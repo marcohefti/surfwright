@@ -3,7 +3,7 @@ import { CliError } from "../errors.js";
 import { nowIso } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { DEFAULT_TARGET_READ_CHUNK_SIZE } from "../types.js";
-import { framesForScope, parseFrameScope } from "./target-frame.js";
+import { frameScopeHints, framesForScope, parseFrameScope } from "./target-frame.js";
 import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetReadReport } from "../types.js";
 
@@ -89,11 +89,18 @@ export async function targetRead(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    const frames = framesForScope(target.page, frameScope);
+    const hints = frameScopeHints({
+      frameScope,
+      frameCount: target.page.frames().length,
+      command: "target.read",
+      targetId: requestedTargetId,
+    });
     if (selectorQuery) {
       if (frameScope === "main") {
         await ensureValidSelector(target.page, selectorQuery);
       } else {
-        for (const frame of framesForScope(target.page, frameScope)) {
+        for (const frame of frames) {
           try {
             await frame.locator(selectorQuery).count();
           } catch {
@@ -104,7 +111,7 @@ export async function targetRead(opts: {
     }
     const frameTexts: string[] = [];
     let scopeMatched = false;
-    for (const frame of framesForScope(target.page, frameScope)) {
+    for (const frame of frames) {
       const scopedText = await extractScopedText({
         evaluator: frame,
         selectorQuery,
@@ -146,6 +153,7 @@ export async function targetRead(opts: {
       totalChars,
       text,
       truncated: chunkIndex < totalChunks,
+      hints,
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,

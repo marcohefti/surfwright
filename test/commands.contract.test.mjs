@@ -214,6 +214,7 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "buttons",
     "links",
     "truncated",
+    "hints",
     "timingMs",
   ]);
   assert.equal(snapshotPayload.ok, true);
@@ -387,6 +388,7 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "totalChars",
     "text",
     "truncated",
+    "hints",
     "timingMs",
   ]);
   assert.equal(readPayload.ok, true);

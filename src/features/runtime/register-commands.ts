@@ -416,6 +416,16 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .option("--record-label <label>", "Label to include in recorded artifact metadata")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Default step timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
+    .addHelpText(
+      "after",
+      [
+        "",
+        "Examples:",
+        "  surfwright --json run --doctor --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"snapshot\"}]}'",
+        "  surfwright --json run --plan ./plan.json --record --record-label smoke",
+        "  surfwright --json run --replay ~/.surfwright/runs/<artifact>.json",
+      ].join("\n"),
+    )
     .action(
       async (options: {
         plan?: string;

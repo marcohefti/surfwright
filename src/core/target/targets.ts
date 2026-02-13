@@ -5,7 +5,7 @@ import { withSessionHeartbeat } from "../session/index.js";
 import { allocateSessionId, defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId, updateState } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { extractScopedSnapshotSample } from "./snapshot-sample.js";
-import { framesForScope, parseFrameScope } from "./target-frame.js";
+import { frameScopeHints, framesForScope, parseFrameScope } from "./target-frame.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
   type SessionSource,
@@ -353,6 +353,12 @@ export async function targetSnapshot(opts: {
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
     const frames = framesForScope(target.page, frameScope);
+    const hints = frameScopeHints({
+      frameScope,
+      frameCount: target.page.frames().length,
+      command: "target.snapshot",
+      targetId: requestedTargetId,
+    });
     if (selectorQuery) {
       for (const frame of frames) {
         try {
@@ -429,6 +435,7 @@ export async function targetSnapshot(opts: {
         buttons: totalButtons > maxButtons,
         links: totalLinks > maxLinks,
       },
+      hints,
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,

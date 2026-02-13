@@ -25,6 +25,20 @@ export function printTargetCoreSuccess(report: unknown): boolean {
     return true;
   }
 
+  if ("items" in report && Array.isArray(report.items) && "kind" in report) {
+    const sessionId = typeof report.sessionId === "string" ? report.sessionId : "unknown";
+    const targetId = typeof report.targetId === "string" ? report.targetId : "unknown";
+    const kind = typeof report.kind === "string" ? report.kind : "generic";
+    const count = typeof report.count === "number" ? report.count : report.items.length;
+    const source = typeof report.source === "string" ? report.source : "dom";
+    const base = ["ok", `sessionId=${sessionId}`, `targetId=${targetId}`, `kind=${kind}`, `count=${count}`, `returned=${report.items.length}`, `source=${source}`];
+    process.stdout.write(`${base.join(" ")}\n`);
+    if (report.items.length === 0 && Array.isArray(report.hints) && typeof report.hints[0] === "string") {
+      process.stdout.write(`hint ${report.hints[0]}\n`);
+    }
+    return true;
+  }
+
   if ("chunkIndex" in report && "totalChunks" in report && "text" in report && typeof report.text === "string") {
     const sessionId = typeof report.sessionId === "string" ? report.sessionId : "unknown";
     const targetId = typeof report.targetId === "string" ? report.targetId : "unknown";

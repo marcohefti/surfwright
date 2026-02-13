@@ -25,6 +25,15 @@ export const targetConsoleTailCommandSpec: TargetCommandSpec = {
       .option("--levels <csv>", "Console levels to stream: log,info,warn,error,debug")
       .option("--reload", "Reload page before streaming")
       .option("--timeout-ms <ms>", "Connection/reload timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright target console-tail <targetId> --levels error,warn --capture-ms 2000",
+          "  surfwright --session s-1 target console-tail <targetId> --reload --capture-ms 3000",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,
@@ -79,6 +88,15 @@ export const targetHealthCommandSpec: TargetCommandSpec = {
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--timeout-ms <ms>", "Health probe timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright --json target health <targetId>",
+          "  surfwright --json target health <targetId> --fields readyState,metrics,hints",
+        ].join("\n"),
+      )
       .action(async (targetId: string, options: { timeoutMs: number; fields?: string }) => {
         const output = ctx.globalOutputOpts();
         const globalOpts = ctx.program.opts<{ session?: string }>();

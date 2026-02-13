@@ -2,7 +2,8 @@ import { chromium } from "playwright-core";
 import { CliError } from "../errors.js";
 import { nowIso } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
-import { framesForScope, parseFrameScope } from "./target-frame.js";
+import { fetchAssistedExtractItems, normalizeExtractWhitespace, type ExtractItemDraft } from "./target-extract-assist.js";
+import { frameScopeHints, framesForScope, parseFrameScope } from "./target-frame.js";
 import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetExtractReport } from "../types.js";
 
@@ -36,23 +37,12 @@ async function extractFrameItems(opts: {
   visibleOnly: boolean;
   kind: TargetExtractReport["kind"];
   scanLimit: number;
-}) {
+}): Promise<{ frameUrl: string; matched: boolean; items: ExtractItemDraft[] }> {
   const frameUrl = opts.frame.url();
   const payload = await opts.frame.evaluate(
-    ({
-      selectorQuery,
-      visibleOnly,
-      kind,
-      scanLimit,
-    }: {
-      selectorQuery: string | null;
-      visibleOnly: boolean;
-      kind: TargetExtractReport["kind"];
-      scanLimit: number;
-    }) => {
+    ({ selectorQuery, visibleOnly, kind, scanLimit }) => {
       const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
       const doc = runtime.document;
-      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
       const isVisible = (node: any): boolean => {
         if (!node) {
           return false;
@@ -69,10 +59,7 @@ async function extractFrameItems(opts: {
 
       const rootNode = selectorQuery ? doc?.querySelector?.(selectorQuery) ?? null : doc?.body ?? null;
       if (!rootNode) {
-        return {
-          matched: false,
-          items: [],
-        };
+        return { matched: false, items: [] };
       }
 
       const primarySelectorByKind: Record<TargetExtractReport["kind"], string> = {
@@ -81,12 +68,12 @@ async function extractFrameItems(opts: {
         news: "article,.post,.entry,.news-item,.story",
         docs: "main a[href],article a[href],nav a[href]",
       };
+      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
       const primarySelector = primarySelectorByKind[kind];
       const primaryNodes: any[] = Array.from(rootNode.querySelectorAll?.(primarySelector) ?? []);
       const fallbackNodes: any[] = primaryNodes.length > 0 ? [] : Array.from(rootNode.querySelectorAll?.("a[href]") ?? []);
       const nodes: any[] = [...primaryNodes, ...fallbackNodes].slice(0, Math.max(scanLimit * 3, scanLimit));
       const items: Array<{ title: string; url: string | null; summary: string | null; publishedAt: string | null }> = [];
-
       for (const node of nodes) {
         if (visibleOnly && !isVisible(node)) {
           continue;
@@ -102,6 +89,9 @@ async function extractFrameItems(opts: {
             (node?.getAttribute?.("aria-label") ?? "") ||
             (node?.textContent ?? ""),
         );
+        if (!title) {
+          continue;
+        }
         const href = typeof link?.href === "string" && link.href.length > 0 ? link.href : null;
         const timeNode = node.querySelector?.("time");
         const publishedAtRaw = timeNode?.getAttribute?.("datetime") ?? timeNode?.textContent ?? null;
@@ -109,20 +99,9 @@ async function extractFrameItems(opts: {
         const summaryNode = node.querySelector?.("p");
         const summaryRaw = summaryNode?.textContent ?? null;
         const summary = typeof summaryRaw === "string" ? normalize(summaryRaw) || null : null;
-        if (!title && !href) {
-          continue;
-        }
-        items.push({
-          title,
-          url: href,
-          summary,
-          publishedAt,
-        });
+        items.push({ title, url: href, summary, publishedAt });
       }
-      return {
-        matched: true,
-        items,
-      };
+      return { matched: true, items };
     },
     {
       selectorQuery: opts.selectorQuery,
@@ -135,7 +114,13 @@ async function extractFrameItems(opts: {
   return {
     frameUrl,
     matched: payload.matched,
-    items: payload.items,
+    items: payload.items.map((item) => ({
+      title: normalizeExtractWhitespace(item.title),
+      url: item.url,
+      summary: item.summary,
+      publishedAt: item.publishedAt,
+      frameUrl,
+    })),
   };
 }
 
@@ -171,7 +156,14 @@ export async function targetExtract(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    const pageUrl = target.page.url();
     const frames = framesForScope(target.page, frameScope);
+    const hints = frameScopeHints({
+      frameScope,
+      frameCount: target.page.frames().length,
+      command: "target.extract",
+      targetId: requestedTargetId,
+    });
     if (selectorQuery) {
       if (frameScope === "main") {
         await ensureValidSelector(target.page, selectorQuery);
@@ -189,7 +181,28 @@ export async function targetExtract(opts: {
     let scopeMatched = false;
     const seen = new Set<string>();
     const merged: TargetExtractReport["items"] = [];
+    const sourcesTried: string[] = ["dom"];
+    let source: TargetExtractReport["source"] = "dom";
     let totalRawCount = 0;
+
+    const pushItem = (item: ExtractItemDraft) => {
+      const title = item.title.trim();
+      const url = typeof item.url === "string" && item.url.length > 0 ? item.url : null;
+      const dedupeKey = `${url ?? "no-url"}::${title}`.toLowerCase();
+      if (seen.has(dedupeKey) || merged.length >= limit) {
+        return;
+      }
+      seen.add(dedupeKey);
+      merged.push({
+        index: merged.length,
+        title,
+        url,
+        summary: item.summary,
+        publishedAt: item.publishedAt,
+        frameUrl: item.frameUrl,
+      });
+    };
+
     for (const frame of frames) {
       const extracted = await extractFrameItems({
         frame,
@@ -201,36 +214,47 @@ export async function targetExtract(opts: {
       scopeMatched = scopeMatched || extracted.matched;
       totalRawCount += extracted.items.length;
       for (const item of extracted.items) {
-        const title = item.title.trim();
-        const url = typeof item.url === "string" && item.url.length > 0 ? item.url : null;
-        const dedupeKey = `${url ?? "no-url"}::${title}`.toLowerCase();
-        if (seen.has(dedupeKey)) {
-          continue;
-        }
-        seen.add(dedupeKey);
-        if (merged.length >= limit) {
-          continue;
-        }
-        merged.push({
-          index: merged.length,
-          title,
-          url,
-          summary: item.summary,
-          publishedAt: item.publishedAt,
-          frameUrl: extracted.frameUrl,
-        });
+        pushItem(item);
       }
     }
-    const actionCompletedAt = Date.now();
 
+    if (merged.length === 0) {
+      const assisted = await fetchAssistedExtractItems({
+        pageUrl,
+        kind,
+        limit,
+      });
+      if (assisted.sourcesTried.length > 0) {
+        sourcesTried.push(...assisted.sourcesTried);
+      }
+      if (assisted.items.length > 0) {
+        source = "api-feed";
+        totalRawCount += assisted.items.length;
+        for (const item of assisted.items) {
+          pushItem(item);
+        }
+        hints.push("Structured items were recovered via API/feed fallback.");
+      }
+    }
+
+    if (merged.length === 0) {
+      hints.push(`No structured items found for kind=${kind}.`);
+      hints.push(`Try: surfwright --json target extract ${requestedTargetId} --kind blog --frame-scope all --limit 10`);
+      hints.push(`Try: surfwright --json target snapshot ${requestedTargetId} --frame-scope all --max-headings 30 --max-links 50`);
+      hints.push(`Try: surfwright --json target health ${requestedTargetId}`);
+    }
+
+    const actionCompletedAt = Date.now();
     const report: TargetExtractReport = {
       ok: true,
       sessionId: session.sessionId,
       sessionSource,
       targetId: requestedTargetId,
-      url: target.page.url(),
+      url: pageUrl,
       title: await target.page.title(),
       kind,
+      source,
+      sourcesTried,
       scope: {
         selector: selectorQuery,
         matched: scopeMatched,
@@ -241,6 +265,7 @@ export async function targetExtract(opts: {
       count: totalRawCount,
       items: merged,
       truncated: totalRawCount > merged.length,
+      hints,
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,
@@ -264,7 +289,6 @@ export async function targetExtract(opts: {
     const persistedAt = Date.now();
     report.timingMs.persistState = persistedAt - persistStartedAt;
     report.timingMs.total = persistedAt - startedAt;
-
     return report;
   } finally {
     await browser.close();

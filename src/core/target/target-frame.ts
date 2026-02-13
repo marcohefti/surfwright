@@ -20,3 +20,18 @@ export function framesForScope(page: Page, frameScope: FrameScope): Frame[] {
   }
   return page.frames();
 }
+
+export function frameScopeHints(opts: {
+  frameScope: FrameScope;
+  frameCount: number;
+  command: "target.read" | "target.snapshot" | "target.extract";
+  targetId: string;
+}): string[] {
+  if (opts.frameCount <= 1 || opts.frameScope !== "main") {
+    return [];
+  }
+  return [
+    `Multiple frames detected (${opts.frameCount}). Using main frame only by default.`,
+    `To include embedded frames, rerun: surfwright --json ${opts.command} ${opts.targetId} --frame-scope all`,
+  ];
+}

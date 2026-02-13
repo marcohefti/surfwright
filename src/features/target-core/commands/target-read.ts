@@ -16,7 +16,7 @@ export const targetReadCommandSpec: TargetCommandSpec = {
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--selector <query>", "Scope read to a selector")
       .option("--visible-only", "Only include visible text")
-      .option("--frame-scope <scope>", "Frame scope: main|all")
+      .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--chunk-size <n>", "Chunk size in characters", String(DEFAULT_TARGET_READ_CHUNK_SIZE))
       .option("--chunk <n>", "Chunk index to read (1-based)", "1")
       .option("--timeout-ms <ms>", "Read timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)

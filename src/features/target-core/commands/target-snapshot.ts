@@ -16,7 +16,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--selector <query>", "Scope snapshot to a selector")
       .option("--visible-only", "Only include visible content")
-      .option("--frame-scope <scope>", "Frame scope: main|all")
+      .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--max-chars <n>", "Maximum text preview chars to return")
       .option("--max-headings <n>", "Maximum heading rows to return")
       .option("--max-buttons <n>", "Maximum button rows to return")

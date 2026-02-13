@@ -128,6 +128,7 @@ export type TargetSnapshotReport = {
     buttons: boolean;
     links: boolean;
   };
+  hints?: string[];
   timingMs: ActionTimingMs;
 };
 
@@ -215,6 +216,7 @@ export type TargetReadReport = {
   totalChars: number;
   text: string;
   truncated: boolean;
+  hints?: string[];
   timingMs: ActionTimingMs;
 };
 
@@ -226,6 +228,8 @@ export type TargetExtractReport = {
   url: string;
   title: string;
   kind: "generic" | "blog" | "news" | "docs";
+  source: "dom" | "api-feed";
+  sourcesTried: string[];
   scope: {
     selector: string | null;
     matched: boolean;
@@ -243,6 +247,7 @@ export type TargetExtractReport = {
     frameUrl: string;
   }>;
   truncated: boolean;
+  hints: string[];
   timingMs: ActionTimingMs;
 };
 

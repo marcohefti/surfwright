@@ -17,11 +17,21 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
       .option("--kind <kind>", "Extraction profile: generic|blog|news|docs")
       .option("--selector <query>", "Scope extraction to a selector")
       .option("--visible-only", "Only include visible content")
-      .option("--frame-scope <scope>", "Frame scope: main|all")
+      .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--limit <n>", "Maximum extracted items to return")
       .option("--timeout-ms <ms>", "Extraction timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state", false)
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright --json target extract <targetId> --kind blog --limit 5",
+          "  surfwright --json target extract <targetId> --kind blog --frame-scope all --limit 10",
+          "  surfwright --json target extract <targetId> --kind news --selector main --visible-only",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,

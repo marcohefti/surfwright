@@ -81,4 +81,6 @@ This combines:
 - `session prune` (remove unreachable attached sessions; repair stale managed pid metadata)
 - `target prune` (remove orphaned/aged target metadata and enforce per-session cap)
 
-For scheduled cleanup, a weekly `state reconcile` is sufficient for most operator workflows.
+For long-lived automation, use per-agent state namespaces with `SURFWRIGHT_AGENT_ID=<agentId>`.
+
+`session ensure` includes an automatic session hygiene pass, but a scheduled weekly `state reconcile` is still a good full cleanup baseline.

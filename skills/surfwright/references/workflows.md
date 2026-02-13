@@ -17,6 +17,7 @@ surfwright --json open https://example.com --reuse-url
 surfwright --json target list
 surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
+surfwright --json target click <targetId> --text "query" --visible-only
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --profile perf --view summary
@@ -35,6 +36,7 @@ surfwright --json target network-check <targetId> --budget ./budgets/network.jso
 - `target list` enumerates currently reachable page targets.
 - `target snapshot` returns bounded text/headings/buttons/links for one explicit target.
 - `target find` checks match counts and returns bounded match metadata for one explicit query.
+- `target click` executes one explicit click action from text/selector query semantics.
 - `target read` returns deterministic chunks for long text extraction.
 - `target wait` blocks until text/selector/network-idle readiness is met.
 - `target network` captures bounded request/websocket diagnostics with profiles, projections, hints, and insights.
@@ -61,6 +63,8 @@ surfwright --json session attach --cdp http://127.0.0.1:9222 --session-id a-logi
 surfwright --json session use a-login
 ```
 
+If `/json/version` is slow to respond on your endpoint, add `--timeout-ms <ms>` to `session attach`.
+
 List known sessions:
 
 ```bash
@@ -73,6 +77,7 @@ surfwright --json session list
 - Avoid `--pretty` in automated loops.
 - Treat non-zero process exit as failure and decode `code` from JSON.
 - Prefer `targetId` from `open` when taking snapshots; use `target list` only when recovering from lost handles.
+- Contract ids are executable aliases: `target.find`, `target.click`, `session.ensure`, `state.reconcile`, etc.
 
 ## 5) State hygiene after restart/crash
 

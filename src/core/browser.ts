@@ -2,10 +2,17 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import net, { AddressInfo } from "node:net";
 import { CliError } from "./errors.js";
+import {
+  currentAgentId,
+  defaultSessionPolicyForKind,
+  normalizeSessionPolicy,
+  withSessionHeartbeat,
+} from "./session/hygiene.js";
 import { defaultSessionUserDataDir, nowIso } from "./state.js";
-import { DEFAULT_SESSION_ID, type SessionState, type SurfwrightState } from "./types.js";
+import { DEFAULT_SESSION_ID, type SessionPolicy, type SessionState, type SurfwrightState } from "./types.js";
 
 export const CDP_HEALTHCHECK_TIMEOUT_MS = 600;
+const CDP_HEALTHCHECK_FALLBACK_MAX_TIMEOUT_MS = 3000;
 const CDP_STARTUP_MAX_WAIT_MS = 6000;
 const CDP_STARTUP_POLL_MS = 125;
 
@@ -80,6 +87,25 @@ export async function isCdpEndpointAlive(cdpOrigin: string, timeoutMs: number): 
   }
   const ws = (payload as { webSocketDebuggerUrl?: unknown }).webSocketDebuggerUrl;
   return typeof ws === "string" && ws.length > 0;
+}
+
+function boundedHealthcheckTimeout(timeoutMs: number): number {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return CDP_HEALTHCHECK_TIMEOUT_MS;
+  }
+  return Math.max(CDP_HEALTHCHECK_TIMEOUT_MS, Math.min(Math.floor(timeoutMs), CDP_HEALTHCHECK_FALLBACK_MAX_TIMEOUT_MS));
+}
+
+export async function isCdpEndpointReachable(cdpOrigin: string, timeoutMs: number): Promise<boolean> {
+  if (await isCdpEndpointAlive(cdpOrigin, CDP_HEALTHCHECK_TIMEOUT_MS)) {
+    return true;
+  }
+
+  const fallbackTimeoutMs = boundedHealthcheckTimeout(timeoutMs);
+  if (fallbackTimeoutMs <= CDP_HEALTHCHECK_TIMEOUT_MS) {
+    return false;
+  }
+  return await isCdpEndpointAlive(cdpOrigin, fallbackTimeoutMs);
 }
 
 async function waitForCdpEndpoint(cdpOrigin: string, timeoutMs: number): Promise<boolean> {
@@ -164,6 +190,7 @@ export async function startManagedSession(
     sessionId: string;
     debugPort: number;
     userDataDir: string;
+    policy?: SessionPolicy;
     createdAt?: string;
   },
   timeoutMs: number,
@@ -192,16 +219,26 @@ export async function startManagedSession(
     throw new CliError("E_BROWSER_START_TIMEOUT", "Browser launched but CDP endpoint did not become ready in time");
   }
 
-  return {
-    sessionId: opts.sessionId,
-    kind: "managed",
-    cdpOrigin,
-    debugPort: opts.debugPort,
-    userDataDir: opts.userDataDir,
-    browserPid,
-    createdAt: opts.createdAt ?? nowIso(),
-    lastSeenAt: nowIso(),
-  };
+  const createdAt = opts.createdAt ?? nowIso();
+  return withSessionHeartbeat(
+    {
+      sessionId: opts.sessionId,
+      kind: "managed",
+      policy: normalizeSessionPolicy(opts.policy) ?? defaultSessionPolicyForKind("managed"),
+      cdpOrigin,
+      debugPort: opts.debugPort,
+      userDataDir: opts.userDataDir,
+      browserPid,
+      ownerId: currentAgentId(),
+      leaseExpiresAt: null,
+      leaseTtlMs: null,
+      managedUnreachableSince: null,
+      managedUnreachableCount: 0,
+      createdAt,
+      lastSeenAt: createdAt,
+    },
+    createdAt,
+  );
 }
 
 export async function ensureSessionReachable(
@@ -211,12 +248,9 @@ export async function ensureSessionReachable(
   session: SessionState;
   restarted: boolean;
 }> {
-  if (await isCdpEndpointAlive(session.cdpOrigin, CDP_HEALTHCHECK_TIMEOUT_MS)) {
+  if (await isCdpEndpointReachable(session.cdpOrigin, timeoutMs)) {
     return {
-      session: {
-        ...session,
-        lastSeenAt: nowIso(),
-      },
+      session: withSessionHeartbeat(session),
       restarted: false,
     };
   }
@@ -237,6 +271,7 @@ export async function ensureSessionReachable(
         sessionId: session.sessionId,
         debugPort,
         userDataDir,
+        policy: session.policy,
         createdAt: session.createdAt,
       },
       timeoutMs,
@@ -276,6 +311,7 @@ export async function ensureDefaultManagedSession(
       sessionId: DEFAULT_SESSION_ID,
       debugPort,
       userDataDir,
+      policy: "persistent",
       createdAt: nowIso(),
     },
     timeoutMs,

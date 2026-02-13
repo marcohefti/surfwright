@@ -21,10 +21,20 @@
         "allowCoreImports": [
           "src/core/cli-contract",
           "src/core/network-types",
-          "src/core/target-network*",
+          "src/core/target/network/index",
           "src/core/types",
           "src/core/usecases"
         ]
+      }
+    },
+    {
+      "name": "core-boundaries",
+      "enabled": true,
+      "options": {
+        "include": ["src/core/**/*.ts"],
+        "exclude": [],
+        "boundedDomains": ["session", "state", "shared", "target", "daemon"],
+        "allowCrossDomainInternal": ["src/core/session/index", "src/core/shared/index"]
       }
     },
     {
@@ -43,11 +53,20 @@
         ],
         "allowMutationImportFromState": [
           "src/core/state-repos/**/*.ts",
+          "src/core/state/**/*.ts",
           "src/core/state.ts",
-          "src/core/state-maintenance.ts",
-          "src/core/targets.ts",
+          "src/core/target/targets.ts",
           "src/core/usecases.ts"
         ]
+      }
+    },
+    {
+      "name": "max-files-per-directory",
+      "enabled": true,
+      "options": {
+        "max": 12,
+        "include": ["**/*"],
+        "exclude": []
       }
     },
     {

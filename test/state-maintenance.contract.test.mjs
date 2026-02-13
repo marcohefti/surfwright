@@ -30,11 +30,15 @@ function stateFilePath() {
 
 function baseState() {
   return {
-    version: 2,
+    version: 3,
     activeSessionId: null,
     nextSessionOrdinal: 1,
+    nextCaptureOrdinal: 1,
+    nextArtifactOrdinal: 1,
     sessions: {},
     targets: {},
+    networkCaptures: {},
+    networkArtifacts: {},
   };
 }
 
@@ -83,11 +87,46 @@ test("legacy state payload migrates forward before maintenance commands run", ()
   assert.equal(payload.removed, 0);
 
   const state = readState();
-  assert.equal(state.version, 2);
+  assert.equal(state.version, 3);
   assert.equal(state.nextCaptureOrdinal, 1);
   assert.equal(state.nextArtifactOrdinal, 1);
   assert.deepEqual(state.networkCaptures, {});
   assert.deepEqual(state.networkArtifacts, {});
+});
+
+test("v2 session payload migrates policy and lease hygiene fields", () => {
+  writeState({
+    version: 2,
+    activeSessionId: "s-legacy",
+    nextSessionOrdinal: 2,
+    nextCaptureOrdinal: 1,
+    nextArtifactOrdinal: 1,
+    sessions: {
+      "s-legacy": {
+        sessionId: "s-legacy",
+        kind: "attached",
+        cdpOrigin: "http://127.0.0.1:1",
+        debugPort: null,
+        userDataDir: null,
+        browserPid: null,
+        createdAt: "2026-02-13T09:00:00.000Z",
+        lastSeenAt: "2026-02-13T09:00:00.000Z",
+      },
+    },
+    targets: {},
+    networkCaptures: {},
+    networkArtifacts: {},
+  });
+
+  const result = runCli(["--json", "target", "prune"]);
+  assert.equal(result.status, 0);
+
+  const state = readState();
+  assert.equal(state.version, 3);
+  assert.equal(state.sessions["s-legacy"].policy, "ephemeral");
+  assert.equal(typeof state.sessions["s-legacy"].leaseTtlMs, "number");
+  assert.equal(state.sessions["s-legacy"].managedUnreachableCount, 0);
+  assert.equal(state.sessions["s-legacy"].managedUnreachableSince, null);
 });
 
 test("target prune removes orphaned, stale, and overflow metadata", () => {
@@ -210,8 +249,11 @@ test("session prune removes unreachable attached sessions and can drop managed s
   assert.equal(firstPayload.scanned, 2);
   assert.equal(firstPayload.kept, 1);
   assert.equal(firstPayload.removed, 1);
+  assert.equal(firstPayload.removedByLeaseExpired, 0);
   assert.equal(firstPayload.removedAttachedUnreachable, 1);
   assert.equal(firstPayload.removedManagedUnreachable, 0);
+  assert.equal(firstPayload.removedManagedByGrace, 0);
+  assert.equal(firstPayload.removedManagedByFlag, 0);
   assert.equal(firstPayload.repairedManagedPid, 1);
   assert.equal(firstPayload.activeSessionId, "m-dead");
 
@@ -226,7 +268,10 @@ test("session prune removes unreachable attached sessions and can drop managed s
   assert.equal(secondPayload.scanned, 1);
   assert.equal(secondPayload.kept, 0);
   assert.equal(secondPayload.removed, 1);
+  assert.equal(secondPayload.removedByLeaseExpired, 0);
   assert.equal(secondPayload.removedManagedUnreachable, 1);
+  assert.equal(secondPayload.removedManagedByGrace, 0);
+  assert.equal(secondPayload.removedManagedByFlag, 1);
   assert.equal(secondPayload.activeSessionId, null);
 
   const finalState = readState();
@@ -327,8 +372,11 @@ test("state reconcile combines session and target maintenance", () => {
   assert.equal(payload.sessions.scanned, 2);
   assert.equal(payload.sessions.kept, 1);
   assert.equal(payload.sessions.removed, 1);
+  assert.equal(payload.sessions.removedByLeaseExpired, 0);
   assert.equal(payload.sessions.removedAttachedUnreachable, 1);
   assert.equal(payload.sessions.removedManagedUnreachable, 0);
+  assert.equal(payload.sessions.removedManagedByGrace, 0);
+  assert.equal(payload.sessions.removedManagedByFlag, 0);
   assert.equal(payload.sessions.repairedManagedPid, 1);
   assert.equal(payload.targets.scanned, 5);
   assert.equal(payload.targets.remaining, 1);
@@ -344,4 +392,96 @@ test("state reconcile combines session and target maintenance", () => {
   assert.deepEqual(Object.keys(state.sessions), ["m-dead"]);
   assert.equal(state.sessions["m-dead"].browserPid, null);
   assert.deepEqual(Object.keys(state.targets), ["t-managed-new"]);
+});
+
+test("session prune drops managed sessions with expired lease even without drop-managed-unreachable", () => {
+  writeState({
+    ...baseState(),
+    activeSessionId: "m-expired",
+    sessions: {
+      "m-expired": {
+        sessionId: "m-expired",
+        kind: "managed",
+        cdpOrigin: "http://127.0.0.1:1",
+        debugPort: 9222,
+        userDataDir: "/tmp/surfwright-m-expired",
+        browserPid: null,
+        ownerId: "agent.test",
+        leaseExpiresAt: "2000-01-01T00:00:00.000Z",
+        leaseTtlMs: 3600000,
+        createdAt: "2026-02-13T09:00:00.000Z",
+        lastSeenAt: "2026-02-13T09:00:00.000Z",
+      },
+    },
+    targets: {},
+  });
+
+  const pruneResult = runCli(["--json", "session", "prune", "--timeout-ms", "200"]);
+  assert.equal(pruneResult.status, 0);
+  const payload = parseJson(pruneResult.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.scanned, 1);
+  assert.equal(payload.kept, 0);
+  assert.equal(payload.removed, 1);
+  assert.equal(payload.removedByLeaseExpired, 1);
+  assert.equal(payload.removedManagedUnreachable, 0);
+  assert.equal(payload.removedManagedByGrace, 0);
+  assert.equal(payload.removedManagedByFlag, 0);
+  assert.equal(payload.activeSessionId, null);
+
+  const state = readState();
+  assert.deepEqual(state.sessions, {});
+  assert.equal(state.activeSessionId, null);
+});
+
+test("session prune uses grace pass before removing unreachable managed sessions", () => {
+  writeState({
+    ...baseState(),
+    activeSessionId: "m-grace",
+    sessions: {
+      "m-grace": {
+        sessionId: "m-grace",
+        kind: "managed",
+        cdpOrigin: "http://127.0.0.1:1",
+        debugPort: 9222,
+        userDataDir: "/tmp/surfwright-m-grace",
+        browserPid: null,
+        ownerId: "agent.test",
+        leaseExpiresAt: null,
+        leaseTtlMs: 3600000,
+        managedUnreachableSince: null,
+        managedUnreachableCount: 0,
+        createdAt: "2026-02-13T09:00:00.000Z",
+        lastSeenAt: "2026-02-13T09:00:00.000Z",
+      },
+    },
+    targets: {},
+  });
+
+  const firstPrune = runCli(["--json", "session", "prune", "--timeout-ms", "200"]);
+  assert.equal(firstPrune.status, 0);
+  const firstPayload = parseJson(firstPrune.stdout);
+  assert.equal(firstPayload.ok, true);
+  assert.equal(firstPayload.scanned, 1);
+  assert.equal(firstPayload.kept, 1);
+  assert.equal(firstPayload.removedByLeaseExpired, 0);
+  assert.equal(firstPayload.removedManagedUnreachable, 0);
+  assert.equal(firstPayload.removedManagedByGrace, 0);
+  assert.equal(firstPayload.removedManagedByFlag, 0);
+
+  const afterFirst = readState();
+  assert.equal(afterFirst.sessions["m-grace"].managedUnreachableCount, 1);
+  assert.equal(typeof afterFirst.sessions["m-grace"].managedUnreachableSince, "string");
+
+  const secondPrune = runCli(["--json", "session", "prune", "--timeout-ms", "200"]);
+  assert.equal(secondPrune.status, 0);
+  const secondPayload = parseJson(secondPrune.stdout);
+  assert.equal(secondPayload.ok, true);
+  assert.equal(secondPayload.scanned, 1);
+  assert.equal(secondPayload.kept, 0);
+  assert.equal(secondPayload.removedByLeaseExpired, 0);
+  assert.equal(secondPayload.removedManagedUnreachable, 1);
+  assert.equal(secondPayload.removedManagedByGrace, 1);
+  assert.equal(secondPayload.removedManagedByFlag, 0);
+  assert.equal(secondPayload.activeSessionId, null);
 });

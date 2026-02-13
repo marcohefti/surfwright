@@ -1,4 +1,4 @@
-import { targetWait } from "../../../core/usecases.js";
+import { parseFieldsCsv, projectReportFields, targetWait } from "../../../core/usecases.js";
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";
@@ -18,13 +18,23 @@ export const targetWaitCommandSpec: TargetCommandSpec = {
       .option("--for-selector <query>", "Wait until selector becomes visible")
       .option("--network-idle", "Wait for network idle state")
       .option("--timeout-ms <ms>", "Wait timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
           targetId: string,
-          options: { forText?: string; forSelector?: string; networkIdle?: boolean; timeoutMs: number },
+          options: {
+            forText?: string;
+            forSelector?: string;
+            networkIdle?: boolean;
+            timeoutMs: number;
+            noPersist?: boolean;
+            fields?: string;
+          },
         ) => {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
+          const fields = parseFieldsCsv(options.fields);
           try {
             const report = await targetWait({
               targetId,
@@ -33,8 +43,9 @@ export const targetWaitCommandSpec: TargetCommandSpec = {
               forText: options.forText,
               forSelector: options.forSelector,
               networkIdle: Boolean(options.networkIdle),
+              persistState: !Boolean(options.noPersist),
             });
-            ctx.printTargetSuccess(report, output);
+            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
             ctx.handleFailure(error, output);
           }

@@ -1,13 +1,16 @@
 import process from "node:process";
-import { CDP_HEALTHCHECK_TIMEOUT_MS, isCdpEndpointAlive } from "./browser.js";
-import { CliError } from "./errors.js";
-import { nowIso, updateState } from "./state.js";
-import type { SessionPruneReport, StateReconcileReport, TargetPruneReport } from "./types.js";
+import { CDP_HEALTHCHECK_TIMEOUT_MS, isCdpEndpointAlive } from "../browser.js";
+import { CliError } from "../errors.js";
+import { hasSessionLeaseExpired, withSessionHeartbeat } from "../session/index.js";
+import { nowIso, updateState } from "../state.js";
+import type { SessionState } from "../types.js";
+import type { SessionPruneReport, StateReconcileReport, TargetPruneReport } from "../types.js";
 
 const DEFAULT_TARGET_MAX_AGE_HOURS = 168;
 const DEFAULT_TARGET_MAX_PER_SESSION = 200;
 const MAX_TARGET_MAX_AGE_HOURS = 8760;
 const MAX_TARGET_MAX_PER_SESSION = 5000;
+const SESSION_PRUNE_REACHABILITY_TIMEOUT_CAP_MS = 1500;
 
 function pidIsAlive(pid: number | null): boolean {
   if (!pid || !Number.isFinite(pid) || pid <= 0) {
@@ -18,6 +21,20 @@ function pidIsAlive(pid: number | null): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+function stopManagedSessionProcess(session: SessionState): void {
+  if (session.kind !== "managed") {
+    return;
+  }
+  if (!pidIsAlive(session.browserPid ?? null)) {
+    return;
+  }
+  try {
+    process.kill(session.browserPid ?? 0, "SIGTERM");
+  } catch {
+    // best-effort termination for stale managed sessions
   }
 }
 
@@ -44,8 +61,11 @@ type SessionMaintenanceSummary = {
   scanned: number;
   kept: number;
   removed: number;
+  removedByLeaseExpired: number;
   removedAttachedUnreachable: number;
   removedManagedUnreachable: number;
+  removedManagedByGrace: number;
+  removedManagedByFlag: number;
   repairedManagedPid: number;
 };
 
@@ -54,12 +74,18 @@ async function sessionPruneInternal(opts: {
   dropManagedUnreachable: boolean;
   dropAttachedUnreachable: boolean;
 }): Promise<SessionMaintenanceSummary> {
-  const timeoutMs = opts.timeoutMs;
+  const timeoutMs = Math.max(
+    CDP_HEALTHCHECK_TIMEOUT_MS,
+    Math.min(opts.timeoutMs, SESSION_PRUNE_REACHABILITY_TIMEOUT_CAP_MS),
+  );
   return await updateState(async (state) => {
     const sessionIds = Object.keys(state.sessions).sort((a, b) => a.localeCompare(b));
 
+    let removedByLeaseExpired = 0;
     let removedAttachedUnreachable = 0;
     let removedManagedUnreachable = 0;
+    let removedManagedByGrace = 0;
+    let removedManagedByFlag = 0;
     let repairedManagedPid = 0;
 
     for (const sessionId of sessionIds) {
@@ -68,12 +94,16 @@ async function sessionPruneInternal(opts: {
         continue;
       }
 
+      if (hasSessionLeaseExpired(session)) {
+        stopManagedSessionProcess(session);
+        delete state.sessions[sessionId];
+        removedByLeaseExpired += 1;
+        continue;
+      }
+
       const reachable = await isCdpEndpointAlive(session.cdpOrigin, Math.max(CDP_HEALTHCHECK_TIMEOUT_MS, timeoutMs));
       if (reachable) {
-        state.sessions[sessionId] = {
-          ...session,
-          lastSeenAt: nowIso(),
-        };
+        state.sessions[sessionId] = withSessionHeartbeat(session);
         continue;
       }
 
@@ -86,6 +116,10 @@ async function sessionPruneInternal(opts: {
       }
 
       const managedHasLivePid = pidIsAlive(session.browserPid ?? null);
+      const nextUnreachableCount = Math.max(0, Math.floor(session.managedUnreachableCount ?? 0)) + 1;
+      const managedUnreachableSince = session.managedUnreachableSince ?? nowIso();
+      const shouldDropManaged = Boolean(opts.dropManagedUnreachable) || nextUnreachableCount >= 2;
+
       if (!managedHasLivePid && session.browserPid !== null) {
         state.sessions[sessionId] = {
           ...session,
@@ -93,11 +127,23 @@ async function sessionPruneInternal(opts: {
         };
         repairedManagedPid += 1;
       }
-
-      if (opts.dropManagedUnreachable) {
+      if (shouldDropManaged) {
+        stopManagedSessionProcess(session);
         delete state.sessions[sessionId];
         removedManagedUnreachable += 1;
+        if (opts.dropManagedUnreachable) {
+          removedManagedByFlag += 1;
+        } else {
+          removedManagedByGrace += 1;
+        }
+        continue;
       }
+
+      state.sessions[sessionId] = {
+        ...state.sessions[sessionId],
+        managedUnreachableSince,
+        managedUnreachableCount: nextUnreachableCount,
+      };
     }
 
     if (state.activeSessionId && !state.sessions[state.activeSessionId]) {
@@ -106,15 +152,18 @@ async function sessionPruneInternal(opts: {
 
     const kept = Object.keys(state.sessions).length;
     const scanned = sessionIds.length;
-    const removed = removedAttachedUnreachable + removedManagedUnreachable;
+    const removed = removedByLeaseExpired + removedAttachedUnreachable + removedManagedUnreachable;
 
     return {
       activeSessionId: state.activeSessionId,
       scanned,
       kept,
       removed,
+      removedByLeaseExpired,
       removedAttachedUnreachable,
       removedManagedUnreachable,
+      removedManagedByGrace,
+      removedManagedByFlag,
       repairedManagedPid,
     };
   });
@@ -275,8 +324,11 @@ export async function stateReconcile(opts: {
       scanned: sessionSummary.scanned,
       kept: sessionSummary.kept,
       removed: sessionSummary.removed,
+      removedByLeaseExpired: sessionSummary.removedByLeaseExpired,
       removedAttachedUnreachable: sessionSummary.removedAttachedUnreachable,
       removedManagedUnreachable: sessionSummary.removedManagedUnreachable,
+      removedManagedByGrace: sessionSummary.removedManagedByGrace,
+      removedManagedByFlag: sessionSummary.removedManagedByFlag,
       repairedManagedPid: sessionSummary.repairedManagedPid,
     },
     targets: {

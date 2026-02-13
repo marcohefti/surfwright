@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { TargetNetworkHarReport, TargetNetworkRequestReport } from "./types.js";
+import type { TargetNetworkHarReport, TargetNetworkRequestReport } from "../../types.js";
 
 type HarHeader = {
   name: string;

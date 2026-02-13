@@ -1,4 +1,4 @@
-import { targetSnapshot } from "../../../core/usecases.js";
+import { parseFieldsCsv, projectReportFields, targetSnapshot } from "../../../core/usecases.js";
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";
@@ -21,6 +21,8 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
       .option("--max-buttons <n>", "Maximum button rows to return")
       .option("--max-links <n>", "Maximum link rows to return")
       .option("--timeout-ms <ms>", "Snapshot timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
           targetId: string,
@@ -32,10 +34,13 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
             maxButtons?: string;
             maxLinks?: string;
             timeoutMs: number;
+            noPersist?: boolean;
+            fields?: string;
           },
         ) => {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
+          const fields = parseFieldsCsv(options.fields);
           const maxChars = typeof options.maxChars === "string" ? Number.parseInt(options.maxChars, 10) : undefined;
           const maxHeadings =
             typeof options.maxHeadings === "string" ? Number.parseInt(options.maxHeadings, 10) : undefined;
@@ -54,8 +59,9 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
               maxHeadings,
               maxButtons,
               maxLinks,
+              persistState: !Boolean(options.noPersist),
             });
-            ctx.printTargetSuccess(report, output);
+            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
             ctx.handleFailure(error, output);
           }

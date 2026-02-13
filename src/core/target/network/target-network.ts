@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
-import { sanitizeActionId } from "./action-id.js";
-import { nowIso } from "./state.js";
-import { readRecentTargetAction, saveTargetSnapshot } from "./state-repos/target-repo.js";
-import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { sanitizeActionId } from "../../action-id.js";
+import { nowIso } from "../../state.js";
+import { readRecentTargetAction, saveTargetSnapshot } from "../../state-repos/target-repo.js";
+import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {
   matchesRequestFilters,
@@ -23,7 +23,7 @@ import type {
   TargetNetworkRequestReport,
   TargetNetworkWebSocketMessageReport,
   TargetNetworkWebSocketReport,
-} from "./types.js";
+} from "../../types.js";
 
 type MutableRequest = TargetNetworkRequestReport;
 type MutableWebSocket = TargetNetworkWebSocketReport;

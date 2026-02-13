@@ -2,12 +2,12 @@ import {
   appendNetworkArtifact,
   listNetworkArtifacts,
   pruneNetworkArtifacts,
-} from "./state-repos/network-artifact-repo.js";
+} from "../../state-repos/network-artifact-repo.js";
 import type {
   TargetNetworkArtifactListReport,
   TargetNetworkArtifactPruneReport,
   TargetNetworkExportReport,
-} from "./types.js";
+} from "../../types.js";
 
 export async function recordNetworkArtifact(opts: {
   report: TargetNetworkExportReport;

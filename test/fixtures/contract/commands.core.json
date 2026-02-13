@@ -11,8 +11,10 @@
   { "id": "target.list", "usageMustContain": "target list" },
   { "id": "target.snapshot", "usageMustContain": "target snapshot" },
   { "id": "target.find", "usageMustContain": "target find" },
+  { "id": "target.click", "usageMustContain": "target click" },
   { "id": "target.read", "usageMustContain": "target read" },
   { "id": "target.wait", "usageMustContain": "target wait" },
   { "id": "target.prune", "usageMustContain": "target prune" },
-  { "id": "state.reconcile", "usageMustContain": "state reconcile" }
+  { "id": "state.reconcile", "usageMustContain": "state reconcile" },
+  { "id": "run", "usageMustContain": "run --plan <path>" }
 ]

@@ -1,3 +1,4 @@
+import { targetClickCommandSpec } from "./target-click.js";
 import { targetFindCommandSpec } from "./target-find.js";
 import { targetListCommandSpec } from "./target-list.js";
 import { targetPruneCommandSpec } from "./target-prune.js";
@@ -10,6 +11,7 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetListCommandSpec,
   targetSnapshotCommandSpec,
   targetFindCommandSpec,
+  targetClickCommandSpec,
   targetReadCommandSpec,
   targetWaitCommandSpec,
   targetPruneCommandSpec,

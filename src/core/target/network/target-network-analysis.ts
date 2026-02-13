@@ -1,4 +1,4 @@
-import type { TargetNetworkReport, TargetNetworkRequestReport } from "./types.js";
+import type { TargetNetworkReport, TargetNetworkRequestReport } from "../../types.js";
 
 const NETWORK_MAX_REQUESTS_CAP = 1000;
 const NETWORK_MAX_WEBSOCKETS_CAP = 200;

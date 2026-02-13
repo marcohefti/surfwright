@@ -1,11 +1,11 @@
-import { CliError } from "./errors.js";
+import { CliError } from "../../errors.js";
 import {
   DEFAULT_TARGET_NETWORK_CAPTURE_MS,
   DEFAULT_TARGET_NETWORK_MAX_REQUESTS,
   DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS,
   DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES,
-} from "./types.js";
-import type { TargetNetworkRequestReport } from "./types.js";
+} from "../../types.js";
+import type { TargetNetworkRequestReport } from "../../types.js";
 
 const NETWORK_CAPTURE_MIN_MS = 50;
 const NETWORK_CAPTURE_MAX_MS = 120000;

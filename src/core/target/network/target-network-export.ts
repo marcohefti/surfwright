@@ -1,9 +1,9 @@
 import path from "node:path";
-import { CliError } from "./errors.js";
+import { CliError } from "../../errors.js";
 import { recordNetworkArtifact } from "./target-network-artifacts.js";
 import { targetNetwork } from "./target-network.js";
 import { writeHarFile } from "./target-network-har.js";
-import type { TargetNetworkExportReport } from "./types.js";
+import type { TargetNetworkExportReport } from "../../types.js";
 
 function parseOutPath(input: string): string {
   const value = input.trim();

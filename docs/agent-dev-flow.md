@@ -113,10 +113,17 @@ If fewer than two are true, prefer documentation over new script surface.
 
 ## Validation Commands
 
+Preferred single-pass (sequential, avoids build race between separate processes):
+
 ```bash
-pnpm validate
+pnpm verify
+```
+
+Equivalent explicit sequence:
+
+```bash
 pnpm test
-pnpm skill:validate
+pnpm validate
 pnpm contract:snapshot:check
 ```
 

@@ -1,10 +1,10 @@
 import { chromium } from "playwright-core";
-import { CliError } from "./errors.js";
-import { nowIso } from "./state.js";
-import { saveTargetSnapshot } from "./state-repos/target-repo.js";
-import { DEFAULT_TARGET_READ_CHUNK_SIZE } from "./types.js";
+import { CliError } from "../errors.js";
+import { nowIso } from "../state.js";
+import { saveTargetSnapshot } from "../state-repos/target-repo.js";
+import { DEFAULT_TARGET_READ_CHUNK_SIZE } from "../types.js";
 import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
-import type { TargetReadReport } from "./types.js";
+import type { TargetReadReport } from "../types.js";
 
 const READ_MAX_CHUNK_SIZE = 10000;
 const READ_MAX_CHUNK_INDEX = 100000;
@@ -60,11 +60,13 @@ export async function targetRead(opts: {
   targetId: string;
   timeoutMs: number;
   sessionId?: string;
+  persistState?: boolean;
   selectorQuery?: string;
   visibleOnly?: boolean;
   chunkSize?: number;
   chunkIndex?: number;
 }): Promise<TargetReadReport> {
+  const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const selectorQuery = normalizeSelectorQuery(opts.selectorQuery);
   const visibleOnly = Boolean(opts.visibleOnly);
@@ -72,9 +74,11 @@ export async function targetRead(opts: {
   const chunkIndex = parseChunkIndex(opts.chunkIndex);
 
   const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
+  const connectedAt = Date.now();
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
@@ -96,6 +100,7 @@ export async function targetRead(opts: {
 
     const start = (chunkIndex - 1) * chunkSize;
     const text = scopedText.text.slice(start, start + chunkSize);
+    const actionCompletedAt = Date.now();
 
     const report: TargetReadReport = {
       ok: true,
@@ -114,16 +119,29 @@ export async function targetRead(opts: {
       totalChars,
       text,
       truncated: chunkIndex < totalChunks,
+      timingMs: {
+        total: 0,
+        resolveSession: resolvedSessionAt - startedAt,
+        connectCdp: connectedAt - resolvedSessionAt,
+        action: actionCompletedAt - connectedAt,
+        persistState: 0,
+      },
     };
 
-    await saveTargetSnapshot({
-      targetId: report.targetId,
-      sessionId: report.sessionId,
-      url: report.url,
-      title: report.title,
-      status: null,
-      updatedAt: nowIso(),
-    });
+    const persistStartedAt = Date.now();
+    if (opts.persistState !== false) {
+      await saveTargetSnapshot({
+        targetId: report.targetId,
+        sessionId: report.sessionId,
+        url: report.url,
+        title: report.title,
+        status: null,
+        updatedAt: nowIso(),
+      });
+    }
+    const persistedAt = Date.now();
+    report.timingMs.persistState = persistedAt - persistStartedAt;
+    report.timingMs.total = persistedAt - startedAt;
 
     return report;
   } finally {

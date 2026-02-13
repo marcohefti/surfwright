@@ -2,12 +2,11 @@ import fs from "node:fs";
 import { chromium } from "playwright-core";
 import { newActionId } from "./action-id.js";
 import {
-  CDP_HEALTHCHECK_TIMEOUT_MS,
   allocateFreePort,
   chromeCandidatesForPlatform,
   ensureDefaultManagedSession,
   ensureSessionReachable,
-  isCdpEndpointAlive,
+  isCdpEndpointReachable,
   normalizeCdpOrigin,
   startManagedSession,
 } from "./browser.js";
@@ -18,13 +17,26 @@ import {
   defaultSessionUserDataDir,
   inferDebugPortFromCdpOrigin,
   nowIso,
+  readState,
   sanitizeSessionId,
   updateState,
 } from "./state.js";
+import {
+  defaultSessionPolicyForKind,
+  normalizeSessionPolicy,
+  normalizeSessionLeaseTtlMs,
+  withSessionHeartbeat,
+} from "./session/hygiene.js";
+import { parseFieldsCsv, projectReportFields } from "./report-fields.js";
 import { listSessionsSnapshot } from "./state-repos/session-repo.js";
 import { saveTargetSnapshot } from "./state-repos/target-repo.js";
-import { readPageTargetId, resolveSessionForAction } from "./targets.js";
-import { sessionPrune, stateReconcile, targetPrune } from "./state-maintenance.js";
+import { targetClick } from "./target/target-click.js";
+import { targetFind } from "./target/target-find.js";
+import { targetRead } from "./target/target-read.js";
+import { targetWait } from "./target/target-wait.js";
+import { readPageTargetId, resolveSessionForAction, targetList, targetSnapshot } from "./target/targets.js";
+import { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
+import { executePipelinePlan } from "./pipeline.js";
 import type {
   DoctorReport,
   OpenReport,
@@ -79,6 +91,7 @@ export async function openUrl(opts: {
   sessionId?: string;
   reuseUrl?: boolean;
 }): Promise<OpenReport> {
+  const startedAt = Date.now();
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(opts.inputUrl);
@@ -86,24 +99,37 @@ export async function openUrl(opts: {
     throw new CliError("E_URL_INVALID", "URL must be absolute (e.g. https://example.com)");
   }
   const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
+  const connectedAt = Date.now();
   try {
     const context = browser.contexts()[0] ?? (await browser.newContext());
     if (opts.reuseUrl) {
       const existing = context.pages().find((candidate) => candidate.url() === parsedUrl.toString());
       if (existing) {
         const actionId = newActionId();
+        const targetId = await readPageTargetId(context, existing);
+        const title = await existing.title();
+        const actionCompletedAt = Date.now();
         const report: OpenReport = {
           ok: true,
           sessionId: session.sessionId,
-          targetId: await readPageTargetId(context, existing),
+          targetId,
           actionId,
           url: existing.url(),
           status: null,
-          title: await existing.title(),
+          title,
+          timingMs: {
+            total: 0,
+            resolveSession: resolvedSessionAt - startedAt,
+            connectCdp: connectedAt - resolvedSessionAt,
+            action: actionCompletedAt - connectedAt,
+            persistState: 0,
+          },
         };
+        const persistStartedAt = Date.now();
         await saveTargetSnapshot({
           targetId: report.targetId,
           sessionId: report.sessionId,
@@ -115,6 +141,9 @@ export async function openUrl(opts: {
           lastActionKind: "open",
           updatedAt: nowIso(),
         });
+        const persistedAt = Date.now();
+        report.timingMs.persistState = persistedAt - persistStartedAt;
+        report.timingMs.total = persistedAt - startedAt;
         return report;
       }
     }
@@ -124,6 +153,8 @@ export async function openUrl(opts: {
       timeout: opts.timeoutMs,
     });
     const targetId = await readPageTargetId(context, page);
+    const title = await page.title();
+    const actionCompletedAt = Date.now();
     const report: OpenReport = {
       ok: true,
       sessionId: session.sessionId,
@@ -131,8 +162,16 @@ export async function openUrl(opts: {
       actionId: newActionId(),
       url: page.url(),
       status: response?.status() ?? null,
-      title: await page.title(),
+      title,
+      timingMs: {
+        total: 0,
+        resolveSession: resolvedSessionAt - startedAt,
+        connectCdp: connectedAt - resolvedSessionAt,
+        action: actionCompletedAt - connectedAt,
+        persistState: 0,
+      },
     };
+    const persistStartedAt = Date.now();
     await saveTargetSnapshot({
       targetId: report.targetId,
       sessionId: report.sessionId,
@@ -144,18 +183,31 @@ export async function openUrl(opts: {
       lastActionKind: "open",
       updatedAt: nowIso(),
     });
+    const persistedAt = Date.now();
+    report.timingMs.persistState = persistedAt - persistStartedAt;
+    report.timingMs.total = persistedAt - startedAt;
     return report;
   } finally {
     await browser.close();
   }
 }
 export async function sessionEnsure(opts: { timeoutMs: number }): Promise<SessionReport> {
-  return await updateState(async (state) => {
-    if (state.activeSessionId && state.sessions[state.activeSessionId]) {
-      const activeId = state.activeSessionId;
-      const activeSession = state.sessions[activeId];
-      try {
-        const ensured = await ensureSessionReachable(activeSession, opts.timeoutMs);
+  await sessionPrune({
+    timeoutMs: opts.timeoutMs,
+    dropManagedUnreachable: false,
+  });
+
+  const snapshot = readState();
+  if (snapshot.activeSessionId && snapshot.sessions[snapshot.activeSessionId]) {
+    const activeId = snapshot.activeSessionId;
+    const activeSession = snapshot.sessions[activeId];
+    try {
+      const ensured = await ensureSessionReachable(activeSession, opts.timeoutMs);
+      return await updateState(async (state) => {
+        const current = state.sessions[activeId];
+        if (!current) {
+          throw new CliError("E_SESSION_NOT_FOUND", `Session ${activeId} not found`);
+        }
         state.sessions[activeId] = ensured.session;
         state.activeSessionId = activeId;
         return sessionReport(ensured.session, {
@@ -163,14 +215,17 @@ export async function sessionEnsure(opts: { timeoutMs: number }): Promise<Sessio
           created: false,
           restarted: ensured.restarted,
         });
-      } catch (error) {
-        if (!(error instanceof CliError) || error.code !== "E_SESSION_UNREACHABLE" || activeSession.kind !== "attached") {
-          throw error;
-        }
-        // Guardrail: never auto-attach to unknown running browsers. If an attached session is dead,
-        // fallback to a managed default session instead of probing/attaching elsewhere.
+      });
+    } catch (error) {
+      if (!(error instanceof CliError) || error.code !== "E_SESSION_UNREACHABLE" || activeSession.kind !== "attached") {
+        throw error;
       }
+      // Guardrail: never auto-attach to unknown running browsers. If an attached session is dead,
+      // fallback to a managed default session instead of probing/attaching elsewhere.
     }
+  }
+
+  return await updateState(async (state) => {
     const ensuredDefault = await ensureDefaultManagedSession(state, opts.timeoutMs);
     state.activeSessionId = ensuredDefault.session.sessionId;
     return sessionReport(ensuredDefault.session, {
@@ -180,7 +235,21 @@ export async function sessionEnsure(opts: { timeoutMs: number }): Promise<Sessio
     });
   });
 }
-export async function sessionNew(opts: { timeoutMs: number; requestedSessionId?: string }): Promise<SessionReport> {
+export async function sessionNew(opts: {
+  timeoutMs: number;
+  requestedSessionId?: string;
+  policyInput?: string;
+  leaseTtlMs?: number;
+}): Promise<SessionReport> {
+  const policy = typeof opts.policyInput === "string" ? normalizeSessionPolicy(opts.policyInput) : null;
+  if (typeof opts.policyInput === "string" && policy === null) {
+    throw new CliError("E_QUERY_INVALID", "policy must be one of: ephemeral, persistent");
+  }
+  const leaseTtlMs = typeof opts.leaseTtlMs === "number" ? normalizeSessionLeaseTtlMs(opts.leaseTtlMs) : null;
+  if (typeof opts.leaseTtlMs === "number" && leaseTtlMs === null) {
+    throw new CliError("E_QUERY_INVALID", "lease-ttl-ms must be a positive integer within supported bounds");
+  }
+
   return await updateState(async (state) => {
     const sessionId = opts.requestedSessionId ? sanitizeSessionId(opts.requestedSessionId) : allocateSessionId(state, "s");
     assertSessionDoesNotExist(state, sessionId);
@@ -190,41 +259,75 @@ export async function sessionNew(opts: { timeoutMs: number; requestedSessionId?:
         sessionId,
         debugPort,
         userDataDir: defaultSessionUserDataDir(sessionId),
+        policy: policy ?? defaultSessionPolicyForKind("managed"),
         createdAt: nowIso(),
       },
       opts.timeoutMs,
     );
-    state.sessions[sessionId] = session;
+    state.sessions[sessionId] =
+      leaseTtlMs === null
+        ? session
+        : withSessionHeartbeat(
+            {
+              ...session,
+              leaseTtlMs,
+            },
+            session.lastSeenAt,
+          );
     state.activeSessionId = sessionId;
-    return sessionReport(session, {
+    return sessionReport(state.sessions[sessionId], {
       active: true,
       created: true,
       restarted: false,
     });
   });
 }
-export async function sessionAttach(opts: { requestedSessionId?: string; cdpOriginInput: string }): Promise<SessionReport> {
+export async function sessionAttach(opts: {
+  requestedSessionId?: string;
+  cdpOriginInput: string;
+  timeoutMs: number;
+  policyInput?: string;
+  leaseTtlMs?: number;
+}): Promise<SessionReport> {
+  const requestedSessionId = opts.requestedSessionId ? sanitizeSessionId(opts.requestedSessionId) : undefined;
+  const cdpOrigin = normalizeCdpOrigin(opts.cdpOriginInput);
+  const isAlive = await isCdpEndpointReachable(cdpOrigin, opts.timeoutMs);
+  if (!isAlive) {
+    throw new CliError("E_CDP_UNREACHABLE", `CDP endpoint is not reachable at ${cdpOrigin}`);
+  }
+  const policy = typeof opts.policyInput === "string" ? normalizeSessionPolicy(opts.policyInput) : null;
+  if (typeof opts.policyInput === "string" && policy === null) {
+    throw new CliError("E_QUERY_INVALID", "policy must be one of: ephemeral, persistent");
+  }
+  const leaseTtlMs = typeof opts.leaseTtlMs === "number" ? normalizeSessionLeaseTtlMs(opts.leaseTtlMs) : null;
+  if (typeof opts.leaseTtlMs === "number" && leaseTtlMs === null) {
+    throw new CliError("E_QUERY_INVALID", "lease-ttl-ms must be a positive integer within supported bounds");
+  }
+
   return await updateState(async (state) => {
-    const sessionId = opts.requestedSessionId ? sanitizeSessionId(opts.requestedSessionId) : allocateSessionId(state, "a");
+    const sessionId = requestedSessionId ?? allocateSessionId(state, "a");
     assertSessionDoesNotExist(state, sessionId);
-    const cdpOrigin = normalizeCdpOrigin(opts.cdpOriginInput);
-    const isAlive = await isCdpEndpointAlive(cdpOrigin, CDP_HEALTHCHECK_TIMEOUT_MS);
-    if (!isAlive) {
-      throw new CliError("E_CDP_UNREACHABLE", `CDP endpoint is not reachable at ${cdpOrigin}`);
-    }
+    const attachedAt = nowIso();
     const session: SessionState = {
       sessionId,
       kind: "attached",
+      policy: policy ?? defaultSessionPolicyForKind("attached"),
       cdpOrigin,
       debugPort: inferDebugPortFromCdpOrigin(cdpOrigin),
       userDataDir: null,
       browserPid: null,
-      createdAt: nowIso(),
-      lastSeenAt: nowIso(),
+      ownerId: null,
+      leaseExpiresAt: null,
+      leaseTtlMs,
+      managedUnreachableSince: null,
+      managedUnreachableCount: 0,
+      createdAt: attachedAt,
+      lastSeenAt: attachedAt,
     };
-    state.sessions[sessionId] = session;
+    const hydrated = withSessionHeartbeat(session, attachedAt);
+    state.sessions[sessionId] = hydrated;
     state.activeSessionId = sessionId;
-    return sessionReport(session, {
+    return sessionReport(hydrated, {
       active: true,
       created: true,
       restarted: false,
@@ -232,13 +335,19 @@ export async function sessionAttach(opts: { requestedSessionId?: string; cdpOrig
   });
 }
 export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: string }): Promise<SessionReport> {
+  const sessionId = sanitizeSessionId(opts.sessionIdInput);
+  const snapshot = readState();
+  const existing = snapshot.sessions[sessionId];
+  if (!existing) {
+    throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
+  }
+  const ensured = await ensureSessionReachable(existing, opts.timeoutMs);
+
   return await updateState(async (state) => {
-    const sessionId = sanitizeSessionId(opts.sessionIdInput);
-    const existing = state.sessions[sessionId];
-    if (!existing) {
+    const current = state.sessions[sessionId];
+    if (!current) {
       throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
     }
-    const ensured = await ensureSessionReachable(existing, opts.timeoutMs);
     state.sessions[sessionId] = ensured.session;
     state.activeSessionId = sessionId;
     return sessionReport(ensured.session, {
@@ -263,7 +372,91 @@ export function sessionList(): SessionListReport {
     sessions,
   };
 }
-export { targetFind } from "./target-find.js";
+
+export async function runPipeline(opts: {
+  planPath: string;
+  timeoutMs: number;
+  sessionId?: string;
+}): Promise<Record<string, unknown>> {
+  return await executePipelinePlan({
+    planPath: opts.planPath,
+    timeoutMs: opts.timeoutMs,
+    sessionId: opts.sessionId,
+    ops: {
+      open: async (input) =>
+        await openUrl({
+          inputUrl: input.url,
+          timeoutMs: input.timeoutMs,
+          sessionId: input.sessionId,
+          reuseUrl: input.reuseUrl,
+        }),
+      list: async (input) =>
+        (await targetList({
+          timeoutMs: input.timeoutMs,
+          sessionId: input.sessionId,
+          persistState: input.persistState,
+        })) as unknown as Record<string, unknown>,
+      snapshot: async (input) =>
+        (await targetSnapshot({
+          targetId: input.targetId,
+          timeoutMs: input.timeoutMs,
+          sessionId: input.sessionId,
+          selectorQuery: input.selectorQuery,
+          visibleOnly: input.visibleOnly,
+          persistState: input.persistState,
+        })) as unknown as Record<string, unknown>,
+      find: async (input) =>
+        (await targetFind({
+          targetId: input.targetId,
+          timeoutMs: input.timeoutMs,
+          sessionId: input.sessionId,
+          textQuery: input.textQuery,
+          selectorQuery: input.selectorQuery,
+          containsQuery: input.containsQuery,
+          visibleOnly: input.visibleOnly,
+          first: input.first,
+          limit: input.limit,
+          persistState: input.persistState,
+        })) as unknown as Record<string, unknown>,
+      click: async (input) =>
+        (await targetClick({
+          targetId: input.targetId,
+          timeoutMs: input.timeoutMs,
+          sessionId: input.sessionId,
+          textQuery: input.textQuery,
+          selectorQuery: input.selectorQuery,
+          containsQuery: input.containsQuery,
+          visibleOnly: input.visibleOnly,
+          waitForText: input.waitForText,
+          waitForSelector: input.waitForSelector,
+          waitNetworkIdle: input.waitNetworkIdle,
+          snapshot: input.snapshot,
+          persistState: input.persistState,
+        })) as unknown as Record<string, unknown>,
+      read: async (input) =>
+        (await targetRead({
+          targetId: input.targetId,
+          timeoutMs: input.timeoutMs,
+          sessionId: input.sessionId,
+          selectorQuery: input.selectorQuery,
+          visibleOnly: input.visibleOnly,
+          chunkSize: input.chunkSize,
+          chunkIndex: input.chunkIndex,
+          persistState: input.persistState,
+        })) as unknown as Record<string, unknown>,
+      wait: async (input) =>
+        (await targetWait({
+          targetId: input.targetId,
+          timeoutMs: input.timeoutMs,
+          sessionId: input.sessionId,
+          forText: input.forText,
+          forSelector: input.forSelector,
+          networkIdle: input.networkIdle,
+          persistState: input.persistState,
+        })) as unknown as Record<string, unknown>,
+    },
+  });
+}
 export {
   targetNetwork,
   targetNetworkArtifactList,
@@ -275,7 +468,6 @@ export {
   targetNetworkQuery,
   targetNetworkTail,
 } from "../features/network/usecases/index.js";
-export { targetRead } from "./target-read.js";
-export { targetWait } from "./target-wait.js";
-export { targetList, targetSnapshot } from "./targets.js";
-export { sessionPrune, stateReconcile, targetPrune } from "./state-maintenance.js";
+export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
+export { targetFind, targetRead, targetWait, targetClick, targetList, targetSnapshot };
+export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";

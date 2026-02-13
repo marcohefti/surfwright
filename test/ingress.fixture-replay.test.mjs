@@ -101,6 +101,42 @@ function assertTargetListFixture(fixture, filePath) {
   assert.ok(sameUrlCount >= 2, `${filePath}: expected duplicate targets for ${wantedUrl}`);
 }
 
+function assertSessionAttachFixture(fixture, filePath) {
+  const { observed, expect, command } = fixture;
+  assert.equal(command.id, "session.attach", `${filePath}: expected session.attach command`);
+  assert.equal(typeof command.input.cdpOrigin, "string", `${filePath}: command.input.cdpOrigin must be a string`);
+  assert.equal(typeof command.input.timeoutMs, "number", `${filePath}: command.input.timeoutMs must be a number`);
+
+  if (expect.ok === false) {
+    assert.equal(observed.ok, false, `${filePath}: observed.ok should be false`);
+    assert.equal(observed.code, expect.code, `${filePath}: observed.code mismatch`);
+    assert.equal(typeof observed.message, "string", `${filePath}: observed.message must be a string`);
+    return;
+  }
+
+  assert.equal(observed.ok, true, `${filePath}: observed.ok should be true`);
+  assert.equal(observed.kind, "attached", `${filePath}: kind should be attached`);
+  assert.equal(observed.active, true, `${filePath}: active should be true`);
+  assert.equal(observed.created, true, `${filePath}: created should be true`);
+  assert.equal(observed.restarted, false, `${filePath}: restarted should be false`);
+}
+
+function assertTargetClickFixture(fixture, filePath) {
+  const { observed, expect, command } = fixture;
+  assert.equal(command.id, "target.click", `${filePath}: expected target.click command`);
+  assert.equal(observed.ok, true, `${filePath}: observed.ok should be true`);
+  assert.equal(observed.mode, expect.mode, `${filePath}: mode mismatch`);
+  assert.equal(observed.query, expect.query, `${filePath}: query mismatch`);
+  assert.equal(typeof observed.actionId, "string", `${filePath}: actionId must be a string`);
+  assert.equal(typeof observed.clicked, "object", `${filePath}: clicked must be an object`);
+  assert.equal(typeof observed.clicked.text, "string", `${filePath}: clicked.text must be a string`);
+  assert.ok(observed.clicked.text.includes(expect.clickedTextContains), `${filePath}: clicked.text missing expected content`);
+  assert.equal(Object.prototype.hasOwnProperty.call(observed, "wait"), true, `${filePath}: wait key missing`);
+  assert.equal(Object.prototype.hasOwnProperty.call(observed, "snapshot"), true, `${filePath}: snapshot key missing`);
+  assert.equal(typeof observed.timingMs, "object", `${filePath}: timingMs must be an object`);
+  assert.equal(typeof observed.timingMs.total, "number", `${filePath}: timingMs.total must be a number`);
+}
+
 function assertFixtureCasesPresent(fixturesByCaseId) {
   const required = [
     "target-find-invalid-selector",
@@ -108,6 +144,8 @@ function assertFixtureCasesPresent(fixturesByCaseId) {
     "target-find-multi-match-truncated",
     "target-snapshot-truncation-flags",
     "target-list-duplicate-url-different-targets",
+    "session-attach-slow-healthcheck-timeout-window",
+    "target-click-basic-selector",
   ];
   for (const caseId of required) {
     assert.equal(fixturesByCaseId.has(caseId), true, `Missing required ingress fixture case: ${caseId}`);
@@ -136,6 +174,14 @@ test("ingress fixture replay cases are present and valid", () => {
     }
     if (fixture.command.id === "target.list") {
       assertTargetListFixture(fixture, filePath);
+      continue;
+    }
+    if (fixture.command.id === "session.attach") {
+      assertSessionAttachFixture(fixture, filePath);
+      continue;
+    }
+    if (fixture.command.id === "target.click") {
+      assertTargetClickFixture(fixture, filePath);
       continue;
     }
     assert.fail(`${filePath}: unsupported command id ${fixture.command.id}`);

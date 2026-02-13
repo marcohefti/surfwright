@@ -1,6 +1,10 @@
 export const DEFAULT_SESSION_ID = "s-default";
 export const DEFAULT_OPEN_TIMEOUT_MS = 20000;
 export const DEFAULT_SESSION_TIMEOUT_MS = 12000;
+export const DEFAULT_SESSION_LEASE_TTL_MS = 72 * 60 * 60 * 1000;
+export const MIN_SESSION_LEASE_TTL_MS = 60 * 1000;
+export const MAX_SESSION_LEASE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+export const DEFAULT_EPHEMERAL_SESSION_LEASE_TTL_MS = 4 * 60 * 60 * 1000;
 export const DEFAULT_TARGET_TIMEOUT_MS = 10000;
 export const DEFAULT_TARGET_FIND_LIMIT = 12;
 export const DEFAULT_TARGET_READ_CHUNK_SIZE = 1200;
@@ -9,7 +13,15 @@ export const DEFAULT_TARGET_NETWORK_MAX_REQUESTS = 120;
 export const DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS = 24;
 export const DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES = 120;
 export const DEFAULT_TARGET_NETWORK_MAX_RUNTIME_MS = 600000;
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
+
+export type ActionTimingMs = {
+  total: number;
+  resolveSession: number;
+  connectCdp: number;
+  action: number;
+  persistState: number;
+};
 
 export type DoctorReport = {
   ok: boolean;
@@ -25,6 +37,7 @@ export type DoctorReport = {
 };
 
 export type SessionKind = "managed" | "attached";
+export type SessionPolicy = "ephemeral" | "persistent";
 
 export type OpenReport = {
   ok: true;
@@ -34,6 +47,7 @@ export type OpenReport = {
   url: string;
   status: number | null;
   title: string;
+  timingMs: ActionTimingMs;
 };
 
 export type SessionReport = {
@@ -63,8 +77,11 @@ export type SessionPruneReport = {
   scanned: number;
   kept: number;
   removed: number;
+  removedByLeaseExpired: number;
   removedAttachedUnreachable: number;
   removedManagedUnreachable: number;
+  removedManagedByGrace: number;
+  removedManagedByFlag: number;
   repairedManagedPid: number;
 };
 
@@ -77,6 +94,7 @@ export type TargetListReport = {
     title: string;
     type: "page";
   }>;
+  timingMs: ActionTimingMs;
 };
 
 export type TargetSnapshotReport = {
@@ -103,6 +121,7 @@ export type TargetSnapshotReport = {
     buttons: boolean;
     links: boolean;
   };
+  timingMs: ActionTimingMs;
 };
 
 export type TargetPruneReport = {
@@ -137,6 +156,35 @@ export type TargetFindReport = {
     selectorHint: string | null;
   }>;
   truncated: boolean;
+  timingMs: ActionTimingMs;
+};
+
+export type TargetClickReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  actionId: string;
+  mode: "text" | "selector";
+  selector: string | null;
+  contains: string | null;
+  visibleOnly: boolean;
+  query: string;
+  clicked: {
+    index: number;
+    text: string;
+    visible: boolean;
+    selectorHint: string | null;
+  };
+  url: string;
+  title: string;
+  wait: {
+    mode: "text" | "selector" | "network-idle";
+    value: string | null;
+  } | null;
+  snapshot: {
+    textPreview: string;
+  } | null;
+  timingMs: ActionTimingMs;
 };
 
 export type TargetReadReport = {
@@ -156,6 +204,7 @@ export type TargetReadReport = {
   totalChars: number;
   text: string;
   truncated: boolean;
+  timingMs: ActionTimingMs;
 };
 
 export type TargetWaitReport = {
@@ -166,6 +215,7 @@ export type TargetWaitReport = {
   title: string;
   mode: "text" | "selector" | "network-idle";
   value: string | null;
+  timingMs: ActionTimingMs;
 };
 export type {
   TargetNetworkArtifactListReport,
@@ -193,8 +243,11 @@ export type StateReconcileReport = {
     scanned: number;
     kept: number;
     removed: number;
+    removedByLeaseExpired: number;
     removedAttachedUnreachable: number;
     removedManagedUnreachable: number;
+    removedManagedByGrace: number;
+    removedManagedByFlag: number;
     repairedManagedPid: number;
   };
   targets: {
@@ -218,10 +271,16 @@ export type CliFailure = {
 export type SessionState = {
   sessionId: string;
   kind: SessionKind;
+  policy: SessionPolicy;
   cdpOrigin: string;
   debugPort: number | null;
   userDataDir: string | null;
   browserPid: number | null;
+  ownerId: string | null;
+  leaseExpiresAt: string | null;
+  leaseTtlMs: number | null;
+  managedUnreachableSince: string | null;
+  managedUnreachableCount: number;
   createdAt: string;
   lastSeenAt: string;
 };

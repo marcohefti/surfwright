@@ -1,9 +1,9 @@
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
-import { sanitizeActionId } from "./action-id.js";
-import { readRecentTargetAction } from "./state-repos/target-repo.js";
-import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { sanitizeActionId } from "../../action-id.js";
+import { readRecentTargetAction } from "../../state-repos/target-repo.js";
+import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { parseNetworkInput, wsFramePreview } from "./target-network-utils.js";
-import type { TargetNetworkTailReport } from "./types.js";
+import type { TargetNetworkTailReport } from "../../types.js";
 
 function resolveTailActionId(opts: {
   actionId?: string;

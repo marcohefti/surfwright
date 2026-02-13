@@ -1,1 +1,1 @@
-export { writeHarFile } from "../../../core/target-network-har.js";
+export { writeHarFile } from "../../../core/target/network/index.js";

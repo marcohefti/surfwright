@@ -66,7 +66,7 @@ SurfWright goes the other way:
 SurfWright is a new agent-native browser harness:
 
 - a CLI (`surfwright`)
-- (soon) a local daemon for fast, stateful sessions
+- a local daemon path enabled by default for fast, stateful command loops
 - using Chrome/Chromium via CDP, with Playwright as the control engine
 
 ## Quick Start
@@ -90,17 +90,19 @@ pnpm skill:install
 surfwright doctor [--json] [--pretty]
 surfwright contract [--json] [--pretty]
 surfwright session ensure [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session new [--session-id <id>] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session attach --cdp <origin> [--session-id <id>] [--json] [--pretty]
+surfwright session new [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
+surfwright session attach --cdp <origin> [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session list [--json] [--pretty]
 surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target list [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright run --plan <path> [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--session <id>]
 surfwright target network-query [--capture-id <id> | --artifact-id <id>] [--preset <name>] [--limit <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--json] [--pretty]
@@ -113,6 +115,10 @@ surfwright target network-check [targetId] --budget <path> [--capture-id <id>] [
 surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]
 surfwright state reconcile [--timeout-ms <ms>] [--max-age-hours <h>] [--max-per-session <n>] [--drop-managed-unreachable] [--json] [--pretty]
 ```
+
+Default command execution uses a local daemon path for lower warm-start overhead.
+Set `SURFWRIGHT_DAEMON=off` to force direct per-invocation execution.
+Use `--agent-id <id>` (or `SURFWRIGHT_AGENT_ID`) to isolate state+daemon scope per agent.
 
 Machine-readable runtime contract:
 
@@ -128,6 +134,7 @@ surfwright --json open https://example.com --reuse-url
 surfwright --json target list
 surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "Checkout" --first --visible-only
+surfwright --json target click <targetId> --text "Blog" --visible-only
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --profile perf --view summary
@@ -157,25 +164,31 @@ surfwright --json state reconcile
 `open` intentionally returns a minimal success shape for agent loops:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","status":200,"title":"CamelPay — Cross-chain crypto checkout"}
+{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","status":200,"title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":231,"resolveSession":4,"connectCdp":33,"action":176,"persistState":18}}
 ```
 
 `target snapshot` returns bounded page-read primitives for deterministic agent parsing:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","textPreview":"CamelPay is in early access ...","headings":["Cross-chain crypto checkout, made simple"],"buttons":["Start Checkout"],"links":[{"text":"Read the docs","href":"http://localhost:3002/developers/quickstart"}],"truncated":{"text":false,"headings":false,"buttons":false,"links":false}}
+{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","textPreview":"CamelPay is in early access ...","headings":["Cross-chain crypto checkout, made simple"],"buttons":["Start Checkout"],"links":[{"text":"Read the docs","href":"http://localhost:3002/developers/quickstart"}],"truncated":{"text":false,"headings":false,"buttons":false,"links":false},"timingMs":{"total":147,"resolveSession":4,"connectCdp":26,"action":104,"persistState":13}}
 ```
 
 `target find` returns bounded match records for text/selector queries:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","mode":"text","query":"Checkout","count":9,"limit":5,"matches":[{"index":0,"text":"Cross-chain crypto checkout, made simple","visible":true,"selectorHint":"h1"}],"truncated":true}
+{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","mode":"text","query":"Checkout","count":9,"limit":5,"matches":[{"index":0,"text":"Cross-chain crypto checkout, made simple","visible":true,"selectorHint":"h1"}],"truncated":true,"timingMs":{"total":132,"resolveSession":3,"connectCdp":24,"action":92,"persistState":13}}
+```
+
+`target click` executes one click and returns action metadata:
+
+```json
+{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pc-9kd2rj","mode":"selector","selector":"#start-checkout","contains":null,"visibleOnly":true,"query":"#start-checkout","clicked":{"index":0,"text":"Start Checkout","visible":true,"selectorHint":"a#start-checkout.inline-flex.h-9"},"url":"http://camelpay.localhost/#checkout","title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":128,"resolveSession":4,"connectCdp":25,"action":84,"persistState":15}}
 ```
 
 `target read` returns deterministic text chunks for long pages:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","scope":{"selector":"main","matched":true,"visibleOnly":true},"chunkSize":1200,"chunkIndex":1,"totalChunks":2,"totalChars":2200,"text":"Cross-chain crypto checkout, made simple ...","truncated":true}
+{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","scope":{"selector":"main","matched":true,"visibleOnly":true},"chunkSize":1200,"chunkIndex":1,"totalChunks":2,"totalChars":2200,"text":"Cross-chain crypto checkout, made simple ...","truncated":true,"timingMs":{"total":139,"resolveSession":4,"connectCdp":27,"action":95,"persistState":13}}
 ```
 
 `target network` returns bounded request/websocket diagnostics plus performance summary, correlation ids, hints, and insights:
@@ -222,9 +235,21 @@ Errors are typed and short:
 
 `--json` is compact by default (one line for easy piping). Add `--pretty` only when a human needs multiline output.
 
-Sessions are tracked in `~/.surfwright/state.json` (or `SURFWRIGHT_STATE_DIR`) with an explicit active pointer.
+Sessions are tracked in state with an explicit active pointer:
+
+- default: `~/.surfwright/state.json`
+- agent-scoped: set `SURFWRIGHT_AGENT_ID=<agentId>` to use `~/.surfwright/agents/<agentId>/state.json`
+- explicit override: `SURFWRIGHT_STATE_DIR=<path>`
+
+`session ensure` now runs a built-in session hygiene pass (drops unreachable attached sessions, drops unreachable managed sessions, and clears expired leases) before selecting/creating the active session.
+Set `SURFWRIGHT_SESSION_LEASE_TTL_MS=<ms>` to tune session lease retention (default 72h).
+Use `session new --policy persistent` for long-lived sessions and `--policy ephemeral` for disposable runs.
 
 Guardrail: SurfWright never auto-attaches to arbitrary running browsers. Attaching to an existing browser only happens via explicit `session attach --cdp ...`.
+
+If the endpoint is slow to answer `/json/version`, increase attach reachability window with `--timeout-ms <ms>`.
+
+Contract ids are executable aliases. Example: `surfwright --json target.find <targetId> --text Checkout`.
 
 ## Agent Guidance In Repo
 

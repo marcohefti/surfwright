@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "cases": {
+    "target-click-basic-selector": {
+      "maxTotalMs": 500,
+      "maxActionMs": 400
+    }
+  }
+}

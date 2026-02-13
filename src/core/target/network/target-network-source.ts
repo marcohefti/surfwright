@@ -1,8 +1,8 @@
 import fs from "node:fs";
-import { CliError } from "./errors.js";
-import { readState } from "./state.js";
+import { CliError } from "../../errors.js";
+import { readState } from "../../state.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints } from "./target-network-analysis.js";
-import type { TargetNetworkReport, TargetNetworkRequestReport } from "./types.js";
+import type { TargetNetworkReport, TargetNetworkRequestReport } from "../../types.js";
 
 const CAPTURE_ID_PATTERN = /^c-[0-9]+$/;
 const ARTIFACT_ID_PATTERN = /^na-[0-9]+$/;

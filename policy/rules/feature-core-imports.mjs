@@ -6,7 +6,7 @@ const DEFAULT_OPTIONS = {
   allowCoreImports: [
     "src/core/cli-contract",
     "src/core/network-types",
-    "src/core/target-network*",
+    "src/core/target/network/index",
     "src/core/types",
     "src/core/usecases",
   ],

@@ -93,6 +93,8 @@ pnpm validate
 - `target.find` multi-match with `truncated=true`
 - `target.snapshot` truncation flag behavior
 - `target.list` duplicate URL with distinct `targetId` handles
+- `session.attach` slow `/json/version` healthcheck succeeds with explicit timeout window
+- `target.click` selector action shape + timing envelope
 
 ## Review Gate for Fixture PRs
 

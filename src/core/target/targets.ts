@@ -1,9 +1,9 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
-import { ensureDefaultManagedSession, ensureSessionReachable } from "./browser.js";
-import { CliError } from "./errors.js";
-import { nowIso, sanitizeSessionId, updateState } from "./state.js";
-import { saveTargetSnapshot } from "./state-repos/target-repo.js";
-import type { SessionState, TargetListReport, TargetSnapshotReport } from "./types.js";
+import { ensureDefaultManagedSession, ensureSessionReachable } from "../browser.js";
+import { CliError } from "../errors.js";
+import { nowIso, readState, sanitizeSessionId, updateState } from "../state.js";
+import { saveTargetSnapshot } from "../state-repos/target-repo.js";
+import type { SessionState, TargetListReport, TargetSnapshotReport } from "../types.js";
 
 const TARGET_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
 const SNAPSHOT_TEXT_MAX_CHARS = 1200;
@@ -76,6 +76,34 @@ export async function resolveSessionForAction(
 ): Promise<{
   session: SessionState;
 }> {
+  const snapshot = readState();
+  if (typeof sessionHint === "string" && sessionHint.length > 0) {
+    const sessionId = sanitizeSessionId(sessionHint);
+    const existing = snapshot.sessions[sessionId];
+    if (existing) {
+      const ensured = await ensureSessionReachable(existing, timeoutMs);
+      await updateState(async (state) => {
+        if (!state.sessions[sessionId]) {
+          throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
+        }
+        state.sessions[sessionId] = ensured.session;
+      });
+      return { session: ensured.session };
+    }
+  } else if (snapshot.activeSessionId && snapshot.sessions[snapshot.activeSessionId]) {
+    const activeId = snapshot.activeSessionId;
+    const active = snapshot.sessions[activeId];
+    const ensured = await ensureSessionReachable(active, timeoutMs);
+    await updateState(async (state) => {
+      if (!state.sessions[activeId]) {
+        throw new CliError("E_SESSION_NOT_FOUND", `Session ${activeId} not found`);
+      }
+      state.sessions[activeId] = ensured.session;
+      state.activeSessionId = activeId;
+    });
+    return { session: ensured.session };
+  }
+
   return await updateState(async (state) => {
     if (typeof sessionHint === "string" && sessionHint.length > 0) {
       const sessionId = sanitizeSessionId(sessionHint);
@@ -278,11 +306,14 @@ async function extractScopedSnapshotSample(opts: {
   };
 }
 
-export async function targetList(opts: { timeoutMs: number; sessionId?: string }): Promise<TargetListReport> {
+export async function targetList(opts: { timeoutMs: number; sessionId?: string; persistState?: boolean }): Promise<TargetListReport> {
+  const startedAt = Date.now();
   const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
+  const connectedAt = Date.now();
 
   try {
     const handles = await listPageTargetHandles(browser);
@@ -295,23 +326,35 @@ export async function targetList(opts: { timeoutMs: number; sessionId?: string }
         type: "page",
       });
     }
+    const actionCompletedAt = Date.now();
     targets.sort((a, b) => a.targetId.localeCompare(b.targetId));
 
-    for (const target of targets) {
-      await saveTargetSnapshot({
-        targetId: target.targetId,
-        sessionId: session.sessionId,
-        url: target.url,
-        title: target.title,
-        status: null,
-        updatedAt: nowIso(),
-      });
+    const persistStartedAt = Date.now();
+    if (opts.persistState !== false) {
+      for (const target of targets) {
+        await saveTargetSnapshot({
+          targetId: target.targetId,
+          sessionId: session.sessionId,
+          url: target.url,
+          title: target.title,
+          status: null,
+          updatedAt: nowIso(),
+        });
+      }
     }
+    const persistedAt = Date.now();
 
     return {
       ok: true,
       sessionId: session.sessionId,
       targets,
+      timingMs: {
+        total: persistedAt - startedAt,
+        resolveSession: resolvedSessionAt - startedAt,
+        connectCdp: connectedAt - resolvedSessionAt,
+        action: actionCompletedAt - connectedAt,
+        persistState: persistedAt - persistStartedAt,
+      },
     };
   } finally {
     await browser.close();
@@ -322,6 +365,7 @@ export async function targetSnapshot(opts: {
   targetId: string;
   timeoutMs: number;
   sessionId?: string;
+  persistState?: boolean;
   selectorQuery?: string;
   visibleOnly?: boolean;
   maxChars?: number;
@@ -329,6 +373,7 @@ export async function targetSnapshot(opts: {
   maxButtons?: number;
   maxLinks?: number;
 }): Promise<TargetSnapshotReport> {
+  const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const selectorQuery = normalizeSelectorQuery(opts.selectorQuery);
   const visibleOnly = Boolean(opts.visibleOnly);
@@ -362,9 +407,11 @@ export async function targetSnapshot(opts: {
   });
 
   const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
+  const connectedAt = Date.now();
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
@@ -381,6 +428,7 @@ export async function targetSnapshot(opts: {
       maxButtons,
       maxLinks,
     });
+    const actionCompletedAt = Date.now();
 
     const report: TargetSnapshotReport = {
       ok: true,
@@ -403,16 +451,29 @@ export async function targetSnapshot(opts: {
         buttons: sample.counts.buttons > maxButtons,
         links: sample.counts.links > maxLinks,
       },
+      timingMs: {
+        total: 0,
+        resolveSession: resolvedSessionAt - startedAt,
+        connectCdp: connectedAt - resolvedSessionAt,
+        action: actionCompletedAt - connectedAt,
+        persistState: 0,
+      },
     };
 
-    await saveTargetSnapshot({
-      targetId: report.targetId,
-      sessionId: report.sessionId,
-      url: report.url,
-      title: report.title,
-      status: null,
-      updatedAt: nowIso(),
-    });
+    const persistStartedAt = Date.now();
+    if (opts.persistState !== false) {
+      await saveTargetSnapshot({
+        targetId: report.targetId,
+        sessionId: report.sessionId,
+        url: report.url,
+        title: report.title,
+        status: null,
+        updatedAt: nowIso(),
+      });
+    }
+    const persistedAt = Date.now();
+    report.timingMs.persistState = persistedAt - persistStartedAt;
+    report.timingMs.total = persistedAt - startedAt;
 
     return report;
   } finally {

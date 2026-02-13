@@ -13,9 +13,9 @@ const DEFAULT_OPTIONS = {
   ],
   allowMutationImportFromState: [
     "src/core/state-repos/**/*.ts",
+    "src/core/state/**/*.ts",
     "src/core/state.ts",
-    "src/core/state-maintenance.ts",
-    "src/core/targets.ts",
+    "src/core/target/targets.ts",
     "src/core/usecases.ts",
   ],
 };

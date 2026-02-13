@@ -1,7 +1,7 @@
-import { CliError } from "./errors.js";
+import { CliError } from "../../errors.js";
 import { resolveNetworkReportSource } from "./target-network-source.js";
 import { matchesRequestFilters, parseNetworkInput } from "./target-network-utils.js";
-import type { TargetNetworkQueryPreset, TargetNetworkQueryReport } from "./types.js";
+import type { TargetNetworkQueryPreset, TargetNetworkQueryReport } from "../../types.js";
 
 const QUERY_ROW_CAP = 500;
 

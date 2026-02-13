@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "caseId": "target-click-basic-selector",
+  "source": {
+    "capturedAt": "2026-02-13T16:40:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "Selector click returns deterministic action metadata and timing envelope"
+  },
+  "command": {
+    "id": "target.click",
+    "input": {
+      "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+      "mode": "selector",
+      "query": "#start-checkout",
+      "visibleOnly": true
+    }
+  },
+  "observed": {
+    "ok": true,
+    "sessionId": "s-default",
+    "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+    "actionId": "a-mlkmix1x-b05e8h",
+    "mode": "selector",
+    "selector": "#start-checkout",
+    "contains": null,
+    "visibleOnly": true,
+    "query": "#start-checkout",
+    "clicked": {
+      "index": 0,
+      "text": "Start Checkout",
+      "visible": true,
+      "selectorHint": "a#start-checkout.inline-flex.h-9"
+    },
+    "url": "http://camelpay.localhost/#checkout",
+    "title": "CamelPay — Cross-chain crypto checkout",
+    "wait": null,
+    "snapshot": null,
+    "timingMs": {
+      "total": 128,
+      "resolveSession": 5,
+      "connectCdp": 23,
+      "action": 82,
+      "persistState": 18
+    }
+  },
+  "expect": {
+    "ok": true,
+    "mode": "selector",
+    "query": "#start-checkout",
+    "clickedTextContains": "Checkout"
+  }
+}

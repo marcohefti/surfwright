@@ -3,8 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { CliError } from "./errors.js";
-import { migrateStatePayload } from "./state-migrations.js";
-import { STATE_VERSION, type SessionKind, type SessionState, type SurfwrightState, type TargetState } from "./types.js";
+import { asPositiveInteger } from "./shared/numeric.js";
+import { currentAgentId, withSessionHeartbeat } from "./session/hygiene.js";
+import { normalizeSessionState } from "./session/state-normalizer.js";
+import { migrateStatePayload } from "./state/migrations.js";
+import { STATE_VERSION, type SessionState, type SurfwrightState, type TargetState } from "./types.js";
 const SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 const STATE_LOCK_FILENAME = "state.lock";
 const STATE_LOCK_RETRY_MS = 40;
@@ -14,6 +17,10 @@ export function stateRootDir(): string {
   const fromEnv = process.env.SURFWRIGHT_STATE_DIR;
   if (typeof fromEnv === "string" && fromEnv.trim().length > 0) {
     return path.resolve(fromEnv.trim());
+  }
+  const agentId = currentAgentId();
+  if (agentId) {
+    return path.join(os.homedir(), ".surfwright", "agents", agentId);
   }
   return path.join(os.homedir(), ".surfwright");
 }
@@ -42,16 +49,8 @@ function emptyState(): SurfwrightState {
 export function nowIso(): string {
   return new Date().toISOString();
 }
-export function asPositiveInteger(value: unknown): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return null;
-  }
-  const n = Math.floor(value);
-  if (n <= 0) {
-    return null;
-  }
-  return n;
-}
+export { asPositiveInteger } from "./shared/numeric.js";
+
 export function inferDebugPortFromCdpOrigin(cdpOrigin: string): number | null {
   try {
     const parsed = new URL(cdpOrigin);
@@ -63,42 +62,6 @@ export function inferDebugPortFromCdpOrigin(cdpOrigin: string): number | null {
   } catch {
     return null;
   }
-}
-function normalizeSession(sessionId: string, raw: unknown): SessionState | null {
-  if (typeof raw !== "object" || raw === null) {
-    return null;
-  }
-  const value = raw as {
-    kind?: unknown;
-    cdpOrigin?: unknown;
-    debugPort?: unknown;
-    userDataDir?: unknown;
-    browserPid?: unknown;
-    createdAt?: unknown;
-    lastSeenAt?: unknown;
-  };
-  if (typeof value.cdpOrigin !== "string" || value.cdpOrigin.length === 0) {
-    return null;
-  }
-  const kind: SessionKind = value.kind === "attached" ? "attached" : "managed";
-  const debugPort = asPositiveInteger(value.debugPort) ?? inferDebugPortFromCdpOrigin(value.cdpOrigin);
-  const userDataDir =
-    kind === "managed"
-      ? typeof value.userDataDir === "string" && value.userDataDir.length > 0
-        ? value.userDataDir
-        : defaultSessionUserDataDir(sessionId)
-      : null;
-  const browserPid = asPositiveInteger(value.browserPid);
-  return {
-    sessionId,
-    kind,
-    cdpOrigin: value.cdpOrigin,
-    debugPort,
-    userDataDir,
-    browserPid,
-    createdAt: typeof value.createdAt === "string" && value.createdAt.length > 0 ? value.createdAt : nowIso(),
-    lastSeenAt: typeof value.lastSeenAt === "string" && value.lastSeenAt.length > 0 ? value.lastSeenAt : nowIso(),
-  };
 }
 function normalizeTarget(raw: unknown): TargetState | null {
   if (typeof raw !== "object" || raw === null) {
@@ -237,7 +200,13 @@ function readStateFromPath(statePath: string): SurfwrightState {
     const sessions: Record<string, SessionState> = {};
     if (typeof parsed.sessions === "object" && parsed.sessions !== null) {
       for (const [sessionId, rawSession] of Object.entries(parsed.sessions)) {
-        const normalized = normalizeSession(sessionId, rawSession);
+        const normalized = normalizeSessionState({
+          sessionId,
+          raw: rawSession,
+          defaultUserDataDir: defaultSessionUserDataDir,
+          inferDebugPortFromCdpOrigin,
+          nowIso,
+        });
         if (normalized) {
           sessions[sessionId] = normalized;
         }
@@ -468,10 +437,7 @@ export async function upsertTargetState(target: TargetState) {
     };
     const session = state.sessions[target.sessionId];
     if (session) {
-      state.sessions[target.sessionId] = {
-        ...session,
-        lastSeenAt: nowIso(),
-      };
+      state.sessions[target.sessionId] = withSessionHeartbeat(session);
     }
   });
 }

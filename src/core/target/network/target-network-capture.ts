@@ -3,28 +3,28 @@ import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright-core";
-import { newActionId, sanitizeActionId } from "./action-id.js";
-import { CliError } from "./errors.js";
-import { nowIso, stateRootDir } from "./state.js";
+import { newActionId, sanitizeActionId } from "../../action-id.js";
+import { CliError } from "../../errors.js";
+import { nowIso, stateRootDir } from "../../state.js";
 import {
   createNetworkCapture,
   deleteNetworkCapture,
   finalizeNetworkCapture,
   readNetworkCapture,
   setNetworkCaptureWorkerPid,
-} from "./state-repos/network-capture-repo.js";
+} from "../../state-repos/network-capture-repo.js";
 import { targetNetwork } from "./target-network.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {
   matchesRequestFilters,
   parseNetworkInput,
 } from "./target-network-utils.js";
-import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import type {
   TargetNetworkCaptureBeginReport,
   TargetNetworkCaptureEndReport,
   TargetNetworkReport,
-} from "./types.js";
+} from "../../types.js";
 
 const CAPTURE_DONE_TIMEOUT_MS = 20000;
 const CAPTURE_MAX_RUNTIME_MIN_MS = 1000;

@@ -141,7 +141,7 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(openResult.status, 0);
   assert.ok(openResult.stdout.trim().startsWith('{"ok":true,'));
   const openPayload = parseJson(openResult.stdout);
-  assert.deepEqual(Object.keys(openPayload), ["ok", "sessionId", "targetId", "actionId", "url", "status", "title"]);
+  assert.deepEqual(Object.keys(openPayload), ["ok", "sessionId", "targetId", "actionId", "url", "status", "title", "timingMs"]);
   assert.equal(openPayload.ok, true);
   assert.equal(openPayload.sessionId, ensurePayload.sessionId);
   assert.equal(typeof openPayload.targetId, "string");
@@ -151,6 +151,23 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(openPayload.url, dataUrl);
   assert.equal(openPayload.status, null);
   assert.equal(openPayload.title, "Contract Test Page");
+  assert.equal(typeof openPayload.timingMs, "object");
+  assert.equal(typeof openPayload.timingMs.total, "number");
+  const openProjectedResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "open",
+    dataUrl,
+    "--reuse-url",
+    "--fields",
+    "sessionId,targetId,url",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(openProjectedResult.status, 0);
+  const openProjectedPayload = parseJson(openProjectedResult.stdout);
+  assert.deepEqual(Object.keys(openProjectedPayload), ["ok", "sessionId", "targetId", "url"]);
   const reopenReuseResult = runCli([
     "--json",
     "--session",
@@ -177,11 +194,13 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   ]);
   assert.equal(listResult.status, 0);
   const listPayload = parseJson(listResult.stdout);
-  assert.deepEqual(Object.keys(listPayload), ["ok", "sessionId", "targets"]);
+  assert.deepEqual(Object.keys(listPayload), ["ok", "sessionId", "targets", "timingMs"]);
   assert.equal(listPayload.ok, true);
   assert.equal(listPayload.sessionId, ensurePayload.sessionId);
   assert.equal(Array.isArray(listPayload.targets), true);
   assert.equal(listPayload.targets.some((entry) => entry.targetId === openPayload.targetId), true);
+  assert.equal(typeof listPayload.timingMs, "object");
+  assert.equal(typeof listPayload.timingMs.total, "number");
   const snapshotResult = runCli([
     "--json",
     "--session",
@@ -206,6 +225,7 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "buttons",
     "links",
     "truncated",
+    "timingMs",
   ]);
   assert.equal(snapshotPayload.ok, true);
   assert.equal(snapshotPayload.sessionId, ensurePayload.sessionId);
@@ -219,6 +239,24 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(Array.isArray(snapshotPayload.buttons), true);
   assert.equal(Array.isArray(snapshotPayload.links), true);
   assert.equal(typeof snapshotPayload.truncated, "object");
+  assert.equal(typeof snapshotPayload.timingMs, "object");
+  assert.equal(typeof snapshotPayload.timingMs.total, "number");
+  const snapshotProjectedResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "snapshot",
+    openPayload.targetId,
+    "--no-persist",
+    "--fields",
+    "targetId,url,title",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(snapshotProjectedResult.status, 0);
+  const snapshotProjectedPayload = parseJson(snapshotProjectedResult.stdout);
+  assert.deepEqual(Object.keys(snapshotProjectedPayload), ["ok", "targetId", "url", "title"]);
   const findByTextResult = runCli([
     "--json",
     "--session",
@@ -249,6 +287,7 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "limit",
     "matches",
     "truncated",
+    "timingMs",
   ]);
   assert.equal(findByTextPayload.ok, true);
   assert.equal(findByTextPayload.sessionId, ensurePayload.sessionId);
@@ -263,6 +302,8 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(findByTextPayload.limit, 5);
   assert.equal(Array.isArray(findByTextPayload.matches), true);
   assert.equal(typeof findByTextPayload.truncated, "boolean");
+  assert.equal(typeof findByTextPayload.timingMs, "object");
+  assert.equal(typeof findByTextPayload.timingMs.total, "number");
   const findBySelectorResult = runCli([
     "--json",
     "--session",
@@ -353,6 +394,7 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "totalChars",
     "text",
     "truncated",
+    "timingMs",
   ]);
   assert.equal(readPayload.ok, true);
   assert.equal(readPayload.scope.selector, "main");
@@ -361,6 +403,8 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(readPayload.chunkIndex, 1);
   assert.equal(typeof readPayload.totalChars, "number");
   assert.equal(typeof readPayload.text, "string");
+  assert.equal(typeof readPayload.timingMs, "object");
+  assert.equal(typeof readPayload.timingMs.total, "number");
   const waitSelectorResult = runCli([
     "--json",
     "--session",
@@ -375,10 +419,12 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   ]);
   assert.equal(waitSelectorResult.status, 0);
   const waitSelectorPayload = parseJson(waitSelectorResult.stdout);
-  assert.deepEqual(Object.keys(waitSelectorPayload), ["ok", "sessionId", "targetId", "url", "title", "mode", "value"]);
+  assert.deepEqual(Object.keys(waitSelectorPayload), ["ok", "sessionId", "targetId", "url", "title", "mode", "value", "timingMs"]);
   assert.equal(waitSelectorPayload.ok, true);
   assert.equal(waitSelectorPayload.mode, "selector");
   assert.equal(waitSelectorPayload.value, "h1");
+  assert.equal(typeof waitSelectorPayload.timingMs, "object");
+  assert.equal(typeof waitSelectorPayload.timingMs.total, "number");
   const waitNetworkIdleResult = runCli([
     "--json",
     "--session",
@@ -428,6 +474,7 @@ test("session new and session use switch active pointer", { skip: !hasBrowser() 
   assert.equal(Array.isArray(listPayload.sessions), true);
   assert.equal(listPayload.sessions.some((entry) => entry.sessionId === sessionId), true);
 });
+
 test("concurrent session new with same id returns one typed conflict", { skip: !hasBrowser() }, async () => {
   const sessionId = `s-concurrent-${Date.now()}`;
   const args = ["--json", "session", "new", "--session-id", sessionId, "--timeout-ms", "6000"];

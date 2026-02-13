@@ -1,9 +1,9 @@
 import { chromium } from "playwright-core";
-import { CliError } from "./errors.js";
-import { nowIso } from "./state.js";
-import { saveTargetSnapshot } from "./state-repos/target-repo.js";
+import { CliError } from "../errors.js";
+import { nowIso } from "../state.js";
+import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
-import type { TargetWaitReport } from "./types.js";
+import type { TargetWaitReport } from "../types.js";
 
 function parseWaitInput(opts: {
   forText?: string;
@@ -51,10 +51,12 @@ export async function targetWait(opts: {
   targetId: string;
   timeoutMs: number;
   sessionId?: string;
+  persistState?: boolean;
   forText?: string;
   forSelector?: string;
   networkIdle?: boolean;
 }): Promise<TargetWaitReport> {
+  const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const parsed = parseWaitInput({
     forText: opts.forText,
@@ -63,9 +65,11 @@ export async function targetWait(opts: {
   });
 
   const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
+  const connectedAt = Date.now();
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
@@ -87,6 +91,7 @@ export async function targetWait(opts: {
         timeout: opts.timeoutMs,
       });
     }
+    const actionCompletedAt = Date.now();
 
     const report: TargetWaitReport = {
       ok: true,
@@ -96,16 +101,29 @@ export async function targetWait(opts: {
       title: await target.page.title(),
       mode: parsed.mode,
       value: parsed.value,
+      timingMs: {
+        total: 0,
+        resolveSession: resolvedSessionAt - startedAt,
+        connectCdp: connectedAt - resolvedSessionAt,
+        action: actionCompletedAt - connectedAt,
+        persistState: 0,
+      },
     };
 
-    await saveTargetSnapshot({
-      targetId: report.targetId,
-      sessionId: report.sessionId,
-      url: report.url,
-      title: report.title,
-      status: null,
-      updatedAt: nowIso(),
-    });
+    const persistStartedAt = Date.now();
+    if (opts.persistState !== false) {
+      await saveTargetSnapshot({
+        targetId: report.targetId,
+        sessionId: report.sessionId,
+        url: report.url,
+        title: report.title,
+        status: null,
+        updatedAt: nowIso(),
+      });
+    }
+    const persistedAt = Date.now();
+    report.timingMs.persistState = persistedAt - persistStartedAt;
+    report.timingMs.total = persistedAt - startedAt;
 
     return report;
   } finally {

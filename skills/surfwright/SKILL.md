@@ -31,6 +31,7 @@ surfwright --json session ensure
 surfwright --json open https://example.com --reuse-url
 surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
+surfwright --json target click <targetId> --text "query" --visible-only
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --profile perf --view summary
@@ -44,7 +45,7 @@ surfwright --json target network-export-prune --max-age-hours 72 --max-count 100
 surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
 ```
 
-`open` returns `sessionId` and `targetId`; persist these handles in your run state and use `target snapshot` / `target find` / `target read` / `target wait` / `target network` for bounded page reads, deterministic readiness checks, and compact network diagnostics.
+`open` returns `sessionId` and `targetId`; persist these handles in your run state and use `target snapshot` / `target find` / `target click` / `target read` / `target wait` / `target network` for bounded page reads, deterministic readiness checks, and compact network diagnostics.
 
 If local state may be stale (machine restart, browser crash), run:
 

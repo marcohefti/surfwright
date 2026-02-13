@@ -46,6 +46,25 @@ export function printTargetCoreSuccess(report: unknown): boolean {
     return true;
   }
 
+  if ("clicked" in report && isRecord(report.clicked) && "actionId" in report) {
+    const sessionId = typeof report.sessionId === "string" ? report.sessionId : "unknown";
+    const targetId = typeof report.targetId === "string" ? report.targetId : "unknown";
+    const actionId = typeof report.actionId === "string" ? report.actionId : "unknown";
+    const mode = typeof report.mode === "string" ? report.mode : "unknown";
+    const clickedText = typeof report.clicked.text === "string" ? report.clicked.text : "";
+    process.stdout.write(
+      [
+        "ok",
+        `sessionId=${sessionId}`,
+        `targetId=${targetId}`,
+        `actionId=${actionId}`,
+        `mode=${mode}`,
+        `clicked=${clickedText.length > 0 ? clickedText : "(empty)"}`,
+      ].join(" ") + "\n",
+    );
+    return true;
+  }
+
   if ("url" in report && typeof report.url === "string") {
     const sessionId = typeof report.sessionId === "string" ? report.sessionId : "unknown";
     const targetId = typeof report.targetId === "string" ? report.targetId : "unknown";

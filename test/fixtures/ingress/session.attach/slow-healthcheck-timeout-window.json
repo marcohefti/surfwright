@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "caseId": "session-attach-slow-healthcheck-timeout-window",
+  "source": {
+    "capturedAt": "2026-02-13T15:10:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "Explicit timeout should allow attaching when CDP /json/version responds slower than fast healthcheck window"
+  },
+  "command": {
+    "id": "session.attach",
+    "input": {
+      "cdpOrigin": "http://127.0.0.1:49221",
+      "timeoutMs": 1500,
+      "sessionId": "a-slow-healthcheck"
+    }
+  },
+  "observed": {
+    "ok": true,
+    "sessionId": "a-slow-healthcheck",
+    "kind": "attached",
+    "cdpOrigin": "http://127.0.0.1:49221",
+    "active": true,
+    "created": true,
+    "restarted": false
+  },
+  "expect": {
+    "ok": true
+  }
+}

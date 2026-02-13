@@ -1,4 +1,4 @@
-import { targetList } from "../../../core/usecases.js";
+import { parseFieldsCsv, projectReportFields, targetList } from "../../../core/usecases.js";
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";
@@ -14,15 +14,19 @@ export const targetListCommandSpec: TargetCommandSpec = {
       .command("list")
       .description(meta.summary)
       .option("--timeout-ms <ms>", "Target listing timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .action(async (options: { timeoutMs: number }) => {
+      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--fields <csv>", "Return only selected top-level fields")
+      .action(async (options: { timeoutMs: number; noPersist?: boolean; fields?: string }) => {
         const output = ctx.globalOutputOpts();
         const globalOpts = ctx.program.opts<{ session?: string }>();
         try {
+          const fields = parseFieldsCsv(options.fields);
           const report = await targetList({
             timeoutMs: options.timeoutMs,
             sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+            persistState: !Boolean(options.noPersist),
           });
-          ctx.printTargetSuccess(report, output);
+          ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
         } catch (error) {
           ctx.handleFailure(error, output);
         }

@@ -18,12 +18,14 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   },
   {
     id: "session.new",
-    usage: "surfwright session new [--session-id <id>] [--timeout-ms <ms>] [--json] [--pretty]",
+    usage:
+      "surfwright session new [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
     summary: "create a managed browser session and mark it active",
   },
   {
     id: "session.attach",
-    usage: "surfwright session attach --cdp <origin> [--session-id <id>] [--json] [--pretty]",
+    usage:
+      "surfwright session attach --cdp <origin> [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
     summary: "explicitly attach to an already running CDP endpoint",
   },
   {
@@ -43,7 +45,8 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   },
   {
     id: "open",
-    usage: "surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+    usage:
+      "surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "open URL and return minimal page report with target handle",
   },
   {
@@ -51,6 +54,11 @@ export const runtimeCommandManifest: CliCommandContract[] = [
     usage:
       "surfwright state reconcile [--timeout-ms <ms>] [--max-age-hours <h>] [--max-per-session <n>] [--drop-managed-unreachable] [--json] [--pretty]",
     summary: "repair and prune state for resilient post-restart recovery",
+  },
+  {
+    id: "run",
+    usage: "surfwright run --plan <path> [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+    summary: "execute a deterministic multi-step browser plan in one command",
   },
 ];
 

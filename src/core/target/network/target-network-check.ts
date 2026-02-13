@@ -1,8 +1,8 @@
 import fs from "node:fs";
-import { CliError } from "./errors.js";
+import { CliError } from "../../errors.js";
 import { resolveNetworkReportSource } from "./target-network-source.js";
 import { targetNetwork } from "./target-network.js";
-import type { TargetNetworkCheckBudget, TargetNetworkCheckReport } from "./types.js";
+import type { TargetNetworkCheckBudget, TargetNetworkCheckReport } from "../../types.js";
 
 function parseBudget(path: string): TargetNetworkCheckBudget {
   const value = path.trim();

@@ -10,7 +10,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.snapshot",
     usage:
-      "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "read bounded text and UI primitives for a target",
   },
   {
@@ -28,8 +28,14 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.read",
     usage:
-      "surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "read target text in deterministic chunks",
+  },
+  {
+    id: "target.extract",
+    usage:
+      "surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "extract structured content records (blog/news/docs/generic) from a target",
   },
   {
     id: "target.eval",
@@ -47,6 +53,22 @@ export const targetCommandManifest: CliCommandContract[] = [
     id: "target.prune",
     usage: "surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]",
     summary: "prune stale/orphan target metadata with age and size caps",
+  },
+  {
+    id: "target.console-tail",
+    usage:
+      "surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--session <id>]",
+    summary: "stream live console/pageerror/requestfailed events as NDJSON",
+  },
+  {
+    id: "target.health",
+    usage: "surfwright target health <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "return target diagnostics with readiness checks and hints",
+  },
+  {
+    id: "target.hud",
+    usage: "surfwright target hud <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "return compact operator HUD payload for fast triage",
   },
 ];
 

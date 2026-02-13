@@ -5,6 +5,7 @@ import { withSessionHeartbeat } from "../session/index.js";
 import { allocateSessionId, defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId, updateState } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { extractScopedSnapshotSample } from "./snapshot-sample.js";
+import { framesForScope, parseFrameScope } from "./target-frame.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
   type SessionSource,
@@ -298,6 +299,7 @@ export async function targetSnapshot(opts: {
   persistState?: boolean;
   selectorQuery?: string;
   visibleOnly?: boolean;
+  frameScope?: string;
   maxChars?: number;
   maxHeadings?: number;
   maxButtons?: number;
@@ -307,6 +309,7 @@ export async function targetSnapshot(opts: {
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const selectorQuery = normalizeSelectorQuery(opts.selectorQuery);
   const visibleOnly = Boolean(opts.visibleOnly);
+  const frameScope = parseFrameScope(opts.frameScope);
   const textMaxChars = parsePositiveIntInRange({
     value: opts.maxChars,
     defaultValue: SNAPSHOT_TEXT_MAX_CHARS,
@@ -349,19 +352,58 @@ export async function targetSnapshot(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    const frames = framesForScope(target.page, frameScope);
     if (selectorQuery) {
-      await ensureValidSelector(target.page, selectorQuery);
+      for (const frame of frames) {
+        try {
+          await frame.locator(selectorQuery).count();
+        } catch {
+          throw new CliError("E_SELECTOR_INVALID", `Invalid selector query: ${selectorQuery}`);
+        }
+      }
     }
 
-    const sample = await extractScopedSnapshotSample({
-      page: target.page,
-      selectorQuery,
-      visibleOnly,
-      textMaxChars,
-      maxHeadings,
-      maxButtons,
-      maxLinks,
-    });
+    let scopeMatched = false;
+    let totalTextLength = 0;
+    let totalHeadings = 0;
+    let totalButtons = 0;
+    let totalLinks = 0;
+    const headings: string[] = [];
+    const buttons: string[] = [];
+    const links: Array<{ text: string; href: string }> = [];
+    let textPreview = "";
+    for (const frame of frames) {
+      const remainingText = Math.max(0, textMaxChars - textPreview.length);
+      const remainingHeadings = Math.max(0, maxHeadings - headings.length);
+      const remainingButtons = Math.max(0, maxButtons - buttons.length);
+      const remainingLinks = Math.max(0, maxLinks - links.length);
+      const sample = await extractScopedSnapshotSample({
+        evaluator: frame,
+        selectorQuery,
+        visibleOnly,
+        textMaxChars: Math.max(1, remainingText),
+        maxHeadings: Math.max(1, remainingHeadings),
+        maxButtons: Math.max(1, remainingButtons),
+        maxLinks: Math.max(1, remainingLinks),
+      });
+      scopeMatched = scopeMatched || sample.scopeMatched;
+      totalTextLength += sample.counts.textLength;
+      totalHeadings += sample.counts.headings;
+      totalButtons += sample.counts.buttons;
+      totalLinks += sample.counts.links;
+      if (remainingText > 0 && sample.textPreview.length > 0) {
+        textPreview = `${textPreview}${textPreview.length > 0 ? "\n" : ""}${sample.textPreview}`.slice(0, textMaxChars);
+      }
+      if (remainingHeadings > 0 && sample.headings.length > 0) {
+        headings.push(...sample.headings.slice(0, remainingHeadings));
+      }
+      if (remainingButtons > 0 && sample.buttons.length > 0) {
+        buttons.push(...sample.buttons.slice(0, remainingButtons));
+      }
+      if (remainingLinks > 0 && sample.links.length > 0) {
+        links.push(...sample.links.slice(0, remainingLinks));
+      }
+    }
     const actionCompletedAt = Date.now();
 
     const report: TargetSnapshotReport = {
@@ -373,18 +415,19 @@ export async function targetSnapshot(opts: {
       title: await target.page.title(),
       scope: {
         selector: selectorQuery,
-        matched: sample.scopeMatched,
+        matched: scopeMatched,
         visibleOnly,
+        frameScope,
       },
-      textPreview: sample.textPreview,
-      headings: sample.headings,
-      buttons: sample.buttons,
-      links: sample.links,
+      textPreview,
+      headings,
+      buttons,
+      links,
       truncated: {
-        text: sample.counts.textLength > textMaxChars,
-        headings: sample.counts.headings > maxHeadings,
-        buttons: sample.counts.buttons > maxButtons,
-        links: sample.counts.links > maxLinks,
+        text: totalTextLength > textMaxChars,
+        headings: totalHeadings > maxHeadings,
+        buttons: totalButtons > maxButtons,
+        links: totalLinks > maxLinks,
       },
       timingMs: {
         total: 0,

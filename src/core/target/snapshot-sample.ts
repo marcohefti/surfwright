@@ -1,7 +1,7 @@
-import type { Page } from "playwright-core";
-
 export async function extractScopedSnapshotSample(opts: {
-  page: Page;
+  evaluator: {
+    evaluate<T, Arg>(pageFunction: (arg: Arg) => T, arg: Arg): Promise<T>;
+  };
   selectorQuery: string | null;
   visibleOnly: boolean;
   textMaxChars: number;
@@ -21,7 +21,7 @@ export async function extractScopedSnapshotSample(opts: {
     links: number;
   };
 }> {
-  return (await opts.page.evaluate(
+  return (await opts.evaluator.evaluate(
     ({ selectorQuery, visibleOnly, textMaxChars, maxHeadings, maxButtons, maxLinks }) => {
       const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
       const doc = runtime.document;

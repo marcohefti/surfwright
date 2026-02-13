@@ -97,14 +97,18 @@ surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session list [--json] [--pretty]
 surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright run --plan <path> [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target eval <targetId> (--expression <js> | --js <js> | --script <js>) [--arg-json <json>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--session <id>]
+surfwright target health <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target hud <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--session <id>]
 surfwright target network-query [--capture-id <id> | --artifact-id <id>] [--preset <name>] [--limit <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--json] [--pretty]
@@ -135,9 +139,13 @@ surfwright --json open https://example.com
 surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "Checkout" --first --visible-only
 surfwright --json target click <targetId> --text "Blog" --visible-only
-surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
+surfwright --json target read <targetId> --selector main --frame-scope main --chunk-size 1200 --chunk 1
+surfwright --json target extract <targetId> --kind blog --frame-scope all --limit 10
 surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
+surfwright target console-tail <targetId> --capture-ms 2000 --levels error,warn
+surfwright --json target health <targetId>
+surfwright --json target hud <targetId>
 surfwright --json target network <targetId> --profile perf --view summary
 surfwright target network-tail <targetId> --profile api --capture-ms 3000
 surfwright --json target network-query --capture-id <captureId> --preset slowest --limit 10
@@ -148,6 +156,14 @@ surfwright --json target network-export <targetId> --profile page --reload --cap
 surfwright --json target network-export-list --limit 20
 surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
 surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
+```
+
+Plan UX examples:
+
+```bash
+surfwright --json run --doctor --plan-json '{"steps":[{"id":"open","url":"https://example.com"},{"id":"snapshot"}]}'
+surfwright --json run --plan ./plan.json --record --record-label smoke
+surfwright --json run --replay ~/.surfwright/runs/2026-02-13Z-smoke-abc123.json
 ```
 
 Session selection defaults:

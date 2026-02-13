@@ -1,144 +1,112 @@
-import fs from "node:fs";
 import { CliError } from "./errors.js";
+import { writeRunArtifact } from "./pipeline-support/artifacts.js";
+import {
+  SUPPORTED_STEP_IDS,
+  evaluateAssertions,
+  lintPlan,
+  parseOptionalBoolean,
+  parseOptionalInteger,
+  parseOptionalString,
+  parseStepAlias,
+  parseStepTimeoutMs,
+  resolvePlanSource,
+  resolveTemplateInValue,
+  type PipelineOps,
+  type PipelineStepInput,
+} from "./pipeline-support/plan.js";
 
-export type PipelineStepInput = {
-  id: string;
-  targetId?: string;
-  url?: string;
-  reuseUrl?: boolean;
-  timeoutMs?: number;
-  text?: string;
-  selector?: string;
-  contains?: string;
-  visibleOnly?: boolean;
-  first?: boolean;
-  limit?: number;
-  chunkSize?: number;
-  chunk?: number;
-  expression?: string;
-  argJson?: string;
-  captureConsole?: boolean;
-  maxConsole?: number;
-  forText?: string;
-  forSelector?: string;
-  networkIdle?: boolean;
-  waitForText?: string;
-  waitForSelector?: string;
-  waitNetworkIdle?: boolean;
-  snapshot?: boolean;
-  noPersist?: boolean;
-};
-
-export type PipelineOps = {
-  open: (opts: { url: string; timeoutMs: number; sessionId?: string; reuseUrl: boolean }) => Promise<Record<string, unknown>>;
-  list: (opts: { timeoutMs: number; sessionId?: string; persistState: boolean }) => Promise<Record<string, unknown>>;
-  snapshot: (opts: {
-    targetId: string;
-    timeoutMs: number;
-    sessionId?: string;
-    selectorQuery?: string;
-    visibleOnly: boolean;
-    persistState: boolean;
-  }) => Promise<Record<string, unknown>>;
-  find: (opts: {
-    targetId: string;
-    timeoutMs: number;
-    sessionId?: string;
-    textQuery?: string;
-    selectorQuery?: string;
-    containsQuery?: string;
-    visibleOnly: boolean;
-    first: boolean;
-    limit?: number;
-    persistState: boolean;
-  }) => Promise<Record<string, unknown>>;
-  click: (opts: {
-    targetId: string;
-    timeoutMs: number;
-    sessionId?: string;
-    textQuery?: string;
-    selectorQuery?: string;
-    containsQuery?: string;
-    visibleOnly: boolean;
-    waitForText?: string;
-    waitForSelector?: string;
-    waitNetworkIdle: boolean;
-    snapshot: boolean;
-    persistState: boolean;
-  }) => Promise<Record<string, unknown>>;
-  read: (opts: {
-    targetId: string;
-    timeoutMs: number;
-    sessionId?: string;
-    selectorQuery?: string;
-    visibleOnly: boolean;
-    chunkSize?: number;
-    chunkIndex?: number;
-    persistState: boolean;
-  }) => Promise<Record<string, unknown>>;
-  eval: (opts: {
-    targetId: string;
-    timeoutMs: number;
-    sessionId?: string;
-    expression?: string;
-    argJson?: string;
-    captureConsole?: boolean;
-    maxConsole?: number;
-    persistState: boolean;
-  }) => Promise<Record<string, unknown>>;
-  wait: (opts: {
-    targetId: string;
-    timeoutMs: number;
-    sessionId?: string;
-    forText?: string;
-    forSelector?: string;
-    networkIdle: boolean;
-    persistState: boolean;
-  }) => Promise<Record<string, unknown>>;
-};
+export type { PipelineOps, PipelineStepInput } from "./pipeline-support/plan.js";
 
 export async function executePipelinePlan(opts: {
-  planPath: string;
+  planPath?: string;
+  planJson?: string;
+  stdinPlan?: string;
+  replayPath?: string;
   timeoutMs: number;
   sessionId?: string;
+  doctor?: boolean;
+  record?: boolean;
+  recordPath?: string;
+  recordLabel?: string;
   ops: PipelineOps;
 }): Promise<Record<string, unknown>> {
-  const startedAt = Date.now();
-  const raw = fs.readFileSync(opts.planPath, "utf8");
-  const parsed = JSON.parse(raw) as { steps?: unknown };
-  if (!Array.isArray(parsed.steps) || parsed.steps.length === 0) {
-    throw new CliError("E_QUERY_INVALID", "plan.steps must be a non-empty array");
+  const loaded = resolvePlanSource({
+    planPath: opts.planPath,
+    planJson: opts.planJson,
+    stdinPlan: opts.stdinPlan,
+    replayPath: opts.replayPath,
+  });
+  const lintIssues = lintPlan(loaded.plan);
+  const lintErrors = lintIssues.filter((entry) => entry.level === "error");
+  if (opts.doctor) {
+    return {
+      ok: true,
+      mode: "doctor",
+      source: loaded.source,
+      stepCount: loaded.plan.steps.length,
+      valid: lintErrors.length === 0,
+      supportedSteps: [...SUPPORTED_STEP_IDS],
+      issues: lintIssues,
+    };
+  }
+  if (lintErrors.length > 0) {
+    throw new CliError("E_QUERY_INVALID", `plan lint failed: ${lintErrors[0].path} ${lintErrors[0].message}`);
   }
 
-  const steps = parsed.steps as PipelineStepInput[];
+  const startedAt = Date.now();
+  const steps = loaded.plan.steps;
   const results: Array<Record<string, unknown>> = [];
-  const ctx: {
-    sessionId?: string;
-    targetId?: string;
-  } = {
+  const aliases: Record<string, Record<string, unknown>> = {};
+  const timeline: Array<Record<string, unknown>> = [];
+  timeline.push({
+    atMs: 0,
+    phase: "run.start",
+    source: loaded.source,
+  });
+  const ctx: { sessionId?: string; targetId?: string } = {
     sessionId: opts.sessionId,
     targetId: undefined,
   };
 
   for (let index = 0; index < steps.length; index += 1) {
-    const step = steps[index];
+    const stepRaw = steps[index];
+    const templateScope: Record<string, unknown> = {
+      sessionId: ctx.sessionId ?? null,
+      targetId: ctx.targetId ?? null,
+      last: results.length > 0 ? (results[results.length - 1].report as Record<string, unknown>) : null,
+      steps: aliases,
+    };
+    const step = resolveTemplateInValue(stepRaw, templateScope, `steps[${index}]`) as PipelineStepInput;
     if (!step || typeof step !== "object" || typeof step.id !== "string") {
       throw new CliError("E_QUERY_INVALID", `steps[${index}] must include id`);
     }
+    if (!SUPPORTED_STEP_IDS.has(step.id)) {
+      throw new CliError("E_QUERY_INVALID", `Unsupported step id: ${step.id}`);
+    }
 
-    const stepTimeoutMs = typeof step.timeoutMs === "number" ? step.timeoutMs : opts.timeoutMs;
+    const stepAlias = parseStepAlias(step.as, index);
+    const stepTimeoutMs = parseStepTimeoutMs(step.timeoutMs, opts.timeoutMs, index);
     const stepStartedAt = Date.now();
-    const stepTargetId = typeof step.targetId === "string" && step.targetId.length > 0 ? step.targetId : ctx.targetId;
+    const stepTargetId = parseOptionalString(step.targetId, `steps[${index}].targetId`) ?? ctx.targetId;
+    const stepFrameScope = parseOptionalString(step.frameScope, `steps[${index}].frameScope`);
+    timeline.push({
+      atMs: stepStartedAt - startedAt,
+      phase: "step.start",
+      index,
+      id: step.id,
+      as: stepAlias,
+      targetId: stepTargetId ?? null,
+    });
 
     let report: Record<string, unknown>;
-
     switch (step.id) {
       case "open": {
-        if (typeof step.url !== "string" || step.url.length === 0) {
+        const url = parseOptionalString(step.url, `steps[${index}].url`);
+        if (typeof url !== "string" || url.length === 0) {
           throw new CliError("E_QUERY_INVALID", `steps[${index}].url is required for open`);
         }
         report = await opts.ops.open({
-          url: step.url,
+          url,
           timeoutMs: stepTimeoutMs,
           sessionId: ctx.sessionId,
           reuseUrl: Boolean(step.reuseUrl),
@@ -161,8 +129,9 @@ export async function executePipelinePlan(opts: {
           targetId: stepTargetId,
           timeoutMs: stepTimeoutMs,
           sessionId: ctx.sessionId,
-          selectorQuery: step.selector,
+          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
           visibleOnly: Boolean(step.visibleOnly),
+          frameScope: stepFrameScope,
           persistState: !Boolean(step.noPersist),
         });
         break;
@@ -175,12 +144,12 @@ export async function executePipelinePlan(opts: {
           targetId: stepTargetId,
           timeoutMs: stepTimeoutMs,
           sessionId: ctx.sessionId,
-          textQuery: step.text,
-          selectorQuery: step.selector,
-          containsQuery: step.contains,
+          textQuery: parseOptionalString(step.text, `steps[${index}].text`),
+          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+          containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
           visibleOnly: Boolean(step.visibleOnly),
           first: Boolean(step.first),
-          limit: typeof step.limit === "number" ? step.limit : undefined,
+          limit: parseOptionalInteger(step.limit, `steps[${index}].limit`),
           persistState: !Boolean(step.noPersist),
         });
         break;
@@ -193,12 +162,12 @@ export async function executePipelinePlan(opts: {
           targetId: stepTargetId,
           timeoutMs: stepTimeoutMs,
           sessionId: ctx.sessionId,
-          textQuery: step.text,
-          selectorQuery: step.selector,
-          containsQuery: step.contains,
+          textQuery: parseOptionalString(step.text, `steps[${index}].text`),
+          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+          containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
           visibleOnly: Boolean(step.visibleOnly),
-          waitForText: step.waitForText,
-          waitForSelector: step.waitForSelector,
+          waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
+          waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
           waitNetworkIdle: Boolean(step.waitNetworkIdle),
           snapshot: Boolean(step.snapshot),
           persistState: !Boolean(step.noPersist),
@@ -213,10 +182,11 @@ export async function executePipelinePlan(opts: {
           targetId: stepTargetId,
           timeoutMs: stepTimeoutMs,
           sessionId: ctx.sessionId,
-          selectorQuery: step.selector,
+          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
           visibleOnly: Boolean(step.visibleOnly),
-          chunkSize: typeof step.chunkSize === "number" ? step.chunkSize : undefined,
-          chunkIndex: typeof step.chunk === "number" ? step.chunk : undefined,
+          frameScope: stepFrameScope,
+          chunkSize: parseOptionalInteger(step.chunkSize, `steps[${index}].chunkSize`),
+          chunkIndex: parseOptionalInteger(step.chunk, `steps[${index}].chunk`),
           persistState: !Boolean(step.noPersist),
         });
         break;
@@ -229,8 +199,8 @@ export async function executePipelinePlan(opts: {
           targetId: stepTargetId,
           timeoutMs: stepTimeoutMs,
           sessionId: ctx.sessionId,
-          forText: step.forText,
-          forSelector: step.forSelector,
+          forText: parseOptionalString(step.forText, `steps[${index}].forText`),
+          forSelector: parseOptionalString(step.forSelector, `steps[${index}].forSelector`),
           networkIdle: Boolean(step.networkIdle),
           persistState: !Boolean(step.noPersist),
         });
@@ -244,10 +214,27 @@ export async function executePipelinePlan(opts: {
           targetId: stepTargetId,
           timeoutMs: stepTimeoutMs,
           sessionId: ctx.sessionId,
-          expression: step.expression,
-          argJson: step.argJson,
-          captureConsole: Boolean(step.captureConsole),
-          maxConsole: typeof step.maxConsole === "number" ? step.maxConsole : undefined,
+          expression: parseOptionalString(step.expression, `steps[${index}].expression`),
+          argJson: parseOptionalString(step.argJson, `steps[${index}].argJson`),
+          captureConsole: parseOptionalBoolean(step.captureConsole, `steps[${index}].captureConsole`),
+          maxConsole: parseOptionalInteger(step.maxConsole, `steps[${index}].maxConsole`),
+          persistState: !Boolean(step.noPersist),
+        });
+        break;
+      }
+      case "extract": {
+        if (!stepTargetId) {
+          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
+        }
+        report = await opts.ops.extract({
+          targetId: stepTargetId,
+          timeoutMs: stepTimeoutMs,
+          sessionId: ctx.sessionId,
+          kind: parseOptionalString(step.kind, `steps[${index}].kind`),
+          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+          visibleOnly: Boolean(step.visibleOnly),
+          frameScope: stepFrameScope,
+          limit: parseOptionalInteger(step.limit, `steps[${index}].limit`),
           persistState: !Boolean(step.noPersist),
         });
         break;
@@ -256,6 +243,9 @@ export async function executePipelinePlan(opts: {
         throw new CliError("E_QUERY_INVALID", `Unsupported step id: ${step.id}`);
     }
 
+    if (stepAlias) {
+      aliases[stepAlias] = report;
+    }
     if (typeof report.sessionId === "string") {
       ctx.sessionId = report.sessionId;
     }
@@ -263,19 +253,84 @@ export async function executePipelinePlan(opts: {
       ctx.targetId = report.targetId;
     }
 
+    const assertions = evaluateAssertions(step, report);
+    if (assertions.failed > 0) {
+      const failed = assertions.checks.find((entry) => !entry.ok);
+      timeline.push({
+        atMs: Date.now() - startedAt,
+        phase: "step.assert-failed",
+        index,
+        id: step.id,
+        message: failed?.message ?? "assertion failed",
+      });
+      throw new CliError(
+        "E_ASSERT_FAILED",
+        `Assertion failed at steps[${index}] ${failed?.path ?? ""}: ${failed?.message ?? "unknown"}`.trim(),
+      );
+    }
+
+    const stepEndedAt = Date.now();
+    timeline.push({
+      atMs: stepEndedAt - startedAt,
+      phase: "step.end",
+      index,
+      id: step.id,
+      as: stepAlias,
+      elapsedMs: stepEndedAt - stepStartedAt,
+      sessionId: typeof report.sessionId === "string" ? report.sessionId : null,
+      targetId: typeof report.targetId === "string" ? report.targetId : null,
+      assertions: assertions.total,
+    });
     results.push({
       index,
       id: step.id,
-      elapsedMs: Date.now() - stepStartedAt,
+      as: stepAlias,
+      elapsedMs: stepEndedAt - stepStartedAt,
+      assertions: {
+        total: assertions.total,
+        failed: assertions.failed,
+      },
       report,
     });
   }
 
-  return {
+  const finishedAt = Date.now();
+  timeline.push({
+    atMs: finishedAt - startedAt,
+    phase: "run.end",
+    steps: results.length,
+    sessionId: ctx.sessionId ?? null,
+    targetId: ctx.targetId ?? null,
+  });
+
+  const report: Record<string, unknown> = {
     ok: true,
+    source: loaded.source,
+    replay: loaded.replay,
     sessionId: ctx.sessionId ?? null,
     targetId: ctx.targetId ?? null,
     steps: results,
-    totalMs: Date.now() - startedAt,
+    timeline,
+    totalMs: finishedAt - startedAt,
   };
+  if (opts.record) {
+    report.artifact = writeRunArtifact({
+      outPath: opts.recordPath,
+      label: opts.recordLabel,
+      source: loaded.source,
+      replay: loaded.replay,
+      plan: loaded.plan,
+      report: {
+        ok: true,
+        source: loaded.source,
+        replay: loaded.replay,
+        sessionId: ctx.sessionId ?? null,
+        targetId: ctx.targetId ?? null,
+        steps: results,
+        timeline,
+        totalMs: finishedAt - startedAt,
+      },
+    });
+  }
+  return { ...report };
 }

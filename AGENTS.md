@@ -17,6 +17,7 @@ This repo exists for one thing: a stable browser control surface that agents can
 3. `docs/maintaining-agent-surface.md` for pre-merge and release checklist.
 4. `docs/policy-harness.md` for structural rule framework and plug-in rules.
 5. `docs/fixture-ingress-workflow.md` for adding regression fixtures when new edge cases appear.
+6. `docs/zerocontext-lab.md` for unbiased cold-start subagent evaluation workflow.
 
 ## Runtime Source of Truth
 
@@ -59,6 +60,16 @@ Treat all feature work, refactors, and optimizations as agent-operator surface d
   - agent comfort (composability + deterministic parsing),
   - operational speed (runtime/iteration latency),
   - quality of answers the agent can generate from CLI output.
+
+## ZeroContext Trigger
+
+When the user asks to "spawn agents", "zero context test", or evaluate fresh-agent intuition:
+
+- Use the ZeroContext Lab workflow in `docs/zerocontext-lab.md` (do not invent an ad-hoc process).
+- Keep task prompts short and unbiased; do not leak implementation hints or feature names unless explicitly requested.
+- Ensure runs are trace-backed (captured command artifacts/logs), then evaluate from those artifacts first.
+- Prefer evidence-based scoring: success/failure, command count, typed failures, and where agents got stuck.
+- Treat agent self-reports as secondary; ground conclusions in ZeroContext outputs (`commands.jsonl`, run artifacts, report).
 
 ## Commit Message Rule
 

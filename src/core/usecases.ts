@@ -34,7 +34,9 @@ import { listSessionsSnapshot } from "./state-repos/session-repo.js";
 import { saveTargetSnapshot } from "./state-repos/target-repo.js";
 import { targetClick } from "./target/target-click.js";
 import { targetEval } from "./target/target-eval.js";
+import { targetExtract } from "./target/target-extract.js";
 import { targetFind } from "./target/target-find.js";
+import { targetConsoleTail, targetHealth, targetHud } from "./target/target-observability.js";
 import { targetRead } from "./target/target-read.js";
 import { targetWait } from "./target/target-wait.js";
 import { readPageTargetId, resolveSessionForAction, targetList, targetSnapshot } from "./target/targets.js";
@@ -362,13 +364,12 @@ export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: stri
 }
 export function sessionList(): SessionListReport {
   const state = listSessionsSnapshot();
-  const sessions = state.sessions
-    .map((session) => ({
-      sessionId: session.sessionId,
-      kind: session.kind,
-      cdpOrigin: session.cdpOrigin,
-      lastSeenAt: session.lastSeenAt,
-    }));
+  const sessions = state.sessions.map((session) => ({
+    sessionId: session.sessionId,
+    kind: session.kind,
+    cdpOrigin: session.cdpOrigin,
+    lastSeenAt: session.lastSeenAt,
+  }));
   return {
     ok: true,
     activeSessionId: state.activeSessionId,
@@ -377,117 +378,82 @@ export function sessionList(): SessionListReport {
 }
 
 export async function runPipeline(opts: {
-  planPath: string;
+  planPath?: string;
+  planJson?: string;
+  stdinPlan?: string;
+  replayPath?: string;
   timeoutMs: number;
   sessionId?: string;
   isolation?: string;
+  doctor?: boolean;
+  record?: boolean;
+  recordPath?: string;
+  recordLabel?: string;
 }): Promise<Record<string, unknown>> {
-  const resolvedSessionId = await resolvePipelineSessionId({
-    sessionId: opts.sessionId,
-    isolation: opts.isolation,
-    timeoutMs: opts.timeoutMs,
-    ensureSharedSession: async ({ timeoutMs }) =>
-      await sessionEnsure({
-        timeoutMs,
-      }),
-    ensureImplicitSession: async ({ timeoutMs }) =>
-      await resolveSessionForAction({
-        timeoutMs,
-        allowImplicitNewSession: true,
-      }),
-  });
+  const sourceCount =
+    Number(typeof opts.planPath === "string" && opts.planPath.length > 0) +
+    Number(typeof opts.planJson === "string" && opts.planJson.length > 0) +
+    Number(typeof opts.replayPath === "string" && opts.replayPath.length > 0);
+  if (sourceCount !== 1) {
+    throw new CliError("E_QUERY_INVALID", "Use exactly one plan source: --plan, --plan-json, or --replay");
+  }
+  const resolvedSessionId = opts.doctor
+    ? opts.sessionId
+    : await resolvePipelineSessionId({
+        sessionId: opts.sessionId,
+        isolation: opts.isolation,
+        timeoutMs: opts.timeoutMs,
+        ensureSharedSession: async ({ timeoutMs }) => await sessionEnsure({ timeoutMs }),
+        ensureImplicitSession: async ({ timeoutMs }) => await resolveSessionForAction({ timeoutMs, allowImplicitNewSession: true }),
+      });
 
   return await executePipelinePlan({
     planPath: opts.planPath,
+    planJson: opts.planJson,
+    stdinPlan: opts.stdinPlan,
+    replayPath: opts.replayPath,
     timeoutMs: opts.timeoutMs,
     sessionId: resolvedSessionId,
+    doctor: Boolean(opts.doctor),
+    record: Boolean(opts.record),
+    recordPath: opts.recordPath,
+    recordLabel: opts.recordLabel,
     ops: {
-      open: async (input) =>
-        await openUrl({
-          inputUrl: input.url,
-          timeoutMs: input.timeoutMs,
-          sessionId: input.sessionId,
-          reuseUrl: input.reuseUrl,
-        }),
-      list: async (input) =>
-        (await targetList({
-          timeoutMs: input.timeoutMs,
-          sessionId: input.sessionId,
-          persistState: input.persistState,
-        })) as unknown as Record<string, unknown>,
+      open: async (input) => await openUrl({ inputUrl: input.url, timeoutMs: input.timeoutMs, sessionId: input.sessionId, reuseUrl: input.reuseUrl }),
+      list: async (input) => (await targetList({ timeoutMs: input.timeoutMs, sessionId: input.sessionId, persistState: input.persistState })) as unknown as Record<string, unknown>,
       snapshot: async (input) =>
         (await targetSnapshot({
-          targetId: input.targetId,
-          timeoutMs: input.timeoutMs,
-          sessionId: input.sessionId,
-          selectorQuery: input.selectorQuery,
-          visibleOnly: input.visibleOnly,
-          persistState: input.persistState,
+          targetId: input.targetId, timeoutMs: input.timeoutMs, sessionId: input.sessionId, selectorQuery: input.selectorQuery, visibleOnly: input.visibleOnly, frameScope: input.frameScope, persistState: input.persistState,
         })) as unknown as Record<string, unknown>,
       find: async (input) =>
         (await targetFind({
-          targetId: input.targetId,
-          timeoutMs: input.timeoutMs,
-          sessionId: input.sessionId,
-          textQuery: input.textQuery,
-          selectorQuery: input.selectorQuery,
-          containsQuery: input.containsQuery,
-          visibleOnly: input.visibleOnly,
-          first: input.first,
-          limit: input.limit,
-          persistState: input.persistState,
+          targetId: input.targetId, timeoutMs: input.timeoutMs, sessionId: input.sessionId, textQuery: input.textQuery, selectorQuery: input.selectorQuery, containsQuery: input.containsQuery, visibleOnly: input.visibleOnly, first: input.first, limit: input.limit, persistState: input.persistState,
         })) as unknown as Record<string, unknown>,
       click: async (input) =>
         (await targetClick({
-          targetId: input.targetId,
-          timeoutMs: input.timeoutMs,
-          sessionId: input.sessionId,
-          textQuery: input.textQuery,
-          selectorQuery: input.selectorQuery,
-          containsQuery: input.containsQuery,
-          visibleOnly: input.visibleOnly,
-          waitForText: input.waitForText,
-          waitForSelector: input.waitForSelector,
-          waitNetworkIdle: input.waitNetworkIdle,
-          snapshot: input.snapshot,
-          persistState: input.persistState,
+          targetId: input.targetId, timeoutMs: input.timeoutMs, sessionId: input.sessionId, textQuery: input.textQuery, selectorQuery: input.selectorQuery, containsQuery: input.containsQuery, visibleOnly: input.visibleOnly, waitForText: input.waitForText, waitForSelector: input.waitForSelector, waitNetworkIdle: input.waitNetworkIdle, snapshot: input.snapshot, persistState: input.persistState,
         })) as unknown as Record<string, unknown>,
       read: async (input) =>
         (await targetRead({
-          targetId: input.targetId,
-          timeoutMs: input.timeoutMs,
-          sessionId: input.sessionId,
-          selectorQuery: input.selectorQuery,
-          visibleOnly: input.visibleOnly,
-          chunkSize: input.chunkSize,
-          chunkIndex: input.chunkIndex,
-          persistState: input.persistState,
+          targetId: input.targetId, timeoutMs: input.timeoutMs, sessionId: input.sessionId, selectorQuery: input.selectorQuery, visibleOnly: input.visibleOnly, frameScope: input.frameScope, chunkSize: input.chunkSize, chunkIndex: input.chunkIndex, persistState: input.persistState,
+        })) as unknown as Record<string, unknown>,
+      extract: async (input) =>
+        (await targetExtract({
+          targetId: input.targetId, timeoutMs: input.timeoutMs, sessionId: input.sessionId, kind: input.kind, selectorQuery: input.selectorQuery, visibleOnly: input.visibleOnly, frameScope: input.frameScope, limit: input.limit, persistState: input.persistState,
         })) as unknown as Record<string, unknown>,
       eval: async (input) =>
         (await targetEval({
-          targetId: input.targetId,
-          timeoutMs: input.timeoutMs,
-          sessionId: input.sessionId,
-          expression: input.expression,
-          argJson: input.argJson,
-          captureConsole: input.captureConsole,
-          maxConsole: input.maxConsole,
-          persistState: input.persistState,
+          targetId: input.targetId, timeoutMs: input.timeoutMs, sessionId: input.sessionId, expression: input.expression, argJson: input.argJson, captureConsole: input.captureConsole, maxConsole: input.maxConsole, persistState: input.persistState,
         })) as unknown as Record<string, unknown>,
       wait: async (input) =>
         (await targetWait({
-          targetId: input.targetId,
-          timeoutMs: input.timeoutMs,
-          sessionId: input.sessionId,
-          forText: input.forText,
-          forSelector: input.forSelector,
-          networkIdle: input.networkIdle,
-          persistState: input.persistState,
+          targetId: input.targetId, timeoutMs: input.timeoutMs, sessionId: input.sessionId, forText: input.forText, forSelector: input.forSelector, networkIdle: input.networkIdle, persistState: input.persistState,
         })) as unknown as Record<string, unknown>,
     },
   });
 }
 export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail } from "../features/network/usecases/index.js";
 export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
-export { targetFind, targetRead, targetWait, targetClick, targetEval, targetList, targetSnapshot };
+export { targetFind, targetRead, targetWait, targetClick, targetEval, targetList, targetSnapshot, targetExtract };
+export { targetConsoleTail, targetHealth, targetHud };
 export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { type Command } from "commander";
 import {
   getDoctorReport,
@@ -163,6 +164,12 @@ function printStateReconcileSuccess(report: StateReconcileReport, opts: RuntimeO
 function printRunSuccess(report: Record<string, unknown>, opts: RuntimeOutputOpts) {
   if (opts.json) {
     writeJson(report, { pretty: opts.pretty });
+    return;
+  }
+  if (report.mode === "doctor") {
+    const valid = report.valid === true;
+    const issues = Array.isArray(report.issues) ? report.issues.length : 0;
+    process.stdout.write(["ok", "mode=doctor", `valid=${valid ? "true" : "false"}`, `issues=${issues}`].join(" ") + "\n");
     return;
   }
   const steps = Array.isArray(report.steps) ? report.steps.length : 0;
@@ -400,22 +407,51 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
   ctx.program
     .command("run")
     .description(runtimeCommandMeta("run").summary)
-    .requiredOption("--plan <path>", "Path to JSON plan file")
+    .option("--plan <path>", "Path to JSON plan file (use - for stdin)")
+    .option("--plan-json <json>", "Inline JSON plan payload")
+    .option("--replay <path>", "Replay a previously recorded run artifact")
+    .option("--doctor", "Lint plan source and return issues without executing", false)
+    .option("--record", "Write run artifact with timeline and replay payload", false)
+    .option("--record-path <path>", "Explicit output path for recorded artifact")
+    .option("--record-label <label>", "Label to include in recorded artifact metadata")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Default step timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
-    .action(async (options: { plan: string; isolation?: string; timeoutMs: number }) => {
+    .action(
+      async (options: {
+        plan?: string;
+        planJson?: string;
+        replay?: string;
+        doctor?: boolean;
+        record?: boolean;
+        recordPath?: string;
+        recordLabel?: string;
+        isolation?: string;
+        timeoutMs: number;
+      }) => {
       const output = ctx.globalOutputOpts();
       const globalOpts = ctx.program.opts<{ session?: string }>();
       try {
+        const stdinPlan = options.plan === "-" ? fs.readFileSync(0, "utf8") : undefined;
         const report = await runPipeline({
           planPath: options.plan,
+          planJson: options.planJson,
+          stdinPlan,
+          replayPath: options.replay,
           timeoutMs: options.timeoutMs,
           isolation: options.isolation,
+          doctor: Boolean(options.doctor),
+          record: Boolean(options.record),
+          recordPath: options.recordPath,
+          recordLabel: options.recordLabel,
           sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
         });
         printRunSuccess(report, output);
+        if (report.mode === "doctor" && report.valid !== true) {
+          process.exitCode = 1;
+        }
       } catch (error) {
         ctx.handleFailure(error, output);
       }
-    });
+      },
+    );
 }

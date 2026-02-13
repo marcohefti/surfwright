@@ -63,8 +63,9 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   },
   {
     id: "run",
-    usage: "surfwright run --plan <path> [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
-    summary: "execute a deterministic multi-step browser plan in one command",
+    usage:
+      "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+    summary: "execute, lint, record, or replay deterministic multi-step browser plans",
   },
 ];
 

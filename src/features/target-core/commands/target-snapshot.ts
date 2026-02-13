@@ -16,6 +16,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--selector <query>", "Scope snapshot to a selector")
       .option("--visible-only", "Only include visible content")
+      .option("--frame-scope <scope>", "Frame scope: main|all")
       .option("--max-chars <n>", "Maximum text preview chars to return")
       .option("--max-headings <n>", "Maximum heading rows to return")
       .option("--max-buttons <n>", "Maximum button rows to return")
@@ -29,6 +30,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
           options: {
             selector?: string;
             visibleOnly?: boolean;
+            frameScope?: string;
             maxChars?: string;
             maxHeadings?: string;
             maxButtons?: string;
@@ -55,6 +57,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               selectorQuery: options.selector,
               visibleOnly: Boolean(options.visibleOnly),
+              frameScope: options.frameScope,
               maxChars,
               maxHeadings,
               maxButtons,

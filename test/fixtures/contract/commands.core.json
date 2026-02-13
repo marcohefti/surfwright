@@ -16,7 +16,11 @@
   { "id": "target.read", "usageMustContain": "target read" },
   { "id": "target.eval", "usageMustContain": "target eval" },
   { "id": "target.wait", "usageMustContain": "target wait" },
+  { "id": "target.extract", "usageMustContain": "target extract" },
+  { "id": "target.console-tail", "usageMustContain": "target console-tail" },
+  { "id": "target.health", "usageMustContain": "target health" },
+  { "id": "target.hud", "usageMustContain": "target hud" },
   { "id": "target.prune", "usageMustContain": "target prune" },
   { "id": "state.reconcile", "usageMustContain": "state reconcile" },
-  { "id": "run", "usageMustContain": "run --plan <path>" }
+  { "id": "run", "usageMustContain": "run [--plan <path>|--plan-json <json>|--replay <path>]" }
 ]

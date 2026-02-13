@@ -1,36 +1,36 @@
-import { parseFieldsCsv, projectReportFields, targetRead } from "../../../core/usecases.js";
-import { DEFAULT_TARGET_READ_CHUNK_SIZE, DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
+import { parseFieldsCsv, projectReportFields, targetExtract } from "../../../core/usecases.js";
+import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";
 
-const meta = targetCommandMeta("target.read");
+const extractMeta = targetCommandMeta("target.extract");
 
-export const targetReadCommandSpec: TargetCommandSpec = {
-  id: meta.id,
-  usage: meta.usage,
-  summary: meta.summary,
+export const targetExtractCommandSpec: TargetCommandSpec = {
+  id: extractMeta.id,
+  usage: extractMeta.usage,
+  summary: extractMeta.summary,
   register: (ctx) => {
     ctx.target
-      .command("read")
-      .description(meta.summary)
+      .command("extract")
+      .description(extractMeta.summary)
       .argument("<targetId>", "Target handle returned by open/target list")
-      .option("--selector <query>", "Scope read to a selector")
-      .option("--visible-only", "Only include visible text")
+      .option("--kind <kind>", "Extraction profile: generic|blog|news|docs")
+      .option("--selector <query>", "Scope extraction to a selector")
+      .option("--visible-only", "Only include visible content")
       .option("--frame-scope <scope>", "Frame scope: main|all")
-      .option("--chunk-size <n>", "Chunk size in characters", String(DEFAULT_TARGET_READ_CHUNK_SIZE))
-      .option("--chunk <n>", "Chunk index to read (1-based)", "1")
-      .option("--timeout-ms <ms>", "Read timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--limit <n>", "Maximum extracted items to return")
+      .option("--timeout-ms <ms>", "Extraction timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state", false)
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
           targetId: string,
           options: {
+            kind?: string;
             selector?: string;
             visibleOnly?: boolean;
             frameScope?: string;
-            chunkSize: string;
-            chunk: string;
+            limit?: string;
             timeoutMs: number;
             noPersist?: boolean;
             fields?: string;
@@ -38,20 +38,18 @@ export const targetReadCommandSpec: TargetCommandSpec = {
         ) => {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
-          const chunkSize = Number.parseInt(options.chunkSize, 10);
-          const chunkIndex = Number.parseInt(options.chunk, 10);
           const fields = parseFieldsCsv(options.fields);
-
+          const limit = typeof options.limit === "string" ? Number.parseInt(options.limit, 10) : undefined;
           try {
-            const report = await targetRead({
+            const report = await targetExtract({
               targetId,
               timeoutMs: options.timeoutMs,
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+              kind: options.kind,
               selectorQuery: options.selector,
               visibleOnly: Boolean(options.visibleOnly),
               frameScope: options.frameScope,
-              chunkSize,
-              chunkIndex,
+              limit,
               persistState: !Boolean(options.noPersist),
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

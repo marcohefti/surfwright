@@ -17,6 +17,7 @@ export const errorContracts: CliErrorContract[] = [
   { code: "E_TARGET_SESSION_UNKNOWN", message: "targetId is not mapped to a known session", retryable: false },
   { code: "E_TARGET_SESSION_MISMATCH", message: "targetId does not belong to the requested session", retryable: false },
   { code: "E_QUERY_INVALID", message: "Query input is invalid or missing", retryable: false },
+  { code: "E_ASSERT_FAILED", message: "Pipeline assertion failed", retryable: false },
   { code: "E_WAIT_TIMEOUT", message: "wait condition did not complete before timeout", retryable: true },
   { code: "E_EVAL_SCRIPT_TOO_LARGE", message: "Evaluation script exceeds maximum supported length", retryable: false },
   { code: "E_EVAL_TIMEOUT", message: "evaluation did not complete before timeout", retryable: true },

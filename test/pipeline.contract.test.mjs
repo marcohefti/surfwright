@@ -22,6 +22,17 @@ function runCli(args) {
   });
 }
 
+function runCliWithInput(args, input) {
+  return spawnSync(process.execPath, ["dist/cli.js", ...args], {
+    encoding: "utf8",
+    input,
+    env: {
+      ...process.env,
+      SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+    },
+  });
+}
+
 function parseJson(stdout) {
   const text = stdout.trim();
   assert.notEqual(text.length, 0, "Expected JSON output on stdout");
@@ -117,4 +128,46 @@ test("run executes deterministic multi-step pipeline", { skip: !hasBrowser() }, 
   assert.equal(payload.steps[4].id, "wait");
   assert.equal(payload.steps[5].id, "snapshot");
   assert.equal(typeof payload.totalMs, "number");
+});
+
+test("run doctor validates inline plan-json without browser execution", () => {
+  const plan = {
+    steps: [
+      { id: "open", url: "https://example.com" },
+      { id: "snapshot" },
+    ],
+  };
+  const result = runCli(["--json", "run", "--doctor", "--plan-json", JSON.stringify(plan)]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "doctor");
+  assert.equal(payload.valid, true);
+  assert.equal(payload.stepCount, 2);
+  assert.equal(Array.isArray(payload.issues), true);
+});
+
+test("run doctor returns exit code 1 for lint-invalid plan", () => {
+  const invalidPlan = {
+    steps: [{ id: "open" }],
+  };
+  const result = runCli(["--json", "run", "--doctor", "--plan-json", JSON.stringify(invalidPlan)]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "doctor");
+  assert.equal(payload.valid, false);
+  assert.equal(payload.issues.some((entry) => entry.path === "steps[0].url"), true);
+});
+
+test("run doctor accepts stdin plan source", () => {
+  const stdinPlan = {
+    steps: [{ id: "open", url: "https://example.com", as: "open1" }],
+  };
+  const result = runCliWithInput(["--json", "run", "--doctor", "--plan", "-"], `${JSON.stringify(stdinPlan)}\n`);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "doctor");
+  assert.equal(payload.valid, true);
 });

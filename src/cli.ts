@@ -265,6 +265,21 @@ function shouldBypassDaemon(argv: string[]): boolean {
     // Keep streaming command direct to avoid daemon buffering latency/memory.
     return true;
   }
+  if (first === "target" && second === "console-tail") {
+    // Keep streaming command direct to avoid daemon buffering latency/memory.
+    return true;
+  }
+  if (first === "run") {
+    for (let index = 2; index < argv.length; index += 1) {
+      const token = argv[index];
+      if (token === "--plan" && argv[index + 1] === "-") {
+        return true;
+      }
+      if (token === "--plan=-") {
+        return true;
+      }
+    }
+  }
   return false;
 }
 

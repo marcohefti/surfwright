@@ -3,6 +3,7 @@ import { CliError } from "../errors.js";
 import { nowIso } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { DEFAULT_TARGET_READ_CHUNK_SIZE } from "../types.js";
+import { framesForScope, parseFrameScope } from "./target-frame.js";
 import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetReadReport } from "../types.js";
 
@@ -26,11 +27,11 @@ function parseChunkIndex(value: number | undefined): number {
 }
 
 async function extractScopedText(opts: {
-  page: { evaluate<T, Arg>(pageFunction: (arg: Arg) => T, arg: Arg): Promise<T> };
+  evaluator: { evaluate<T, Arg>(pageFunction: (arg: Arg) => T, arg: Arg): Promise<T> };
   selectorQuery: string | null;
   visibleOnly: boolean;
 }): Promise<{ matched: boolean; text: string }> {
-  return await opts.page.evaluate(
+  return await opts.evaluator.evaluate(
     ({ selectorQuery, visibleOnly }: { selectorQuery: string | null; visibleOnly: boolean }) => {
       const runtime = globalThis as unknown as { document?: any };
       const doc = runtime.document;
@@ -63,6 +64,7 @@ export async function targetRead(opts: {
   persistState?: boolean;
   selectorQuery?: string;
   visibleOnly?: boolean;
+  frameScope?: string;
   chunkSize?: number;
   chunkIndex?: number;
 }): Promise<TargetReadReport> {
@@ -70,6 +72,7 @@ export async function targetRead(opts: {
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const selectorQuery = normalizeSelectorQuery(opts.selectorQuery);
   const visibleOnly = Boolean(opts.visibleOnly);
+  const frameScope = parseFrameScope(opts.frameScope);
   const chunkSize = parseChunkSize(opts.chunkSize);
   const chunkIndex = parseChunkIndex(opts.chunkIndex);
 
@@ -87,23 +90,41 @@ export async function targetRead(opts: {
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
     if (selectorQuery) {
-      await ensureValidSelector(target.page, selectorQuery);
+      if (frameScope === "main") {
+        await ensureValidSelector(target.page, selectorQuery);
+      } else {
+        for (const frame of framesForScope(target.page, frameScope)) {
+          try {
+            await frame.locator(selectorQuery).count();
+          } catch {
+            throw new CliError("E_SELECTOR_INVALID", `Invalid selector query: ${selectorQuery}`);
+          }
+        }
+      }
     }
+    const frameTexts: string[] = [];
+    let scopeMatched = false;
+    for (const frame of framesForScope(target.page, frameScope)) {
+      const scopedText = await extractScopedText({
+        evaluator: frame,
+        selectorQuery,
+        visibleOnly,
+      });
+      scopeMatched = scopeMatched || scopedText.matched;
+      if (scopedText.text.length > 0) {
+        frameTexts.push(scopedText.text);
+      }
+    }
+    const fullText = frameTexts.join("\n");
 
-    const scopedText = await extractScopedText({
-      page: target.page,
-      selectorQuery,
-      visibleOnly,
-    });
-
-    const totalChars = scopedText.text.length;
+    const totalChars = fullText.length;
     const totalChunks = Math.max(1, Math.ceil(totalChars / chunkSize));
     if (chunkIndex > totalChunks) {
       throw new CliError("E_QUERY_INVALID", `chunk must be between 1 and ${totalChunks}`);
     }
 
     const start = (chunkIndex - 1) * chunkSize;
-    const text = scopedText.text.slice(start, start + chunkSize);
+    const text = fullText.slice(start, start + chunkSize);
     const actionCompletedAt = Date.now();
 
     const report: TargetReadReport = {
@@ -115,8 +136,9 @@ export async function targetRead(opts: {
       title: await target.page.title(),
       scope: {
         selector: selectorQuery,
-        matched: scopedText.matched,
+        matched: scopeMatched,
         visibleOnly,
+        frameScope,
       },
       chunkSize,
       chunkIndex,

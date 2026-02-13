@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "caseId": "target-list-duplicate-url-different-targets",
+  "source": {
+    "capturedAt": "2026-02-13T11:52:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "Multiple tabs can share same URL/title with unique target handles"
+  },
+  "command": {
+    "id": "target.list",
+    "input": {
+      "sessionId": "s-default"
+    }
+  },
+  "observed": {
+    "ok": true,
+    "sessionId": "s-default",
+    "targets": [
+      {
+        "targetId": "197D10727DE30589C27DE6418993C150",
+        "url": "http://camelpay.localhost/",
+        "title": "CamelPay — Cross-chain crypto checkout",
+        "type": "page"
+      },
+      {
+        "targetId": "1B32B2A76D8206F1DD50816A8F2BED33",
+        "url": "http://camelpay.localhost/",
+        "title": "CamelPay — Cross-chain crypto checkout",
+        "type": "page"
+      },
+      {
+        "targetId": "B09D3FD8FA10F2487079DBA7AC3476CB",
+        "url": "about:blank",
+        "title": "",
+        "type": "page"
+      }
+    ]
+  },
+  "expect": {
+    "ok": true,
+    "minTargets": 3,
+    "requireDuplicateUrl": "http://camelpay.localhost/"
+  }
+}

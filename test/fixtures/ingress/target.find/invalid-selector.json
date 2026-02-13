@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "caseId": "target-find-invalid-selector",
+  "source": {
+    "capturedAt": "2026-02-13T11:48:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "Selector parse failure should map to typed selector error"
+  },
+  "command": {
+    "id": "target.find",
+    "input": {
+      "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+      "mode": "selector",
+      "query": "div[",
+      "limit": 12
+    }
+  },
+  "observed": {
+    "ok": false,
+    "code": "E_SELECTOR_INVALID",
+    "message": "Invalid selector query: div["
+  },
+  "expect": {
+    "ok": false,
+    "code": "E_SELECTOR_INVALID"
+  }
+}

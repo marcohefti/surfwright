@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "caseId": "target-find-multi-match-truncated",
+  "source": {
+    "capturedAt": "2026-02-13T11:50:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "High-match text query should preserve count and truncated semantics"
+  },
+  "command": {
+    "id": "target.find",
+    "input": {
+      "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+      "mode": "text",
+      "query": "Checkout",
+      "limit": 5
+    }
+  },
+  "observed": {
+    "ok": true,
+    "sessionId": "s-default",
+    "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+    "mode": "text",
+    "query": "Checkout",
+    "count": 9,
+    "limit": 5,
+    "matches": [
+      {
+        "index": 0,
+        "text": "Start Checkout",
+        "visible": false,
+        "selectorHint": "a.inline-flex.h-9"
+      },
+      {
+        "index": 1,
+        "text": "Cross-chain crypto checkout, made simple",
+        "visible": true,
+        "selectorHint": "h1.text-4xl.font-bold"
+      }
+    ],
+    "truncated": true
+  },
+  "expect": {
+    "ok": true,
+    "mode": "text",
+    "query": "Checkout",
+    "limit": 5,
+    "countAtLeast": 6,
+    "minMatches": 1,
+    "truncated": true
+  }
+}

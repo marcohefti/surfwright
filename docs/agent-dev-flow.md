@@ -27,6 +27,7 @@ Use this matrix before editing docs/skills.
 | Flag/default/timeout semantic change | contract payload if user-facing, tests, skill workflow reference | `README.md` examples | architecture docs |
 | Output JSON shape change | contract payload, tests, skill references that parse/use fields | `README.md` examples | unrelated docs |
 | Error code or retryability change | contract payload, tests, `skills/surfwright/references/error-handling.md` | `README.md` typed error examples | `AGENTS.md` |
+| New edge case discovered in real browser run | ingress fixture + integration test, `docs/fixture-ingress-workflow.md` | `README.md` examples if user-visible | contract payload unless behavior changed |
 | Internal refactor with no behavior change | tests if coverage shifts | docs only if architecture/process changed | skill refs |
 | New operator troubleshooting workflow | skill references | `README.md` if common | contract payload |
 | Dev process change (how we maintain) | `docs/maintaining-agent-surface.md` or this file | `AGENTS.md` routing section | skill references |
@@ -91,6 +92,13 @@ If fewer than two are true, prefer documentation over new script surface.
 1. Update `docs/*.md`.
 2. Update `AGENTS.md` routing if discoverability changed.
 3. Run relevant lightweight checks.
+
+### Edge-case fixture addition (no behavior change)
+
+1. Add fixture per `docs/fixture-ingress-workflow.md`.
+2. Add/extend integration test that consumes the fixture.
+3. Confirm fixture does not encode volatile/raw Playwright internals.
+4. Run validation commands.
 
 ## Validation Commands
 

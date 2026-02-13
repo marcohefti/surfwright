@@ -57,3 +57,11 @@ Expect non-zero exit and `{"ok":false,"code":...}` payload.
 
 - If docs and code disagree, code + contract command win.
 - Fix docs/skill in the same change window; do not defer drift cleanup.
+
+## 6) Edge-case fixture policy
+
+When real-world behavior reveals a new edge case, add a deterministic ingress fixture and test coverage in the same change window.
+
+- Follow `docs/fixture-ingress-workflow.md`.
+- Store normalized SurfWright contract behavior, not raw Playwright/CDP payloads.
+- Use the fixture path convention under `test/fixtures/ingress/...`.

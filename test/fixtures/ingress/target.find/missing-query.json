@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "caseId": "target-find-missing-query",
+  "source": {
+    "capturedAt": "2026-02-13T11:49:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "Exactly one of --text or --selector must be provided"
+  },
+  "command": {
+    "id": "target.find",
+    "input": {
+      "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+      "mode": "none",
+      "query": "",
+      "limit": 12
+    }
+  },
+  "observed": {
+    "ok": false,
+    "code": "E_QUERY_INVALID",
+    "message": "Provide exactly one query: --text <query> or --selector <query>"
+  },
+  "expect": {
+    "ok": false,
+    "code": "E_QUERY_INVALID"
+  }
+}

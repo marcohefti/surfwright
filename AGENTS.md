@@ -16,6 +16,7 @@ This repo exists for one thing: a stable browser control surface that agents can
 2. `docs/agent-dev-flow.md` for change routing and update decisions.
 3. `docs/maintaining-agent-surface.md` for pre-merge and release checklist.
 4. `docs/policy-harness.md` for structural rule framework and plug-in rules.
+5. `docs/fixture-ingress-workflow.md` for adding regression fixtures when new edge cases appear.
 
 ## Runtime Source of Truth
 

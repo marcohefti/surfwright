@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "caseId": "target-snapshot-truncation-flags",
+  "source": {
+    "capturedAt": "2026-02-13T11:51:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "Large landing page payload should set truncation flags deterministically"
+  },
+  "command": {
+    "id": "target.snapshot",
+    "input": {
+      "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8"
+    }
+  },
+  "observed": {
+    "ok": true,
+    "sessionId": "s-default",
+    "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+    "url": "http://camelpay.localhost/",
+    "title": "CamelPay — Cross-chain crypto checkout",
+    "textPreview": "CamelPay is in early access ...",
+    "headings": [
+      "Cross-chain crypto checkout, made simple",
+      "Go live in three steps",
+      "Create a payment",
+      "Customer pays",
+      "You get paid",
+      "Integrate where you already work"
+    ],
+    "buttons": [
+      "Theme: Dark. Click to toggle.",
+      "Open menu",
+      "What does the 0.5% fee cover?",
+      "Who controls where the funds go?"
+    ],
+    "links": [
+      {
+        "text": "Read the docs",
+        "href": "http://localhost:3002/developers/quickstart"
+      },
+      {
+        "text": "Product",
+        "href": "/#how-it-works"
+      }
+    ],
+    "truncated": {
+      "text": true,
+      "headings": true,
+      "buttons": false,
+      "links": true
+    }
+  },
+  "expect": {
+    "ok": true,
+    "titleContains": "CamelPay",
+    "minHeadings": 5,
+    "minButtons": 3,
+    "truncated": {
+      "text": true,
+      "headings": true,
+      "links": true
+    }
+  }
+}

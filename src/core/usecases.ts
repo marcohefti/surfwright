@@ -33,6 +33,7 @@ import { parseFieldsCsv, projectReportFields } from "./report-fields.js";
 import { listSessionsSnapshot } from "./state-repos/session-repo.js";
 import { saveTargetSnapshot } from "./state-repos/target-repo.js";
 import { targetClick } from "./target/target-click.js";
+import { targetEval } from "./target/target-eval.js";
 import { targetFind } from "./target/target-find.js";
 import { targetRead } from "./target/target-read.js";
 import { targetWait } from "./target/target-wait.js";
@@ -462,6 +463,17 @@ export async function runPipeline(opts: {
           chunkIndex: input.chunkIndex,
           persistState: input.persistState,
         })) as unknown as Record<string, unknown>,
+      eval: async (input) =>
+        (await targetEval({
+          targetId: input.targetId,
+          timeoutMs: input.timeoutMs,
+          sessionId: input.sessionId,
+          expression: input.expression,
+          argJson: input.argJson,
+          captureConsole: input.captureConsole,
+          maxConsole: input.maxConsole,
+          persistState: input.persistState,
+        })) as unknown as Record<string, unknown>,
       wait: async (input) =>
         (await targetWait({
           targetId: input.targetId,
@@ -475,17 +487,7 @@ export async function runPipeline(opts: {
     },
   });
 }
-export {
-  targetNetwork,
-  targetNetworkArtifactList,
-  targetNetworkArtifactPrune,
-  targetNetworkCaptureBegin,
-  targetNetworkCaptureEnd,
-  targetNetworkCheck,
-  targetNetworkExport,
-  targetNetworkQuery,
-  targetNetworkTail,
-} from "../features/network/usecases/index.js";
+export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail } from "../features/network/usecases/index.js";
 export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
-export { targetFind, targetRead, targetWait, targetClick, targetList, targetSnapshot };
+export { targetFind, targetRead, targetWait, targetClick, targetEval, targetList, targetSnapshot };
 export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";

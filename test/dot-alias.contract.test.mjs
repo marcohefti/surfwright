@@ -50,6 +50,12 @@ test("dot-command aliases route to runtime/target commands", () => {
   const reconcilePayload = parseJson(reconcileResult.stdout);
   assert.equal(reconcilePayload.ok, true);
   assert.equal(typeof reconcilePayload.sessions.removed, "number");
+
+  const evalResult = runCli(["--json", "target.eval", "DEADBEEF", "--expression", "1 + 1"]);
+  assert.equal(evalResult.status, 1);
+  const evalPayload = parseJson(evalResult.stdout);
+  assert.equal(evalPayload.ok, false);
+  assert.equal(evalPayload.code, "E_TARGET_SESSION_UNKNOWN");
 });
 
 test("dot-command alias supports network subcommands", () => {

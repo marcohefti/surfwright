@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "name": "surfwright-smoke",
+  "agentPreamble": "You are running inside ZeroContext Lab. Use the surfwright CLI only for browser actions unless the task says otherwise.",
+  "tasks": [
+    {
+      "id": "example-title",
+      "prompt": "Open https://example.com with surfwright and print one line exactly as: TITLE=<title>.",
+      "expect": {
+        "stdoutIncludes": [
+          "TITLE=Example Domain"
+        ],
+        "maxCliCommands": 8,
+        "requireFeedback": true
+      }
+    },
+    {
+      "id": "typed-url-error",
+      "prompt": "Run a surfwright command that intentionally uses an invalid URL and print one line exactly as: ERROR_CODE=<code> using the typed error code returned by the CLI.",
+      "expect": {
+        "stdoutIncludes": [
+          "ERROR_CODE=E_URL_INVALID"
+        ],
+        "maxCliCommands": 6,
+        "requireFeedback": true
+      }
+    }
+  ]
+}

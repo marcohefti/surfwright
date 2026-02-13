@@ -26,12 +26,16 @@ Non-retryable codes (fix input/config first):
 - `E_TARGET_SESSION_UNKNOWN`
 - `E_TARGET_SESSION_MISMATCH`
 - `E_QUERY_INVALID`
+- `E_EVAL_SCRIPT_TOO_LARGE`
+- `E_EVAL_RUNTIME`
+- `E_EVAL_RESULT_UNSERIALIZABLE`
 - `E_SELECTOR_INVALID`
 - `E_BROWSER_NOT_FOUND`
 
 Context-sensitive:
 
 - `E_SESSION_UNREACHABLE`: attached session endpoint is down; re-attach explicitly.
+- `E_EVAL_TIMEOUT`: retryable timeout when page-context evaluation exceeds deadline.
 
 ## Suggested backoff envelope
 

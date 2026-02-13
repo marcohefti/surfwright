@@ -15,6 +15,10 @@ export type PipelineStepInput = {
   limit?: number;
   chunkSize?: number;
   chunk?: number;
+  expression?: string;
+  argJson?: string;
+  captureConsole?: boolean;
+  maxConsole?: number;
   forText?: string;
   forSelector?: string;
   networkIdle?: boolean;
@@ -70,6 +74,16 @@ export type PipelineOps = {
     visibleOnly: boolean;
     chunkSize?: number;
     chunkIndex?: number;
+    persistState: boolean;
+  }) => Promise<Record<string, unknown>>;
+  eval: (opts: {
+    targetId: string;
+    timeoutMs: number;
+    sessionId?: string;
+    expression?: string;
+    argJson?: string;
+    captureConsole?: boolean;
+    maxConsole?: number;
     persistState: boolean;
   }) => Promise<Record<string, unknown>>;
   wait: (opts: {
@@ -218,6 +232,22 @@ export async function executePipelinePlan(opts: {
           forText: step.forText,
           forSelector: step.forSelector,
           networkIdle: Boolean(step.networkIdle),
+          persistState: !Boolean(step.noPersist),
+        });
+        break;
+      }
+      case "eval": {
+        if (!stepTargetId) {
+          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
+        }
+        report = await opts.ops.eval({
+          targetId: stepTargetId,
+          timeoutMs: stepTimeoutMs,
+          sessionId: ctx.sessionId,
+          expression: step.expression,
+          argJson: step.argJson,
+          captureConsole: Boolean(step.captureConsole),
+          maxConsole: typeof step.maxConsole === "number" ? step.maxConsole : undefined,
           persistState: !Boolean(step.noPersist),
         });
         break;

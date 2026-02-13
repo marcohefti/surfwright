@@ -179,6 +179,32 @@ test("open without session creates distinct isolated sessions per invocation", {
   assert.notEqual(firstPayload.sessionId, secondPayload.sessionId);
 });
 
+test("open without session skips stale profile directory ids", { skip: !hasBrowser() }, () => {
+  const blockedProfileId = "s-1";
+  fs.mkdirSync(path.join(TEST_STATE_DIR, "profiles", blockedProfileId), { recursive: true });
+  const seededState = {
+    version: 3,
+    activeSessionId: null,
+    nextSessionOrdinal: 1,
+    nextCaptureOrdinal: 1,
+    nextArtifactOrdinal: 1,
+    sessions: {},
+    targets: {},
+    networkCaptures: {},
+    networkArtifacts: {},
+  };
+  fs.writeFileSync(stateFilePath(), `${JSON.stringify(seededState, null, 2)}\n`, "utf8");
+
+  const html = `<title>Skip Stale Profile</title><main>ok</main>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+  assert.equal(openPayload.ok, true);
+  assert.equal(openPayload.sessionSource, "implicit-new");
+  assert.notEqual(openPayload.sessionId, blockedProfileId);
+});
+
 test("target command infers session from targetId when --session is omitted", { skip: !hasBrowser() }, () => {
   const html = `<title>Infer Session</title><main><h1>inferred heading</h1></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
@@ -284,6 +310,105 @@ test("target wait emits typed timeout error", { skip: !hasBrowser() }, () => {
   assert.equal(waitResult.status, 1);
   const waitPayload = parseJson(waitResult.stdout);
   assert.equal(waitPayload.code, "E_WAIT_TIMEOUT");
+});
+
+test("target eval validates script size before session resolution", () => {
+  const oversizedExpression = "x".repeat(5000);
+  const evalResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    "ABCDEF123456",
+    "--expression",
+    oversizedExpression,
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(evalResult.status, 1);
+  const evalPayload = parseJson(evalResult.stdout);
+  assert.equal(evalPayload.ok, false);
+  assert.equal(evalPayload.code, "E_EVAL_SCRIPT_TOO_LARGE");
+});
+
+test("target eval accepts --js alias", () => {
+  const evalResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    "ABCDEF123456",
+    "--js",
+    "1 + 1",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(evalResult.status, 1);
+  const evalPayload = parseJson(evalResult.stdout);
+  assert.equal(evalPayload.ok, false);
+  assert.equal(evalPayload.code, "E_TARGET_SESSION_UNKNOWN");
+});
+
+test("target eval returns deterministic shape and typed runtime failures", { skip: !hasBrowser() }, () => {
+  const html = `<title>Eval Contract</title><main><h1>Eval</h1></main>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const evalSuccessResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    openPayload.targetId,
+    "--expression",
+    "console.log('hello from agent'); return { ok: true, value: 42, text: 'abc' };",
+    "--capture-console",
+    "--max-console",
+    "5",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(evalSuccessResult.status, 0);
+  const evalSuccessPayload = parseJson(evalSuccessResult.stdout);
+  assert.deepEqual(Object.keys(evalSuccessPayload), [
+    "ok",
+    "sessionId",
+    "sessionSource",
+    "targetId",
+    "actionId",
+    "expression",
+    "result",
+    "console",
+    "timingMs",
+  ]);
+  assert.equal(evalSuccessPayload.ok, true);
+  assert.equal(evalSuccessPayload.sessionId, openPayload.sessionId);
+  assert.equal(evalSuccessPayload.sessionSource, "target-inferred");
+  assert.equal(evalSuccessPayload.targetId, openPayload.targetId);
+  assert.equal(typeof evalSuccessPayload.actionId, "string");
+  assert.equal(evalSuccessPayload.expression.includes("console.log"), true);
+  assert.equal(evalSuccessPayload.result.type, "object");
+  assert.equal(evalSuccessPayload.result.value.value, 42);
+  assert.equal(typeof evalSuccessPayload.result.truncated, "boolean");
+  assert.equal(evalSuccessPayload.console.captured, true);
+  assert.equal(evalSuccessPayload.console.count >= 1, true);
+  assert.equal(Array.isArray(evalSuccessPayload.console.entries), true);
+  assert.equal(evalSuccessPayload.console.entries[0]?.text.includes("hello from agent"), true);
+  assert.equal(typeof evalSuccessPayload.timingMs.total, "number");
+
+  const evalFailureResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    openPayload.targetId,
+    "--expression",
+    "throw new Error('boom from eval')",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(evalFailureResult.status, 1);
+  const evalFailurePayload = parseJson(evalFailureResult.stdout);
+  assert.equal(evalFailurePayload.ok, false);
+  assert.equal(evalFailurePayload.code, "E_EVAL_RUNTIME");
 });
 
 test("session fresh creates ephemeral managed session", { skip: !hasBrowser() }, () => {

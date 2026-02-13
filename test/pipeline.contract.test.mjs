@@ -94,6 +94,7 @@ test("run executes deterministic multi-step pipeline", { skip: !hasBrowser() }, 
       { id: "open", url: dataUrl, timeoutMs: 5000 },
       { id: "find", text: "Blog", timeoutMs: 5000, noPersist: true },
       { id: "click", text: "Blog", timeoutMs: 5000, waitForText: "Ready", snapshot: true, noPersist: true },
+      { id: "eval", expression: "return document.title", timeoutMs: 5000, noPersist: true },
       { id: "wait", forSelector: "#done", timeoutMs: 5000, noPersist: true },
       { id: "snapshot", timeoutMs: 5000, noPersist: true },
     ],
@@ -108,11 +109,12 @@ test("run executes deterministic multi-step pipeline", { skip: !hasBrowser() }, 
   assert.equal(typeof payload.sessionId, "string");
   assert.equal(typeof payload.targetId, "string");
   assert.equal(Array.isArray(payload.steps), true);
-  assert.equal(payload.steps.length, 5);
+  assert.equal(payload.steps.length, 6);
   assert.equal(payload.steps[0].id, "open");
   assert.equal(payload.steps[1].id, "find");
   assert.equal(payload.steps[2].id, "click");
-  assert.equal(payload.steps[3].id, "wait");
-  assert.equal(payload.steps[4].id, "snapshot");
+  assert.equal(payload.steps[3].id, "eval");
+  assert.equal(payload.steps[4].id, "wait");
+  assert.equal(payload.steps[5].id, "snapshot");
   assert.equal(typeof payload.totalMs, "number");
 });

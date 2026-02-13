@@ -37,6 +37,21 @@ export function printTargetCoreSuccess(report: unknown): boolean {
     return true;
   }
 
+  if ("result" in report && isRecord(report.result) && "actionId" in report) {
+    const sessionId = typeof report.sessionId === "string" ? report.sessionId : "unknown";
+    const targetId = typeof report.targetId === "string" ? report.targetId : "unknown";
+    const actionId = typeof report.actionId === "string" ? report.actionId : "unknown";
+    const resultType = typeof report.result.type === "string" ? report.result.type : "unknown";
+    const consoleCount =
+      isRecord(report.console) && typeof report.console.count === "number" ? String(report.console.count) : "0";
+    process.stdout.write(
+      ["ok", `sessionId=${sessionId}`, `targetId=${targetId}`, `actionId=${actionId}`, `type=${resultType}`, `console=${consoleCount}`].join(
+        " ",
+      ) + "\n",
+    );
+    return true;
+  }
+
   if ("value" in report) {
     const sessionId = typeof report.sessionId === "string" ? report.sessionId : "unknown";
     const targetId = typeof report.targetId === "string" ? report.targetId : "unknown";

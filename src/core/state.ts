@@ -382,12 +382,23 @@ export function sanitizeSessionId(input: string): string {
   return value;
 }
 export function allocateSessionId(state: SurfwrightState, prefix: "s" | "a"): string {
+  const profileExistsForSession = (sessionId: string): boolean => {
+    if (prefix !== "s") {
+      return false;
+    }
+    try {
+      return fs.existsSync(defaultSessionUserDataDir(sessionId));
+    } catch {
+      return false;
+    }
+  };
+
   let ordinal = state.nextSessionOrdinal;
   if (!Number.isFinite(ordinal) || ordinal <= 0) {
     ordinal = 1;
   }
   let candidate = `${prefix}-${Math.floor(ordinal)}`;
-  while (state.sessions[candidate]) {
+  while (state.sessions[candidate] || profileExistsForSession(candidate)) {
     ordinal += 1;
     candidate = `${prefix}-${Math.floor(ordinal)}`;
   }

@@ -33,6 +33,7 @@ surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
 surfwright --json target click <targetId> --text "query" --visible-only
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
+surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --profile perf --view summary
 surfwright target network-tail <targetId> --profile api --capture-ms 3000
@@ -57,7 +58,8 @@ surfwright --json state reconcile
 
 - Retry only retryable infrastructure failures (`E_CDP_UNREACHABLE`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_TIMEOUT`, `E_INTERNAL`, `E_WAIT_TIMEOUT`).
 - Do not retry input/config failures (`E_URL_INVALID`, `E_CDP_INVALID`, `E_SESSION_ID_INVALID`, `E_SESSION_EXISTS`, `E_SESSION_REQUIRED`).
-- Do not retry target/query failures (`E_TARGET_ID_INVALID`, `E_TARGET_NOT_FOUND`, `E_TARGET_SESSION_UNKNOWN`, `E_TARGET_SESSION_MISMATCH`, `E_QUERY_INVALID`, `E_SELECTOR_INVALID`) until command inputs change.
+- Do not retry target/query failures (`E_TARGET_ID_INVALID`, `E_TARGET_NOT_FOUND`, `E_TARGET_SESSION_UNKNOWN`, `E_TARGET_SESSION_MISMATCH`, `E_QUERY_INVALID`, `E_SELECTOR_INVALID`, `E_EVAL_SCRIPT_TOO_LARGE`, `E_EVAL_RUNTIME`, `E_EVAL_RESULT_UNSERIALIZABLE`) until command inputs change.
+- Treat `E_EVAL_TIMEOUT` as retryable infrastructure timeout only when eval payload is unchanged and idempotent.
 - If `E_SESSION_UNREACHABLE` occurs on an attached session, re-attach explicitly.
 
 ## Reference map

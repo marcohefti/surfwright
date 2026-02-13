@@ -9,6 +9,7 @@ export const DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS = 30 * 60 * 1000;
 export const DEFAULT_TARGET_TIMEOUT_MS = 10000;
 export const DEFAULT_TARGET_FIND_LIMIT = 12;
 export const DEFAULT_TARGET_READ_CHUNK_SIZE = 1200;
+export const DEFAULT_TARGET_EVAL_MAX_CONSOLE = 20;
 export const DEFAULT_TARGET_NETWORK_CAPTURE_MS = 2500;
 export const DEFAULT_TARGET_NETWORK_MAX_REQUESTS = 120;
 export const DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS = 24;
@@ -212,6 +213,30 @@ export type TargetReadReport = {
   totalChars: number;
   text: string;
   truncated: boolean;
+  timingMs: ActionTimingMs;
+};
+
+export type TargetEvalReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  actionId: string;
+  expression: string;
+  result: {
+    type: "undefined" | "null" | "boolean" | "number" | "string" | "bigint" | "array" | "object";
+    value: unknown;
+    truncated: boolean;
+  };
+  console: {
+    captured: boolean;
+    count: number;
+    truncated: boolean;
+    entries: Array<{
+      level: string;
+      text: string;
+    }>;
+  };
   timingMs: ActionTimingMs;
 };
 

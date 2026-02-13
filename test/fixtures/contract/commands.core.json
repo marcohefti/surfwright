@@ -14,6 +14,7 @@
   { "id": "target.find", "usageMustContain": "target find" },
   { "id": "target.click", "usageMustContain": "target click" },
   { "id": "target.read", "usageMustContain": "target read" },
+  { "id": "target.eval", "usageMustContain": "target eval" },
   { "id": "target.wait", "usageMustContain": "target wait" },
   { "id": "target.prune", "usageMustContain": "target prune" },
   { "id": "state.reconcile", "usageMustContain": "state reconcile" },

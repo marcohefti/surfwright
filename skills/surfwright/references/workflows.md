@@ -17,6 +17,7 @@ surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
 surfwright --json target click <targetId> --text "query" --visible-only
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
+surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --profile perf --view summary
 surfwright target network-tail <targetId> --profile api --capture-ms 3000
@@ -37,6 +38,7 @@ surfwright --json target network-check <targetId> --budget ./budgets/network.jso
 - `target find` checks match counts and returns bounded match metadata for one explicit query.
 - `target click` executes one explicit click action from text/selector query semantics.
 - `target read` returns deterministic chunks for long text extraction.
+- `target eval` executes bounded JavaScript in page context and returns typed result projection.
 - `target wait` blocks until text/selector/network-idle readiness is met.
 - `target network` captures bounded request/websocket diagnostics with profiles, projections, hints, and insights.
 - `target network-tail` streams NDJSON events for live request/socket observation.

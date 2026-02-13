@@ -103,6 +103,7 @@ surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--m
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target eval <targetId> (--expression <js> | --js <js> | --script <js>) [--arg-json <json>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--session <id>]
@@ -135,6 +136,7 @@ surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "Checkout" --first --visible-only
 surfwright --json target click <targetId> --text "Blog" --visible-only
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
+surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --profile perf --view summary
 surfwright target network-tail <targetId> --profile api --capture-ms 3000
@@ -196,6 +198,12 @@ surfwright --json state reconcile
 
 ```json
 {"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","scope":{"selector":"main","matched":true,"visibleOnly":true},"chunkSize":1200,"chunkIndex":1,"totalChunks":2,"totalChars":2200,"text":"Cross-chain crypto checkout, made simple ...","truncated":true,"timingMs":{"total":139,"resolveSession":4,"connectCdp":27,"action":95,"persistState":13}}
+```
+
+`target eval` executes bounded page-context JavaScript for one explicit target:
+
+```json
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pk-1xk9","expression":"console.log('hello from agent'); return document.title","result":{"type":"string","value":"CamelPay — Cross-chain crypto checkout","truncated":false},"console":{"captured":true,"count":1,"truncated":false,"entries":[{"level":"log","text":"hello from agent"}]},"timingMs":{"total":126,"resolveSession":4,"connectCdp":25,"action":84,"persistState":13}}
 ```
 
 `target network` returns bounded request/websocket diagnostics plus performance summary, correlation ids, hints, and insights:
@@ -265,7 +273,21 @@ Contract ids are executable aliases. Example: `surfwright --json target.find <ta
 
 - Architecture and source-of-truth map: `docs/agent-guidance-architecture.md`
 - Maintenance checklist: `docs/maintaining-agent-surface.md`
+- Zero-context evaluation harness: `docs/zerocontext-lab.md`
 - Installable runtime skill: `skills/surfwright/SKILL.md`
+
+## ZERO_CONTEXT_DAY
+
+Declared: **February 13, 2026**
+
+We celebrate this as the milestone where fresh agents, with near-zero guidance, successfully discovered and used SurfWright workflows on first try.
+
+```txt
+   ________  ______  __       ______
+  /__  __/ / __/ / / /      / ____/
+    / /   / /_/ /_/ /____  / /__
+   /_/    \__/\____/_____/ \___/
+```
 
 ## Status
 

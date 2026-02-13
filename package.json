@@ -18,6 +18,8 @@
     "perf:check": "node scripts/perf-budget-check.mjs",
     "skill:validate": "node scripts/validate-skills.mjs",
     "skill:install": "bash scripts/install-skill.sh",
+    "zcl:run": "node scripts/zerocontext-lab.mjs run",
+    "zcl:report": "node scripts/zerocontext-lab.mjs report",
     "start": "node dist/cli.js",
     "verify": "pnpm -s test && pnpm -s validate",
     "validate": "pnpm -s typecheck && pnpm -s policy:check && pnpm -s perf:check && pnpm -s skill:validate && pnpm -s build && pnpm -s contract:snapshot:check",

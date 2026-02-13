@@ -36,6 +36,8 @@ import { targetClick } from "./target/target-click.js";
 import { targetEval } from "./target/target-eval.js";
 import { targetExtract } from "./target/target-extract.js";
 import { targetFind } from "./target/target-find.js";
+import { targetScrollPlan } from "./target/effects/target-scroll-plan.js";
+import { targetTransitionTrace } from "./target/effects/target-transition-trace.js";
 import { targetConsoleTail, targetHealth, targetHud } from "./target/target-observability.js";
 import { targetRead } from "./target/target-read.js";
 import { targetWait } from "./target/target-wait.js";
@@ -455,5 +457,5 @@ export async function runPipeline(opts: {
 export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail } from "../features/network/usecases/index.js";
 export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
 export { targetFind, targetRead, targetWait, targetClick, targetEval, targetList, targetSnapshot, targetExtract };
-export { targetConsoleTail, targetHealth, targetHud };
+export { targetConsoleTail, targetHealth, targetHud, targetScrollPlan, targetTransitionTrace };
 export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";

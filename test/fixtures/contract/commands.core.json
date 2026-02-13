@@ -15,6 +15,8 @@
   { "id": "target.click", "usageMustContain": "target click" },
   { "id": "target.read", "usageMustContain": "target read" },
   { "id": "target.eval", "usageMustContain": "target eval" },
+  { "id": "target.scroll-plan", "usageMustContain": "target scroll-plan" },
+  { "id": "target.transition-trace", "usageMustContain": "target transition-trace" },
   { "id": "target.wait", "usageMustContain": "target wait" },
   { "id": "target.extract", "usageMustContain": "target extract" },
   { "id": "target.console-tail", "usageMustContain": "target console-tail" },

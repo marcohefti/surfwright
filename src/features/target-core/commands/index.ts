@@ -1,4 +1,5 @@
 import { targetClickCommandSpec } from "./target-click.js";
+import { targetScrollPlanCommandSpec, targetTransitionTraceCommandSpec } from "./effects/target-effects.js";
 import { targetEvalCommandSpec } from "./target-eval.js";
 import { targetFindCommandSpec } from "./target-find.js";
 import { targetListCommandSpec } from "./target-list.js";
@@ -15,6 +16,8 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetSnapshotCommandSpec,
   targetFindCommandSpec,
   targetClickCommandSpec,
+  targetScrollPlanCommandSpec,
+  targetTransitionTraceCommandSpec,
   targetEvalCommandSpec,
   targetReadCommandSpec,
   targetExtractCommandSpec,

@@ -169,9 +169,19 @@
       "summary": "read target text in deterministic chunks"
     },
     {
+      "id": "target.scroll-plan",
+      "usage": "surfwright target scroll-plan <targetId> [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "execute deterministic scroll steps and report requested vs achieved positions"
+    },
+    {
       "id": "target.snapshot",
       "usage": "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "read bounded text and UI primitives for a target"
+    },
+    {
+      "id": "target.transition-trace",
+      "usage": "surfwright target transition-trace <targetId> [--capture-ms <ms>] [--max-events <n>] [--click-text <query> | --click-selector <query>] [--contains <text>] [--visible-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "capture transition/animation events over a bounded window with optional click trigger"
     },
     {
       "id": "target.wait",

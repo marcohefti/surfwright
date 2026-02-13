@@ -44,6 +44,18 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "execute bounded JavaScript in page context for a target",
   },
   {
+    id: "target.scroll-plan",
+    usage:
+      "surfwright target scroll-plan <targetId> [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "execute deterministic scroll steps and report requested vs achieved positions",
+  },
+  {
+    id: "target.transition-trace",
+    usage:
+      "surfwright target transition-trace <targetId> [--capture-ms <ms>] [--max-events <n>] [--click-text <query> | --click-selector <query>] [--contains <text>] [--visible-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "capture transition/animation events over a bounded window with optional click trigger",
+  },
+  {
     id: "target.wait",
     usage:
       "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",

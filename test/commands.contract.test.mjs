@@ -466,10 +466,11 @@ test("contract command matches fixture-backed command surface", () => {
 
   const expectedCore = loadFixture("test/fixtures/contract/commands.core.json");
   const expectedNetwork = loadFixture("test/fixtures/contract/commands.network.json");
+  const expectedExperimental = loadFixture("test/fixtures/contract/commands.experimental.json");
   const expectedErrors = loadFixture("test/fixtures/contract/errors.json");
   const commandById = new Map(payload.commands.map((entry) => [entry.id, entry]));
 
-  for (const entry of [...expectedCore, ...expectedNetwork]) {
+  for (const entry of [...expectedCore, ...expectedNetwork, ...expectedExperimental]) {
     const actual = commandById.get(entry.id);
     assert.notEqual(actual, undefined, `missing command ${entry.id}`);
     assert.equal(actual.usage.includes(entry.usageMustContain), true, `usage mismatch for ${entry.id}`);

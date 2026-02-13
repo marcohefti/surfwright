@@ -19,6 +19,11 @@
       "summary": "check node/chrome prerequisites without side effects"
     },
     {
+      "id": "exp.effects",
+      "usage": "surfwright exp effects <targetId> [--profile <preset>] [--include-declared] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "experimental scaffold for effect observation and coverage reporting"
+    },
+    {
       "id": "open",
       "usage": "surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "open URL and return minimal page report with target handle"

@@ -4,7 +4,6 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
-import { registerTargetCommands } from "./cli-target.js";
 import { toCliFailure } from "./core/errors.js";
 import {
   cleanupOwnedDaemonMeta,
@@ -15,10 +14,7 @@ import {
 } from "./core/daemon/index.js";
 import { type CliFailure } from "./core/types.js";
 import { parseWorkerArgv, runTargetNetworkWorker } from "./features/network/index.js";
-import { networkCommandManifest } from "./features/network/manifest.js";
-import { registerRuntimeCommands } from "./features/runtime/register-commands.js";
-import { runtimeCommandManifest } from "./features/runtime/manifest.js";
-import { targetCommandManifest } from "./features/target-core/manifest.js";
+import { allCommandManifest, registerFeaturePlugins } from "./features/registry.js";
 
 type OutputOpts = {
   json: boolean;
@@ -154,7 +150,7 @@ function applyAgentIdOverrideFromArgv(argv: string[]): void {
 
 const DOT_COMMAND_ALIAS_MAP = (() => {
   const map = new Map<string, string[]>();
-  for (const command of [...runtimeCommandManifest, ...targetCommandManifest, ...networkCommandManifest]) {
+  for (const command of allCommandManifest) {
     if (!command.id.includes(".")) {
       continue;
     }
@@ -314,19 +310,12 @@ function createProgram(): Command {
     .option("--session <sessionId>", "Use a specific session for this command")
     .exitOverride();
 
-  registerRuntimeCommands({
+  registerFeaturePlugins({
     program,
     parseTimeoutMs,
     globalOutputOpts,
     handleFailure,
     readPackageVersion,
-  });
-
-  registerTargetCommands({
-    program,
-    parseTimeoutMs,
-    globalOutputOpts,
-    handleFailure,
   });
 
   return program;

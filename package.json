@@ -23,7 +23,7 @@
     "start": "node dist/cli.js",
     "verify": "pnpm -s test && pnpm -s validate",
     "validate": "pnpm -s typecheck && pnpm -s policy:check && pnpm -s perf:check && pnpm -s skill:validate && pnpm -s build && pnpm -s contract:snapshot:check",
-    "test:contract": "pnpm -s build && node --test test/*.contract.test.mjs",
+    "test:contract": "pnpm -s build && node --test test/*.contract.test.mjs test/**/*.contract.test.mjs",
     "test:fixtures": "node --test test/ingress.fixture-replay.test.mjs",
     "test": "pnpm -s test:contract && pnpm -s test:fixtures"
   },

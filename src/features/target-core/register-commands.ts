@@ -1,5 +1,5 @@
-import { registerNetworkCommands } from "../network/index.js";
 import { targetCommandSpecs } from "./commands/index.js";
+import { ensureTargetCommand } from "./target-command.js";
 import type { TargetCommandContext, TargetOutputOpts } from "./commands/types.js";
 import { printTargetSuccess } from "./formatters/index.js";
 
@@ -11,7 +11,7 @@ type RegisterTargetCommandsOptions = {
 };
 
 export function registerTargetCommands(opts: RegisterTargetCommandsOptions) {
-  const target = opts.program.command("target").description("Inspect browser targets in a session");
+  const target = ensureTargetCommand(opts.program);
   const targetCtx: TargetCommandContext = {
     ...opts,
     target,
@@ -21,11 +21,4 @@ export function registerTargetCommands(opts: RegisterTargetCommandsOptions) {
   for (const spec of targetCommandSpecs) {
     spec.register(targetCtx);
   }
-
-  registerNetworkCommands({
-    ...targetCtx,
-    printTargetSuccess: (report, output) => {
-      printTargetSuccess(report, output);
-    },
-  });
 }

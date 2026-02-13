@@ -36,7 +36,10 @@ import { targetClick } from "./target/target-click.js";
 import { targetEval } from "./target/target-eval.js";
 import { targetExtract } from "./target/target-extract.js";
 import { targetFind } from "./target/target-find.js";
+import { targetObserve } from "./target/effects/target-observe.js";
 import { targetScrollPlan } from "./target/effects/target-scroll-plan.js";
+import { targetScrollSample } from "./target/effects/target-scroll-sample.js";
+import { targetScrollWatch } from "./target/effects/target-scroll-watch.js";
 import { targetTransitionTrace } from "./target/effects/target-transition-trace.js";
 import { targetConsoleTail, targetHealth, targetHud } from "./target/target-observability.js";
 import { targetRead } from "./target/target-read.js";
@@ -457,5 +460,5 @@ export async function runPipeline(opts: {
 export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail } from "../features/network/usecases/index.js";
 export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
 export { targetFind, targetRead, targetWait, targetClick, targetEval, targetList, targetSnapshot, targetExtract };
-export { targetConsoleTail, targetHealth, targetHud, targetScrollPlan, targetTransitionTrace };
+export { targetConsoleTail, targetHealth, targetHud, targetObserve, targetScrollPlan, targetScrollSample, targetScrollWatch, targetTransitionTrace };
 export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";

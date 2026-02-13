@@ -1,10 +1,82 @@
-import { parseFieldsCsv, projectReportFields, targetScrollPlan, targetTransitionTrace } from "../../../../core/usecases.js";
+import {
+  parseFieldsCsv,
+  projectReportFields,
+  targetObserve,
+  targetScrollPlan,
+  targetScrollSample,
+  targetScrollWatch,
+  targetTransitionTrace,
+} from "../../../../core/usecases.js";
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../../core/types.js";
 import { targetCommandMeta } from "../../manifest.js";
 import type { TargetCommandSpec } from "../types.js";
 
+const observeMeta = targetCommandMeta("target.observe");
 const scrollPlanMeta = targetCommandMeta("target.scroll-plan");
+const scrollSampleMeta = targetCommandMeta("target.scroll-sample");
+const scrollWatchMeta = targetCommandMeta("target.scroll-watch");
 const transitionTraceMeta = targetCommandMeta("target.transition-trace");
+
+export const targetObserveCommandSpec: TargetCommandSpec = {
+  id: observeMeta.id,
+  usage: observeMeta.usage,
+  summary: observeMeta.summary,
+  register: (ctx) => {
+    ctx.target
+      .command("observe")
+      .description(observeMeta.summary)
+      .argument("<targetId>", "Target handle returned by open/target list")
+      .option("--selector <query>", "Selector query to observe")
+      .option("--contains <text>", "Optional contains filter applied to selector matches")
+      .option("--visible-only", "Require observed target to be visible", false)
+      .option("--property <name>", "Property to sample (computed style by default)", "transform")
+      .option("--interval-ms <ms>", "Sampling interval in milliseconds", "400")
+      .option("--duration-ms <ms>", "Total capture window in milliseconds", "3000")
+      .option("--max-samples <n>", "Maximum samples to return", "120")
+      .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--fields <csv>", "Return only selected top-level fields")
+      .action(
+        async (
+          targetId: string,
+          options: {
+            selector?: string;
+            contains?: string;
+            visibleOnly?: boolean;
+            property: string;
+            intervalMs: string;
+            durationMs: string;
+            maxSamples: string;
+            timeoutMs: number;
+            noPersist?: boolean;
+            fields?: string;
+          },
+        ) => {
+          const output = ctx.globalOutputOpts();
+          const globalOpts = ctx.program.opts<{ session?: string }>();
+          const fields = parseFieldsCsv(options.fields);
+          try {
+            const report = await targetObserve({
+              targetId,
+              timeoutMs: options.timeoutMs,
+              sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+              selectorQuery: options.selector,
+              containsQuery: options.contains,
+              visibleOnly: Boolean(options.visibleOnly),
+              property: options.property,
+              intervalMs: Number.parseInt(options.intervalMs, 10),
+              durationMs: Number.parseInt(options.durationMs, 10),
+              maxSamples: Number.parseInt(options.maxSamples, 10),
+              persistState: !Boolean(options.noPersist),
+            });
+            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
+          } catch (error) {
+            ctx.handleFailure(error, output);
+          }
+        },
+      );
+  },
+};
 
 export const targetScrollPlanCommandSpec: TargetCommandSpec = {
   id: scrollPlanMeta.id,
@@ -38,6 +110,125 @@ export const targetScrollPlanCommandSpec: TargetCommandSpec = {
           ctx.handleFailure(error, output);
         }
       });
+  },
+};
+
+export const targetScrollSampleCommandSpec: TargetCommandSpec = {
+  id: scrollSampleMeta.id,
+  usage: scrollSampleMeta.usage,
+  summary: scrollSampleMeta.summary,
+  register: (ctx) => {
+    ctx.target
+      .command("scroll-sample")
+      .description(scrollSampleMeta.summary)
+      .argument("<targetId>", "Target handle returned by open/target list")
+      .option("--selector <query>", "Selector query to sample during scroll plan")
+      .option("--contains <text>", "Optional contains filter applied to selector matches")
+      .option("--visible-only", "Require sampled target to be visible", false)
+      .option("--property <name>", "Property to sample (computed style by default)", "transform")
+      .option("--steps <csv>", "Comma-separated requested scrollY positions", "0,300,600,900")
+      .option("--settle-ms <ms>", "Settle delay after each scroll step in milliseconds", "300")
+      .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--fields <csv>", "Return only selected top-level fields")
+      .action(
+        async (
+          targetId: string,
+          options: {
+            selector?: string;
+            contains?: string;
+            visibleOnly?: boolean;
+            property: string;
+            steps: string;
+            settleMs: string;
+            timeoutMs: number;
+            noPersist?: boolean;
+            fields?: string;
+          },
+        ) => {
+          const output = ctx.globalOutputOpts();
+          const globalOpts = ctx.program.opts<{ session?: string }>();
+          const fields = parseFieldsCsv(options.fields);
+          try {
+            const report = await targetScrollSample({
+              targetId,
+              timeoutMs: options.timeoutMs,
+              sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+              selectorQuery: options.selector,
+              containsQuery: options.contains,
+              visibleOnly: Boolean(options.visibleOnly),
+              property: options.property,
+              stepsCsv: options.steps,
+              settleMs: Number.parseInt(options.settleMs, 10),
+              persistState: !Boolean(options.noPersist),
+            });
+            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
+          } catch (error) {
+            ctx.handleFailure(error, output);
+          }
+        },
+      );
+  },
+};
+
+export const targetScrollWatchCommandSpec: TargetCommandSpec = {
+  id: scrollWatchMeta.id,
+  usage: scrollWatchMeta.usage,
+  summary: scrollWatchMeta.summary,
+  register: (ctx) => {
+    ctx.target
+      .command("scroll-watch")
+      .description(scrollWatchMeta.summary)
+      .argument("<targetId>", "Target handle returned by open/target list")
+      .option("--selector <query>", "Selector query to watch during scroll plan")
+      .option("--contains <text>", "Optional contains filter applied to selector matches")
+      .option("--visible-only", "Require watched target to be visible", false)
+      .option("--properties <csv>", "Comma-separated computed style properties", "position,top,transform,opacity")
+      .option("--steps <csv>", "Comma-separated requested scrollY positions", "0,120,240,480,960")
+      .option("--settle-ms <ms>", "Settle delay after each scroll step in milliseconds", "300")
+      .option("--max-events <n>", "Maximum transition/animation events to return", "240")
+      .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--fields <csv>", "Return only selected top-level fields")
+      .action(
+        async (
+          targetId: string,
+          options: {
+            selector?: string;
+            contains?: string;
+            visibleOnly?: boolean;
+            properties: string;
+            steps: string;
+            settleMs: string;
+            maxEvents: string;
+            timeoutMs: number;
+            noPersist?: boolean;
+            fields?: string;
+          },
+        ) => {
+          const output = ctx.globalOutputOpts();
+          const globalOpts = ctx.program.opts<{ session?: string }>();
+          const fields = parseFieldsCsv(options.fields);
+          try {
+            const report = await targetScrollWatch({
+              targetId,
+              timeoutMs: options.timeoutMs,
+              sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+              selectorQuery: options.selector,
+              containsQuery: options.contains,
+              visibleOnly: Boolean(options.visibleOnly),
+              propertiesCsv: options.properties,
+              stepsCsv: options.steps,
+              settleMs: Number.parseInt(options.settleMs, 10),
+              maxEvents: Number.parseInt(options.maxEvents, 10),
+              persistState: !Boolean(options.noPersist),
+            });
+            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
+          } catch (error) {
+            ctx.handleFailure(error, output);
+          }
+        },
+      );
   },
 };
 

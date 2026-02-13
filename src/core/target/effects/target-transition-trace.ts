@@ -1,10 +1,11 @@
-import { chromium, type Locator } from "playwright-core";
+import { chromium } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
 import { nowIso } from "../../state.js";
 import { saveTargetSnapshot } from "../../state-repos/target-repo.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
+import { resolveFirstMatch } from "./query-match.js";
 import type { TargetTransitionTraceReport } from "./types.js";
 
 const DEFAULT_TRANSITION_TRACE_CAPTURE_MS = 2500;
@@ -59,35 +60,6 @@ function parseTraceClickQuery(opts: {
     containsQuery: contains,
     visibleOnly: opts.visibleOnly,
   });
-}
-
-async function resolveFirstMatch(opts: {
-  locator: Locator;
-  count: number;
-  visibleOnly: boolean;
-}): Promise<{
-  locator: Locator;
-  index: number;
-  visible: boolean;
-}> {
-  for (let idx = 0; idx < opts.count; idx += 1) {
-    const candidate = opts.locator.nth(idx);
-    let visible = false;
-    try {
-      visible = await candidate.isVisible();
-    } catch {
-      visible = false;
-    }
-    if (opts.visibleOnly && !visible) {
-      continue;
-    }
-    return {
-      locator: candidate,
-      index: idx,
-      visible,
-    };
-  }
-  throw new CliError("E_QUERY_INVALID", opts.visibleOnly ? "No visible element matched click query" : "No element matched click query");
 }
 
 export async function targetTransitionTrace(opts: {

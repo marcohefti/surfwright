@@ -108,6 +108,61 @@ test("target transition-trace validates max-events before session resolution", (
   assert.equal(payload.code, "E_QUERY_INVALID");
 });
 
+test("target observe requires selector before session resolution", () => {
+  const result = runCli([
+    "--json",
+    "target",
+    "observe",
+    "ABCDEF123456",
+    "--property",
+    "transform",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+});
+
+test("target scroll-sample validates steps before session resolution", () => {
+  const result = runCli([
+    "--json",
+    "target",
+    "scroll-sample",
+    "ABCDEF123456",
+    "--selector",
+    "body",
+    "--steps",
+    "0,bad,10",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+});
+
+test("target scroll-watch validates properties before session resolution", () => {
+  const result = runCli([
+    "--json",
+    "target",
+    "scroll-watch",
+    "ABCDEF123456",
+    "--selector",
+    "body",
+    "--properties",
+    ",",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+});
+
 test("target scroll-plan returns deterministic shape", { skip: !hasBrowser() }, () => {
   const html = `<title>Scroll Plan</title><main style="height:4000px"><h1>scroll-page</h1></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
@@ -186,4 +241,160 @@ test("target transition-trace captures transition events after click", { skip: !
   assert.equal(typeof payload.trigger.clicked.selectorHint, "string");
   assert.equal(payload.events.some((entry) => entry.kind === "transitionstart"), true);
   assert.equal(payload.events.some((entry) => entry.propertyName === "opacity"), true);
+});
+
+test("target observe captures sampled property changes", { skip: !hasBrowser() }, () => {
+  const html = `<!doctype html>
+  <html><head><title>Observe</title></head><body>
+  <div id="auto" style="width:80px;height:30px;transform:translateX(0px)">auto</div>
+  <script>
+    let step = 0;
+    setInterval(() => {
+      step += 1;
+      const el = document.getElementById("auto");
+      if (el) {
+        el.style.transform = "translateX(" + (step * 8) + "px)";
+      }
+    }, 120);
+  </script>
+  </body></html>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const observeResult = runCli([
+    "--json",
+    "target",
+    "observe",
+    openPayload.targetId,
+    "--selector",
+    "#auto",
+    "--property",
+    "transform",
+    "--interval-ms",
+    "120",
+    "--duration-ms",
+    "900",
+    "--max-samples",
+    "20",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(observeResult.status, 0);
+  const payload = parseJson(observeResult.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.targetId, openPayload.targetId);
+  assert.equal(payload.query.selector, "#auto");
+  assert.equal(payload.property, "transform");
+  assert.equal(Array.isArray(payload.samples), true);
+  assert.equal(payload.sampleCount, payload.samples.length);
+  assert.equal(payload.sampleCount > 2, true);
+  assert.equal(payload.changes > 0, true);
+});
+
+test("target scroll-sample returns sampled values across steps", { skip: !hasBrowser() }, () => {
+  const html = `<!doctype html>
+  <html><head><title>Scroll Sample</title></head>
+  <body style="height:4000px;margin:0">
+  <div id="probe" style="position:fixed;top:10px;left:10px;transform:translateY(0px)">probe</div>
+  <script>
+    const probe = document.getElementById("probe");
+    const apply = () => {
+      if (probe) {
+        probe.style.transform = "translateY(" + Math.round(window.scrollY / 2) + "px)";
+      }
+    };
+    apply();
+    window.addEventListener("scroll", apply, { passive: true });
+  </script>
+  </body></html>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const sampleResult = runCli([
+    "--json",
+    "target",
+    "scroll-sample",
+    openPayload.targetId,
+    "--selector",
+    "#probe",
+    "--property",
+    "transform",
+    "--steps",
+    "0,200,800",
+    "--settle-ms",
+    "120",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(sampleResult.status, 0);
+  const payload = parseJson(sampleResult.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.targetId, openPayload.targetId);
+  assert.equal(payload.query.selector, "#probe");
+  assert.equal(payload.property, "transform");
+  assert.equal(Array.isArray(payload.steps), true);
+  assert.equal(payload.steps.length, 3);
+  assert.equal(typeof payload.steps[0].value, "string");
+  assert.equal(payload.valueChanges > 0, true);
+});
+
+test("target scroll-watch returns class/style deltas and transition events", { skip: !hasBrowser() }, () => {
+  const html = `<!doctype html>
+  <html><head><title>Scroll Watch</title>
+  <style>
+    body { margin: 0; height: 4000px; }
+    #hdr { position: fixed; top: 0; left: 0; right: 0; height: 48px; opacity: 1; transition: opacity 0.15s linear; background: #222; color: #fff; }
+    body.scrolled #hdr { opacity: 0.6; }
+  </style>
+  </head><body>
+  <header id="hdr">Header</header>
+  <script>
+    const apply = () => {
+      if (window.scrollY > 120) {
+        document.body.classList.add("scrolled");
+      } else {
+        document.body.classList.remove("scrolled");
+      }
+    };
+    apply();
+    window.addEventListener("scroll", apply, { passive: true });
+  </script>
+  </body></html>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const watchResult = runCli([
+    "--json",
+    "target",
+    "scroll-watch",
+    openPayload.targetId,
+    "--selector",
+    "#hdr",
+    "--properties",
+    "opacity,position",
+    "--steps",
+    "0,180,0",
+    "--settle-ms",
+    "300",
+    "--max-events",
+    "120",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(watchResult.status, 0);
+  const payload = parseJson(watchResult.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.targetId, openPayload.targetId);
+  assert.equal(payload.query.selector, "#hdr");
+  assert.equal(Array.isArray(payload.samples), true);
+  assert.equal(payload.samples.length, 3);
+  assert.equal(payload.changeCount > 0, true);
+  assert.equal(typeof payload.transition.emitted, "number");
+  assert.equal(payload.transition.emitted > 0, true);
 });

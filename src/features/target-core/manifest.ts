@@ -44,10 +44,28 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "execute bounded JavaScript in page context for a target",
   },
   {
+    id: "target.observe",
+    usage:
+      "surfwright target observe <targetId> --selector <query> [--contains <text>] [--visible-only] [--property <name>] [--interval-ms <ms>] [--duration-ms <ms>] [--max-samples <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "capture bounded time-series samples for a selector property on a target",
+  },
+  {
     id: "target.scroll-plan",
     usage:
       "surfwright target scroll-plan <targetId> [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "execute deterministic scroll steps and report requested vs achieved positions",
+  },
+  {
+    id: "target.scroll-sample",
+    usage:
+      "surfwright target scroll-sample <targetId> --selector <query> [--contains <text>] [--visible-only] [--property <name>] [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "execute deterministic scroll steps and sample selector property values at each step",
+  },
+  {
+    id: "target.scroll-watch",
+    usage:
+      "surfwright target scroll-watch <targetId> --selector <query> [--contains <text>] [--visible-only] [--properties <csv>] [--steps <csv>] [--settle-ms <ms>] [--max-events <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "watch class/computed-style deltas and transition events while running a scroll plan",
   },
   {
     id: "target.transition-trace",

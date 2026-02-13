@@ -1,5 +1,29 @@
 import type { ActionTimingMs, SessionSource } from "../../types.js";
 
+export type TargetObservedElement = {
+  index: number;
+  text: string;
+  visible: boolean;
+  selectorHint: string | null;
+};
+
+export type TargetObservedQuery = {
+  selector: string;
+  contains: string | null;
+  visibleOnly: boolean;
+};
+
+export type TargetTransitionEvent = {
+  kind: string;
+  propertyName: string | null;
+  animationName: string | null;
+  elapsedMs: number | null;
+  selector: string | null;
+  text: string | null;
+  scrollY: number;
+  timeMs: number;
+};
+
 export type TargetScrollPlanReport = {
   ok: true;
   sessionId: string;
@@ -34,15 +58,105 @@ export type TargetTransitionTraceReport = {
   dropped: number;
   truncated: boolean;
   countsByKind: Record<string, number>;
-  events: Array<{
-    kind: string;
-    propertyName: string | null;
-    animationName: string | null;
-    elapsedMs: number | null;
-    selector: string | null;
-    text: string | null;
-    scrollY: number;
+  events: TargetTransitionEvent[];
+  timingMs: ActionTimingMs;
+};
+
+export type TargetObserveReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  actionId: string;
+  query: TargetObservedQuery;
+  observed: TargetObservedElement;
+  property: string;
+  intervalMs: number;
+  durationMs: number;
+  maxSamples: number;
+  sampleCount: number;
+  samples: Array<{
+    index: number;
     timeMs: number;
+    value: string | null;
+    scrollY: number;
   }>;
+  changes: number;
+  firstValue: string | null;
+  lastValue: string | null;
+  timingMs: ActionTimingMs;
+};
+
+export type TargetScrollSampleReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  actionId: string;
+  query: TargetObservedQuery;
+  observed: TargetObservedElement;
+  property: string;
+  settleMs: number;
+  maxScroll: number;
+  viewport: { width: number; height: number };
+  steps: Array<{
+    index: number;
+    requestedY: number;
+    appliedY: number;
+    achievedY: number;
+    deltaY: number;
+    value: string | null;
+  }>;
+  valueChanges: number;
+  timingMs: ActionTimingMs;
+};
+
+export type TargetScrollWatchReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  actionId: string;
+  query: TargetObservedQuery;
+  observed: TargetObservedElement;
+  properties: string[];
+  settleMs: number;
+  maxEvents: number;
+  maxScroll: number;
+  viewport: { width: number; height: number };
+  samples: Array<{
+    index: number;
+    requestedY: number;
+    appliedY: number;
+    achievedY: number;
+    deltaY: number;
+    className: string;
+    rectTop: number | null;
+    rectBottom: number | null;
+    rectHeight: number | null;
+    computed: Record<string, string | null>;
+  }>;
+  changes: Array<{
+    fromIndex: number;
+    toIndex: number;
+    fromScrollY: number;
+    toScrollY: number;
+    classAdded: string[];
+    classRemoved: string[];
+    propertyChanges: Array<{
+      property: string;
+      from: string | null;
+      to: string | null;
+    }>;
+  }>;
+  changeCount: number;
+  transition: {
+    eventCount: number;
+    emitted: number;
+    dropped: number;
+    truncated: boolean;
+    countsByKind: Record<string, number>;
+    events: TargetTransitionEvent[];
+  };
   timingMs: ActionTimingMs;
 };

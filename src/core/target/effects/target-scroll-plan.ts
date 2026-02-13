@@ -1,58 +1,12 @@
 import { chromium } from "playwright-core";
 import { newActionId } from "../../action-id.js";
-import { CliError } from "../../errors.js";
 import { nowIso } from "../../state.js";
 import { saveTargetSnapshot } from "../../state-repos/target-repo.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
+import { parseSettleMs, parseStepsCsv } from "./parse.js";
 import type { TargetScrollPlanReport } from "./types.js";
 
 const DEFAULT_SCROLL_PLAN_SETTLE_MS = 300;
-const MAX_SCROLL_PLAN_STEPS = 200;
-const MAX_SCROLL_PLAN_POSITION = 1_000_000;
-const MAX_SCROLL_PLAN_SETTLE_MS = 10_000;
-
-function parseStepsCsv(input: string | undefined): number[] {
-  const raw = typeof input === "string" ? input.trim() : "";
-  if (raw.length === 0) {
-    throw new CliError("E_QUERY_INVALID", "steps is required and must be a comma-separated list of non-negative integers");
-  }
-
-  const parts = raw
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0);
-
-  if (parts.length === 0) {
-    throw new CliError("E_QUERY_INVALID", "steps must include at least one position");
-  }
-  if (parts.length > MAX_SCROLL_PLAN_STEPS) {
-    throw new CliError("E_QUERY_INVALID", `steps must contain at most ${MAX_SCROLL_PLAN_STEPS} values`);
-  }
-
-  const values: number[] = [];
-  for (const part of parts) {
-    const value = Number.parseInt(part, 10);
-    if (!Number.isFinite(value) || !Number.isInteger(value)) {
-      throw new CliError("E_QUERY_INVALID", `Invalid steps value: ${part}`);
-    }
-    if (value < 0 || value > MAX_SCROLL_PLAN_POSITION) {
-      throw new CliError("E_QUERY_INVALID", `steps values must be between 0 and ${MAX_SCROLL_PLAN_POSITION}`);
-    }
-    values.push(value);
-  }
-
-  return values;
-}
-
-function parseSettleMs(input: number | undefined): number {
-  if (typeof input === "undefined") {
-    return DEFAULT_SCROLL_PLAN_SETTLE_MS;
-  }
-  if (!Number.isFinite(input) || !Number.isInteger(input) || input < 0 || input > MAX_SCROLL_PLAN_SETTLE_MS) {
-    throw new CliError("E_QUERY_INVALID", `settle-ms must be an integer between 0 and ${MAX_SCROLL_PLAN_SETTLE_MS}`);
-  }
-  return input;
-}
 
 export async function targetScrollPlan(opts: {
   targetId: string;
@@ -65,7 +19,7 @@ export async function targetScrollPlan(opts: {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const requestedSteps = parseStepsCsv(opts.stepsCsv);
-  const settleMs = parseSettleMs(opts.settleMs);
+  const settleMs = parseSettleMs(opts.settleMs, DEFAULT_SCROLL_PLAN_SETTLE_MS);
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,

@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "node --import tsx src/cli.ts",
-    "build": "tsup src/cli.ts --format esm --dts --clean --out-dir dist",
+    "build": "node scripts/build-cli.mjs",
     "typecheck": "tsc --noEmit",
     "policy:check": "node scripts/policy-check.mjs",
     "skill:validate": "node scripts/validate-skills.mjs",

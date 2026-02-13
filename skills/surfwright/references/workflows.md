@@ -20,10 +20,14 @@ surfwright --json target find <targetId> --selector a --contains "query" --first
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --profile perf --view summary
-surfwright --json target network-begin <targetId> --profile api --max-runtime-ms 600000
+surfwright target network-tail <targetId> --profile api --capture-ms 3000
+surfwright --json target network-query --capture-id <captureId> --preset slowest --limit 10
+surfwright --json target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
 surfwright --json target network-end <captureId> --view summary --status 5xx
 surfwright --json target network-export <targetId> --profile page --reload --capture-ms 3000 --out ./artifacts/capture.har
 surfwright --json target network-export-list --limit 20
+surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
+surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
 ```
 
 - `session ensure` guarantees a reachable active session (or creates managed default).
@@ -34,9 +38,12 @@ surfwright --json target network-export-list --limit 20
 - `target read` returns deterministic chunks for long text extraction.
 - `target wait` blocks until text/selector/network-idle readiness is met.
 - `target network` captures bounded request/websocket diagnostics with profiles, projections, hints, and insights.
+- `target network-tail` streams NDJSON events for live request/socket observation.
+- `target network-query` answers common diagnostics directly from saved capture/HAR sources.
 - `target network-begin` / `target network-end` gives action-scoped handle capture around workflows.
 - `target network-export --out <path>` writes a compact HAR artifact for deep offline inspection.
-- `target network-export-list` lets agents discover previous artifacts without scanning filesystems.
+- `target network-export-list` / `target network-export-prune` manage indexed artifacts with retention policies.
+- `target network-check` compares runtime metrics against explicit budget files.
 
 ## 3) Explicit session lifecycle
 

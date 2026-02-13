@@ -101,11 +101,15 @@ surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--m
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target network <targetId> [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target network-begin <targetId> [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--include-headers] [--include-post-data] [--no-ws-messages] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--session <id>]
+surfwright target network-query [--capture-id <id> | --artifact-id <id>] [--preset <name>] [--limit <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--json] [--pretty]
+surfwright target network-begin <targetId> [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--include-headers] [--include-post-data] [--no-ws-messages] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target network-end <captureId> [--profile <preset>] [--view <mode>] [--fields <csv>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright target network-export <targetId> --out <path> [--format har] [--profile <preset>] [--capture-ms <ms>] [--max-requests <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target network-export <targetId> --out <path> [--action-id <id>] [--format har] [--profile <preset>] [--capture-ms <ms>] [--max-requests <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target network-export-list [--limit <n>] [--json] [--pretty]
+surfwright target network-export-prune [--max-age-hours <h>] [--max-count <n>] [--max-total-mb <n>] [--keep-files] [--json] [--pretty]
+surfwright target network-check [targetId] --budget <path> [--capture-id <id>] [--artifact-id <id>] [--profile <preset>] [--capture-ms <ms>] [--fail-on-violation] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]
 surfwright state reconcile [--timeout-ms <ms>] [--max-age-hours <h>] [--max-per-session <n>] [--drop-managed-unreachable] [--json] [--pretty]
 ```
@@ -127,11 +131,15 @@ surfwright --json target find <targetId> --selector a --contains "Checkout" --fi
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --profile perf --view summary
+surfwright target network-tail <targetId> --profile api --capture-ms 3000
+surfwright --json target network-query --capture-id <captureId> --preset slowest --limit 10
 surfwright --json target network <targetId> --view table --fields id,method,status,durationMs,url
-surfwright --json target network-begin <targetId> --profile api --max-runtime-ms 600000
+surfwright --json target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
 surfwright --json target network-end <captureId> --view summary --status 5xx
 surfwright --json target network-export <targetId> --profile page --reload --capture-ms 3000 --out ./artifacts/capture.har
 surfwright --json target network-export-list --limit 20
+surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
+surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
 ```
 
 State hygiene workflow for stale local metadata:
@@ -149,7 +157,7 @@ surfwright --json state reconcile
 `open` intentionally returns a minimal success shape for agent loops:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","status":200,"title":"CamelPay — Cross-chain crypto checkout"}
+{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","status":200,"title":"CamelPay — Cross-chain crypto checkout"}
 ```
 
 `target snapshot` returns bounded page-read primitives for deterministic agent parsing:
@@ -173,13 +181,13 @@ surfwright --json state reconcile
 `target network` returns bounded request/websocket diagnostics plus performance summary, correlation ids, hints, and insights:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","captureId":null,"url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","capture":{"startedAt":"2026-02-13T12:00:00.000Z","endedAt":"2026-02-13T12:00:02.600Z","durationMs":2600,"captureMs":2500,"reload":false},"filters":{"urlContains":null,"method":null,"resourceType":null,"status":"2xx","failedOnly":false,"profile":"custom"},"view":"raw","fields":["id","method","status","durationMs","resourceType","url"],"tableRows":[],"limits":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120},"counts":{"requestsSeen":31,"requestsReturned":24,"responsesSeen":31,"failedSeen":0,"webSocketsSeen":1,"webSocketsReturned":1,"wsMessagesSeen":14,"wsMessagesReturned":14,"droppedRequests":0,"droppedWebSockets":0,"droppedWsMessages":0},"performance":{"completedRequests":24,"bytesApproxTotal":198432,"statusBuckets":{"2xx":24,"3xx":0,"4xx":0,"5xx":0,"other":0},"latencyMs":{"min":11.2,"max":921.7,"avg":147.4,"p50":64.1,"p95":721.6},"ttfbMs":{"min":6.3,"max":680.4,"avg":83.2,"p50":41.7,"p95":421.9},"slowest":[{"id":5,"url":"https://camelpay.localhost/api/checkout","resourceType":"fetch","status":200,"durationMs":921.7}]},"truncated":{"requests":false,"webSockets":false,"wsMessages":false},"hints":{"shouldRecapture":false,"suggested":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120}},"insights":{"topHosts":[],"errorHotspots":[],"websocketHotspots":[]},"requests":[],"webSockets":[]}
+{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","captureId":null,"actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","capture":{"startedAt":"2026-02-13T12:00:00.000Z","endedAt":"2026-02-13T12:00:02.600Z","durationMs":2600,"captureMs":2500,"reload":false},"filters":{"urlContains":null,"method":null,"resourceType":null,"status":"2xx","failedOnly":false,"profile":"custom"},"view":"raw","fields":["id","method","status","durationMs","resourceType","url"],"tableRows":[],"limits":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120},"counts":{"requestsSeen":31,"requestsReturned":24,"responsesSeen":31,"failedSeen":0,"webSocketsSeen":1,"webSocketsReturned":1,"wsMessagesSeen":14,"wsMessagesReturned":14,"droppedRequests":0,"droppedWebSockets":0,"droppedWsMessages":0},"performance":{"completedRequests":24,"bytesApproxTotal":198432,"statusBuckets":{"2xx":24,"3xx":0,"4xx":0,"5xx":0,"other":0},"latencyMs":{"min":11.2,"max":921.7,"avg":147.4,"p50":64.1,"p95":721.6},"ttfbMs":{"min":6.3,"max":680.4,"avg":83.2,"p50":41.7,"p95":421.9},"slowest":[{"id":5,"url":"https://camelpay.localhost/api/checkout","resourceType":"fetch","status":200,"durationMs":921.7}]},"truncated":{"requests":false,"webSockets":false,"wsMessages":false},"hints":{"shouldRecapture":false,"suggested":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120}},"insights":{"topHosts":[],"errorHotspots":[],"websocketHotspots":[]},"requests":[],"webSockets":[]}
 ```
 
 `target network-begin` / `target network-end` gives an action-scoped handle-based capture loop:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","captureId":"c-12","status":"recording","profile":"api","startedAt":"2026-02-13T12:00:00.000Z","maxRuntimeMs":600000}
+{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","captureId":"c-12","actionId":"checkout-click","status":"recording","profile":"api","startedAt":"2026-02-13T12:00:00.000Z","maxRuntimeMs":600000}
 ```
 
 `target network-export` writes a compact HAR artifact and returns artifact metadata:
@@ -192,6 +200,18 @@ surfwright --json state reconcile
 
 ```json
 {"ok":true,"total":4,"returned":4,"artifacts":[{"artifactId":"na-4","createdAt":"2026-02-13T12:00:02.605Z","format":"har","path":"/abs/path/capture.har","sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","captureId":null,"entries":24,"bytes":18212}]}
+```
+
+`target network-query` turns saved captures/HAR into direct answers without manual file inspection:
+
+```json
+{"ok":true,"source":{"kind":"capture","id":"c-12","path":"/abs/path/c-12.result.json"},"preset":"slowest","returned":3,"rows":[{"id":5,"actionId":"checkout-click","method":"POST","status":200,"durationMs":921.7,"url":"https://camelpay.localhost/api/checkout"}],"summary":{"requests":24,"failed":0,"webSockets":1,"bytesApproxTotal":198432,"p95LatencyMs":721.6}}
+```
+
+`target network-check` evaluates runtime metrics against budget thresholds:
+
+```json
+{"ok":true,"passed":true,"source":{"kind":"capture-live","id":"1764200ABD63A830C21F4BF2799536D0"},"metrics":{"requests":24,"failures":0,"errorRate":0,"p95LatencyMs":721.6,"bytesApproxTotal":198432,"wsMessages":14},"checks":[{"name":"maxP95LatencyMs","limit":1000,"actual":721.6,"passed":true}],"budget":{"maxP95LatencyMs":1000}}
 ```
 
 Errors are typed and short:

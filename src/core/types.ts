@@ -30,6 +30,7 @@ export type OpenReport = {
   ok: true;
   sessionId: string;
   targetId: string;
+  actionId: string;
   url: string;
   status: number | null;
   title: string;
@@ -166,218 +167,24 @@ export type TargetWaitReport = {
   mode: "text" | "selector" | "network-idle";
   value: string | null;
 };
-
-export type TargetNetworkRequestReport = {
-  id: number;
-  captureKey: string;
-  redirectedFromId: number | null;
-  url: string;
-  method: string;
-  resourceType: string;
-  navigation: boolean;
-  startMs: number;
-  endMs: number | null;
-  durationMs: number | null;
-  ttfbMs: number | null;
-  status: number | null;
-  ok: boolean | null;
-  failure: string | null;
-  bytesApprox: number | null;
-  requestHeaders?: Record<string, string>;
-  responseHeaders?: Record<string, string>;
-  postDataPreview?: string | null;
-};
-
-export type TargetNetworkWebSocketMessageReport = {
-  direction: "sent" | "received";
-  atMs: number;
-  opcode: number | null;
-  sizeBytes: number;
-  preview: string;
-};
-
-export type TargetNetworkWebSocketReport = {
-  id: number;
-  captureKey: string;
-  url: string;
-  startMs: number;
-  closeMs: number | null;
-  durationMs: number | null;
-  closed: boolean;
-  error: string | null;
-  messageCount: number;
-  messages: TargetNetworkWebSocketMessageReport[];
-};
-
-export type TargetNetworkHarReport = {
-  path: string;
-  mode: "minimal";
-  scope: "filtered";
-  entries: number;
-  bytes: number;
-  writtenAt: string;
-};
-
-export type TargetNetworkReport = {
-  ok: true;
-  sessionId: string;
-  targetId: string;
-  captureId: string | null;
-  url: string;
-  title: string;
-  capture: {
-    startedAt: string;
-    endedAt: string;
-    durationMs: number;
-    captureMs: number;
-    reload: boolean;
-  };
-  filters: {
-    urlContains: string | null;
-    method: string | null;
-    resourceType: string | null;
-    status: string | null;
-    failedOnly: boolean;
-    profile: "custom" | "api" | "page" | "ws" | "perf";
-  };
-  view: "raw" | "summary" | "table";
-  fields: string[];
-  tableRows: Array<Record<string, string | number | boolean | null>>;
-  limits: {
-    maxRequests: number;
-    maxWebSockets: number;
-    maxWsMessages: number;
-  };
-  counts: {
-    requestsSeen: number;
-    requestsReturned: number;
-    responsesSeen: number;
-    failedSeen: number;
-    webSocketsSeen: number;
-    webSocketsReturned: number;
-    wsMessagesSeen: number;
-    wsMessagesReturned: number;
-    droppedRequests: number;
-    droppedWebSockets: number;
-    droppedWsMessages: number;
-  };
-  performance: {
-    completedRequests: number;
-    bytesApproxTotal: number;
-    statusBuckets: {
-      "2xx": number;
-      "3xx": number;
-      "4xx": number;
-      "5xx": number;
-      other: number;
-    };
-    latencyMs: {
-      min: number | null;
-      max: number | null;
-      avg: number | null;
-      p50: number | null;
-      p95: number | null;
-    };
-    ttfbMs: {
-      min: number | null;
-      max: number | null;
-      avg: number | null;
-      p50: number | null;
-      p95: number | null;
-    };
-    slowest: Array<{
-      id: number;
-      url: string;
-      resourceType: string;
-      status: number | null;
-      durationMs: number;
-    }>;
-  };
-  truncated: {
-    requests: boolean;
-    webSockets: boolean;
-    wsMessages: boolean;
-  };
-  hints: {
-    shouldRecapture: boolean;
-    suggested: {
-      maxRequests: number;
-      maxWebSockets: number;
-      maxWsMessages: number;
-    };
-  };
-  insights: {
-    topHosts: Array<{
-      host: string;
-      requests: number;
-      failures: number;
-      avgLatencyMs: number | null;
-    }>;
-    errorHotspots: Array<{
-      url: string;
-      failures: number;
-      status4xx: number;
-      status5xx: number;
-    }>;
-    websocketHotspots: Array<{
-      url: string;
-      messages: number;
-      durationMs: number | null;
-    }>;
-  };
-  requests: TargetNetworkRequestReport[];
-  webSockets: TargetNetworkWebSocketReport[];
-};
-
-export type TargetNetworkExportReport = {
-  ok: true;
-  sessionId: string;
-  targetId: string;
-  url: string;
-  title: string;
-  format: "har";
-  artifact: TargetNetworkHarReport;
-  source: {
-    captureMs: number;
-    requestsSeen: number;
-    requestsReturned: number;
-    truncatedRequests: boolean;
-  };
-};
-
-export type TargetNetworkCaptureStatus = "recording" | "stopped" | "failed";
-
-export type TargetNetworkCaptureBeginReport = {
-  ok: true;
-  sessionId: string;
-  targetId: string;
-  captureId: string;
-  status: TargetNetworkCaptureStatus;
-  profile: "custom" | "api" | "page" | "ws" | "perf";
-  startedAt: string;
-  maxRuntimeMs: number;
-};
-
-export type TargetNetworkCaptureEndReport = TargetNetworkReport & {
-  status: TargetNetworkCaptureStatus;
-};
-
-export type TargetNetworkArtifactListReport = {
-  ok: true;
-  total: number;
-  returned: number;
-  artifacts: Array<{
-    artifactId: string;
-    createdAt: string;
-    format: "har";
-    path: string;
-    sessionId: string;
-    targetId: string;
-    captureId: string | null;
-    entries: number;
-    bytes: number;
-  }>;
-};
+export type {
+  TargetNetworkArtifactListReport,
+  TargetNetworkArtifactPruneReport,
+  TargetNetworkCaptureBeginReport,
+  TargetNetworkCaptureEndReport,
+  TargetNetworkCaptureStatus,
+  TargetNetworkCheckBudget,
+  TargetNetworkCheckReport,
+  TargetNetworkExportReport,
+  TargetNetworkHarReport,
+  TargetNetworkQueryPreset,
+  TargetNetworkQueryReport,
+  TargetNetworkReport,
+  TargetNetworkRequestReport,
+  TargetNetworkTailReport,
+  TargetNetworkWebSocketMessageReport,
+  TargetNetworkWebSocketReport,
+} from "./network-types.js";
 
 export type StateReconcileReport = {
   ok: true;
@@ -425,6 +232,9 @@ export type TargetState = {
   url: string;
   title: string;
   status: number | null;
+  lastActionId?: string | null;
+  lastActionAt?: string | null;
+  lastActionKind?: string | null;
   updatedAt: string;
 };
 
@@ -451,6 +261,7 @@ export type SurfwrightState = {
       donePath: string;
       resultPath: string;
       endedAt: string | null;
+      actionId: string;
     }
   >;
   networkArtifacts: Record<
@@ -489,3 +300,4 @@ export type CliContractReport = {
   commands: CliCommandContract[];
   errors: CliErrorContract[];
 };
+import type { TargetNetworkCaptureStatus } from "./network-types.js";

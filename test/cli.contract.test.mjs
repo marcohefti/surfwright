@@ -137,7 +137,11 @@ test("contract command returns machine-readable command and error metadata", () 
   assert.equal(payload.commands.some((entry) => entry.id === "target.network-export"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.network-begin"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.network-end"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.network-tail"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.network-query"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.network-export-list"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.network-export-prune"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.network-check"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.network-export" && entry.usage.includes("--out <path>")), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.network" && entry.usage.includes("--profile <preset>")), true);
   assert.equal(payload.commands.some((entry) => entry.id === "contract"), true);
@@ -170,11 +174,13 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(openResult.status, 0);
   assert.ok(openResult.stdout.trim().startsWith('{"ok":true,'));
   const openPayload = parseJson(openResult.stdout);
-  assert.deepEqual(Object.keys(openPayload), ["ok", "sessionId", "targetId", "url", "status", "title"]);
+  assert.deepEqual(Object.keys(openPayload), ["ok", "sessionId", "targetId", "actionId", "url", "status", "title"]);
   assert.equal(openPayload.ok, true);
   assert.equal(openPayload.sessionId, ensurePayload.sessionId);
   assert.equal(typeof openPayload.targetId, "string");
   assert.equal(openPayload.targetId.length > 0, true);
+  assert.equal(typeof openPayload.actionId, "string");
+  assert.equal(openPayload.actionId.length > 0, true);
   assert.equal(openPayload.url, dataUrl);
   assert.equal(openPayload.status, null);
   assert.equal(openPayload.title, "Contract Test Page");

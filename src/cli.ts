@@ -121,6 +121,7 @@ function printOpenSuccess(report: OpenReport, opts: OutputOpts) {
       "ok",
       `sessionId=${report.sessionId}`,
       `targetId=${report.targetId}`,
+      `actionId=${report.actionId}`,
       `status=${report.status ?? "null"}`,
       `url=${report.url}`,
     ].join(" ") + "\n",

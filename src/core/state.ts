@@ -109,6 +109,9 @@ function normalizeTarget(raw: unknown): TargetState | null {
     url?: unknown;
     title?: unknown;
     status?: unknown;
+    lastActionId?: unknown;
+    lastActionAt?: unknown;
+    lastActionKind?: unknown;
     updatedAt?: unknown;
   };
   if (
@@ -126,6 +129,10 @@ function normalizeTarget(raw: unknown): TargetState | null {
     url: value.url,
     title: value.title,
     status,
+    lastActionId: typeof value.lastActionId === "string" && value.lastActionId.length > 0 ? value.lastActionId : null,
+    lastActionAt: typeof value.lastActionAt === "string" && value.lastActionAt.length > 0 ? value.lastActionAt : null,
+    lastActionKind:
+      typeof value.lastActionKind === "string" && value.lastActionKind.length > 0 ? value.lastActionKind : null,
     updatedAt: typeof value.updatedAt === "string" && value.updatedAt.length > 0 ? value.updatedAt : nowIso(),
   };
 }
@@ -146,6 +153,7 @@ function normalizeNetworkCapture(captureId: string, raw: unknown): SurfwrightSta
     donePath?: unknown;
     resultPath?: unknown;
     endedAt?: unknown;
+    actionId?: unknown;
   };
   if (
     typeof value.sessionId !== "string" ||
@@ -175,6 +183,7 @@ function normalizeNetworkCapture(captureId: string, raw: unknown): SurfwrightSta
     donePath: value.donePath,
     resultPath: value.resultPath,
     endedAt: typeof value.endedAt === "string" && value.endedAt.length > 0 ? value.endedAt : null,
+    actionId: typeof value.actionId === "string" && value.actionId.length > 0 ? value.actionId : "a-unknown",
   };
 }
 function normalizeNetworkArtifact(artifactId: string, raw: unknown): SurfwrightState["networkArtifacts"][string] | null {
@@ -447,7 +456,14 @@ export function assertSessionDoesNotExist(state: SurfwrightState, sessionId: str
 }
 export async function upsertTargetState(target: TargetState) {
   await updateState((state) => {
-    state.targets[target.targetId] = target;
+    const existing = state.targets[target.targetId];
+    state.targets[target.targetId] = {
+      ...target,
+      lastActionId: typeof target.lastActionId === "undefined" ? (existing?.lastActionId ?? null) : target.lastActionId,
+      lastActionAt: typeof target.lastActionAt === "undefined" ? (existing?.lastActionAt ?? null) : target.lastActionAt,
+      lastActionKind:
+        typeof target.lastActionKind === "undefined" ? (existing?.lastActionKind ?? null) : target.lastActionKind,
+    };
     const session = state.sessions[target.sessionId];
     if (session) {
       state.sessions[target.sessionId] = {

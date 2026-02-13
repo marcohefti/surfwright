@@ -34,10 +34,14 @@ surfwright --json target find <targetId> --selector a --contains "query" --first
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --profile perf --view summary
-surfwright --json target network-begin <targetId> --profile api --max-runtime-ms 600000
+surfwright target network-tail <targetId> --profile api --capture-ms 3000
+surfwright --json target network-query --capture-id <captureId> --preset slowest --limit 10
+surfwright --json target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
 surfwright --json target network-end <captureId> --view summary --status 5xx
 surfwright --json target network-export <targetId> --profile page --reload --capture-ms 3000 --out ./artifacts/capture.har
 surfwright --json target network-export-list --limit 20
+surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
+surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
 ```
 
 `open` returns `sessionId` and `targetId`; persist these handles in your run state and use `target snapshot` / `target find` / `target read` / `target wait` / `target network` for bounded page reads, deterministic readiness checks, and compact network diagnostics.

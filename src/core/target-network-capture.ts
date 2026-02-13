@@ -3,8 +3,9 @@ import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright-core";
+import { newActionId, sanitizeActionId } from "./action-id.js";
 import { CliError } from "./errors.js";
-import { allocateArtifactId, allocateCaptureId, nowIso, readState, stateRootDir, updateState } from "./state.js";
+import { allocateCaptureId, nowIso, stateRootDir, updateState } from "./state.js";
 import { targetNetwork } from "./target-network.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {
@@ -13,10 +14,8 @@ import {
 } from "./target-network-utils.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type {
-  TargetNetworkArtifactListReport,
   TargetNetworkCaptureBeginReport,
   TargetNetworkCaptureEndReport,
-  TargetNetworkExportReport,
   TargetNetworkReport,
 } from "./types.js";
 
@@ -74,6 +73,7 @@ export async function targetNetworkCaptureBegin(opts: {
   targetId: string;
   timeoutMs: number;
   sessionId?: string;
+  actionId?: string;
   profile?: string;
   maxRuntimeMs?: number;
   maxRequests?: number;
@@ -84,6 +84,8 @@ export async function targetNetworkCaptureBegin(opts: {
   includeWsMessages?: boolean;
 }): Promise<TargetNetworkCaptureBeginReport> {
   const targetId = sanitizeTargetId(opts.targetId);
+  const actionId =
+    typeof opts.actionId === "string" && opts.actionId.trim().length > 0 ? sanitizeActionId(opts.actionId) : newActionId();
   const sessionId = await ensureCaptureTargetExists({
     targetId,
     sessionId: opts.sessionId,
@@ -121,6 +123,7 @@ export async function targetNetworkCaptureBegin(opts: {
       donePath,
       resultPath,
       endedAt: null,
+      actionId,
     };
     return state.networkCaptures[captureId];
   });
@@ -159,6 +162,8 @@ export async function targetNetworkCaptureBegin(opts: {
       String(captureRecord.maxRuntimeMs),
       "--profile",
       parsed.profile,
+      "--action-id",
+      captureRecord.actionId,
       "--max-requests",
       String(parsed.maxRequests),
       "--max-websockets",
@@ -202,6 +207,7 @@ export async function targetNetworkCaptureBegin(opts: {
     sessionId: captureRecord.sessionId,
     targetId: captureRecord.targetId,
     captureId: captureRecord.captureId,
+    actionId: captureRecord.actionId,
     status: "recording",
     profile: captureRecord.profile,
     startedAt: captureRecord.startedAt,
@@ -347,6 +353,7 @@ export async function runTargetNetworkWorker(opts: {
   captureId: string;
   sessionId: string;
   targetId: string;
+  actionId: string;
   resultPath: string;
   donePath: string;
   stopPath: string;
@@ -363,6 +370,7 @@ export async function runTargetNetworkWorker(opts: {
     const report = await targetNetwork({
       targetId: opts.targetId,
       sessionId: opts.sessionId,
+      actionId: opts.actionId,
       timeoutMs: Math.max(20000, opts.maxRuntimeMs),
       captureId: opts.captureId,
       profile: opts.profile,
@@ -386,44 +394,11 @@ export async function runTargetNetworkWorker(opts: {
   }
 }
 
-export async function recordNetworkArtifact(opts: {
-  report: TargetNetworkExportReport;
-  captureId: string | null;
-}) {
-  await updateState(async (state) => {
-    const artifactId = allocateArtifactId(state);
-    state.networkArtifacts[artifactId] = {
-      artifactId,
-      createdAt: opts.report.artifact.writtenAt,
-      format: "har",
-      path: opts.report.artifact.path,
-      sessionId: opts.report.sessionId,
-      targetId: opts.report.targetId,
-      captureId: opts.captureId,
-      entries: opts.report.artifact.entries,
-      bytes: opts.report.artifact.bytes,
-    };
-  });
-}
-
-export function targetNetworkArtifactList(opts: { limit?: number }): TargetNetworkArtifactListReport {
-  const parsedLimit = typeof opts.limit === "number" && Number.isInteger(opts.limit) && opts.limit > 0 ? opts.limit : 50;
-  const state = readState();
-  const artifacts = Object.values(state.networkArtifacts)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, Math.min(500, parsedLimit));
-  return {
-    ok: true,
-    total: Object.keys(state.networkArtifacts).length,
-    returned: artifacts.length,
-    artifacts,
-  };
-}
-
 export function parseWorkerArgv(argv: string[]): {
   captureId: string;
   sessionId: string;
   targetId: string;
+  actionId: string;
   resultPath: string;
   donePath: string;
   stopPath: string;
@@ -447,6 +422,7 @@ export function parseWorkerArgv(argv: string[]): {
     captureId: get("--capture-id"),
     sessionId: get("--session-id"),
     targetId: get("--target-id"),
+    actionId: get("--action-id"),
     resultPath: get("--result-path"),
     donePath: get("--done-path"),
     stopPath: get("--stop-path"),

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
-import { nowIso, upsertTargetState } from "./state.js";
+import { sanitizeActionId } from "./action-id.js";
+import { nowIso, readState, upsertTargetState } from "./state.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {
@@ -26,12 +27,36 @@ import type {
 type MutableRequest = TargetNetworkRequestReport;
 type MutableWebSocket = TargetNetworkWebSocketReport;
 type NetworkCounts = TargetNetworkReport["counts"];
+const ACTION_CORRELATION_WINDOW_MS = 2 * 60 * 1000;
+
+function resolveCaptureActionId(opts: {
+  actionId?: string;
+  sessionId: string;
+  targetId: string;
+}): string | null {
+  if (typeof opts.actionId === "string" && opts.actionId.trim().length > 0) {
+    return sanitizeActionId(opts.actionId);
+  }
+  const target = readState().targets[opts.targetId];
+  if (!target || target.sessionId !== opts.sessionId || !target.lastActionId || !target.lastActionAt) {
+    return null;
+  }
+  const actionAtMs = Date.parse(target.lastActionAt);
+  if (!Number.isFinite(actionAtMs)) {
+    return null;
+  }
+  if (Date.now() - actionAtMs > ACTION_CORRELATION_WINDOW_MS) {
+    return null;
+  }
+  return target.lastActionId;
+}
 
 export async function targetNetwork(opts: {
   targetId: string;
   timeoutMs: number;
   sessionId?: string;
   captureId?: string | null;
+  actionId?: string;
   profile?: string;
   view?: string;
   fields?: string;
@@ -71,6 +96,11 @@ export async function targetNetwork(opts: {
   });
 
   const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const captureActionId = resolveCaptureActionId({
+    actionId: opts.actionId,
+    sessionId: session.sessionId,
+    targetId: requestedTargetId,
+  });
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
@@ -111,6 +141,7 @@ export async function targetNetwork(opts: {
       const record: MutableRequest = {
         id: nextRequestId,
         captureKey: `${opts.captureId ?? "live"}:req:${nextRequestId}`,
+        actionId: captureActionId,
         redirectedFromId: null,
         url: request.url(),
         method: request.method().toUpperCase(),
@@ -204,6 +235,7 @@ export async function targetNetwork(opts: {
       const socket: MutableWebSocket = {
         id: nextWebSocketId,
         captureKey: `${opts.captureId ?? "live"}:ws:${nextWebSocketId}`,
+        actionId: captureActionId,
         url: webSocket.url(),
         startMs: toRelativeMs(captureStartEpochMs),
         closeMs: null,
@@ -304,6 +336,7 @@ export async function targetNetwork(opts: {
       sessionId: session.sessionId,
       targetId: requestedTargetId,
       captureId: opts.captureId ?? null,
+      actionId: captureActionId,
       url: pageUrl,
       title: pageTitle,
       capture: {

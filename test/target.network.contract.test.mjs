@@ -27,6 +27,11 @@ function parseJson(stdout) {
   return JSON.parse(text);
 }
 
+function writeState(state) {
+  fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
+  fs.writeFileSync(stateFilePath(), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+}
+
 let hasBrowserCache;
 
 function hasBrowser() {
@@ -130,6 +135,7 @@ test("target network returns deterministic JSON shape", { skip: !hasBrowser() },
     "sessionId",
     "targetId",
     "captureId",
+    "actionId",
     "url",
     "title",
     "capture",
@@ -149,6 +155,7 @@ test("target network returns deterministic JSON shape", { skip: !hasBrowser() },
   assert.equal(networkPayload.ok, true);
   assert.equal(networkPayload.sessionId, ensurePayload.sessionId);
   assert.equal(networkPayload.targetId, openPayload.targetId);
+  assert.equal(typeof networkPayload.actionId, "string");
   assert.equal(typeof networkPayload.capture.captureMs, "number");
   assert.equal(typeof networkPayload.capture.durationMs, "number");
   assert.equal(networkPayload.filters.status, "2xx");
@@ -248,6 +255,7 @@ test("target network begin/end returns capture handle and projected report", { s
   const beginPayload = parseJson(beginResult.stdout);
   assert.equal(beginPayload.ok, true);
   assert.equal(typeof beginPayload.captureId, "string");
+  assert.equal(typeof beginPayload.actionId, "string");
   assert.equal(beginPayload.status, "recording");
 
   const endResult = runCli([
@@ -276,4 +284,138 @@ test("target network-export-list returns indexed artifacts", () => {
   assert.equal(typeof listPayload.total, "number");
   assert.equal(typeof listPayload.returned, "number");
   assert.equal(Array.isArray(listPayload.artifacts), true);
+});
+
+test("target network-query/check/export-prune work on saved sources", () => {
+  const capturePath = path.join(TEST_STATE_DIR, "captures", "c-1.result.json");
+  const artifactPath = path.join(TEST_STATE_DIR, "artifacts", "a-1.har");
+  fs.mkdirSync(path.dirname(capturePath), { recursive: true });
+  fs.mkdirSync(path.dirname(artifactPath), { recursive: true });
+  fs.writeFileSync(
+    capturePath,
+    JSON.stringify({
+      ok: true,
+      sessionId: "s-1",
+      targetId: "t-1",
+      captureId: "c-1",
+      actionId: "a-1",
+      url: "https://example.com",
+      title: "Example",
+      capture: { startedAt: "2026-02-13T10:00:00.000Z", endedAt: "2026-02-13T10:00:01.000Z", durationMs: 1000, captureMs: 1000, reload: false },
+      filters: { urlContains: null, method: null, resourceType: null, status: null, failedOnly: false, profile: "custom" },
+      view: "raw",
+      fields: ["id", "method", "status", "durationMs", "url"],
+      tableRows: [],
+      limits: { maxRequests: 10, maxWebSockets: 5, maxWsMessages: 10 },
+      counts: {
+        requestsSeen: 1,
+        requestsReturned: 1,
+        responsesSeen: 1,
+        failedSeen: 0,
+        webSocketsSeen: 0,
+        webSocketsReturned: 0,
+        wsMessagesSeen: 0,
+        wsMessagesReturned: 0,
+        droppedRequests: 0,
+        droppedWebSockets: 0,
+        droppedWsMessages: 0,
+      },
+      performance: {
+        completedRequests: 1,
+        bytesApproxTotal: 120,
+        statusBuckets: { "2xx": 1, "3xx": 0, "4xx": 0, "5xx": 0, other: 0 },
+        latencyMs: { min: 24, max: 24, avg: 24, p50: 24, p95: 24 },
+        ttfbMs: { min: 8, max: 8, avg: 8, p50: 8, p95: 8 },
+        slowest: [{ id: 1, url: "https://example.com/api", resourceType: "xhr", status: 200, durationMs: 24 }],
+      },
+      truncated: { requests: false, webSockets: false, wsMessages: false },
+      hints: { shouldRecapture: false, suggested: { maxRequests: 10, maxWebSockets: 5, maxWsMessages: 10 } },
+      insights: { topHosts: [], errorHotspots: [], websocketHotspots: [] },
+      requests: [
+        {
+          id: 1,
+          captureKey: "c-1:req:1",
+          actionId: "a-1",
+          redirectedFromId: null,
+          url: "https://example.com/api",
+          method: "GET",
+          resourceType: "xhr",
+          navigation: false,
+          startMs: 2,
+          endMs: 26,
+          durationMs: 24,
+          ttfbMs: 8,
+          status: 200,
+          ok: true,
+          failure: null,
+          bytesApprox: 120,
+        },
+      ],
+      webSockets: [],
+    }),
+    "utf8",
+  );
+  fs.writeFileSync(artifactPath, JSON.stringify({ log: { version: "1.2", creator: { name: "surfwright" }, pages: [], entries: [] } }), "utf8");
+  writeState({
+    version: 2,
+    activeSessionId: null,
+    nextSessionOrdinal: 1,
+    nextCaptureOrdinal: 2,
+    nextArtifactOrdinal: 2,
+    sessions: {},
+    targets: {},
+    networkCaptures: {
+      "c-1": {
+        captureId: "c-1",
+        sessionId: "s-1",
+        targetId: "t-1",
+        startedAt: "2026-02-13T10:00:00.000Z",
+        status: "stopped",
+        profile: "custom",
+        maxRuntimeMs: 10000,
+        workerPid: null,
+        stopSignalPath: path.join(TEST_STATE_DIR, "captures", "c-1.stop"),
+        donePath: path.join(TEST_STATE_DIR, "captures", "c-1.done.json"),
+        resultPath: capturePath,
+        endedAt: "2026-02-13T10:00:01.000Z",
+        actionId: "a-1",
+      },
+    },
+    networkArtifacts: {
+      "na-1": {
+        artifactId: "na-1",
+        createdAt: "2020-01-01T00:00:00.000Z",
+        format: "har",
+        path: artifactPath,
+        sessionId: "s-1",
+        targetId: "t-1",
+        captureId: null,
+        entries: 0,
+        bytes: 42,
+      },
+    },
+  });
+
+  const queryResult = runCli(["--json", "target", "network-query", "--capture-id", "c-1", "--preset", "slowest"]);
+  assert.equal(queryResult.status, 0);
+  const queryPayload = parseJson(queryResult.stdout);
+  assert.equal(queryPayload.ok, true);
+  assert.equal(queryPayload.source.id, "c-1");
+  assert.equal(queryPayload.preset, "slowest");
+  assert.equal(Array.isArray(queryPayload.rows), true);
+
+  const budgetPath = path.join(TEST_STATE_DIR, "budget.json");
+  fs.writeFileSync(budgetPath, JSON.stringify({ maxP95LatencyMs: 100, maxErrorRate: 0.2 }), "utf8");
+  const checkResult = runCli(["--json", "target", "network-check", "--capture-id", "c-1", "--budget", budgetPath]);
+  assert.equal(checkResult.status, 0);
+  const checkPayload = parseJson(checkResult.stdout);
+  assert.equal(checkPayload.ok, true);
+  assert.equal(typeof checkPayload.passed, "boolean");
+  assert.equal(Array.isArray(checkPayload.checks), true);
+
+  const pruneResult = runCli(["--json", "target", "network-export-prune", "--max-age-hours", "24"]);
+  assert.equal(pruneResult.status, 0);
+  const prunePayload = parseJson(pruneResult.stdout);
+  assert.equal(prunePayload.ok, true);
+  assert.equal(prunePayload.removed >= 1, true);
 });

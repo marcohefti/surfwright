@@ -1,6 +1,6 @@
 import path from "node:path";
 import { CliError } from "./errors.js";
-import { recordNetworkArtifact } from "./target-network-capture.js";
+import { recordNetworkArtifact } from "./target-network-artifacts.js";
 import { targetNetwork } from "./target-network.js";
 import { writeHarFile } from "./target-network-har.js";
 import type { TargetNetworkExportReport } from "./types.js";
@@ -31,6 +31,7 @@ export async function targetNetworkExport(opts: {
   format?: string;
   sessionId?: string;
   captureId?: string | null;
+  actionId?: string;
   profile?: string;
   captureMs?: number;
   maxRequests?: number;
@@ -51,6 +52,7 @@ export async function targetNetworkExport(opts: {
     timeoutMs: opts.timeoutMs,
     sessionId: opts.sessionId,
     captureId: opts.captureId ?? null,
+    actionId: opts.actionId,
     profile: opts.profile,
     view: opts.view,
     fields: opts.fields,

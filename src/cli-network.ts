@@ -1,10 +1,14 @@
 import { type Command } from "commander";
 import {
   targetNetwork,
+  targetNetworkArtifactPrune,
   targetNetworkArtifactList,
   targetNetworkCaptureBegin,
   targetNetworkCaptureEnd,
+  targetNetworkCheck,
   targetNetworkExport,
+  targetNetworkQuery,
+  targetNetworkTail,
 } from "./core/usecases.js";
 import {
   DEFAULT_TARGET_NETWORK_CAPTURE_MS,
@@ -14,11 +18,13 @@ import {
   DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES,
   DEFAULT_TARGET_TIMEOUT_MS,
 } from "./core/types.js";
-
 type OutputOpts = {
   json: boolean;
   pretty: boolean;
 };
+function writeNdjson(event: unknown) {
+  process.stdout.write(`${JSON.stringify(event)}\n`);
+}
 
 export function registerNetworkCommands(opts: {
   target: Command;
@@ -33,6 +39,7 @@ export function registerNetworkCommands(opts: {
     .description("Capture bounded network + websocket diagnostics and performance summary")
     .argument("<targetId>", "Target handle returned by open/target list")
     .option("--profile <preset>", "Preset capture profile: custom|api|page|ws|perf")
+    .option("--action-id <id>", "Correlation action id to stamp on captured events")
     .option("--view <mode>", "Projection mode: raw|summary|table", "raw")
     .option("--fields <csv>", "Comma-separated fields for table view")
     .option("--capture-ms <ms>", "Capture duration in milliseconds", String(DEFAULT_TARGET_NETWORK_CAPTURE_MS))
@@ -58,6 +65,7 @@ export function registerNetworkCommands(opts: {
         targetId: string,
         options: {
           profile?: string;
+          actionId?: string;
           view?: string;
           fields?: string;
           captureMs: string;
@@ -88,6 +96,7 @@ export function registerNetworkCommands(opts: {
             timeoutMs: options.timeoutMs,
             sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
             profile: options.profile,
+            actionId: options.actionId,
             view: options.view,
             fields: options.fields,
             captureMs,
@@ -117,6 +126,7 @@ export function registerNetworkCommands(opts: {
     .argument("<targetId>", "Target handle returned by open/target list")
     .requiredOption("--out <path>", "Artifact output path")
     .option("--format <format>", "Artifact format (har)", "har")
+    .option("--action-id <id>", "Correlation action id to stamp on captured events")
     .option("--profile <preset>", "Preset capture profile: custom|api|page|ws|perf")
     .option("--capture-ms <ms>", "Capture duration in milliseconds", String(DEFAULT_TARGET_NETWORK_CAPTURE_MS))
     .option("--max-requests <n>", "Maximum request records to retain", String(DEFAULT_TARGET_NETWORK_MAX_REQUESTS))
@@ -133,6 +143,7 @@ export function registerNetworkCommands(opts: {
         options: {
           out: string;
           format: string;
+          actionId?: string;
           profile?: string;
           captureMs: string;
           maxRequests: string;
@@ -156,6 +167,7 @@ export function registerNetworkCommands(opts: {
             sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
             outPath: options.out,
             format: options.format,
+            actionId: options.actionId,
             profile: options.profile,
             captureMs,
             maxRequests,
@@ -177,6 +189,7 @@ export function registerNetworkCommands(opts: {
     .command("network-begin")
     .description("Start background network capture and return capture handle")
     .argument("<targetId>", "Target handle returned by open/target list")
+    .option("--action-id <id>", "Correlation action id for this capture window")
     .option("--profile <preset>", "Preset capture profile: custom|api|page|ws|perf")
     .option("--max-runtime-ms <ms>", "Maximum recorder runtime in milliseconds", String(DEFAULT_TARGET_NETWORK_MAX_RUNTIME_MS))
     .option("--max-requests <n>", "Maximum request records to retain", String(DEFAULT_TARGET_NETWORK_MAX_REQUESTS))
@@ -194,6 +207,7 @@ export function registerNetworkCommands(opts: {
       async (
         targetId: string,
         options: {
+          actionId?: string;
           profile?: string;
           maxRuntimeMs: string;
           maxRequests: string;
@@ -212,6 +226,7 @@ export function registerNetworkCommands(opts: {
             targetId,
             timeoutMs: options.timeoutMs,
             sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+            actionId: options.actionId,
             profile: options.profile,
             maxRuntimeMs: Number.parseInt(options.maxRuntimeMs, 10),
             maxRequests: Number.parseInt(options.maxRequests, 10),
@@ -278,6 +293,123 @@ export function registerNetworkCommands(opts: {
     );
 
   opts.target
+    .command("network-tail")
+    .description("Stream live network/websocket events as NDJSON")
+    .argument("<targetId>", "Target handle returned by open/target list")
+    .option("--action-id <id>", "Correlation action id to stamp on emitted events")
+    .option("--profile <preset>", "Preset capture profile: custom|api|page|ws|perf")
+    .option("--capture-ms <ms>", "Capture duration in milliseconds", String(DEFAULT_TARGET_NETWORK_CAPTURE_MS))
+    .option(
+      "--max-ws-messages <n>",
+      "Maximum websocket frame events to emit",
+      String(DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES),
+    )
+    .option("--url-contains <text>", "Only emit URLs containing text")
+    .option("--method <verb>", "Only emit requests with this HTTP verb")
+    .option("--resource-type <type>", "Only emit requests with this Playwright resource type")
+    .option("--status <codeOrClass>", "Only emit request end events matching status code/class")
+    .option("--failed-only", "Only emit failed requests")
+    .option("--reload", "Reload page before streaming")
+    .option("--timeout-ms <ms>", "Connection/reload timeout in milliseconds", opts.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+    .action(
+      async (
+        targetId: string,
+        options: {
+          actionId?: string;
+          profile?: string;
+          captureMs: string;
+          maxWsMessages: string;
+          urlContains?: string;
+          method?: string;
+          resourceType?: string;
+          status?: string;
+          failedOnly?: boolean;
+          reload?: boolean;
+          timeoutMs: number;
+        },
+      ) => {
+        const output = opts.globalOutputOpts();
+        const globalOpts = opts.program.opts<{ session?: string }>();
+        try {
+          const report = await targetNetworkTail({
+            targetId,
+            timeoutMs: options.timeoutMs,
+            sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+            actionId: options.actionId,
+            profile: options.profile,
+            captureMs: Number.parseInt(options.captureMs, 10),
+            maxWsMessages: Number.parseInt(options.maxWsMessages, 10),
+            urlContains: options.urlContains,
+            method: options.method,
+            resourceType: options.resourceType,
+            status: options.status,
+            failedOnly: Boolean(options.failedOnly),
+            reload: Boolean(options.reload),
+            onEvent: (event) => writeNdjson(event),
+          });
+          if (!output.json) {
+            process.stdout.write(
+              [
+                "ok",
+                `sessionId=${report.sessionId}`,
+                `targetId=${report.targetId}`,
+                `events=${report.eventCount}`,
+                `requests=${report.counts.requests}`,
+                `responses=${report.counts.responses}`,
+              ].join(" ") + "\n",
+            );
+          }
+        } catch (error) {
+          opts.handleFailure(error, output);
+        }
+      },
+    );
+
+  opts.target
+    .command("network-query")
+    .description("Query saved network capture/artifact with high-signal presets")
+    .option("--capture-id <id>", "Capture id source")
+    .option("--artifact-id <id>", "Artifact id source")
+    .option("--preset <name>", "Preset: summary|slowest|errors|largest|ws-hotspots", "summary")
+    .option("--limit <n>", "Maximum rows to return", "20")
+    .option("--url-contains <text>", "Filter URLs by substring")
+    .option("--method <verb>", "Filter by method")
+    .option("--resource-type <type>", "Filter by resource type")
+    .option("--status <codeOrClass>", "Filter by status code/class")
+    .option("--failed-only", "Only include failed requests")
+    .action(
+      (options: {
+        captureId?: string;
+        artifactId?: string;
+        preset?: string;
+        limit: string;
+        urlContains?: string;
+        method?: string;
+        resourceType?: string;
+        status?: string;
+        failedOnly?: boolean;
+      }) => {
+        const output = opts.globalOutputOpts();
+        try {
+          const report = targetNetworkQuery({
+            captureId: options.captureId,
+            artifactId: options.artifactId,
+            preset: options.preset,
+            limit: Number.parseInt(options.limit, 10),
+            urlContains: options.urlContains,
+            method: options.method,
+            resourceType: options.resourceType,
+            status: options.status,
+            failedOnly: Boolean(options.failedOnly),
+          });
+          opts.printTargetSuccess(report, output);
+        } catch (error) {
+          opts.handleFailure(error, output);
+        }
+      },
+    );
+
+  opts.target
     .command("network-export-list")
     .description("List indexed network export artifacts")
     .option("--limit <n>", "Maximum artifacts to return", "50")
@@ -292,4 +424,76 @@ export function registerNetworkCommands(opts: {
         opts.handleFailure(error, output);
       }
     });
+
+  opts.target
+    .command("network-export-prune")
+    .description("Prune export artifact index/files by retention policy")
+    .option("--max-age-hours <h>", "Delete artifacts older than N hours")
+    .option("--max-count <n>", "Keep at most N newest artifacts")
+    .option("--max-total-mb <n>", "Keep artifacts within total size budget (MB)")
+    .option("--keep-files", "Only prune state index, do not delete files")
+    .action(
+      async (options: { maxAgeHours?: string; maxCount?: string; maxTotalMb?: string; keepFiles?: boolean }) => {
+        const output = opts.globalOutputOpts();
+        try {
+          const report = await targetNetworkArtifactPrune({
+            maxAgeHours: typeof options.maxAgeHours === "string" ? Number.parseInt(options.maxAgeHours, 10) : undefined,
+            maxCount: typeof options.maxCount === "string" ? Number.parseInt(options.maxCount, 10) : undefined,
+            maxTotalBytes:
+              typeof options.maxTotalMb === "string" ? Number.parseInt(options.maxTotalMb, 10) * 1024 * 1024 : undefined,
+            deleteFiles: !options.keepFiles,
+          });
+          opts.printTargetSuccess(report, output);
+        } catch (error) {
+          opts.handleFailure(error, output);
+        }
+      },
+    );
+
+  opts.target
+    .command("network-check")
+    .description("Evaluate network metrics against a budget file")
+    .argument("[targetId]", "Target handle for live capture mode")
+    .requiredOption("--budget <path>", "Budget JSON file")
+    .option("--capture-id <id>", "Check against saved capture id")
+    .option("--artifact-id <id>", "Check against saved artifact id")
+    .option("--profile <preset>", "Live capture profile: custom|api|page|ws|perf", "perf")
+    .option("--capture-ms <ms>", "Live capture duration in milliseconds", String(DEFAULT_TARGET_NETWORK_CAPTURE_MS))
+    .option("--fail-on-violation", "Exit non-zero when budget check fails")
+    .option("--timeout-ms <ms>", "Connection/reload timeout in milliseconds", opts.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+    .action(
+      async (
+        targetId: string | undefined,
+        options: {
+          budget: string;
+          captureId?: string;
+          artifactId?: string;
+          profile?: string;
+          captureMs: string;
+          failOnViolation?: boolean;
+          timeoutMs: number;
+        },
+      ) => {
+        const output = opts.globalOutputOpts();
+        const globalOpts = opts.program.opts<{ session?: string }>();
+        try {
+          const report = await targetNetworkCheck({
+            budgetPath: options.budget,
+            targetId,
+            timeoutMs: options.timeoutMs,
+            sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+            captureId: options.captureId,
+            artifactId: options.artifactId,
+            profile: options.profile,
+            captureMs: Number.parseInt(options.captureMs, 10),
+          });
+          opts.printTargetSuccess(report, output);
+          if (options.failOnViolation && !report.passed) {
+            process.exitCode = 1;
+          }
+        } catch (error) {
+          opts.handleFailure(error, output);
+        }
+      },
+    );
 }

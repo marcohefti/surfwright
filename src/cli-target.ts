@@ -13,10 +13,13 @@ import {
   DEFAULT_TARGET_READ_CHUNK_SIZE,
   DEFAULT_TARGET_TIMEOUT_MS,
   type TargetFindReport,
+  type TargetNetworkArtifactPruneReport,
   type TargetNetworkArtifactListReport,
+  type TargetNetworkCheckReport,
   type TargetNetworkCaptureBeginReport,
   type TargetNetworkCaptureEndReport,
   type TargetNetworkExportReport,
+  type TargetNetworkQueryReport,
   type TargetListReport,
   type TargetNetworkReport,
   type TargetPruneReport,
@@ -43,6 +46,9 @@ function printTargetSuccess(
     | TargetNetworkCaptureBeginReport
     | TargetNetworkCaptureEndReport
     | TargetNetworkArtifactListReport
+    | TargetNetworkArtifactPruneReport
+    | TargetNetworkCheckReport
+    | TargetNetworkQueryReport
     | TargetNetworkExportReport
     | TargetWaitReport
     | TargetNetworkReport
@@ -105,6 +111,7 @@ function printTargetSuccess(
         "ok",
         `sessionId=${report.sessionId}`,
         `targetId=${report.targetId}`,
+        `actionId=${report.actionId ?? "none"}`,
         `requests=${report.counts.requestsReturned}`,
         `responses=${report.counts.responsesSeen}`,
         `failed=${report.counts.failedSeen}`,
@@ -119,6 +126,35 @@ function printTargetSuccess(
     return;
   }
 
+  if ("removedMissingFiles" in report) {
+    process.stdout.write(
+      ["ok", `before=${report.totalBefore}`, `after=${report.totalAfter}`, `removed=${report.removed}`].join(" ") + "\n",
+    );
+    return;
+  }
+
+  if ("checks" in report && "passed" in report) {
+    process.stdout.write(
+      [
+        "ok",
+        `source=${report.source.kind}`,
+        `id=${report.source.id}`,
+        `passed=${report.passed ? "true" : "false"}`,
+        `checks=${report.checks.length}`,
+      ].join(" ") + "\n",
+    );
+    return;
+  }
+
+  if ("preset" in report && "rows" in report) {
+    process.stdout.write(
+      ["ok", `source=${report.source.kind}:${report.source.id}`, `preset=${report.preset}`, `rows=${report.returned}`].join(
+        " ",
+      ) + "\n",
+    );
+    return;
+  }
+
   if ("captureId" in report && "maxRuntimeMs" in report) {
     process.stdout.write(
       [
@@ -126,6 +162,7 @@ function printTargetSuccess(
         `sessionId=${report.sessionId}`,
         `targetId=${report.targetId}`,
         `captureId=${report.captureId}`,
+        `actionId=${report.actionId}`,
         `status=${report.status}`,
       ].join(" ") + "\n",
     );

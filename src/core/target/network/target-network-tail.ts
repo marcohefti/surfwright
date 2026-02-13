@@ -53,7 +53,11 @@ export async function targetNetworkTail(opts: {
     status: opts.status,
     failedOnly: opts.failedOnly,
   });
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const { session, sessionSource } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: targetId,
+  });
   const actionId = resolveTailActionId({
     actionId: opts.actionId,
     sessionId: session.sessionId,
@@ -280,6 +284,7 @@ export async function targetNetworkTail(opts: {
     const report: TargetNetworkTailReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId,
       actionId,
       captureMs: parsed.captureMs,

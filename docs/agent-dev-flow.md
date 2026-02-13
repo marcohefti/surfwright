@@ -131,8 +131,8 @@ For release confidence, also run:
 
 ```bash
 surfwright --json contract
-surfwright --json session ensure
 surfwright --json open https://example.com
+surfwright --json target snapshot <targetId>
 ```
 
 ## Drift Policy

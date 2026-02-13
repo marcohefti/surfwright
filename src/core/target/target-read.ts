@@ -73,7 +73,11 @@ export async function targetRead(opts: {
   const chunkSize = parseChunkSize(opts.chunkSize);
   const chunkIndex = parseChunkIndex(opts.chunkIndex);
 
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const { session, sessionSource } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: requestedTargetId,
+  });
   const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
@@ -105,6 +109,7 @@ export async function targetRead(opts: {
     const report: TargetReadReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       url: target.page.url(),
       title: await target.page.title(),

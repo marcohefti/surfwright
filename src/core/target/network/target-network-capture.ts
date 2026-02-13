@@ -56,13 +56,20 @@ function parseMaxRuntimeMs(value: number | undefined): number {
 }
 
 async function ensureCaptureTargetExists(opts: { targetId: string; sessionId?: string; timeoutMs: number }) {
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const { session, sessionSource } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: sanitizeTargetId(opts.targetId),
+  });
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   try {
     await resolveTargetHandle(browser, sanitizeTargetId(opts.targetId));
-    return session.sessionId;
+    return {
+      sessionId: session.sessionId,
+      sessionSource,
+    };
   } finally {
     await browser.close();
   }
@@ -93,7 +100,7 @@ export async function targetNetworkCaptureBegin(opts: {
   const targetId = sanitizeTargetId(opts.targetId);
   const actionId =
     typeof opts.actionId === "string" && opts.actionId.trim().length > 0 ? sanitizeActionId(opts.actionId) : newActionId();
-  const sessionId = await ensureCaptureTargetExists({
+  const ensuredTarget = await ensureCaptureTargetExists({
     targetId,
     sessionId: opts.sessionId,
     timeoutMs: opts.timeoutMs,
@@ -113,7 +120,7 @@ export async function targetNetworkCaptureBegin(opts: {
   fs.mkdirSync(root, { recursive: true });
 
   const captureRecord = await createNetworkCapture({
-    sessionId,
+    sessionId: ensuredTarget.sessionId,
     targetId,
     startedAt,
     profile: parsed.profile,
@@ -194,6 +201,7 @@ export async function targetNetworkCaptureBegin(opts: {
   return {
     ok: true,
     sessionId: captureRecord.sessionId,
+    sessionSource: ensuredTarget.sessionSource,
     targetId: captureRecord.targetId,
     captureId: captureRecord.captureId,
     actionId: captureRecord.actionId,

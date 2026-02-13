@@ -20,12 +20,12 @@
     },
     {
       "id": "open",
-      "usage": "surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "usage": "surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "open URL and return minimal page report with target handle"
     },
     {
       "id": "run",
-      "usage": "surfwright run --plan <path> [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "usage": "surfwright run --plan <path> [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
       "summary": "execute a deterministic multi-step browser plan in one command"
     },
     {
@@ -37,6 +37,11 @@
       "id": "session.ensure",
       "usage": "surfwright session ensure [--timeout-ms <ms>] [--json] [--pretty]",
       "summary": "reuse active session if reachable; otherwise use managed default"
+    },
+    {
+      "id": "session.fresh",
+      "usage": "surfwright session fresh [--session-id <id>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
+      "summary": "create a fresh ephemeral managed session and mark it active"
     },
     {
       "id": "session.list",
@@ -194,6 +199,10 @@
       "retryable": false
     },
     {
+      "code": "E_SESSION_REQUIRED",
+      "retryable": false
+    },
+    {
       "code": "E_SESSION_UNREACHABLE",
       "retryable": true
     },
@@ -214,8 +223,20 @@
       "retryable": false
     },
     {
+      "code": "E_TARGET_SESSION_MISMATCH",
+      "retryable": false
+    },
+    {
+      "code": "E_TARGET_SESSION_UNKNOWN",
+      "retryable": false
+    },
+    {
       "code": "E_URL_INVALID",
       "retryable": false
+    },
+    {
+      "code": "E_WAIT_TIMEOUT",
+      "retryable": true
     }
   ]
 }

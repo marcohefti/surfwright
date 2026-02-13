@@ -54,6 +54,7 @@ export type TargetNetworkHarReport = {
 export type TargetNetworkReport = {
   ok: true;
   sessionId: string;
+  sessionSource: import("./types.js").SessionSource;
   targetId: string;
   captureId: string | null;
   actionId: string | null;
@@ -166,6 +167,7 @@ export type TargetNetworkReport = {
 export type TargetNetworkExportReport = {
   ok: true;
   sessionId: string;
+  sessionSource: import("./types.js").SessionSource;
   targetId: string;
   url: string;
   title: string;
@@ -184,6 +186,7 @@ export type TargetNetworkCaptureStatus = "recording" | "stopped" | "failed";
 export type TargetNetworkCaptureBeginReport = {
   ok: true;
   sessionId: string;
+  sessionSource: import("./types.js").SessionSource;
   targetId: string;
   captureId: string;
   actionId: string;
@@ -253,6 +256,7 @@ export type TargetNetworkQueryReport = {
 export type TargetNetworkTailReport = {
   ok: true;
   sessionId: string;
+  sessionSource: import("./types.js").SessionSource;
   targetId: string;
   actionId: string | null;
   captureMs: number;

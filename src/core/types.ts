@@ -5,6 +5,7 @@ export const DEFAULT_SESSION_LEASE_TTL_MS = 72 * 60 * 60 * 1000;
 export const MIN_SESSION_LEASE_TTL_MS = 60 * 1000;
 export const MAX_SESSION_LEASE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const DEFAULT_EPHEMERAL_SESSION_LEASE_TTL_MS = 4 * 60 * 60 * 1000;
+export const DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS = 30 * 60 * 1000;
 export const DEFAULT_TARGET_TIMEOUT_MS = 10000;
 export const DEFAULT_TARGET_FIND_LIMIT = 12;
 export const DEFAULT_TARGET_READ_CHUNK_SIZE = 1200;
@@ -38,10 +39,12 @@ export type DoctorReport = {
 
 export type SessionKind = "managed" | "attached";
 export type SessionPolicy = "ephemeral" | "persistent";
+export type SessionSource = "explicit" | "target-inferred" | "implicit-new";
 
 export type OpenReport = {
   ok: true;
   sessionId: string;
+  sessionSource: SessionSource;
   targetId: string;
   actionId: string;
   url: string;
@@ -88,6 +91,7 @@ export type SessionPruneReport = {
 export type TargetListReport = {
   ok: true;
   sessionId: string;
+  sessionSource: SessionSource;
   targets: Array<{
     targetId: string;
     url: string;
@@ -100,6 +104,7 @@ export type TargetListReport = {
 export type TargetSnapshotReport = {
   ok: true;
   sessionId: string;
+  sessionSource: SessionSource;
   targetId: string;
   url: string;
   title: string;
@@ -140,6 +145,7 @@ export type TargetPruneReport = {
 export type TargetFindReport = {
   ok: true;
   sessionId: string;
+  sessionSource: SessionSource;
   targetId: string;
   mode: "text" | "selector";
   selector: string | null;
@@ -162,6 +168,7 @@ export type TargetFindReport = {
 export type TargetClickReport = {
   ok: true;
   sessionId: string;
+  sessionSource: SessionSource;
   targetId: string;
   actionId: string;
   mode: "text" | "selector";
@@ -190,6 +197,7 @@ export type TargetClickReport = {
 export type TargetReadReport = {
   ok: true;
   sessionId: string;
+  sessionSource: SessionSource;
   targetId: string;
   url: string;
   title: string;
@@ -210,6 +218,7 @@ export type TargetReadReport = {
 export type TargetWaitReport = {
   ok: true;
   sessionId: string;
+  sessionSource: SessionSource;
   targetId: string;
   url: string;
   title: string;

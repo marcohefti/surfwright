@@ -9,6 +9,7 @@ Retryable codes (bounded retries with backoff):
 - `E_BROWSER_START_TIMEOUT`
 - `E_STATE_LOCK_TIMEOUT`
 - `E_STATE_LOCK_IO`
+- `E_WAIT_TIMEOUT`
 - `E_INTERNAL`
 
 Non-retryable codes (fix input/config first):
@@ -18,9 +19,12 @@ Non-retryable codes (fix input/config first):
 - `E_SESSION_ID_INVALID`
 - `E_SESSION_EXISTS`
 - `E_SESSION_NOT_FOUND`
+- `E_SESSION_REQUIRED`
 - `E_SESSION_CONFLICT`
 - `E_TARGET_ID_INVALID`
 - `E_TARGET_NOT_FOUND`
+- `E_TARGET_SESSION_UNKNOWN`
+- `E_TARGET_SESSION_MISMATCH`
 - `E_QUERY_INVALID`
 - `E_SELECTOR_INVALID`
 - `E_BROWSER_NOT_FOUND`

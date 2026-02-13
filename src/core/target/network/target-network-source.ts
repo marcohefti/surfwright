@@ -148,6 +148,7 @@ function buildReportFromHarSource(opts: {
   return {
     ok: true,
     sessionId: opts.sessionId,
+    sessionSource: "explicit",
     targetId: opts.targetId,
     captureId: opts.captureId,
     actionId: null,
@@ -201,11 +202,17 @@ function buildReportFromHarSource(opts: {
 }
 
 function parseReportFromCapture(path: string): TargetNetworkReport {
-  const raw = readJsonFile(path) as TargetNetworkReport;
+  const raw = readJsonFile(path) as TargetNetworkReport & { sessionSource?: unknown };
   if (!raw || raw.ok !== true || !Array.isArray(raw.requests) || !Array.isArray(raw.webSockets)) {
     throw new CliError("E_QUERY_INVALID", `Capture result is invalid: ${path}`);
   }
-  return raw;
+  return {
+    ...raw,
+    sessionSource:
+      raw.sessionSource === "explicit" || raw.sessionSource === "target-inferred" || raw.sessionSource === "implicit-new"
+        ? raw.sessionSource
+        : "explicit",
+  };
 }
 
 export function resolveNetworkReportSource(opts: {

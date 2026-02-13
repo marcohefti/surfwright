@@ -3,6 +3,7 @@
   { "id": "contract", "usageMustContain": "surfwright contract" },
   { "id": "session.ensure", "usageMustContain": "session ensure" },
   { "id": "session.new", "usageMustContain": "session new" },
+  { "id": "session.fresh", "usageMustContain": "session fresh" },
   { "id": "session.attach", "usageMustContain": "session attach" },
   { "id": "session.use", "usageMustContain": "session use" },
   { "id": "session.list", "usageMustContain": "session list" },

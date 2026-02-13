@@ -45,8 +45,8 @@ A runtime agent should be able to run exactly this sequence without reading repo
 
 ```bash
 surfwright --json contract
-surfwright --json session ensure
 surfwright --json open https://example.com
+surfwright --json target snapshot <targetId>
 ```
 
 If this loop breaks, the agent surface is regressing.

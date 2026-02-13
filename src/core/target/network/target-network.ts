@@ -86,7 +86,11 @@ export async function targetNetwork(opts: {
     failedOnly: opts.failedOnly,
   });
 
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const { session, sessionSource } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: requestedTargetId,
+  });
   const captureActionId = resolveCaptureActionId({
     actionId: opts.actionId,
     sessionId: session.sessionId,
@@ -325,6 +329,7 @@ export async function targetNetwork(opts: {
     const report: TargetNetworkReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       captureId: opts.captureId ?? null,
       actionId: captureActionId,

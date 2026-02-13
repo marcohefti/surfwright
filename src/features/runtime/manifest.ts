@@ -23,6 +23,12 @@ export const runtimeCommandManifest: CliCommandContract[] = [
     summary: "create a managed browser session and mark it active",
   },
   {
+    id: "session.fresh",
+    usage:
+      "surfwright session fresh [--session-id <id>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
+    summary: "create a fresh ephemeral managed session and mark it active",
+  },
+  {
     id: "session.attach",
     usage:
       "surfwright session attach --cdp <origin> [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
@@ -46,7 +52,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   {
     id: "open",
     usage:
-      "surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "open URL and return minimal page report with target handle",
   },
   {
@@ -57,7 +63,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   },
   {
     id: "run",
-    usage: "surfwright run --plan <path> [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+    usage: "surfwright run --plan <path> [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
     summary: "execute a deterministic multi-step browser plan in one command",
   },
 ];

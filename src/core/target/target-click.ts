@@ -149,7 +149,11 @@ export async function targetClick(opts: {
     waitNetworkIdle: opts.waitNetworkIdle,
   });
 
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const { session, sessionSource } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: requestedTargetId,
+  });
   const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
@@ -196,6 +200,7 @@ export async function targetClick(opts: {
     const report: TargetClickReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       actionId: newActionId(),
       mode: parsed.mode,

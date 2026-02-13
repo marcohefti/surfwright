@@ -91,12 +91,13 @@ surfwright doctor [--json] [--pretty]
 surfwright contract [--json] [--pretty]
 surfwright session ensure [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session new [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
+surfwright session fresh [--session-id <id>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session attach --cdp <origin> [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session list [--json] [--pretty]
 surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright run --plan <path> [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright run --plan <path> [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
@@ -129,9 +130,7 @@ surfwright --json contract
 Default workflow for agent loops:
 
 ```bash
-surfwright --json session ensure
-surfwright --json open https://example.com --reuse-url
-surfwright --json target list
+surfwright --json open https://example.com
 surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "Checkout" --first --visible-only
 surfwright --json target click <targetId> --text "Blog" --visible-only
@@ -149,6 +148,14 @@ surfwright --json target network-export-prune --max-age-hours 72 --max-count 100
 surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
 ```
 
+Session selection defaults:
+
+- `open` (without `--session`) creates a new isolated ephemeral managed session.
+- `run` (without `--session`) starts a new isolated session and keeps it across plan steps.
+- `target *` (without `--session`) infers the session from persisted `targetId` mapping.
+- `target list` requires `--session` when no `targetId` is available to infer session.
+- set `--isolation shared` on `open`/`run` to reuse the managed shared-session path instead.
+
 State hygiene workflow for stale local metadata:
 
 ```bash
@@ -164,49 +171,49 @@ surfwright --json state reconcile
 `open` intentionally returns a minimal success shape for agent loops:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","status":200,"title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":231,"resolveSession":4,"connectCdp":33,"action":176,"persistState":18}}
+{"ok":true,"sessionId":"s-1","sessionSource":"implicit-new","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","status":200,"title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":231,"resolveSession":4,"connectCdp":33,"action":176,"persistState":18}}
 ```
 
 `target snapshot` returns bounded page-read primitives for deterministic agent parsing:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","textPreview":"CamelPay is in early access ...","headings":["Cross-chain crypto checkout, made simple"],"buttons":["Start Checkout"],"links":[{"text":"Read the docs","href":"http://localhost:3002/developers/quickstart"}],"truncated":{"text":false,"headings":false,"buttons":false,"links":false},"timingMs":{"total":147,"resolveSession":4,"connectCdp":26,"action":104,"persistState":13}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","textPreview":"CamelPay is in early access ...","headings":["Cross-chain crypto checkout, made simple"],"buttons":["Start Checkout"],"links":[{"text":"Read the docs","href":"http://localhost:3002/developers/quickstart"}],"truncated":{"text":false,"headings":false,"buttons":false,"links":false},"timingMs":{"total":147,"resolveSession":4,"connectCdp":26,"action":104,"persistState":13}}
 ```
 
 `target find` returns bounded match records for text/selector queries:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","mode":"text","query":"Checkout","count":9,"limit":5,"matches":[{"index":0,"text":"Cross-chain crypto checkout, made simple","visible":true,"selectorHint":"h1"}],"truncated":true,"timingMs":{"total":132,"resolveSession":3,"connectCdp":24,"action":92,"persistState":13}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","mode":"text","query":"Checkout","count":9,"limit":5,"matches":[{"index":0,"text":"Cross-chain crypto checkout, made simple","visible":true,"selectorHint":"h1"}],"truncated":true,"timingMs":{"total":132,"resolveSession":3,"connectCdp":24,"action":92,"persistState":13}}
 ```
 
 `target click` executes one click and returns action metadata:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pc-9kd2rj","mode":"selector","selector":"#start-checkout","contains":null,"visibleOnly":true,"query":"#start-checkout","clicked":{"index":0,"text":"Start Checkout","visible":true,"selectorHint":"a#start-checkout.inline-flex.h-9"},"url":"http://camelpay.localhost/#checkout","title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":128,"resolveSession":4,"connectCdp":25,"action":84,"persistState":15}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pc-9kd2rj","mode":"selector","selector":"#start-checkout","contains":null,"visibleOnly":true,"query":"#start-checkout","clicked":{"index":0,"text":"Start Checkout","visible":true,"selectorHint":"a#start-checkout.inline-flex.h-9"},"url":"http://camelpay.localhost/#checkout","title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":128,"resolveSession":4,"connectCdp":25,"action":84,"persistState":15}}
 ```
 
 `target read` returns deterministic text chunks for long pages:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","scope":{"selector":"main","matched":true,"visibleOnly":true},"chunkSize":1200,"chunkIndex":1,"totalChunks":2,"totalChars":2200,"text":"Cross-chain crypto checkout, made simple ...","truncated":true,"timingMs":{"total":139,"resolveSession":4,"connectCdp":27,"action":95,"persistState":13}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","scope":{"selector":"main","matched":true,"visibleOnly":true},"chunkSize":1200,"chunkIndex":1,"totalChunks":2,"totalChars":2200,"text":"Cross-chain crypto checkout, made simple ...","truncated":true,"timingMs":{"total":139,"resolveSession":4,"connectCdp":27,"action":95,"persistState":13}}
 ```
 
 `target network` returns bounded request/websocket diagnostics plus performance summary, correlation ids, hints, and insights:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","captureId":null,"actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","capture":{"startedAt":"2026-02-13T12:00:00.000Z","endedAt":"2026-02-13T12:00:02.600Z","durationMs":2600,"captureMs":2500,"reload":false},"filters":{"urlContains":null,"method":null,"resourceType":null,"status":"2xx","failedOnly":false,"profile":"custom"},"view":"raw","fields":["id","method","status","durationMs","resourceType","url"],"tableRows":[],"limits":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120},"counts":{"requestsSeen":31,"requestsReturned":24,"responsesSeen":31,"failedSeen":0,"webSocketsSeen":1,"webSocketsReturned":1,"wsMessagesSeen":14,"wsMessagesReturned":14,"droppedRequests":0,"droppedWebSockets":0,"droppedWsMessages":0},"performance":{"completedRequests":24,"bytesApproxTotal":198432,"statusBuckets":{"2xx":24,"3xx":0,"4xx":0,"5xx":0,"other":0},"latencyMs":{"min":11.2,"max":921.7,"avg":147.4,"p50":64.1,"p95":721.6},"ttfbMs":{"min":6.3,"max":680.4,"avg":83.2,"p50":41.7,"p95":421.9},"slowest":[{"id":5,"url":"https://camelpay.localhost/api/checkout","resourceType":"fetch","status":200,"durationMs":921.7}]},"truncated":{"requests":false,"webSockets":false,"wsMessages":false},"hints":{"shouldRecapture":false,"suggested":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120}},"insights":{"topHosts":[],"errorHotspots":[],"websocketHotspots":[]},"requests":[],"webSockets":[]}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","captureId":null,"actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","capture":{"startedAt":"2026-02-13T12:00:00.000Z","endedAt":"2026-02-13T12:00:02.600Z","durationMs":2600,"captureMs":2500,"reload":false},"filters":{"urlContains":null,"method":null,"resourceType":null,"status":"2xx","failedOnly":false,"profile":"custom"},"view":"raw","fields":["id","method","status","durationMs","resourceType","url"],"tableRows":[],"limits":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120},"counts":{"requestsSeen":31,"requestsReturned":24,"responsesSeen":31,"failedSeen":0,"webSocketsSeen":1,"webSocketsReturned":1,"wsMessagesSeen":14,"wsMessagesReturned":14,"droppedRequests":0,"droppedWebSockets":0,"droppedWsMessages":0},"performance":{"completedRequests":24,"bytesApproxTotal":198432,"statusBuckets":{"2xx":24,"3xx":0,"4xx":0,"5xx":0,"other":0},"latencyMs":{"min":11.2,"max":921.7,"avg":147.4,"p50":64.1,"p95":721.6},"ttfbMs":{"min":6.3,"max":680.4,"avg":83.2,"p50":41.7,"p95":421.9},"slowest":[{"id":5,"url":"https://camelpay.localhost/api/checkout","resourceType":"fetch","status":200,"durationMs":921.7}]},"truncated":{"requests":false,"webSockets":false,"wsMessages":false},"hints":{"shouldRecapture":false,"suggested":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120}},"insights":{"topHosts":[],"errorHotspots":[],"websocketHotspots":[]},"requests":[],"webSockets":[]}
 ```
 
 `target network-begin` / `target network-end` gives an action-scoped handle-based capture loop:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","captureId":"c-12","actionId":"checkout-click","status":"recording","profile":"api","startedAt":"2026-02-13T12:00:00.000Z","maxRuntimeMs":600000}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","captureId":"c-12","actionId":"checkout-click","status":"recording","profile":"api","startedAt":"2026-02-13T12:00:00.000Z","maxRuntimeMs":600000}
 ```
 
 `target network-export` writes a compact HAR artifact and returns artifact metadata:
 
 ```json
-{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","format":"har","artifact":{"path":"/abs/path/capture.har","mode":"minimal","scope":"filtered","entries":24,"bytes":18212,"writtenAt":"2026-02-13T12:00:02.605Z"},"source":{"captureMs":3000,"requestsSeen":31,"requestsReturned":24,"truncatedRequests":false}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","format":"har","artifact":{"path":"/abs/path/capture.har","mode":"minimal","scope":"filtered","entries":24,"bytes":18212,"writtenAt":"2026-02-13T12:00:02.605Z"},"source":{"captureMs":3000,"requestsSeen":31,"requestsReturned":24,"truncatedRequests":false}}
 ```
 
 `target network-export-list` returns indexed artifacts for agent reuse:
@@ -241,7 +248,10 @@ Sessions are tracked in state with an explicit active pointer:
 - agent-scoped: set `SURFWRIGHT_AGENT_ID=<agentId>` to use `~/.surfwright/agents/<agentId>/state.json`
 - explicit override: `SURFWRIGHT_STATE_DIR=<path>`
 
-`session ensure` now runs a built-in session hygiene pass (drops unreachable attached sessions, drops unreachable managed sessions, and clears expired leases) before selecting/creating the active session.
+`session ensure` still runs a built-in hygiene pass, but command defaults are now isolation-first:
+- `open`/`run` without `--session` use new ephemeral sessions by default.
+- `target *` without `--session` infer from persisted `targetId`.
+- explicit `--session` always wins and is validated against `targetId` ownership.
 Set `SURFWRIGHT_SESSION_LEASE_TTL_MS=<ms>` to tune session lease retention (default 72h).
 Use `session new --policy persistent` for long-lived sessions and `--policy ephemeral` for disposable runs.
 

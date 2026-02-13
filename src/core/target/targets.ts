@@ -1,9 +1,17 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
-import { ensureDefaultManagedSession, ensureSessionReachable } from "../browser.js";
+import { allocateFreePort, ensureSessionReachable, startManagedSession } from "../browser.js";
 import { CliError } from "../errors.js";
-import { nowIso, readState, sanitizeSessionId, updateState } from "../state.js";
+import { withSessionHeartbeat } from "../session/index.js";
+import { allocateSessionId, defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId, updateState } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
-import type { SessionState, TargetListReport, TargetSnapshotReport } from "../types.js";
+import { extractScopedSnapshotSample } from "./snapshot-sample.js";
+import {
+  DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
+  type SessionSource,
+  type SessionState,
+  type TargetListReport,
+  type TargetSnapshotReport,
+} from "../types.js";
 
 const TARGET_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
 const SNAPSHOT_TEXT_MAX_CHARS = 1200;
@@ -70,81 +78,107 @@ export async function ensureValidSelector(page: Page, selectorQuery: string): Pr
   }
 }
 
-export async function resolveSessionForAction(
-  sessionHint: string | undefined,
-  timeoutMs: number,
-): Promise<{
-  session: SessionState;
-}> {
-  const isRecoverableActiveAttachedFailure = (error: unknown, session: SessionState): boolean =>
-    error instanceof CliError && error.code === "E_SESSION_UNREACHABLE" && session.kind === "attached";
+async function createImplicitManagedSession(timeoutMs: number): Promise<SessionState> {
+  return await updateState(async (state) => {
+    const sessionId = allocateSessionId(state, "s");
+    const debugPort = await allocateFreePort();
+    const created = await startManagedSession(
+      {
+        sessionId,
+        debugPort,
+        userDataDir: defaultSessionUserDataDir(sessionId),
+        policy: "ephemeral",
+        createdAt: nowIso(),
+      },
+      timeoutMs,
+    );
+    const session = withSessionHeartbeat(
+      {
+        ...created,
+        policy: "ephemeral",
+        leaseTtlMs: DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
+      },
+      created.lastSeenAt,
+    );
+    state.sessions[sessionId] = session;
+    state.activeSessionId = sessionId;
+    return session;
+  });
+}
 
-  const snapshot = readState();
-  if (typeof sessionHint === "string" && sessionHint.length > 0) {
-    const sessionId = sanitizeSessionId(sessionHint);
+export async function resolveSessionForAction(opts: {
+  sessionHint?: string;
+  timeoutMs: number;
+  targetIdHint?: string;
+  allowImplicitNewSession?: boolean;
+}): Promise<{
+  session: SessionState;
+  sessionSource: SessionSource;
+}> {
+  const targetIdHint = typeof opts.targetIdHint === "string" && opts.targetIdHint.length > 0 ? sanitizeTargetId(opts.targetIdHint) : null;
+
+  const resolveExplicitSession = async (sessionId: string): Promise<{
+    session: SessionState;
+    sessionSource: SessionSource;
+  }> => {
+    const snapshot = readState();
     const existing = snapshot.sessions[sessionId];
-    if (existing) {
-      const ensured = await ensureSessionReachable(existing, timeoutMs);
-      await updateState(async (state) => {
-        if (!state.sessions[sessionId]) {
-          throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
-        }
-        state.sessions[sessionId] = ensured.session;
-      });
-      return { session: ensured.session };
+    if (!existing) {
+      throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
     }
-  } else if (snapshot.activeSessionId && snapshot.sessions[snapshot.activeSessionId]) {
-    const activeId = snapshot.activeSessionId;
-    const active = snapshot.sessions[activeId];
-    try {
-      const ensured = await ensureSessionReachable(active, timeoutMs);
-      await updateState(async (state) => {
-        if (!state.sessions[activeId]) {
-          throw new CliError("E_SESSION_NOT_FOUND", `Session ${activeId} not found`);
-        }
-        state.sessions[activeId] = ensured.session;
-        state.activeSessionId = activeId;
-      });
-      return { session: ensured.session };
-    } catch (error) {
-      if (!isRecoverableActiveAttachedFailure(error, active)) {
-        throw error;
+    if (targetIdHint) {
+      const targetRecord = snapshot.targets[targetIdHint];
+      if (!targetRecord) {
+        throw new CliError("E_TARGET_SESSION_UNKNOWN", `Target ${targetIdHint} has no recorded session mapping`);
+      }
+      if (targetRecord.sessionId !== sessionId) {
+        throw new CliError("E_TARGET_SESSION_MISMATCH", `Target ${targetIdHint} belongs to session ${targetRecord.sessionId}`);
       }
     }
-  }
-
-  return await updateState(async (state) => {
-    if (typeof sessionHint === "string" && sessionHint.length > 0) {
-      const sessionId = sanitizeSessionId(sessionHint);
-      const existing = state.sessions[sessionId];
-      if (!existing) {
+    const ensured = await ensureSessionReachable(existing, opts.timeoutMs);
+    await updateState(async (state) => {
+      if (!state.sessions[sessionId]) {
         throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
       }
-
-      const ensured = await ensureSessionReachable(existing, timeoutMs);
       state.sessions[sessionId] = ensured.session;
-      return { session: ensured.session };
-    }
+      state.activeSessionId = sessionId;
+    });
+    return {
+      session: ensured.session,
+      sessionSource: "explicit",
+    };
+  };
 
-    if (state.activeSessionId && state.sessions[state.activeSessionId]) {
-      const activeId = state.activeSessionId;
-      const active = state.sessions[activeId];
-      try {
-        const ensured = await ensureSessionReachable(active, timeoutMs);
-        state.sessions[activeId] = ensured.session;
-        state.activeSessionId = activeId;
-        return { session: ensured.session };
-      } catch (error) {
-        if (!isRecoverableActiveAttachedFailure(error, active)) {
-          throw error;
-        }
-      }
-    }
+  if (typeof opts.sessionHint === "string" && opts.sessionHint.length > 0) {
+    const sessionId = sanitizeSessionId(opts.sessionHint);
+    return await resolveExplicitSession(sessionId);
+  }
 
-    const ensuredDefault = await ensureDefaultManagedSession(state, timeoutMs);
-    state.activeSessionId = ensuredDefault.session.sessionId;
-    return { session: ensuredDefault.session };
-  });
+  if (targetIdHint) {
+    const snapshot = readState();
+    const targetRecord = snapshot.targets[targetIdHint];
+    if (!targetRecord) {
+      throw new CliError("E_TARGET_SESSION_UNKNOWN", `Target ${targetIdHint} has no recorded session mapping`);
+    }
+    const sessionId = targetRecord.sessionId;
+    return await resolveExplicitSession(sessionId).then((resolved) => ({
+      ...resolved,
+      sessionSource: "target-inferred",
+    }));
+  }
+
+  if (opts.allowImplicitNewSession) {
+    const session = await createImplicitManagedSession(opts.timeoutMs);
+    return {
+      session,
+      sessionSource: "implicit-new",
+    };
+  }
+
+  throw new CliError(
+    "E_SESSION_REQUIRED",
+    "session is required for this command when target session cannot be inferred",
+  );
 }
 
 export async function readPageTargetId(context: BrowserContext, page: Page): Promise<string> {
@@ -198,134 +232,12 @@ export async function resolveTargetHandle(
   return target;
 }
 
-async function extractScopedSnapshotSample(opts: {
-  page: Page;
-  selectorQuery: string | null;
-  visibleOnly: boolean;
-  textMaxChars: number;
-  maxHeadings: number;
-  maxButtons: number;
-  maxLinks: number;
-}): Promise<{
-  scopeMatched: boolean;
-  textPreview: string;
-  headings: string[];
-  buttons: string[];
-  links: Array<{ text: string; href: string }>;
-  counts: {
-    textLength: number;
-    headings: number;
-    buttons: number;
-    links: number;
-  };
-}> {
-  return (await opts.page.evaluate(
-    ({ selectorQuery, visibleOnly, textMaxChars, maxHeadings, maxButtons, maxLinks }) => {
-      const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
-      const doc = runtime.document;
-      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
-      const isVisible = (node: any): boolean => {
-        if (!node) {
-          return false;
-        }
-        if (node.hasAttribute?.("hidden")) {
-          return false;
-        }
-        const style = runtime.getComputedStyle?.(node);
-        if (style && (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")) {
-          return false;
-        }
-        return (node.getClientRects?.().length ?? 0) > 0;
-      };
-
-      const rootNode = selectorQuery ? doc?.querySelector?.(selectorQuery) ?? null : doc?.body ?? null;
-      if (!rootNode) {
-        return {
-          scopeMatched: false,
-          textPreview: "",
-          headings: [],
-          buttons: [],
-          links: [],
-          counts: {
-            textLength: 0,
-            headings: 0,
-            buttons: 0,
-            links: 0,
-          },
-        };
-      }
-
-      const textRaw = visibleOnly ? rootNode?.innerText ?? "" : rootNode?.textContent ?? "";
-      const normalizedText = normalize(textRaw);
-
-      const headingNodes = Array.from(rootNode.querySelectorAll?.("h1,h2,h3") ?? []);
-      const buttonNodes = Array.from(
-        rootNode.querySelectorAll?.("button,[role=button],input[type=button],input[type=submit],input[type=reset]") ?? [],
-      );
-      const linkNodes = Array.from(rootNode.querySelectorAll?.("a[href]") ?? []);
-
-      const headings = headingNodes
-        .filter((node: any) => (visibleOnly ? isVisible(node) : true))
-        .map((node: any) => normalize(node?.textContent ?? ""))
-        .filter((value: string) => value.length > 0);
-
-      const buttons = buttonNodes
-        .filter((node: any) => (visibleOnly ? isVisible(node) : true))
-        .map((node: any) => {
-          const fromText = node?.innerText ?? "";
-          const fromAria = node?.getAttribute?.("aria-label") ?? "";
-          const fromValue = node?.getAttribute?.("value") ?? "";
-          return normalize(fromText || fromAria || fromValue);
-        })
-        .filter((value: string) => value.length > 0);
-
-      const links = linkNodes
-        .filter((node: any) => (visibleOnly ? isVisible(node) : true))
-        .map((node: any) => ({
-          text: normalize(node?.textContent ?? ""),
-          href: node?.getAttribute?.("href") ?? "",
-        }));
-
-      return {
-        scopeMatched: true,
-        textPreview: normalizedText.slice(0, textMaxChars),
-        headings: headings.slice(0, maxHeadings),
-        buttons: buttons.slice(0, maxButtons),
-        links: links.slice(0, maxLinks),
-        counts: {
-          textLength: normalizedText.length,
-          headings: headings.length,
-          buttons: buttons.length,
-          links: links.length,
-        },
-      };
-    },
-    {
-      selectorQuery: opts.selectorQuery,
-      visibleOnly: opts.visibleOnly,
-      textMaxChars: opts.textMaxChars,
-      maxHeadings: opts.maxHeadings,
-      maxButtons: opts.maxButtons,
-      maxLinks: opts.maxLinks,
-    },
-  )) as {
-    scopeMatched: boolean;
-    textPreview: string;
-    headings: string[];
-    buttons: string[];
-    links: Array<{ text: string; href: string }>;
-    counts: {
-      textLength: number;
-      headings: number;
-      buttons: number;
-      links: number;
-    };
-  };
-}
-
 export async function targetList(opts: { timeoutMs: number; sessionId?: string; persistState?: boolean }): Promise<TargetListReport> {
   const startedAt = Date.now();
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const { session, sessionSource } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+  });
   const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
@@ -364,6 +276,7 @@ export async function targetList(opts: { timeoutMs: number; sessionId?: string; 
     return {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targets,
       timingMs: {
         total: persistedAt - startedAt,
@@ -423,7 +336,11 @@ export async function targetSnapshot(opts: {
     name: "max-links",
   });
 
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const { session, sessionSource } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: requestedTargetId,
+  });
   const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
@@ -450,6 +367,7 @@ export async function targetSnapshot(opts: {
     const report: TargetSnapshotReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       url: target.page.url(),
       title: await target.page.title(),

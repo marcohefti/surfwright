@@ -79,6 +79,7 @@ export async function targetNetworkExport(opts: {
   const report: TargetNetworkExportReport = {
     ok: true,
     sessionId: capture.sessionId,
+    sessionSource: capture.sessionSource,
     targetId: capture.targetId,
     url: capture.url,
     title: capture.title,

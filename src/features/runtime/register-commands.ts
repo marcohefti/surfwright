@@ -208,9 +208,10 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .description(openMeta.summary)
     .argument("<url>", "Absolute URL to open")
     .option("--reuse-url", "Reuse existing tab for same URL if present", false)
+    .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Navigation timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
     .option("--fields <csv>", "Return only selected top-level fields")
-    .action(async (url: string, options: { timeoutMs: number; reuseUrl?: boolean; fields?: string }) => {
+    .action(async (url: string, options: { timeoutMs: number; reuseUrl?: boolean; isolation?: string; fields?: string }) => {
       const output = ctx.globalOutputOpts();
       const globalOpts = ctx.program.opts<{ session?: string }>();
       try {
@@ -219,6 +220,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           inputUrl: url,
           timeoutMs: options.timeoutMs,
           reuseUrl: Boolean(options.reuseUrl),
+          isolation: options.isolation,
           sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
         });
         printOpenSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -259,6 +261,27 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           timeoutMs: options.timeoutMs,
           requestedSessionId: options.sessionId,
           policyInput: options.policy,
+          leaseTtlMs: options.leaseTtlMs,
+        });
+        printSessionSuccess(report, output);
+      } catch (error) {
+        ctx.handleFailure(error, output);
+      }
+    });
+
+  session
+    .command("fresh")
+    .description(runtimeCommandMeta("session.fresh").summary)
+    .option("--session-id <sessionId>", "Session id to assign (optional)")
+    .option("--lease-ttl-ms <ms>", "Session lease TTL in milliseconds", parseLeaseTtlMs)
+    .option("--timeout-ms <ms>", "Session readiness timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_SESSION_TIMEOUT_MS)
+    .action(async (options: { sessionId?: string; leaseTtlMs?: number; timeoutMs: number }) => {
+      const output = ctx.globalOutputOpts();
+      try {
+        const report = await sessionNew({
+          timeoutMs: options.timeoutMs,
+          requestedSessionId: options.sessionId,
+          policyInput: "ephemeral",
           leaseTtlMs: options.leaseTtlMs,
         });
         printSessionSuccess(report, output);
@@ -378,14 +401,16 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .command("run")
     .description(runtimeCommandMeta("run").summary)
     .requiredOption("--plan <path>", "Path to JSON plan file")
+    .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Default step timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
-    .action(async (options: { plan: string; timeoutMs: number }) => {
+    .action(async (options: { plan: string; isolation?: string; timeoutMs: number }) => {
       const output = ctx.globalOutputOpts();
       const globalOpts = ctx.program.opts<{ session?: string }>();
       try {
         const report = await runPipeline({
           planPath: options.plan,
           timeoutMs: options.timeoutMs,
+          isolation: options.isolation,
           sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
         });
         printRunSuccess(report, output);

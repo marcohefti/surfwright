@@ -123,6 +123,7 @@ test("target click returns deterministic shape for selector/text modes", { skip:
   assert.deepEqual(Object.keys(selectorPayload), [
     "ok",
     "sessionId",
+    "sessionSource",
     "targetId",
     "actionId",
     "mode",
@@ -138,6 +139,7 @@ test("target click returns deterministic shape for selector/text modes", { skip:
     "timingMs",
   ]);
   assert.equal(selectorPayload.ok, true);
+  assert.equal(selectorPayload.sessionSource, "explicit");
   assert.equal(selectorPayload.mode, "selector");
   assert.equal(selectorPayload.selector, "#cta");
   assert.equal(selectorPayload.query, "#cta");
@@ -167,6 +169,7 @@ test("target click returns deterministic shape for selector/text modes", { skip:
   assert.equal(textClick.status, 0);
   const textPayload = parseJson(textClick.stdout);
   assert.equal(textPayload.ok, true);
+  assert.equal(textPayload.sessionSource, "explicit");
   assert.equal(textPayload.mode, "text");
   assert.equal(textPayload.query, "Blog");
   assert.equal(typeof textPayload.clicked.selectorHint, "string");

@@ -64,7 +64,11 @@ export async function targetWait(opts: {
     networkIdle: opts.networkIdle,
   });
 
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const { session, sessionSource } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: requestedTargetId,
+  });
   const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
@@ -73,29 +77,54 @@ export async function targetWait(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    const throwWaitTimeout = (): never => {
+      throw new CliError("E_WAIT_TIMEOUT", "wait condition did not complete before timeout");
+    };
 
     if (parsed.mode === "text") {
-      await target.page.getByText(parsed.value ?? "", { exact: false }).first().waitFor({
-        state: "visible",
-        timeout: opts.timeoutMs,
-      });
+      try {
+        await target.page.getByText(parsed.value ?? "", { exact: false }).first().waitFor({
+          state: "visible",
+          timeout: opts.timeoutMs,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("Timeout")) {
+          throwWaitTimeout();
+        }
+        throw error;
+      }
     } else if (parsed.mode === "selector") {
       const selectorQuery = parsed.value ?? "";
       await ensureValidSelector(target.page, selectorQuery);
-      await target.page.locator(selectorQuery).first().waitFor({
-        state: "visible",
-        timeout: opts.timeoutMs,
-      });
+      try {
+        await target.page.locator(selectorQuery).first().waitFor({
+          state: "visible",
+          timeout: opts.timeoutMs,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("Timeout")) {
+          throwWaitTimeout();
+        }
+        throw error;
+      }
     } else {
-      await target.page.waitForLoadState("networkidle", {
-        timeout: opts.timeoutMs,
-      });
+      try {
+        await target.page.waitForLoadState("networkidle", {
+          timeout: opts.timeoutMs,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("Timeout")) {
+          throwWaitTimeout();
+        }
+        throw error;
+      }
     }
     const actionCompletedAt = Date.now();
 
     const report: TargetWaitReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       url: target.page.url(),
       title: await target.page.title(),

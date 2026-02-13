@@ -133,6 +133,7 @@ test("target network returns deterministic JSON shape", { skip: !hasBrowser() },
   assert.deepEqual(Object.keys(networkPayload), [
     "ok",
     "sessionId",
+    "sessionSource",
     "targetId",
     "captureId",
     "actionId",
@@ -154,6 +155,7 @@ test("target network returns deterministic JSON shape", { skip: !hasBrowser() },
   ]);
   assert.equal(networkPayload.ok, true);
   assert.equal(networkPayload.sessionId, ensurePayload.sessionId);
+  assert.equal(networkPayload.sessionSource, "explicit");
   assert.equal(networkPayload.targetId, openPayload.targetId);
   assert.equal(typeof networkPayload.actionId, "string");
   assert.equal(typeof networkPayload.capture.captureMs, "number");
@@ -205,7 +207,18 @@ test("target network-export writes HAR artifact metadata", { skip: !hasBrowser()
   ]);
   assert.equal(networkResult.status, 0);
   const networkPayload = parseJson(networkResult.stdout);
-  assert.deepEqual(Object.keys(networkPayload), ["ok", "sessionId", "targetId", "url", "title", "format", "artifact", "source"]);
+  assert.deepEqual(Object.keys(networkPayload), [
+    "ok",
+    "sessionId",
+    "sessionSource",
+    "targetId",
+    "url",
+    "title",
+    "format",
+    "artifact",
+    "source",
+  ]);
+  assert.equal(networkPayload.sessionSource, "explicit");
   assert.equal(networkPayload.format, "har");
   assert.equal(typeof networkPayload.artifact, "object");
   assert.equal(networkPayload.artifact.path, path.resolve(harPath));

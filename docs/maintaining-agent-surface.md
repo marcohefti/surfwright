@@ -43,8 +43,8 @@ surfwright --json contract
 2. Core runtime loop:
 
 ```bash
-surfwright --json session ensure
 surfwright --json open https://example.com
+surfwright --json target snapshot <targetId>
 ```
 
 3. Typed failure check:
@@ -83,4 +83,4 @@ This combines:
 
 For long-lived automation, use per-agent state namespaces with `SURFWRIGHT_AGENT_ID=<agentId>`.
 
-`session ensure` includes an automatic session hygiene pass, but a scheduled weekly `state reconcile` is still a good full cleanup baseline.
+`session ensure` includes an automatic session hygiene pass for shared-session workflows, but a scheduled weekly `state reconcile` is still a good full cleanup baseline.

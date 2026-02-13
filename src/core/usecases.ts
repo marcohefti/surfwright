@@ -27,6 +27,8 @@ import {
   normalizeSessionLeaseTtlMs,
   withSessionHeartbeat,
 } from "./session/hygiene.js";
+import { buildSessionReport } from "./session-report.js";
+import { resolveOpenSessionHint, resolvePipelineSessionId } from "./session-isolation.js";
 import { parseFieldsCsv, projectReportFields } from "./report-fields.js";
 import { listSessionsSnapshot } from "./state-repos/session-repo.js";
 import { saveTargetSnapshot } from "./state-repos/target-repo.js";
@@ -44,24 +46,6 @@ import type {
   SessionReport,
   SessionState,
 } from "./types.js";
-function sessionReport(
-  session: SessionState,
-  meta: {
-    active: boolean;
-    created: boolean;
-    restarted: boolean;
-  },
-): SessionReport {
-  return {
-    ok: true,
-    sessionId: session.sessionId,
-    kind: session.kind,
-    cdpOrigin: session.cdpOrigin,
-    active: meta.active,
-    created: meta.created,
-    restarted: meta.restarted,
-  };
-}
 export function getDoctorReport(): DoctorReport {
   const candidates = chromeCandidatesForPlatform();
   const found = candidates.some((candidatePath) => {
@@ -85,11 +69,13 @@ export function getDoctorReport(): DoctorReport {
   };
 }
 export { getCliContractReport } from "./cli-contract.js";
+
 export async function openUrl(opts: {
   inputUrl: string;
   timeoutMs: number;
   sessionId?: string;
   reuseUrl?: boolean;
+  isolation?: string;
 }): Promise<OpenReport> {
   const startedAt = Date.now();
   let parsedUrl: URL;
@@ -98,7 +84,21 @@ export async function openUrl(opts: {
   } catch {
     throw new CliError("E_URL_INVALID", "URL must be absolute (e.g. https://example.com)");
   }
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const sessionHint = await resolveOpenSessionHint({
+    sessionId: opts.sessionId,
+    isolation: opts.isolation,
+    timeoutMs: opts.timeoutMs,
+    ensureSharedSession: async ({ timeoutMs }) =>
+      await sessionEnsure({
+        timeoutMs,
+      }),
+  });
+
+  const { session, sessionSource } = await resolveSessionForAction({
+    sessionHint,
+    timeoutMs: opts.timeoutMs,
+    allowImplicitNewSession: !sessionHint,
+  });
   const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
@@ -116,6 +116,7 @@ export async function openUrl(opts: {
         const report: OpenReport = {
           ok: true,
           sessionId: session.sessionId,
+          sessionSource,
           targetId,
           actionId,
           url: existing.url(),
@@ -158,6 +159,7 @@ export async function openUrl(opts: {
     const report: OpenReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId,
       actionId: newActionId(),
       url: page.url(),
@@ -210,7 +212,7 @@ export async function sessionEnsure(opts: { timeoutMs: number }): Promise<Sessio
         }
         state.sessions[activeId] = ensured.session;
         state.activeSessionId = activeId;
-        return sessionReport(ensured.session, {
+        return buildSessionReport(ensured.session, {
           active: true,
           created: false,
           restarted: ensured.restarted,
@@ -228,7 +230,7 @@ export async function sessionEnsure(opts: { timeoutMs: number }): Promise<Sessio
   return await updateState(async (state) => {
     const ensuredDefault = await ensureDefaultManagedSession(state, opts.timeoutMs);
     state.activeSessionId = ensuredDefault.session.sessionId;
-    return sessionReport(ensuredDefault.session, {
+    return buildSessionReport(ensuredDefault.session, {
       active: true,
       created: ensuredDefault.created,
       restarted: ensuredDefault.restarted,
@@ -275,7 +277,7 @@ export async function sessionNew(opts: {
             session.lastSeenAt,
           );
     state.activeSessionId = sessionId;
-    return sessionReport(state.sessions[sessionId], {
+    return buildSessionReport(state.sessions[sessionId], {
       active: true,
       created: true,
       restarted: false,
@@ -327,7 +329,7 @@ export async function sessionAttach(opts: {
     const hydrated = withSessionHeartbeat(session, attachedAt);
     state.sessions[sessionId] = hydrated;
     state.activeSessionId = sessionId;
-    return sessionReport(hydrated, {
+    return buildSessionReport(hydrated, {
       active: true,
       created: true,
       restarted: false,
@@ -350,7 +352,7 @@ export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: stri
     }
     state.sessions[sessionId] = ensured.session;
     state.activeSessionId = sessionId;
-    return sessionReport(ensured.session, {
+    return buildSessionReport(ensured.session, {
       active: true,
       created: false,
       restarted: ensured.restarted,
@@ -377,11 +379,27 @@ export async function runPipeline(opts: {
   planPath: string;
   timeoutMs: number;
   sessionId?: string;
+  isolation?: string;
 }): Promise<Record<string, unknown>> {
+  const resolvedSessionId = await resolvePipelineSessionId({
+    sessionId: opts.sessionId,
+    isolation: opts.isolation,
+    timeoutMs: opts.timeoutMs,
+    ensureSharedSession: async ({ timeoutMs }) =>
+      await sessionEnsure({
+        timeoutMs,
+      }),
+    ensureImplicitSession: async ({ timeoutMs }) =>
+      await resolveSessionForAction({
+        timeoutMs,
+        allowImplicitNewSession: true,
+      }),
+  });
+
   return await executePipelinePlan({
     planPath: opts.planPath,
     timeoutMs: opts.timeoutMs,
-    sessionId: opts.sessionId,
+    sessionId: resolvedSessionId,
     ops: {
       open: async (input) =>
         await openUrl({

@@ -64,7 +64,11 @@ export async function targetFind(opts: {
     visibleOnly: opts.visibleOnly,
   });
 
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
+  const { session, sessionSource } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: requestedTargetId,
+  });
   const resolvedSessionAt = Date.now();
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
@@ -114,6 +118,7 @@ export async function targetFind(opts: {
     const report: TargetFindReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       mode: parsed.query.mode,
       selector: parsed.query.selector,

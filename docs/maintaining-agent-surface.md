@@ -65,3 +65,18 @@ When real-world behavior reveals a new edge case, add a deterministic ingress fi
 - Follow `docs/fixture-ingress-workflow.md`.
 - Store normalized SurfWright contract behavior, not raw Playwright/CDP payloads.
 - Use the fixture path convention under `test/fixtures/ingress/...`.
+
+## 7) State hygiene policy
+
+When a workstation restarts or browser processes are interrupted, run a maintenance pass before blaming command behavior:
+
+```bash
+surfwright --json state reconcile
+```
+
+This combines:
+
+- `session prune` (remove unreachable attached sessions; repair stale managed pid metadata)
+- `target prune` (remove orphaned/aged target metadata and enforce per-session cap)
+
+For scheduled cleanup, a weekly `state reconcile` is sufficient for most operator workflows.

@@ -1,11 +1,12 @@
 import { type Command } from "commander";
-import { targetFind, targetList, targetRead, targetSnapshot, targetWait } from "./core/usecases.js";
+import { targetFind, targetList, targetPrune, targetRead, targetSnapshot, targetWait } from "./core/usecases.js";
 import {
   DEFAULT_TARGET_FIND_LIMIT,
   DEFAULT_TARGET_READ_CHUNK_SIZE,
   DEFAULT_TARGET_TIMEOUT_MS,
   type TargetFindReport,
   type TargetListReport,
+  type TargetPruneReport,
   type TargetReadReport,
   type TargetSnapshotReport,
   type TargetWaitReport,
@@ -21,7 +22,13 @@ function writeJson(value: unknown, opts: { pretty: boolean }) {
 }
 
 function printTargetSuccess(
-  report: TargetListReport | TargetSnapshotReport | TargetFindReport | TargetReadReport | TargetWaitReport,
+  report:
+    | TargetListReport
+    | TargetSnapshotReport
+    | TargetFindReport
+    | TargetReadReport
+    | TargetWaitReport
+    | TargetPruneReport,
   opts: TargetOutputOpts,
 ) {
   if (opts.json) {
@@ -69,6 +76,19 @@ function printTargetSuccess(
         `targetId=${report.targetId}`,
         `mode=${report.mode}`,
         `value=${report.value ?? "null"}`,
+      ].join(" ") + "\n",
+    );
+    return;
+  }
+
+  if ("removedOrphaned" in report) {
+    process.stdout.write(
+      [
+        "ok",
+        `activeSessionId=${report.activeSessionId ?? "none"}`,
+        `scanned=${report.scanned}`,
+        `remaining=${report.remaining}`,
+        `removed=${report.removed}`,
       ].join(" ") + "\n",
     );
     return;
@@ -267,4 +287,25 @@ export function registerTargetCommands(opts: {
         }
       },
     );
+
+  target
+    .command("prune")
+    .description("Prune stale/orphan target metadata with age and size caps")
+    .option("--max-age-hours <h>", "Maximum target age in hours to retain")
+    .option("--max-per-session <n>", "Maximum retained targets per session")
+    .action(async (options: { maxAgeHours?: string; maxPerSession?: string }) => {
+      const output = opts.globalOutputOpts();
+      const maxAgeHours = typeof options.maxAgeHours === "string" ? Number.parseInt(options.maxAgeHours, 10) : undefined;
+      const maxPerSession =
+        typeof options.maxPerSession === "string" ? Number.parseInt(options.maxPerSession, 10) : undefined;
+      try {
+        const report = await targetPrune({
+          maxAgeHours,
+          maxPerSession,
+        });
+        printTargetSuccess(report, output);
+      } catch (error) {
+        opts.handleFailure(error, output);
+      }
+    });
 }

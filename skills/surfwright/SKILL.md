@@ -37,6 +37,12 @@ surfwright --json target wait <targetId> --for-selector "h1"
 
 `open` returns `sessionId` and `targetId`; persist these handles in your run state and use `target snapshot` / `target find` / `target read` / `target wait` for bounded page reads and deterministic readiness checks.
 
+If local state may be stale (machine restart, browser crash), run:
+
+```bash
+surfwright --json state reconcile
+```
+
 ## Error discipline
 
 - Retry only retryable infrastructure failures (`E_CDP_UNREACHABLE`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_TIMEOUT`, `E_INTERNAL`).

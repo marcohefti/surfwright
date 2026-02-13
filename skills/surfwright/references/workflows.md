@@ -57,3 +57,22 @@ surfwright --json session list
 - Avoid `--pretty` in automated loops.
 - Treat non-zero process exit as failure and decode `code` from JSON.
 - Prefer `targetId` from `open` when taking snapshots; use `target list` only when recovering from lost handles.
+
+## 5) State hygiene after restart/crash
+
+Run this when the host restarts, Chrome dies unexpectedly, or `state.json` might contain stale entries:
+
+```bash
+surfwright --json session prune
+surfwright --json target prune --max-age-hours 168 --max-per-session 200
+```
+
+Single-command equivalent:
+
+```bash
+surfwright --json state reconcile
+```
+
+- `session prune` removes unreachable attached sessions and repairs stale managed `browserPid`.
+- `target prune` removes orphaned/aged targets and caps target history per session.
+- `state reconcile` combines both reports in one deterministic response payload.

@@ -23,6 +23,7 @@ import {
   upsertTargetState,
 } from "./state.js";
 import { readPageTargetId, resolveSessionForAction } from "./targets.js";
+import { sessionPrune, stateReconcile, targetPrune } from "./state-maintenance.js";
 import type {
   CliContractReport,
   DoctorReport,
@@ -125,6 +126,11 @@ export function getCliContractReport(version: string): CliContractReport {
         summary: "list known sessions and current active pointer",
       },
       {
+        id: "session.prune",
+        usage: "surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--json] [--pretty]",
+        summary: "prune unreachable sessions and repair stale managed pid metadata",
+      },
+      {
         id: "open",
         usage: "surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
         summary: "open URL and return minimal page report with target handle",
@@ -157,6 +163,17 @@ export function getCliContractReport(version: string): CliContractReport {
         usage:
           "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
         summary: "wait for deterministic readiness condition on a target",
+      },
+      {
+        id: "target.prune",
+        usage: "surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]",
+        summary: "prune stale/orphan target metadata with age and size caps",
+      },
+      {
+        id: "state.reconcile",
+        usage:
+          "surfwright state reconcile [--timeout-ms <ms>] [--max-age-hours <h>] [--max-per-session <n>] [--drop-managed-unreachable] [--json] [--pretty]",
+        summary: "repair and prune state for resilient post-restart recovery",
       },
     ],
     errors: [
@@ -468,3 +485,4 @@ export { targetFind } from "./target-find.js";
 export { targetRead } from "./target-read.js";
 export { targetWait } from "./target-wait.js";
 export { targetList, targetSnapshot } from "./targets.js";
+export { sessionPrune, stateReconcile, targetPrune } from "./state-maintenance.js";

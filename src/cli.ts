@@ -14,7 +14,9 @@ import {
   sessionEnsure,
   sessionList,
   sessionNew,
+  sessionPrune,
   sessionUse,
+  stateReconcile,
 } from "./core/usecases.js";
 import {
   DEFAULT_OPEN_TIMEOUT_MS,
@@ -24,7 +26,9 @@ import {
   type DoctorReport,
   type OpenReport,
   type SessionListReport,
+  type SessionPruneReport,
   type SessionReport,
+  type StateReconcileReport,
 } from "./core/types.js";
 
 type OutputOpts = {
@@ -122,9 +126,22 @@ function printOpenSuccess(report: OpenReport, opts: OutputOpts) {
   );
 }
 
-function printSessionSuccess(report: SessionReport | SessionListReport, opts: OutputOpts) {
+function printSessionSuccess(report: SessionReport | SessionListReport | SessionPruneReport, opts: OutputOpts) {
   if (opts.json) {
     writeJson(report, { pretty: opts.pretty });
+    return;
+  }
+
+  if ("removedAttachedUnreachable" in report) {
+    process.stdout.write(
+      [
+        "ok",
+        `activeSessionId=${report.activeSessionId ?? "none"}`,
+        `scanned=${report.scanned}`,
+        `kept=${report.kept}`,
+        `removed=${report.removed}`,
+      ].join(" ") + "\n",
+    );
     return;
   }
 
@@ -141,6 +158,22 @@ function printSessionSuccess(report: SessionReport | SessionListReport, opts: Ou
       `active=${report.active ? "true" : "false"}`,
       `created=${report.created ? "true" : "false"}`,
       `restarted=${report.restarted ? "true" : "false"}`,
+    ].join(" ") + "\n",
+  );
+}
+
+function printStateReconcileSuccess(report: StateReconcileReport, opts: OutputOpts) {
+  if (opts.json) {
+    writeJson(report, { pretty: opts.pretty });
+    return;
+  }
+
+  process.stdout.write(
+    [
+      "ok",
+      `activeSessionId=${report.activeSessionId ?? "none"}`,
+      `sessionsRemoved=${report.sessions.removed}`,
+      `targetsRemoved=${report.targets.removed}`,
     ].join(" ") + "\n",
   );
 }
@@ -323,6 +356,58 @@ session
       handleFailure(error, opts);
     }
   });
+
+session
+  .command("prune")
+  .description("Prune unreachable sessions and repair stale managed pid metadata")
+  .option("--drop-managed-unreachable", "Remove managed sessions when currently unreachable", false)
+  .option("--timeout-ms <ms>", "Session reachability timeout in milliseconds", parseTimeoutMs, DEFAULT_SESSION_TIMEOUT_MS)
+  .action(async (options: { dropManagedUnreachable?: boolean; timeoutMs: number }) => {
+    const opts = globalOutputOpts();
+    try {
+      const report = await sessionPrune({
+        timeoutMs: options.timeoutMs,
+        dropManagedUnreachable: Boolean(options.dropManagedUnreachable),
+      });
+      printSessionSuccess(report, opts);
+    } catch (error) {
+      handleFailure(error, opts);
+    }
+  });
+
+program
+  .command("state")
+  .description("State maintenance operations")
+  .command("reconcile")
+  .description("Reconcile state by pruning stale sessions and target metadata")
+  .option("--timeout-ms <ms>", "Session reachability timeout in milliseconds", parseTimeoutMs, DEFAULT_SESSION_TIMEOUT_MS)
+  .option("--max-age-hours <h>", "Maximum target age in hours to retain")
+  .option("--max-per-session <n>", "Maximum retained targets per session")
+  .option("--drop-managed-unreachable", "Remove managed sessions when currently unreachable", false)
+  .action(
+    async (options: {
+      timeoutMs: number;
+      maxAgeHours?: string;
+      maxPerSession?: string;
+      dropManagedUnreachable?: boolean;
+    }) => {
+      const opts = globalOutputOpts();
+      const maxAgeHours = typeof options.maxAgeHours === "string" ? Number.parseInt(options.maxAgeHours, 10) : undefined;
+      const maxPerSession =
+        typeof options.maxPerSession === "string" ? Number.parseInt(options.maxPerSession, 10) : undefined;
+      try {
+        const report = await stateReconcile({
+          timeoutMs: options.timeoutMs,
+          maxAgeHours,
+          maxPerSession,
+          dropManagedUnreachable: Boolean(options.dropManagedUnreachable),
+        });
+        printStateReconcileSuccess(report, opts);
+      } catch (error) {
+        handleFailure(error, opts);
+      }
+    },
+  );
 
 registerTargetCommands({
   program,

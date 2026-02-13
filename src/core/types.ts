@@ -51,6 +51,17 @@ export type SessionListReport = {
   }>;
 };
 
+export type SessionPruneReport = {
+  ok: true;
+  activeSessionId: string | null;
+  scanned: number;
+  kept: number;
+  removed: number;
+  removedAttachedUnreachable: number;
+  removedManagedUnreachable: number;
+  repairedManagedPid: number;
+};
+
 export type TargetListReport = {
   ok: true;
   sessionId: string;
@@ -86,6 +97,19 @@ export type TargetSnapshotReport = {
     buttons: boolean;
     links: boolean;
   };
+};
+
+export type TargetPruneReport = {
+  ok: true;
+  activeSessionId: string | null;
+  scanned: number;
+  remaining: number;
+  removed: number;
+  removedOrphaned: number;
+  removedByAge: number;
+  removedByCap: number;
+  maxAgeHours: number;
+  maxPerSession: number;
 };
 
 export type TargetFindReport = {
@@ -136,6 +160,29 @@ export type TargetWaitReport = {
   title: string;
   mode: "text" | "selector" | "network-idle";
   value: string | null;
+};
+
+export type StateReconcileReport = {
+  ok: true;
+  activeSessionId: string | null;
+  sessions: {
+    scanned: number;
+    kept: number;
+    removed: number;
+    removedAttachedUnreachable: number;
+    removedManagedUnreachable: number;
+    repairedManagedPid: number;
+  };
+  targets: {
+    scanned: number;
+    remaining: number;
+    removed: number;
+    removedOrphaned: number;
+    removedByAge: number;
+    removedByCap: number;
+    maxAgeHours: number;
+    maxPerSession: number;
+  };
 };
 
 export type CliFailure = {

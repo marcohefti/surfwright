@@ -94,12 +94,15 @@ surfwright session new [--session-id <id>] [--timeout-ms <ms>] [--json] [--prett
 surfwright session attach --cdp <origin> [--session-id <id>] [--json] [--pretty]
 surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session list [--json] [--pretty]
+surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target list [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]
+surfwright state reconcile [--timeout-ms <ms>] [--max-age-hours <h>] [--max-per-session <n>] [--drop-managed-unreachable] [--json] [--pretty]
 ```
 
 Machine-readable runtime contract:
@@ -119,6 +122,18 @@ surfwright --json target find <targetId> --selector a --contains "Checkout" --fi
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
 ```
+
+State hygiene workflow for stale local metadata:
+
+```bash
+surfwright --json session prune
+surfwright --json target prune --max-age-hours 168 --max-per-session 200
+surfwright --json state reconcile
+```
+
+- `session prune` removes unreachable attached sessions and repairs stale managed `browserPid`.
+- `target prune` removes orphaned/aged targets and caps retained targets per session.
+- `state reconcile` runs both in one pass (recommended after host/browser restarts).
 
 `open` intentionally returns a minimal success shape for agent loops:
 

@@ -17,7 +17,7 @@
     "skill:install": "bash scripts/install-skill.sh",
     "start": "node dist/cli.js",
     "validate": "pnpm -s typecheck && pnpm -s policy:check && pnpm -s skill:validate && pnpm -s build",
-    "test:contract": "pnpm -s build && node --test test/cli.contract.test.mjs",
+    "test:contract": "pnpm -s build && node --test test/*.contract.test.mjs",
     "test:fixtures": "node --test test/ingress.fixture-replay.test.mjs",
     "test": "pnpm -s test:contract && pnpm -s test:fixtures"
   },

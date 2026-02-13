@@ -118,6 +118,47 @@ test("session attach requires explicit valid CDP origin", () => {
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_CDP_INVALID");
 });
+
+test("open without --session recovers from stale active attached session", { skip: !hasBrowser() }, () => {
+  const existingState = JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  const staleState = {
+    ...existingState,
+    activeSessionId: "a-stale",
+    sessions: {
+      ...existingState.sessions,
+      "a-stale": {
+        sessionId: "a-stale",
+        kind: "attached",
+        policy: "persistent",
+        cdpOrigin: "http://127.0.0.1:9",
+        debugPort: 9,
+        userDataDir: null,
+        browserPid: null,
+        ownerId: null,
+        leaseExpiresAt: null,
+        leaseTtlMs: null,
+        managedUnreachableSince: null,
+        managedUnreachableCount: 0,
+        createdAt: "2026-02-13T10:00:00.000Z",
+        lastSeenAt: "2026-02-13T10:00:00.000Z",
+      },
+    },
+  };
+  fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
+  fs.writeFileSync(stateFilePath(), `${JSON.stringify(staleState, null, 2)}\n`, "utf8");
+
+  const dataUrl = `data:text/html,${encodeURIComponent("<title>Recovered Open</title><main>ok</main>")}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+  assert.equal(openPayload.ok, true);
+  assert.equal(openPayload.sessionId, "s-default");
+  assert.equal(openPayload.title, "Recovered Open");
+
+  const state = JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  assert.equal(state.activeSessionId, "s-default");
+});
+
 test("session ensure + open success returns contract shape", { skip: !hasBrowser() }, () => {
   const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);

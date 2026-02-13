@@ -52,6 +52,7 @@ Treat all feature work, refactors, and optimizations as agent-operator surface d
 - Primary goal: make answers and actions resourceful for agents (high signal, low token cost, deterministic JSON).
 - Always evaluate both `operator UX` and `agent UX`: obvious flows, minimal steps, explicit handles, low friction.
 - Speed is a first-class constraint. Prefer faster command paths and bounded outputs over verbose diagnostics.
+- Do not increase timeouts as a first fix. If a command times out under defaults, treat it as a bug and debug root cause (session state/CDP reachability/startup race); only use longer timeouts for explicitly labeled diagnostics, never as the solution.
 - Do not rely on assumptions when evaluating behavior. Agents should run scripts and gather runtime evidence directly.
 - Playwright is an expected verification tool in this repo. Agents may run focused Playwright scripts to inspect behavior (including network/perf/websocket behavior) and propose concrete CLI improvements from those findings.
 - When proposing/implementing changes, include how the change improves:

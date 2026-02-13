@@ -76,6 +76,9 @@ export async function resolveSessionForAction(
 ): Promise<{
   session: SessionState;
 }> {
+  const isRecoverableActiveAttachedFailure = (error: unknown, session: SessionState): boolean =>
+    error instanceof CliError && error.code === "E_SESSION_UNREACHABLE" && session.kind === "attached";
+
   const snapshot = readState();
   if (typeof sessionHint === "string" && sessionHint.length > 0) {
     const sessionId = sanitizeSessionId(sessionHint);
@@ -93,15 +96,21 @@ export async function resolveSessionForAction(
   } else if (snapshot.activeSessionId && snapshot.sessions[snapshot.activeSessionId]) {
     const activeId = snapshot.activeSessionId;
     const active = snapshot.sessions[activeId];
-    const ensured = await ensureSessionReachable(active, timeoutMs);
-    await updateState(async (state) => {
-      if (!state.sessions[activeId]) {
-        throw new CliError("E_SESSION_NOT_FOUND", `Session ${activeId} not found`);
+    try {
+      const ensured = await ensureSessionReachable(active, timeoutMs);
+      await updateState(async (state) => {
+        if (!state.sessions[activeId]) {
+          throw new CliError("E_SESSION_NOT_FOUND", `Session ${activeId} not found`);
+        }
+        state.sessions[activeId] = ensured.session;
+        state.activeSessionId = activeId;
+      });
+      return { session: ensured.session };
+    } catch (error) {
+      if (!isRecoverableActiveAttachedFailure(error, active)) {
+        throw error;
       }
-      state.sessions[activeId] = ensured.session;
-      state.activeSessionId = activeId;
-    });
-    return { session: ensured.session };
+    }
   }
 
   return await updateState(async (state) => {
@@ -118,10 +127,18 @@ export async function resolveSessionForAction(
     }
 
     if (state.activeSessionId && state.sessions[state.activeSessionId]) {
-      const active = state.sessions[state.activeSessionId];
-      const ensured = await ensureSessionReachable(active, timeoutMs);
-      state.sessions[state.activeSessionId] = ensured.session;
-      return { session: ensured.session };
+      const activeId = state.activeSessionId;
+      const active = state.sessions[activeId];
+      try {
+        const ensured = await ensureSessionReachable(active, timeoutMs);
+        state.sessions[activeId] = ensured.session;
+        state.activeSessionId = activeId;
+        return { session: ensured.session };
+      } catch (error) {
+        if (!isRecoverableActiveAttachedFailure(error, active)) {
+          throw error;
+        }
+      }
     }
 
     const ensuredDefault = await ensureDefaultManagedSession(state, timeoutMs);

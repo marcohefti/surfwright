@@ -20,6 +20,7 @@ surfwright --json target find <targetId> --selector a --contains "query" --first
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --capture-ms 2500 --status 2xx
+surfwright --json target network <targetId> --reload --capture-ms 3000 --har-out ./artifacts/capture.har
 ```
 
 - `session ensure` guarantees a reachable active session (or creates managed default).
@@ -30,6 +31,7 @@ surfwright --json target network <targetId> --capture-ms 2500 --status 2xx
 - `target read` returns deterministic chunks for long text extraction.
 - `target wait` blocks until text/selector/network-idle readiness is met.
 - `target network` captures bounded request/websocket diagnostics with filterable performance summary.
+- `target network --har-out <path>` writes a compact HAR artifact for deep offline inspection while keeping stdout JSON small.
 
 ## 3) Explicit session lifecycle
 

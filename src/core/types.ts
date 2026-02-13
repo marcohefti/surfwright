@@ -205,6 +205,15 @@ export type TargetNetworkWebSocketReport = {
   messages: TargetNetworkWebSocketMessageReport[];
 };
 
+export type TargetNetworkHarReport = {
+  path: string;
+  mode: "minimal";
+  scope: "filtered";
+  entries: number;
+  bytes: number;
+  writtenAt: string;
+};
+
 export type TargetNetworkReport = {
   ok: true;
   sessionId: string;
@@ -280,6 +289,7 @@ export type TargetNetworkReport = {
     webSockets: boolean;
     wsMessages: boolean;
   };
+  har?: TargetNetworkHarReport;
   requests: TargetNetworkRequestReport[];
   webSockets: TargetNetworkWebSocketReport[];
 };

@@ -88,6 +88,9 @@ function printTargetSuccess(
   }
 
   if ("capture" in report) {
+    const harParts = report.har
+      ? [`har=${report.har.path}`, `harEntries=${report.har.entries}`, `harBytes=${report.har.bytes}`]
+      : [];
     process.stdout.write(
       [
         "ok",
@@ -97,6 +100,7 @@ function printTargetSuccess(
         `responses=${report.counts.responsesSeen}`,
         `failed=${report.counts.failedSeen}`,
         `websockets=${report.counts.webSocketsReturned}`,
+        ...harParts,
       ].join(" ") + "\n",
     );
     return;
@@ -329,6 +333,7 @@ export function registerTargetCommands(opts: {
     .option("--include-headers", "Include request/response headers (bounded by max item limits)")
     .option("--include-post-data", "Include bounded request post-data preview")
     .option("--no-ws-messages", "Disable websocket frame preview capture")
+    .option("--har-out <path>", "Write filtered capture as HAR artifact (compact minimal mode)")
     .option("--reload", "Reload page before capture to observe startup requests")
     .option("--timeout-ms <ms>", "Connection/reload timeout in milliseconds", opts.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
     .action(
@@ -347,6 +352,7 @@ export function registerTargetCommands(opts: {
           includeHeaders?: boolean;
           includePostData?: boolean;
           wsMessages?: boolean;
+          harOut?: string;
           reload?: boolean;
           timeoutMs: number;
         },
@@ -374,6 +380,7 @@ export function registerTargetCommands(opts: {
             includeHeaders: Boolean(options.includeHeaders),
             includePostData: Boolean(options.includePostData),
             includeWsMessages: options.wsMessages !== false,
+            harOut: options.harOut,
             reload: Boolean(options.reload),
           });
           printTargetSuccess(report, output);

@@ -167,7 +167,7 @@ export function getCliContractReport(version: string): CliContractReport {
       {
         id: "target.network",
         usage:
-          "surfwright target network <targetId> [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+          "surfwright target network <targetId> [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--har-out <path>] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
         summary: "capture bounded network/websocket diagnostics and performance summary for a target",
       },
       {

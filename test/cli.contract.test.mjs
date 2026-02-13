@@ -141,6 +141,7 @@ test("contract command returns machine-readable command and error metadata", () 
   assert.equal(payload.commands.some((entry) => entry.id === "target.read"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.wait"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.network"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.network" && entry.usage.includes("--har-out <path>")), true);
   assert.equal(payload.commands.some((entry) => entry.id === "contract"), true);
   assert.equal(payload.errors.some((entry) => entry.code === "E_URL_INVALID"), true);
   assert.equal(payload.errors.some((entry) => entry.code === "E_TARGET_NOT_FOUND"), true);

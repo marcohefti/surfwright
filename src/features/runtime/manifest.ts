@@ -1,6 +1,6 @@
-import type { CliCommandContract } from "../types.js";
+import type { CliCommandContract } from "../../core/types.js";
 
-export const baseCommandContracts: CliCommandContract[] = [
+export const runtimeCommandManifest: CliCommandContract[] = [
   {
     id: "doctor",
     usage: "surfwright doctor [--json] [--pretty]",
@@ -47,43 +47,17 @@ export const baseCommandContracts: CliCommandContract[] = [
     summary: "open URL and return minimal page report with target handle",
   },
   {
-    id: "target.list",
-    usage: "surfwright target list [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
-    summary: "list current page targets with explicit target handles",
-  },
-  {
-    id: "target.snapshot",
-    usage:
-      "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
-    summary: "read bounded text and UI primitives for a target",
-  },
-  {
-    id: "target.find",
-    usage:
-      "surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
-    summary: "find matching elements by text or selector in a target",
-  },
-  {
-    id: "target.read",
-    usage:
-      "surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
-    summary: "read target text in deterministic chunks",
-  },
-  {
-    id: "target.wait",
-    usage:
-      "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
-    summary: "wait for deterministic readiness condition on a target",
-  },
-  {
-    id: "target.prune",
-    usage: "surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]",
-    summary: "prune stale/orphan target metadata with age and size caps",
-  },
-  {
     id: "state.reconcile",
     usage:
       "surfwright state reconcile [--timeout-ms <ms>] [--max-age-hours <h>] [--max-per-session <n>] [--drop-managed-unreachable] [--json] [--pretty]",
     summary: "repair and prune state for resilient post-restart recovery",
   },
 ];
+
+export function runtimeCommandMeta(id: string): CliCommandContract {
+  const found = runtimeCommandManifest.find((entry) => entry.id === id);
+  if (!found) {
+    throw new Error(`missing runtime command manifest entry: ${id}`);
+  }
+  return found;
+}

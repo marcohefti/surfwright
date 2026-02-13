@@ -1,0 +1,52 @@
+name: nightly-network-perf
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  network-perf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CLI
+        run: pnpm -s build
+
+      - name: Run network performance harness
+        run: |
+          node scripts/network-perf-harness.mjs \
+            --url https://example.com \
+            --url https://github.com \
+            --runs 2 \
+            --capture-ms 1800 \
+            --profile perf \
+            --timeout-ms 12000 \
+            > network-perf-report.json
+
+      - name: Upload perf report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-network-perf-report
+          path: network-perf-report.json

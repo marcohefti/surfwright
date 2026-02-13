@@ -25,13 +25,16 @@ To keep both fast and maintainable, we separate guidance into explicit layers wi
 ## Design rules
 
 1. Command contracts are manifest-driven. Update feature command specs and derive `surfwright --json contract` from those specs.
-2. Keep `skills/surfwright/SKILL.md` concise and procedural; push detail to `skills/surfwright/references/*`.
-3. Keep docs for humans in `docs/`; avoid auxiliary docs inside skill directories.
-4. Any new/changed error code must be reflected in:
+2. `src/cli.ts` is orchestration-only: global flags, worker mode, and feature registration. Command behavior belongs in feature packages.
+3. State upgrades are explicit and versioned in `src/core/state-migrations.ts`; no implicit schema upgrades in ad-hoc call sites.
+4. Keep `skills/surfwright/SKILL.md` concise and procedural; push detail to `skills/surfwright/references/*`.
+5. Keep docs for humans in `docs/`; avoid auxiliary docs inside skill directories.
+6. Any new/changed error code must be reflected in:
    - `src/core/contracts/error-contracts.ts`
    - `skills/surfwright/references/error-handling.md`
    - contract tests
-5. Feature internals are private. Cross-feature imports must go through `src/features/<feature>/index.ts` (enforced by `ARC001` policy rule).
+7. Feature internals are private. Cross-feature imports must go through `src/features/<feature>/index.ts` (enforced by `ARC001` policy rule).
+8. Features may import only approved core boundary modules (`ARC002`), and state mutation primitives are restricted to approved state boundaries (`ARC003`).
 
 ## Agent UX baseline
 

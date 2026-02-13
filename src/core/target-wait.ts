@@ -1,6 +1,7 @@
 import { chromium } from "playwright-core";
 import { CliError } from "./errors.js";
-import { nowIso, upsertTargetState } from "./state.js";
+import { nowIso } from "./state.js";
+import { saveTargetSnapshot } from "./state-repos/target-repo.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetWaitReport } from "./types.js";
 
@@ -97,7 +98,7 @@ export async function targetWait(opts: {
       value: parsed.value,
     };
 
-    await upsertTargetState({
+    await saveTargetSnapshot({
       targetId: report.targetId,
       sessionId: report.sessionId,
       url: report.url,

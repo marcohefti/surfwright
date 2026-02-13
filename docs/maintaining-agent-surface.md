@@ -7,10 +7,10 @@ For routing decisions (what to update, where, and why), use `docs/agent-dev-flow
 
 Update these in the same PR:
 
-1. Code in `src/core/*` and/or `src/cli.ts`
-2. Feature command specs in `src/features/*/commands/*` (single source for CLI + contract)
-3. Contract composition in `src/core/cli-contract.ts`
-4. Contract tests in `test/contract.commands.test.mjs`
+1. Feature command registration/specs in `src/features/*/register-commands.ts` and `src/features/*/manifest.ts`
+2. Runtime behavior in `src/core/*` used by those features
+3. Contract composition in `src/core/cli-contract.ts` (manifest aggregation only)
+4. Contract tests in `test/commands.contract.test.mjs` and snapshot fixture at `test/fixtures/contract/contract.snapshot.json`
 5. Skill references in `skills/surfwright/references/*` when workflows/errors change
 
 ## 2) Validate before merge
@@ -21,6 +21,7 @@ Run:
 pnpm validate
 pnpm test
 pnpm skill:validate
+pnpm contract:snapshot:check
 ```
 
 ## 3) Install/update local skill

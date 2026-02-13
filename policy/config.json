@@ -13,6 +13,44 @@
       }
     },
     {
+      "name": "feature-core-imports",
+      "enabled": true,
+      "options": {
+        "include": ["src/features/**/*.ts"],
+        "exclude": [],
+        "allowCoreImports": [
+          "src/core/cli-contract",
+          "src/core/network-types",
+          "src/core/target-network*",
+          "src/core/types",
+          "src/core/usecases"
+        ]
+      }
+    },
+    {
+      "name": "state-boundaries",
+      "enabled": true,
+      "options": {
+        "include": ["src/**/*.ts"],
+        "exclude": [],
+        "mutationBindings": [
+          "allocateArtifactId",
+          "allocateCaptureId",
+          "allocateSessionId",
+          "updateState",
+          "upsertTargetState",
+          "writeState"
+        ],
+        "allowMutationImportFromState": [
+          "src/core/state-repos/**/*.ts",
+          "src/core/state.ts",
+          "src/core/state-maintenance.ts",
+          "src/core/targets.ts",
+          "src/core/usecases.ts"
+        ]
+      }
+    },
+    {
       "name": "max-loc",
       "enabled": true,
       "options": {

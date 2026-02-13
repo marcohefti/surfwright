@@ -34,7 +34,7 @@ Use this matrix before editing docs/skills.
 
 | Change type | Must update | Usually update | Usually no change |
 |---|---|---|---|
-| Command added/removed/renamed | `src/core/usecases.ts` contract payload, tests, `README.md` commands section, skill workflow reference | `docs/maintaining-agent-surface.md` if process changed | `AGENTS.md` unless routing changed |
+| Command added/removed/renamed | feature `manifest.ts` + `register-commands.ts`, contract tests/snapshot, `README.md` commands section, skill workflow reference | `docs/maintaining-agent-surface.md` if process changed | `AGENTS.md` unless routing changed |
 | Flag/default/timeout semantic change | contract payload if user-facing, tests, skill workflow reference | `README.md` examples | architecture docs |
 | Output JSON shape change | contract payload, tests, skill references that parse/use fields | `README.md` examples | unrelated docs |
 | Error code or retryability change | contract payload, tests, `skills/surfwright/references/error-handling.md` | `README.md` typed error examples | `AGENTS.md` |
@@ -117,6 +117,7 @@ If fewer than two are true, prefer documentation over new script surface.
 pnpm validate
 pnpm test
 pnpm skill:validate
+pnpm contract:snapshot:check
 ```
 
 For release confidence, also run:

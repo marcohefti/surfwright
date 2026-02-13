@@ -20,9 +20,9 @@ import {
   nowIso,
   sanitizeSessionId,
   updateState,
-  upsertTargetState,
 } from "./state.js";
 import { listSessionsSnapshot } from "./state-repos/session-repo.js";
+import { saveTargetSnapshot } from "./state-repos/target-repo.js";
 import { readPageTargetId, resolveSessionForAction } from "./targets.js";
 import { sessionPrune, stateReconcile, targetPrune } from "./state-maintenance.js";
 import type {
@@ -104,7 +104,7 @@ export async function openUrl(opts: {
           status: null,
           title: await existing.title(),
         };
-        await upsertTargetState({
+        await saveTargetSnapshot({
           targetId: report.targetId,
           sessionId: report.sessionId,
           url: report.url,
@@ -133,7 +133,7 @@ export async function openUrl(opts: {
       status: response?.status() ?? null,
       title: await page.title(),
     };
-    await upsertTargetState({
+    await saveTargetSnapshot({
       targetId: report.targetId,
       sessionId: report.sessionId,
       url: report.url,

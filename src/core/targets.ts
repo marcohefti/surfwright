@@ -1,7 +1,8 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
 import { ensureDefaultManagedSession, ensureSessionReachable } from "./browser.js";
 import { CliError } from "./errors.js";
-import { nowIso, sanitizeSessionId, updateState, upsertTargetState } from "./state.js";
+import { nowIso, sanitizeSessionId, updateState } from "./state.js";
+import { saveTargetSnapshot } from "./state-repos/target-repo.js";
 import type { SessionState, TargetListReport, TargetSnapshotReport } from "./types.js";
 
 const TARGET_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
@@ -297,7 +298,7 @@ export async function targetList(opts: { timeoutMs: number; sessionId?: string }
     targets.sort((a, b) => a.targetId.localeCompare(b.targetId));
 
     for (const target of targets) {
-      await upsertTargetState({
+      await saveTargetSnapshot({
         targetId: target.targetId,
         sessionId: session.sessionId,
         url: target.url,
@@ -404,7 +405,7 @@ export async function targetSnapshot(opts: {
       },
     };
 
-    await upsertTargetState({
+    await saveTargetSnapshot({
       targetId: report.targetId,
       sessionId: report.sessionId,
       url: report.url,

@@ -65,6 +65,31 @@ test("contract includes state maintenance commands", () => {
   assert.equal(commandIds.has("state.reconcile"), true);
 });
 
+test("legacy state payload migrates forward before maintenance commands run", () => {
+  writeState({
+    version: 1,
+    activeSessionId: null,
+    nextSessionOrdinal: 3,
+    sessions: {},
+    targets: {},
+  });
+
+  const result = runCli(["--json", "target", "prune"]);
+  assert.equal(result.status, 0);
+
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.scanned, 0);
+  assert.equal(payload.removed, 0);
+
+  const state = readState();
+  assert.equal(state.version, 2);
+  assert.equal(state.nextCaptureOrdinal, 1);
+  assert.equal(state.nextArtifactOrdinal, 1);
+  assert.deepEqual(state.networkCaptures, {});
+  assert.deepEqual(state.networkArtifacts, {});
+});
+
 test("target prune removes orphaned, stale, and overflow metadata", () => {
   const now = new Date("2026-02-13T10:00:00.000Z");
   const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);

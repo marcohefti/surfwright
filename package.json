@@ -11,12 +11,14 @@
   "scripts": {
     "dev": "node --import tsx src/cli.ts",
     "build": "node scripts/build-cli.mjs",
+    "contract:snapshot:check": "node scripts/contract-snapshot.mjs --check",
+    "contract:snapshot:update": "pnpm -s build && node scripts/contract-snapshot.mjs --update",
     "typecheck": "tsc --noEmit",
     "policy:check": "node scripts/policy-check.mjs",
     "skill:validate": "node scripts/validate-skills.mjs",
     "skill:install": "bash scripts/install-skill.sh",
     "start": "node dist/cli.js",
-    "validate": "pnpm -s typecheck && pnpm -s policy:check && pnpm -s skill:validate && pnpm -s build",
+    "validate": "pnpm -s typecheck && pnpm -s policy:check && pnpm -s skill:validate && pnpm -s build && pnpm -s contract:snapshot:check",
     "test:contract": "pnpm -s build && node --test test/*.contract.test.mjs",
     "test:fixtures": "node --test test/ingress.fixture-replay.test.mjs",
     "test": "pnpm -s test:contract && pnpm -s test:fixtures"

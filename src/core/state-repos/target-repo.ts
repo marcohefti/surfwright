@@ -1,4 +1,5 @@
-import { readState } from "../state.js";
+import { readState, upsertTargetState } from "../state.js";
+import type { TargetState } from "../types.js";
 
 const DEFAULT_RECENT_ACTION_WINDOW_MS = 2 * 60 * 1000;
 
@@ -21,4 +22,8 @@ export function readRecentTargetAction(opts: {
     return null;
   }
   return target.lastActionId;
+}
+
+export async function saveTargetSnapshot(target: TargetState) {
+  await upsertTargetState(target);
 }

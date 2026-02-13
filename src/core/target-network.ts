@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
 import { sanitizeActionId } from "./action-id.js";
-import { nowIso, upsertTargetState } from "./state.js";
-import { readRecentTargetAction } from "./state-repos/target-repo.js";
+import { nowIso } from "./state.js";
+import { readRecentTargetAction, saveTargetSnapshot } from "./state-repos/target-repo.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {
@@ -366,7 +366,7 @@ export async function targetNetwork(opts: {
       webSockets: webSocketsOut,
     };
 
-    await upsertTargetState({
+    await saveTargetSnapshot({
       targetId: report.targetId,
       sessionId: report.sessionId,
       url: report.url,

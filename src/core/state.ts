@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { CliError } from "./errors.js";
+import { migrateStatePayload } from "./state-migrations.js";
 import { STATE_VERSION, type SessionKind, type SessionState, type SurfwrightState, type TargetState } from "./types.js";
 const SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 const STATE_LOCK_FILENAME = "state.lock";
@@ -228,10 +229,11 @@ export function readState(): SurfwrightState {
 function readStateFromPath(statePath: string): SurfwrightState {
   try {
     const raw = fs.readFileSync(statePath, "utf8");
-    const parsed = JSON.parse(raw) as Partial<SurfwrightState> | null;
-    if (typeof parsed !== "object" || parsed === null) {
+    const migrated = migrateStatePayload(JSON.parse(raw));
+    if (!migrated) {
       return emptyState();
     }
+    const parsed = migrated as Partial<SurfwrightState>;
     const sessions: Record<string, SessionState> = {};
     if (typeof parsed.sessions === "object" && parsed.sessions !== null) {
       for (const [sessionId, rawSession] of Object.entries(parsed.sessions)) {

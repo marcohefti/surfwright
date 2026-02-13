@@ -1,6 +1,7 @@
 import { chromium } from "playwright-core";
 import { CliError } from "./errors.js";
-import { nowIso, upsertTargetState } from "./state.js";
+import { nowIso } from "./state.js";
+import { saveTargetSnapshot } from "./state-repos/target-repo.js";
 import { DEFAULT_TARGET_READ_CHUNK_SIZE } from "./types.js";
 import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetReadReport } from "./types.js";
@@ -115,7 +116,7 @@ export async function targetRead(opts: {
       truncated: chunkIndex < totalChunks,
     };
 
-    await upsertTargetState({
+    await saveTargetSnapshot({
       targetId: report.targetId,
       sessionId: report.sessionId,
       url: report.url,

@@ -1,6 +1,7 @@
 import { chromium, type Locator } from "playwright-core";
 import { CliError } from "./errors.js";
-import { nowIso, upsertTargetState } from "./state.js";
+import { nowIso } from "./state.js";
+import { saveTargetSnapshot } from "./state-repos/target-repo.js";
 import { DEFAULT_TARGET_FIND_LIMIT } from "./types.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetFindReport } from "./types.js";
@@ -225,7 +226,7 @@ export async function targetFind(opts: {
       truncated: filteredCount > parsed.limit,
     };
 
-    await upsertTargetState({
+    await saveTargetSnapshot({
       targetId: report.targetId,
       sessionId: report.sessionId,
       url: target.page.url(),

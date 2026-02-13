@@ -1,0 +1,211 @@
+{
+  "name": "surfwright",
+  "guarantees": [
+    "deterministic output shape",
+    "typed failures (code + message)",
+    "json compact by default",
+    "explicit handles for sessions and targets",
+    "bounded runtime via explicit timeouts"
+  ],
+  "commands": [
+    {
+      "id": "contract",
+      "usage": "surfwright contract [--json] [--pretty]",
+      "summary": "emit machine-readable CLI contract and error codes"
+    },
+    {
+      "id": "doctor",
+      "usage": "surfwright doctor [--json] [--pretty]",
+      "summary": "check node/chrome prerequisites without side effects"
+    },
+    {
+      "id": "open",
+      "usage": "surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "open URL and return minimal page report with target handle"
+    },
+    {
+      "id": "session.attach",
+      "usage": "surfwright session attach --cdp <origin> [--session-id <id>] [--json] [--pretty]",
+      "summary": "explicitly attach to an already running CDP endpoint"
+    },
+    {
+      "id": "session.ensure",
+      "usage": "surfwright session ensure [--timeout-ms <ms>] [--json] [--pretty]",
+      "summary": "reuse active session if reachable; otherwise use managed default"
+    },
+    {
+      "id": "session.list",
+      "usage": "surfwright session list [--json] [--pretty]",
+      "summary": "list known sessions and current active pointer"
+    },
+    {
+      "id": "session.new",
+      "usage": "surfwright session new [--session-id <id>] [--timeout-ms <ms>] [--json] [--pretty]",
+      "summary": "create a managed browser session and mark it active"
+    },
+    {
+      "id": "session.prune",
+      "usage": "surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--json] [--pretty]",
+      "summary": "prune unreachable sessions and repair stale managed pid metadata"
+    },
+    {
+      "id": "session.use",
+      "usage": "surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]",
+      "summary": "switch active session after reachability check"
+    },
+    {
+      "id": "state.reconcile",
+      "usage": "surfwright state reconcile [--timeout-ms <ms>] [--max-age-hours <h>] [--max-per-session <n>] [--drop-managed-unreachable] [--json] [--pretty]",
+      "summary": "repair and prune state for resilient post-restart recovery"
+    },
+    {
+      "id": "target.find",
+      "usage": "surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "find matching elements by text or selector in a target"
+    },
+    {
+      "id": "target.list",
+      "usage": "surfwright target list [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "list current page targets with explicit target handles"
+    },
+    {
+      "id": "target.network",
+      "usage": "surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "capture bounded network/websocket diagnostics and performance summary for a target"
+    },
+    {
+      "id": "target.network-begin",
+      "usage": "surfwright target network-begin <targetId> [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--include-headers] [--include-post-data] [--no-ws-messages] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "start handle-based background network capture for an action window"
+    },
+    {
+      "id": "target.network-check",
+      "usage": "surfwright target network-check [targetId] --budget <path> [--capture-id <id>] [--artifact-id <id>] [--profile <preset>] [--capture-ms <ms>] [--fail-on-violation] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "evaluate network metrics against budget thresholds"
+    },
+    {
+      "id": "target.network-end",
+      "usage": "surfwright target network-end <captureId> [--profile <preset>] [--view <mode>] [--fields <csv>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--timeout-ms <ms>] [--json] [--pretty]",
+      "summary": "stop background capture handle and return projected analysis report"
+    },
+    {
+      "id": "target.network-export",
+      "usage": "surfwright target network-export <targetId> --out <path> [--action-id <id>] [--format har] [--profile <preset>] [--capture-ms <ms>] [--max-requests <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "export filtered network capture as artifact (har)"
+    },
+    {
+      "id": "target.network-export-list",
+      "usage": "surfwright target network-export-list [--limit <n>] [--json] [--pretty]",
+      "summary": "list indexed network export artifacts"
+    },
+    {
+      "id": "target.network-export-prune",
+      "usage": "surfwright target network-export-prune [--max-age-hours <h>] [--max-count <n>] [--max-total-mb <n>] [--keep-files] [--json] [--pretty]",
+      "summary": "prune indexed export artifacts by retention policy"
+    },
+    {
+      "id": "target.network-query",
+      "usage": "surfwright target network-query [--capture-id <id> | --artifact-id <id>] [--preset <name>] [--limit <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--json] [--pretty]",
+      "summary": "query saved network captures/artifacts with high-signal presets"
+    },
+    {
+      "id": "target.network-tail",
+      "usage": "surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--session <id>]",
+      "summary": "stream live network/websocket events as NDJSON for short capture windows"
+    },
+    {
+      "id": "target.prune",
+      "usage": "surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]",
+      "summary": "prune stale/orphan target metadata with age and size caps"
+    },
+    {
+      "id": "target.read",
+      "usage": "surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "read target text in deterministic chunks"
+    },
+    {
+      "id": "target.snapshot",
+      "usage": "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "read bounded text and UI primitives for a target"
+    },
+    {
+      "id": "target.wait",
+      "usage": "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "summary": "wait for deterministic readiness condition on a target"
+    }
+  ],
+  "errors": [
+    {
+      "code": "E_BROWSER_NOT_FOUND",
+      "retryable": false
+    },
+    {
+      "code": "E_BROWSER_START_FAILED",
+      "retryable": true
+    },
+    {
+      "code": "E_BROWSER_START_TIMEOUT",
+      "retryable": true
+    },
+    {
+      "code": "E_CDP_INVALID",
+      "retryable": false
+    },
+    {
+      "code": "E_CDP_UNREACHABLE",
+      "retryable": true
+    },
+    {
+      "code": "E_INTERNAL",
+      "retryable": true
+    },
+    {
+      "code": "E_QUERY_INVALID",
+      "retryable": false
+    },
+    {
+      "code": "E_SELECTOR_INVALID",
+      "retryable": false
+    },
+    {
+      "code": "E_SESSION_CONFLICT",
+      "retryable": false
+    },
+    {
+      "code": "E_SESSION_EXISTS",
+      "retryable": false
+    },
+    {
+      "code": "E_SESSION_ID_INVALID",
+      "retryable": false
+    },
+    {
+      "code": "E_SESSION_NOT_FOUND",
+      "retryable": false
+    },
+    {
+      "code": "E_SESSION_UNREACHABLE",
+      "retryable": true
+    },
+    {
+      "code": "E_STATE_LOCK_IO",
+      "retryable": true
+    },
+    {
+      "code": "E_STATE_LOCK_TIMEOUT",
+      "retryable": true
+    },
+    {
+      "code": "E_TARGET_ID_INVALID",
+      "retryable": false
+    },
+    {
+      "code": "E_TARGET_NOT_FOUND",
+      "retryable": false
+    },
+    {
+      "code": "E_URL_INVALID",
+      "retryable": false
+    }
+  ]
+}

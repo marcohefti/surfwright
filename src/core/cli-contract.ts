@@ -1,5 +1,6 @@
 import { networkCommandContracts } from "../features/network/contracts.js";
-import { baseCommandContracts } from "./contracts/base-command-contracts.js";
+import { runtimeCommandContracts } from "../features/runtime/contracts.js";
+import { targetCommandContracts } from "../features/target-core/contracts.js";
 import { errorContracts } from "./contracts/error-contracts.js";
 import type { CliContractReport } from "./types.js";
 
@@ -17,7 +18,7 @@ export function getCliContractReport(version: string): CliContractReport {
     name: "surfwright",
     version,
     guarantees,
-    commands: [...baseCommandContracts, ...networkCommandContracts],
+    commands: [...runtimeCommandContracts, ...targetCommandContracts, ...networkCommandContracts],
     errors: errorContracts,
   };
 }

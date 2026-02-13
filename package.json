@@ -1,0 +1,37 @@
+{
+  "name": "surfwright",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent-first browser control surface (CLI + daemon) for Chrome/Chromium",
+  "license": "UNLICENSED",
+  "type": "module",
+  "bin": {
+    "surfwright": "dist/cli.js"
+  },
+  "scripts": {
+    "dev": "node --import tsx src/cli.ts",
+    "build": "tsup src/cli.ts --format esm --dts --clean --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "policy:check": "node scripts/policy-check.mjs",
+    "skill:validate": "node scripts/validate-skills.mjs",
+    "skill:install": "bash scripts/install-skill.sh",
+    "start": "node dist/cli.js",
+    "validate": "pnpm -s typecheck && pnpm -s policy:check && pnpm -s skill:validate && pnpm -s build",
+    "test:contract": "pnpm -s build && node --test test/cli.contract.test.mjs",
+    "test": "pnpm -s test:contract"
+  },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "playwright-core": "^1.58.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "packageManager": "pnpm@10.27.0"
+}

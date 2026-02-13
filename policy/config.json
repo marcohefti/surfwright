@@ -1,0 +1,17 @@
+{
+  "files": {
+    "include": ["**/*"],
+    "exclude": ["dist/**", "node_modules/**", ".git/**", ".idea/**"]
+  },
+  "rules": [
+    {
+      "name": "max-loc",
+      "enabled": true,
+      "options": {
+        "max": 500,
+        "include": ["src/**/*.ts", "scripts/**/*.mjs", "test/**/*.mjs"],
+        "exclude": []
+      }
+    }
+  ]
+}

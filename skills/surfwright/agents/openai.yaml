@@ -1,0 +1,4 @@
+interface:
+  display_name: "SurfWright"
+  short_description: "Run deterministic browser CLI loops"
+  default_prompt: "Use $surfwright to run a JSON-first browser control loop with explicit sessions, typed failure handling, and compact command chaining."

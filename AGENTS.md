@@ -43,3 +43,9 @@ pnpm validate
 pnpm test
 pnpm skill:validate
 ```
+
+## Commit Message Rule
+
+- Always use Conventional Commits with an explicit scope.
+- Format: `<type>(<scope>): <summary>`
+- Example: `chore(docs): adding guidelines for maintenance`

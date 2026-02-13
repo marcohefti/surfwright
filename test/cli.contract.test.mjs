@@ -330,6 +330,65 @@ test("target eval validates script size before session resolution", () => {
   assert.equal(evalPayload.code, "E_EVAL_SCRIPT_TOO_LARGE");
 });
 
+test("target eval accepts --script-file option", () => {
+  const scriptPath = path.join(TEST_STATE_DIR, "eval-script.js");
+  fs.writeFileSync(scriptPath, "return 1 + 1;", "utf8");
+  const evalResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    "ABCDEF123456",
+    "--script-file",
+    scriptPath,
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(evalResult.status, 1);
+  const evalPayload = parseJson(evalResult.stdout);
+  assert.equal(evalPayload.ok, false);
+  assert.equal(evalPayload.code, "E_TARGET_SESSION_UNKNOWN");
+});
+
+test("target eval validates script-file size before session resolution", () => {
+  const scriptPath = path.join(TEST_STATE_DIR, "eval-oversized-script.js");
+  fs.writeFileSync(scriptPath, "x".repeat(70 * 1024), "utf8");
+  const evalResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    "ABCDEF123456",
+    "--script-file",
+    scriptPath,
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(evalResult.status, 1);
+  const evalPayload = parseJson(evalResult.stdout);
+  assert.equal(evalPayload.ok, false);
+  assert.equal(evalPayload.code, "E_EVAL_SCRIPT_TOO_LARGE");
+});
+
+test("target eval rejects combining --script-file with inline expression", () => {
+  const scriptPath = path.join(TEST_STATE_DIR, "eval-mixed-script.js");
+  fs.writeFileSync(scriptPath, "return 2 + 2;", "utf8");
+  const evalResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    "ABCDEF123456",
+    "--script-file",
+    scriptPath,
+    "--expression",
+    "1 + 1",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(evalResult.status, 1);
+  const evalPayload = parseJson(evalResult.stdout);
+  assert.equal(evalPayload.ok, false);
+  assert.equal(evalPayload.code, "E_QUERY_INVALID");
+});
+
 test("target eval accepts --js alias", () => {
   const evalResult = runCli([
     "--json",

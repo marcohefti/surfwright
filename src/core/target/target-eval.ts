@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { chromium } from "playwright-core";
 import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
@@ -6,7 +7,10 @@ import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetEvalReport } from "../types.js";
 
-const EVAL_MAX_EXPRESSION_CHARS = 4096;
+// Inline expressions are argv-bound and should stay small/deterministic.
+const EVAL_MAX_INLINE_EXPRESSION_CHARS = 4096;
+// File-based scripts avoid shell argv constraints but still need bounded input.
+const EVAL_MAX_SCRIPT_FILE_BYTES = 64 * 1024;
 const EVAL_MAX_ARG_JSON_CHARS = 20000;
 const EVAL_MAX_CONSOLE = 100;
 const EVAL_MAX_CONSOLE_TEXT_CHARS = 4000;
@@ -14,13 +18,50 @@ const EVAL_MAX_RESULT_STRING_CHARS = 4000;
 const EVAL_MAX_RESULT_ITEMS = 200;
 const EVAL_MAX_RESULT_DEPTH = 6;
 
-function parseExpression(input: string | undefined): string {
-  const expression = typeof input === "string" ? input : "";
-  if (expression.trim().length === 0) {
-    throw new CliError("E_QUERY_INVALID", "expression is required");
+function parseExpression(opts: { expression?: string; scriptFile?: string }): string {
+  const expression = typeof opts.expression === "string" ? opts.expression : "";
+  const scriptFile = typeof opts.scriptFile === "string" ? opts.scriptFile.trim() : "";
+
+  if (expression.trim().length > 0 && scriptFile.length > 0) {
+    throw new CliError("E_QUERY_INVALID", "choose either expression/js/script or script-file");
   }
-  if (expression.length > EVAL_MAX_EXPRESSION_CHARS) {
-    throw new CliError("E_EVAL_SCRIPT_TOO_LARGE", `expression must be at most ${EVAL_MAX_EXPRESSION_CHARS} characters`);
+
+  if (scriptFile.length > 0) {
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(scriptFile);
+    } catch {
+      throw new CliError("E_QUERY_INVALID", "script-file is not readable");
+    }
+    if (!stat.isFile()) {
+      throw new CliError("E_QUERY_INVALID", "script-file must point to a file");
+    }
+    if (stat.size > EVAL_MAX_SCRIPT_FILE_BYTES) {
+      throw new CliError(
+        "E_EVAL_SCRIPT_TOO_LARGE",
+        `script-file must be at most ${EVAL_MAX_SCRIPT_FILE_BYTES} bytes`,
+      );
+    }
+    let scriptText: string;
+    try {
+      scriptText = fs.readFileSync(scriptFile, "utf8");
+    } catch {
+      throw new CliError("E_QUERY_INVALID", "script-file is not readable");
+    }
+    if (scriptText.trim().length === 0) {
+      throw new CliError("E_QUERY_INVALID", "script-file is empty");
+    }
+    return scriptText;
+  }
+
+  if (expression.trim().length === 0) {
+    throw new CliError("E_QUERY_INVALID", "expression or script-file is required");
+  }
+  if (expression.length > EVAL_MAX_INLINE_EXPRESSION_CHARS) {
+    throw new CliError(
+      "E_EVAL_SCRIPT_TOO_LARGE",
+      `expression must be at most ${EVAL_MAX_INLINE_EXPRESSION_CHARS} characters`,
+    );
   }
   return expression;
 }
@@ -86,13 +127,17 @@ export async function targetEval(opts: {
   sessionId?: string;
   persistState?: boolean;
   expression?: string;
+  scriptFile?: string;
   argJson?: string;
   captureConsole?: boolean;
   maxConsole?: number;
 }): Promise<TargetEvalReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
-  const expression = parseExpression(opts.expression);
+  const expression = parseExpression({
+    expression: opts.expression,
+    scriptFile: opts.scriptFile,
+  });
   const arg = parseArgJson(opts.argJson);
   const captureConsole = Boolean(opts.captureConsole);
   const maxConsole = parseMaxConsole(opts.maxConsole);

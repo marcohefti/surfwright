@@ -17,6 +17,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
       .option("--expression <js>", "JavaScript to run in page context")
       .option("--js <js>", "Alias for --expression")
       .option("--script <js>", "Alias for --expression")
+      .option("--script-file <path>", "Read JavaScript expression from file")
       .option("--arg-json <json>", "JSON value passed as arg to the expression")
       .option("--capture-console", "Capture console output during evaluation", false)
       .option("--max-console <n>", "Maximum captured console entries", String(DEFAULT_TARGET_EVAL_MAX_CONSOLE))
@@ -30,6 +31,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
             expression: string;
             js?: string;
             script?: string;
+            scriptFile?: string;
             argJson?: string;
             captureConsole?: boolean;
             maxConsole: string;
@@ -52,6 +54,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
               timeoutMs: options.timeoutMs,
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               expression,
+              scriptFile: options.scriptFile,
               argJson: options.argJson,
               captureConsole: Boolean(options.captureConsole),
               maxConsole,

@@ -101,7 +101,8 @@ surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--m
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target network <targetId> [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--har-out <path>] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target network <targetId> [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target network-export <targetId> --out <path> [--format har] [--capture-ms <ms>] [--max-requests <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]
 surfwright state reconcile [--timeout-ms <ms>] [--max-age-hours <h>] [--max-per-session <n>] [--drop-managed-unreachable] [--json] [--pretty]
 ```
@@ -123,7 +124,7 @@ surfwright --json target find <targetId> --selector a --contains "Checkout" --fi
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --capture-ms 2500 --status 2xx
-surfwright --json target network <targetId> --reload --capture-ms 3000 --har-out ./artifacts/capture.har
+surfwright --json target network-export <targetId> --reload --capture-ms 3000 --out ./artifacts/capture.har
 ```
 
 State hygiene workflow for stale local metadata:
@@ -168,10 +169,10 @@ surfwright --json state reconcile
 {"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","capture":{"startedAt":"2026-02-13T12:00:00.000Z","endedAt":"2026-02-13T12:00:02.600Z","durationMs":2600,"captureMs":2500,"reload":false},"filters":{"urlContains":null,"method":null,"resourceType":null,"status":"2xx","failedOnly":false},"limits":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120},"counts":{"requestsSeen":31,"requestsReturned":24,"responsesSeen":31,"failedSeen":0,"webSocketsSeen":1,"webSocketsReturned":1,"wsMessagesSeen":14,"wsMessagesReturned":14,"droppedRequests":0,"droppedWebSockets":0,"droppedWsMessages":0},"performance":{"completedRequests":24,"bytesApproxTotal":198432,"statusBuckets":{"2xx":24,"3xx":0,"4xx":0,"5xx":0,"other":0},"latencyMs":{"min":11.2,"max":921.7,"avg":147.4,"p50":64.1,"p95":721.6},"ttfbMs":{"min":6.3,"max":680.4,"avg":83.2,"p50":41.7,"p95":421.9},"slowest":[{"id":5,"url":"https://camelpay.localhost/api/checkout","resourceType":"fetch","status":200,"durationMs":921.7}]},"truncated":{"requests":false,"webSockets":false,"wsMessages":false},"requests":[],"webSockets":[]}
 ```
 
-When `--har-out` is provided, SurfWright writes a compact HAR artifact to disk and returns metadata in `har`:
+`target network-export` writes a compact HAR artifact and returns artifact metadata:
 
 ```json
-{"ok":true,"har":{"path":"/abs/path/capture.har","mode":"minimal","scope":"filtered","entries":24,"bytes":18212,"writtenAt":"2026-02-13T12:00:02.605Z"}}
+{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","format":"har","artifact":{"path":"/abs/path/capture.har","mode":"minimal","scope":"filtered","entries":24,"bytes":18212,"writtenAt":"2026-02-13T12:00:02.605Z"},"source":{"captureMs":3000,"requestsSeen":31,"requestsReturned":24,"truncatedRequests":false}}
 ```
 
 Errors are typed and short:

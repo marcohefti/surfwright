@@ -51,8 +51,6 @@ function sessionReport(
     restarted: meta.restarted,
   };
 }
-
-
 export function getDoctorReport(): DoctorReport {
   const candidates = chromeCandidatesForPlatform();
   const found = candidates.some((candidatePath) => {
@@ -167,8 +165,14 @@ export function getCliContractReport(version: string): CliContractReport {
       {
         id: "target.network",
         usage:
-          "surfwright target network <targetId> [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--har-out <path>] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+          "surfwright target network <targetId> [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
         summary: "capture bounded network/websocket diagnostics and performance summary for a target",
+      },
+      {
+        id: "target.network-export",
+        usage:
+          "surfwright target network-export <targetId> --out <path> [--format har] [--capture-ms <ms>] [--max-requests <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+        summary: "export filtered network capture as artifact (har)",
       },
       {
         id: "target.prune",
@@ -479,7 +483,6 @@ export function sessionList(): SessionListReport {
       cdpOrigin: session.cdpOrigin,
       lastSeenAt: session.lastSeenAt,
     }));
-
   return {
     ok: true,
     activeSessionId: state.activeSessionId,
@@ -488,6 +491,7 @@ export function sessionList(): SessionListReport {
 }
 
 export { targetFind } from "./target-find.js";
+export { targetNetworkExport } from "./target-network-export.js";
 export { targetNetwork } from "./target-network.js";
 export { targetRead } from "./target-read.js";
 export { targetWait } from "./target-wait.js";

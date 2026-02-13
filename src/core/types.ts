@@ -289,9 +289,24 @@ export type TargetNetworkReport = {
     webSockets: boolean;
     wsMessages: boolean;
   };
-  har?: TargetNetworkHarReport;
   requests: TargetNetworkRequestReport[];
   webSockets: TargetNetworkWebSocketReport[];
+};
+
+export type TargetNetworkExportReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  url: string;
+  title: string;
+  format: "har";
+  artifact: TargetNetworkHarReport;
+  source: {
+    captureMs: number;
+    requestsSeen: number;
+    requestsReturned: number;
+    truncatedRequests: boolean;
+  };
 };
 
 export type StateReconcileReport = {

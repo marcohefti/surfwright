@@ -1,5 +1,14 @@
 import { type Command } from "commander";
-import { targetFind, targetList, targetNetwork, targetPrune, targetRead, targetSnapshot, targetWait } from "./core/usecases.js";
+import {
+  targetFind,
+  targetList,
+  targetNetwork,
+  targetNetworkExport,
+  targetPrune,
+  targetRead,
+  targetSnapshot,
+  targetWait,
+} from "./core/usecases.js";
 import {
   DEFAULT_TARGET_FIND_LIMIT,
   DEFAULT_TARGET_NETWORK_CAPTURE_MS,
@@ -9,6 +18,7 @@ import {
   DEFAULT_TARGET_READ_CHUNK_SIZE,
   DEFAULT_TARGET_TIMEOUT_MS,
   type TargetFindReport,
+  type TargetNetworkExportReport,
   type TargetListReport,
   type TargetNetworkReport,
   type TargetPruneReport,
@@ -32,6 +42,7 @@ function printTargetSuccess(
     | TargetSnapshotReport
     | TargetFindReport
     | TargetReadReport
+    | TargetNetworkExportReport
     | TargetWaitReport
     | TargetNetworkReport
     | TargetPruneReport,
@@ -88,9 +99,6 @@ function printTargetSuccess(
   }
 
   if ("capture" in report) {
-    const harParts = report.har
-      ? [`har=${report.har.path}`, `harEntries=${report.har.entries}`, `harBytes=${report.har.bytes}`]
-      : [];
     process.stdout.write(
       [
         "ok",
@@ -100,7 +108,21 @@ function printTargetSuccess(
         `responses=${report.counts.responsesSeen}`,
         `failed=${report.counts.failedSeen}`,
         `websockets=${report.counts.webSocketsReturned}`,
-        ...harParts,
+      ].join(" ") + "\n",
+    );
+    return;
+  }
+
+  if ("artifact" in report) {
+    process.stdout.write(
+      [
+        "ok",
+        `sessionId=${report.sessionId}`,
+        `targetId=${report.targetId}`,
+        `format=${report.format}`,
+        `path=${report.artifact.path}`,
+        `entries=${report.artifact.entries}`,
+        `bytes=${report.artifact.bytes}`,
       ].join(" ") + "\n",
     );
     return;
@@ -333,7 +355,6 @@ export function registerTargetCommands(opts: {
     .option("--include-headers", "Include request/response headers (bounded by max item limits)")
     .option("--include-post-data", "Include bounded request post-data preview")
     .option("--no-ws-messages", "Disable websocket frame preview capture")
-    .option("--har-out <path>", "Write filtered capture as HAR artifact (compact minimal mode)")
     .option("--reload", "Reload page before capture to observe startup requests")
     .option("--timeout-ms <ms>", "Connection/reload timeout in milliseconds", opts.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
     .action(
@@ -352,7 +373,6 @@ export function registerTargetCommands(opts: {
           includeHeaders?: boolean;
           includePostData?: boolean;
           wsMessages?: boolean;
-          harOut?: string;
           reload?: boolean;
           timeoutMs: number;
         },
@@ -380,7 +400,65 @@ export function registerTargetCommands(opts: {
             includeHeaders: Boolean(options.includeHeaders),
             includePostData: Boolean(options.includePostData),
             includeWsMessages: options.wsMessages !== false,
-            harOut: options.harOut,
+            reload: Boolean(options.reload),
+          });
+          printTargetSuccess(report, output);
+        } catch (error) {
+          opts.handleFailure(error, output);
+        }
+      },
+    );
+
+  target
+    .command("network-export")
+    .description("Export filtered network capture as HAR artifact")
+    .argument("<targetId>", "Target handle returned by open/target list")
+    .requiredOption("--out <path>", "Artifact output path")
+    .option("--format <format>", "Artifact format (har)", "har")
+    .option("--capture-ms <ms>", "Capture duration in milliseconds", String(DEFAULT_TARGET_NETWORK_CAPTURE_MS))
+    .option("--max-requests <n>", "Maximum request records to retain", String(DEFAULT_TARGET_NETWORK_MAX_REQUESTS))
+    .option("--url-contains <text>", "Only include requests whose URL contains text")
+    .option("--method <verb>", "Only include requests with this HTTP verb (e.g. GET)")
+    .option("--resource-type <type>", "Only include requests with this Playwright resource type")
+    .option("--status <codeOrClass>", "Only include requests matching status code (200) or class (2xx)")
+    .option("--failed-only", "Only include failed requests")
+    .option("--reload", "Reload page before capture to observe startup requests")
+    .option("--timeout-ms <ms>", "Connection/reload timeout in milliseconds", opts.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+    .action(
+      async (
+        targetId: string,
+        options: {
+          out: string;
+          format: string;
+          captureMs: string;
+          maxRequests: string;
+          urlContains?: string;
+          method?: string;
+          resourceType?: string;
+          status?: string;
+          failedOnly?: boolean;
+          reload?: boolean;
+          timeoutMs: number;
+        },
+      ) => {
+        const output = opts.globalOutputOpts();
+        const globalOpts = opts.program.opts<{ session?: string }>();
+        const captureMs = Number.parseInt(options.captureMs, 10);
+        const maxRequests = Number.parseInt(options.maxRequests, 10);
+        try {
+          const report = await targetNetworkExport({
+            targetId,
+            timeoutMs: options.timeoutMs,
+            sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+            outPath: options.out,
+            format: options.format,
+            captureMs,
+            maxRequests,
+            urlContains: options.urlContains,
+            method: options.method,
+            resourceType: options.resourceType,
+            status: options.status,
+            failedOnly: Boolean(options.failedOnly),
             reload: Boolean(options.reload),
           });
           printTargetSuccess(report, output);

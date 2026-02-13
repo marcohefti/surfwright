@@ -152,7 +152,7 @@ test("target network returns deterministic JSON shape", { skip: !hasBrowser() },
   assert.equal(typeof networkPayload.counts.requestsSeen, "number");
 });
 
-test("target network can write HAR artifact metadata", { skip: !hasBrowser() }, () => {
+test("target network-export writes HAR artifact metadata", { skip: !hasBrowser() }, () => {
   const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
@@ -177,21 +177,23 @@ test("target network can write HAR artifact metadata", { skip: !hasBrowser() }, 
     "--session",
     ensurePayload.sessionId,
     "target",
-    "network",
+    "network-export",
     openPayload.targetId,
+    "--out",
+    harPath,
     "--capture-ms",
     "200",
-    "--har-out",
-    harPath,
     "--timeout-ms",
     "5000",
   ]);
   assert.equal(networkResult.status, 0);
   const networkPayload = parseJson(networkResult.stdout);
-  assert.equal(typeof networkPayload.har, "object");
-  assert.equal(networkPayload.har.path, path.resolve(harPath));
-  assert.equal(typeof networkPayload.har.entries, "number");
-  assert.equal(typeof networkPayload.har.bytes, "number");
+  assert.deepEqual(Object.keys(networkPayload), ["ok", "sessionId", "targetId", "url", "title", "format", "artifact", "source"]);
+  assert.equal(networkPayload.format, "har");
+  assert.equal(typeof networkPayload.artifact, "object");
+  assert.equal(networkPayload.artifact.path, path.resolve(harPath));
+  assert.equal(typeof networkPayload.artifact.entries, "number");
+  assert.equal(typeof networkPayload.artifact.bytes, "number");
   assert.equal(fs.existsSync(harPath), true);
   const harRaw = fs.readFileSync(harPath, "utf8");
   const harPayload = JSON.parse(harRaw);

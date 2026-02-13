@@ -1,6 +1,5 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { CliError } from "./errors.js";
 import type { TargetNetworkHarReport, TargetNetworkRequestReport } from "./types.js";
 
 type HarHeader = {
@@ -133,30 +132,16 @@ function toHarEntry(opts: {
   };
 }
 
-function parseHarOut(input: string | undefined): string | null {
-  if (typeof input !== "string") {
-    return null;
-  }
-  const value = input.trim();
-  if (!value) {
-    throw new CliError("E_QUERY_INVALID", "har-out must not be empty");
-  }
-  return path.resolve(value);
-}
-
 export async function writeHarFile(opts: {
-  outputPath: string | undefined;
+  outputPath: string;
   captureStartEpochMs: number;
   captureStartedAtIso: string;
   pageTitle: string;
   pageUrl: string;
   targetId: string;
   requests: TargetNetworkRequestReport[];
-}): Promise<TargetNetworkHarReport | undefined> {
-  const outputPath = parseHarOut(opts.outputPath);
-  if (!outputPath) {
-    return undefined;
-  }
+}): Promise<TargetNetworkHarReport> {
+  const outputPath = path.resolve(opts.outputPath);
 
   const pageRef = `page-${opts.targetId}`;
   const entries = [...opts.requests]

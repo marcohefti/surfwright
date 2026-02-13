@@ -1,7 +1,6 @@
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
 import { nowIso, upsertTargetState } from "./state.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
-import { writeHarFile } from "./target-network-har.js";
 import {
   buildPerformanceSummary,
   matchesRequestFilters,
@@ -44,7 +43,6 @@ export async function targetNetwork(opts: {
   resourceType?: string;
   status?: string;
   failedOnly?: boolean;
-  harOut?: string;
 }): Promise<TargetNetworkReport> {
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const parsed = parseNetworkInput({
@@ -262,15 +260,6 @@ export async function targetNetwork(opts: {
     const filteredWebSockets = filterWebSocketsByUrl(webSockets, parsed);
     const pageUrl = target.page.url();
     const pageTitle = await target.page.title();
-    const har = await writeHarFile({
-      outputPath: opts.harOut,
-      captureStartEpochMs,
-      captureStartedAtIso,
-      pageTitle,
-      pageUrl,
-      targetId: requestedTargetId,
-      requests: filteredRequests,
-    });
     counts.requestsReturned = filteredRequests.length;
     counts.webSocketsReturned = filteredWebSockets.length;
     counts.wsMessagesReturned = filteredWebSockets.reduce((acc, socket) => acc + socket.messages.length, 0);
@@ -310,7 +299,6 @@ export async function targetNetwork(opts: {
         webSockets: counts.droppedWebSockets > 0,
         wsMessages: counts.droppedWsMessages > 0,
       },
-      har,
       requests: filteredRequests,
       webSockets: filteredWebSockets,
     };

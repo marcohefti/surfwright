@@ -1,17 +1,16 @@
-import { chromium, type Browser, type BrowserContext, type Locator, type Page } from "playwright-core";
+import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
 import { ensureDefaultManagedSession, ensureSessionReachable } from "./browser.js";
 import { CliError } from "./errors.js";
 import { nowIso, sanitizeSessionId, updateState, upsertTargetState } from "./state.js";
-import { DEFAULT_TARGET_FIND_LIMIT } from "./types.js";
-import type { SessionState, TargetFindReport, TargetListReport, TargetSnapshotReport } from "./types.js";
+import type { SessionState, TargetListReport, TargetSnapshotReport } from "./types.js";
 
 const TARGET_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
 const SNAPSHOT_TEXT_MAX_CHARS = 1200;
 const SNAPSHOT_MAX_HEADINGS = 12;
 const SNAPSHOT_MAX_BUTTONS = 12;
 const SNAPSHOT_MAX_LINKS = 12;
-const FIND_MAX_LIMIT = 50;
-const FIND_TEXT_MAX_CHARS = 180;
+const SNAPSHOT_MAX_TEXT_CAP = 20000;
+const SNAPSHOT_MAX_ITEMS_CAP = 200;
 
 function stableTargetId(url: string): string {
   let hash = 0x811c9dc5;
@@ -22,7 +21,25 @@ function stableTargetId(url: string): string {
   return `t${(hash >>> 0).toString(16).padStart(8, "0")}`;
 }
 
-function sanitizeTargetId(input: string): string {
+function parsePositiveIntInRange(opts: {
+  value: number | undefined;
+  defaultValue: number;
+  min: number;
+  max: number;
+  name: string;
+}): number {
+  if (typeof opts.value === "undefined") {
+    return opts.defaultValue;
+  }
+
+  if (!Number.isFinite(opts.value) || !Number.isInteger(opts.value) || opts.value < opts.min || opts.value > opts.max) {
+    throw new CliError("E_QUERY_INVALID", `${opts.name} must be an integer between ${opts.min} and ${opts.max}`);
+  }
+
+  return opts.value;
+}
+
+export function sanitizeTargetId(input: string): string {
   const value = input.trim();
   if (!TARGET_ID_PATTERN.test(value)) {
     throw new CliError(
@@ -31,6 +48,25 @@ function sanitizeTargetId(input: string): string {
     );
   }
   return value;
+}
+
+export function normalizeSelectorQuery(input: string | undefined): string | null {
+  if (typeof input !== "string") {
+    return null;
+  }
+  const value = input.trim();
+  if (value.length === 0) {
+    throw new CliError("E_QUERY_INVALID", "selector query must not be empty");
+  }
+  return value;
+}
+
+export async function ensureValidSelector(page: Page, selectorQuery: string): Promise<void> {
+  try {
+    await page.locator(selectorQuery).count();
+  } catch {
+    throw new CliError("E_SELECTOR_INVALID", `Invalid selector query: ${selectorQuery}`);
+  }
 }
 
 export async function resolveSessionForAction(
@@ -77,7 +113,7 @@ export async function readPageTargetId(context: BrowserContext, page: Page): Pro
   }
 }
 
-async function listPageTargetHandles(
+export async function listPageTargetHandles(
   browser: Browser,
 ): Promise<
   Array<{
@@ -102,7 +138,7 @@ async function listPageTargetHandles(
   return handles;
 }
 
-async function resolveTargetHandle(
+export async function resolveTargetHandle(
   browser: Browser,
   targetId: string,
 ): Promise<{
@@ -116,63 +152,129 @@ async function resolveTargetHandle(
   return target;
 }
 
-function parseFindInput(opts: {
-  textQuery?: string;
-  selectorQuery?: string;
-  limit?: number;
-}): {
-  mode: "text" | "selector";
-  query: string;
-  limit: number;
-} {
-  const textQuery = typeof opts.textQuery === "string" ? opts.textQuery.trim() : "";
-  const selectorQuery = typeof opts.selectorQuery === "string" ? opts.selectorQuery.trim() : "";
-
-  const hasText = textQuery.length > 0;
-  const hasSelector = selectorQuery.length > 0;
-  if (hasText === hasSelector) {
-    throw new CliError("E_QUERY_INVALID", "Provide exactly one query: --text <query> or --selector <query>");
-  }
-
-  const limitRaw = opts.limit ?? DEFAULT_TARGET_FIND_LIMIT;
-  if (!Number.isFinite(limitRaw) || !Number.isInteger(limitRaw) || limitRaw <= 0 || limitRaw > FIND_MAX_LIMIT) {
-    throw new CliError("E_QUERY_INVALID", `limit must be an integer between 1 and ${FIND_MAX_LIMIT}`);
-  }
-
-  if (hasText) {
-    return {
-      mode: "text",
-      query: textQuery,
-      limit: limitRaw,
-    };
-  }
-
-  return {
-    mode: "selector",
-    query: selectorQuery,
-    limit: limitRaw,
-  };
-}
-
-async function resolveFindLocator(opts: {
+async function extractScopedSnapshotSample(opts: {
   page: Page;
-  mode: "text" | "selector";
-  query: string;
+  selectorQuery: string | null;
+  visibleOnly: boolean;
+  textMaxChars: number;
+  maxHeadings: number;
+  maxButtons: number;
+  maxLinks: number;
 }): Promise<{
-  locator: Locator;
-  count: number;
+  scopeMatched: boolean;
+  textPreview: string;
+  headings: string[];
+  buttons: string[];
+  links: Array<{ text: string; href: string }>;
+  counts: {
+    textLength: number;
+    headings: number;
+    buttons: number;
+    links: number;
+  };
 }> {
-  const locator = opts.mode === "text" ? opts.page.getByText(opts.query, { exact: false }) : opts.page.locator(opts.query);
+  return (await opts.page.evaluate(
+    ({ selectorQuery, visibleOnly, textMaxChars, maxHeadings, maxButtons, maxLinks }) => {
+      const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
+      const doc = runtime.document;
+      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+      const isVisible = (node: any): boolean => {
+        if (!node) {
+          return false;
+        }
+        if (node.hasAttribute?.("hidden")) {
+          return false;
+        }
+        const style = runtime.getComputedStyle?.(node);
+        if (style && (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")) {
+          return false;
+        }
+        return (node.getClientRects?.().length ?? 0) > 0;
+      };
 
-  try {
-    const count = await locator.count();
-    return { locator, count };
-  } catch (error) {
-    if (opts.mode === "selector") {
-      throw new CliError("E_SELECTOR_INVALID", `Invalid selector query: ${opts.query}`);
-    }
-    throw error;
-  }
+      const rootNode = selectorQuery ? doc?.querySelector?.(selectorQuery) ?? null : doc?.body ?? null;
+      if (!rootNode) {
+        return {
+          scopeMatched: false,
+          textPreview: "",
+          headings: [],
+          buttons: [],
+          links: [],
+          counts: {
+            textLength: 0,
+            headings: 0,
+            buttons: 0,
+            links: 0,
+          },
+        };
+      }
+
+      const textRaw = visibleOnly ? rootNode?.innerText ?? "" : rootNode?.textContent ?? "";
+      const normalizedText = normalize(textRaw);
+
+      const headingNodes = Array.from(rootNode.querySelectorAll?.("h1,h2,h3") ?? []);
+      const buttonNodes = Array.from(
+        rootNode.querySelectorAll?.("button,[role=button],input[type=button],input[type=submit],input[type=reset]") ?? [],
+      );
+      const linkNodes = Array.from(rootNode.querySelectorAll?.("a[href]") ?? []);
+
+      const headings = headingNodes
+        .filter((node: any) => (visibleOnly ? isVisible(node) : true))
+        .map((node: any) => normalize(node?.textContent ?? ""))
+        .filter((value: string) => value.length > 0);
+
+      const buttons = buttonNodes
+        .filter((node: any) => (visibleOnly ? isVisible(node) : true))
+        .map((node: any) => {
+          const fromText = node?.innerText ?? "";
+          const fromAria = node?.getAttribute?.("aria-label") ?? "";
+          const fromValue = node?.getAttribute?.("value") ?? "";
+          return normalize(fromText || fromAria || fromValue);
+        })
+        .filter((value: string) => value.length > 0);
+
+      const links = linkNodes
+        .filter((node: any) => (visibleOnly ? isVisible(node) : true))
+        .map((node: any) => ({
+          text: normalize(node?.textContent ?? ""),
+          href: node?.getAttribute?.("href") ?? "",
+        }));
+
+      return {
+        scopeMatched: true,
+        textPreview: normalizedText.slice(0, textMaxChars),
+        headings: headings.slice(0, maxHeadings),
+        buttons: buttons.slice(0, maxButtons),
+        links: links.slice(0, maxLinks),
+        counts: {
+          textLength: normalizedText.length,
+          headings: headings.length,
+          buttons: buttons.length,
+          links: links.length,
+        },
+      };
+    },
+    {
+      selectorQuery: opts.selectorQuery,
+      visibleOnly: opts.visibleOnly,
+      textMaxChars: opts.textMaxChars,
+      maxHeadings: opts.maxHeadings,
+      maxButtons: opts.maxButtons,
+      maxLinks: opts.maxLinks,
+    },
+  )) as {
+    scopeMatched: boolean;
+    textPreview: string;
+    headings: string[];
+    buttons: string[];
+    links: Array<{ text: string; href: string }>;
+    counts: {
+      textLength: number;
+      headings: number;
+      buttons: number;
+      links: number;
+    };
+  };
 }
 
 export async function targetList(opts: { timeoutMs: number; sessionId?: string }): Promise<TargetListReport> {
@@ -219,87 +321,65 @@ export async function targetSnapshot(opts: {
   targetId: string;
   timeoutMs: number;
   sessionId?: string;
+  selectorQuery?: string;
+  visibleOnly?: boolean;
+  maxChars?: number;
+  maxHeadings?: number;
+  maxButtons?: number;
+  maxLinks?: number;
 }): Promise<TargetSnapshotReport> {
   const requestedTargetId = sanitizeTargetId(opts.targetId);
+  const selectorQuery = normalizeSelectorQuery(opts.selectorQuery);
+  const visibleOnly = Boolean(opts.visibleOnly);
+  const textMaxChars = parsePositiveIntInRange({
+    value: opts.maxChars,
+    defaultValue: SNAPSHOT_TEXT_MAX_CHARS,
+    min: 1,
+    max: SNAPSHOT_MAX_TEXT_CAP,
+    name: "max-chars",
+  });
+  const maxHeadings = parsePositiveIntInRange({
+    value: opts.maxHeadings,
+    defaultValue: SNAPSHOT_MAX_HEADINGS,
+    min: 1,
+    max: SNAPSHOT_MAX_ITEMS_CAP,
+    name: "max-headings",
+  });
+  const maxButtons = parsePositiveIntInRange({
+    value: opts.maxButtons,
+    defaultValue: SNAPSHOT_MAX_BUTTONS,
+    min: 1,
+    max: SNAPSHOT_MAX_ITEMS_CAP,
+    name: "max-buttons",
+  });
+  const maxLinks = parsePositiveIntInRange({
+    value: opts.maxLinks,
+    defaultValue: SNAPSHOT_MAX_LINKS,
+    min: 1,
+    max: SNAPSHOT_MAX_ITEMS_CAP,
+    name: "max-links",
+  });
+
   const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
 
   try {
-    const target = (await listPageTargetHandles(browser)).find((handle) => handle.targetId === requestedTargetId);
-    if (!target) {
-      throw new CliError("E_TARGET_NOT_FOUND", `Target ${requestedTargetId} not found in session ${session.sessionId}`);
+    const target = await resolveTargetHandle(browser, requestedTargetId);
+    if (selectorQuery) {
+      await ensureValidSelector(target.page, selectorQuery);
     }
 
-    const sample = (await target.page.evaluate(
-      ({
-        textMaxChars,
-        maxHeadings,
-        maxButtons,
-        maxLinks,
-      }: {
-        textMaxChars: number;
-        maxHeadings: number;
-        maxButtons: number;
-        maxLinks: number;
-      }) => {
-        const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
-        const runtime = globalThis as unknown as { document?: any };
-        const doc = runtime.document;
-
-        const bodyText = normalize(doc?.body?.innerText ?? "");
-        const headings = Array.from(doc?.querySelectorAll?.("h1,h2,h3") ?? [])
-          .map((node: any) => normalize(node?.textContent ?? ""))
-          .filter((value) => value.length > 0);
-        const buttons = Array.from(
-          doc?.querySelectorAll?.("button,[role=button],input[type=button],input[type=submit],input[type=reset]") ?? [],
-        )
-          .map((node: any) => {
-            const fromText = node?.innerText ?? "";
-            const fromAria = node?.getAttribute?.("aria-label") ?? "";
-            const fromValue = node?.getAttribute?.("value") ?? "";
-            return normalize(fromText || fromAria || fromValue);
-          })
-          .filter((value) => value.length > 0);
-        const links = Array.from(doc?.querySelectorAll?.("a[href]") ?? []).map((node: any) => {
-          return {
-            text: normalize(node?.textContent ?? ""),
-            href: node?.getAttribute?.("href") ?? "",
-          };
-        });
-
-        return {
-          textPreview: bodyText.slice(0, textMaxChars),
-          headings: headings.slice(0, maxHeadings),
-          buttons: buttons.slice(0, maxButtons),
-          links: links.slice(0, maxLinks),
-          counts: {
-            textLength: bodyText.length,
-            headings: headings.length,
-            buttons: buttons.length,
-            links: links.length,
-          },
-        };
-      },
-      {
-        textMaxChars: SNAPSHOT_TEXT_MAX_CHARS,
-        maxHeadings: SNAPSHOT_MAX_HEADINGS,
-        maxButtons: SNAPSHOT_MAX_BUTTONS,
-        maxLinks: SNAPSHOT_MAX_LINKS,
-      },
-    )) as {
-      textPreview: string;
-      headings: string[];
-      buttons: string[];
-      links: Array<{ text: string; href: string }>;
-      counts: {
-        textLength: number;
-        headings: number;
-        buttons: number;
-        links: number;
-      };
-    };
+    const sample = await extractScopedSnapshotSample({
+      page: target.page,
+      selectorQuery,
+      visibleOnly,
+      textMaxChars,
+      maxHeadings,
+      maxButtons,
+      maxLinks,
+    });
 
     const report: TargetSnapshotReport = {
       ok: true,
@@ -307,15 +387,20 @@ export async function targetSnapshot(opts: {
       targetId: requestedTargetId,
       url: target.page.url(),
       title: await target.page.title(),
+      scope: {
+        selector: selectorQuery,
+        matched: sample.scopeMatched,
+        visibleOnly,
+      },
       textPreview: sample.textPreview,
       headings: sample.headings,
       buttons: sample.buttons,
       links: sample.links,
       truncated: {
-        text: sample.counts.textLength > SNAPSHOT_TEXT_MAX_CHARS,
-        headings: sample.counts.headings > SNAPSHOT_MAX_HEADINGS,
-        buttons: sample.counts.buttons > SNAPSHOT_MAX_BUTTONS,
-        links: sample.counts.links > SNAPSHOT_MAX_LINKS,
+        text: sample.counts.textLength > textMaxChars,
+        headings: sample.counts.headings > maxHeadings,
+        buttons: sample.counts.buttons > maxButtons,
+        links: sample.counts.links > maxLinks,
       },
     };
 
@@ -324,125 +409,6 @@ export async function targetSnapshot(opts: {
       sessionId: report.sessionId,
       url: report.url,
       title: report.title,
-      status: null,
-      updatedAt: nowIso(),
-    });
-
-    return report;
-  } finally {
-    await browser.close();
-  }
-}
-
-export async function targetFind(opts: {
-  targetId: string;
-  timeoutMs: number;
-  sessionId?: string;
-  textQuery?: string;
-  selectorQuery?: string;
-  limit?: number;
-}): Promise<TargetFindReport> {
-  const requestedTargetId = sanitizeTargetId(opts.targetId);
-  const parsed = parseFindInput({
-    textQuery: opts.textQuery,
-    selectorQuery: opts.selectorQuery,
-    limit: opts.limit,
-  });
-  const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
-    timeout: opts.timeoutMs,
-  });
-
-  try {
-    const target = await resolveTargetHandle(browser, requestedTargetId);
-    const { locator, count } = await resolveFindLocator({
-      page: target.page,
-      mode: parsed.mode,
-      query: parsed.query,
-    });
-
-    const matches: TargetFindReport["matches"] = [];
-    const outputCount = Math.min(count, parsed.limit);
-    for (let idx = 0; idx < outputCount; idx += 1) {
-      const matchLocator = locator.nth(idx);
-      let visible = false;
-      let payload: {
-        text: string;
-        selectorHint: string | null;
-      } = {
-        text: "",
-        selectorHint: null,
-      };
-
-      try {
-        visible = await matchLocator.isVisible();
-      } catch {
-        visible = false;
-      }
-
-      try {
-        payload = (await matchLocator.evaluate(
-          (node: any, { textMaxChars }: { textMaxChars: number }) => {
-            const el = node;
-            const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
-            const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";
-            const classSuffix =
-              classListRaw.length > 0
-                ? classListRaw
-                    .split(" ")
-                    .filter((entry) => entry.length > 0)
-                    .slice(0, 2)
-                    .map((entry) => `.${entry}`)
-                    .join("")
-                : "";
-            const tag = typeof el?.tagName === "string" ? el.tagName.toLowerCase() : "";
-            const id = typeof el?.id === "string" && el.id.length > 0 ? `#${el.id}` : "";
-            const selectorHint = tag.length > 0 ? `${tag}${id}${classSuffix}` : null;
-            const textCandidate = normalize(el?.innerText ?? el?.textContent ?? "");
-            return {
-              text: textCandidate.slice(0, textMaxChars),
-              selectorHint,
-            };
-          },
-          {
-            textMaxChars: FIND_TEXT_MAX_CHARS,
-          },
-        )) as {
-          text: string;
-          selectorHint: string | null;
-        };
-      } catch {
-        payload = {
-          text: "",
-          selectorHint: null,
-        };
-      }
-
-      matches.push({
-        index: idx,
-        text: payload.text,
-        visible,
-        selectorHint: payload.selectorHint,
-      });
-    }
-
-    const report: TargetFindReport = {
-      ok: true,
-      sessionId: session.sessionId,
-      targetId: requestedTargetId,
-      mode: parsed.mode,
-      query: parsed.query,
-      count,
-      limit: parsed.limit,
-      matches,
-      truncated: count > parsed.limit,
-    };
-
-    await upsertTargetState({
-      targetId: report.targetId,
-      sessionId: report.sessionId,
-      url: target.page.url(),
-      title: await target.page.title(),
       status: null,
       updatedAt: nowIso(),
     });

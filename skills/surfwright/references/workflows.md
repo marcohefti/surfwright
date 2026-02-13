@@ -13,17 +13,21 @@ Use `contract` output as source-of-truth for command ids, usage strings, and kno
 
 ```bash
 surfwright --json session ensure
-surfwright --json open https://example.com
+surfwright --json open https://example.com --reuse-url
 surfwright --json target list
 surfwright --json target snapshot <targetId>
-surfwright --json target find <targetId> --text "query"
+surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
+surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
+surfwright --json target wait <targetId> --for-selector "h1"
 ```
 
 - `session ensure` guarantees a reachable active session (or creates managed default).
-- `open` returns minimal page report with `sessionId`, `targetId`, `url`, `status`, `title`.
+- `open --reuse-url` reuses an existing matching URL target when available to avoid duplicate tabs.
 - `target list` enumerates currently reachable page targets.
 - `target snapshot` returns bounded text/headings/buttons/links for one explicit target.
 - `target find` checks match counts and returns bounded match metadata for one explicit query.
+- `target read` returns deterministic chunks for long text extraction.
+- `target wait` blocks until text/selector/network-idle readiness is met.
 
 ## 3) Explicit session lifecycle
 

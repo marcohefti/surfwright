@@ -126,7 +126,7 @@ export function getCliContractReport(version: string): CliContractReport {
       },
       {
         id: "open",
-        usage: "surfwright open <url> [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+        usage: "surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
         summary: "open URL and return minimal page report with target handle",
       },
       {
@@ -136,14 +136,27 @@ export function getCliContractReport(version: string): CliContractReport {
       },
       {
         id: "target.snapshot",
-        usage: "surfwright target snapshot <targetId> [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+        usage:
+          "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
         summary: "read bounded text and UI primitives for a target",
       },
       {
         id: "target.find",
         usage:
-          "surfwright target find <targetId> (--text <query> | --selector <query>) [--limit <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+          "surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
         summary: "find matching elements by text or selector in a target",
+      },
+      {
+        id: "target.read",
+        usage:
+          "surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+        summary: "read target text in deterministic chunks",
+      },
+      {
+        id: "target.wait",
+        usage:
+          "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+        summary: "wait for deterministic readiness condition on a target",
       },
     ],
     errors: [
@@ -241,7 +254,12 @@ export function getCliContractReport(version: string): CliContractReport {
   };
 }
 
-export async function openUrl(opts: { inputUrl: string; timeoutMs: number; sessionId?: string }): Promise<OpenReport> {
+export async function openUrl(opts: {
+  inputUrl: string;
+  timeoutMs: number;
+  sessionId?: string;
+  reuseUrl?: boolean;
+}): Promise<OpenReport> {
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(opts.inputUrl);
@@ -256,6 +274,31 @@ export async function openUrl(opts: { inputUrl: string; timeoutMs: number; sessi
 
   try {
     const context = browser.contexts()[0] ?? (await browser.newContext());
+    if (opts.reuseUrl) {
+      const existing = context.pages().find((candidate) => candidate.url() === parsedUrl.toString());
+      if (existing) {
+        const report: OpenReport = {
+          ok: true,
+          sessionId: session.sessionId,
+          targetId: await readPageTargetId(context, existing),
+          url: existing.url(),
+          status: null,
+          title: await existing.title(),
+        };
+
+        await upsertTargetState({
+          targetId: report.targetId,
+          sessionId: report.sessionId,
+          url: report.url,
+          title: report.title,
+          status: report.status,
+          updatedAt: nowIso(),
+        });
+
+        return report;
+      }
+    }
+
     const page = await context.newPage();
     const response = await page.goto(parsedUrl.toString(), {
       waitUntil: "domcontentloaded",
@@ -421,4 +464,7 @@ export function sessionList(): SessionListReport {
   };
 }
 
-export { targetFind, targetList, targetSnapshot } from "./targets.js";
+export { targetFind } from "./target-find.js";
+export { targetRead } from "./target-read.js";
+export { targetWait } from "./target-wait.js";
+export { targetList, targetSnapshot } from "./targets.js";

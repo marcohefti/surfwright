@@ -30,10 +30,8 @@ function runCliAsync(args) {
       },
       stdio: ["ignore", "pipe", "pipe"],
     });
-
     let stdout = "";
     let stderr = "";
-
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (chunk) => {
       stdout += chunk;
@@ -91,7 +89,6 @@ function cleanupManagedBrowsers() {
     // ignore cleanup failures
   }
 }
-
 process.on("exit", () => {
   cleanupManagedBrowsers();
   try {
@@ -103,10 +100,8 @@ process.on("exit", () => {
 
 test("open invalid URL returns typed compact JSON failure", () => {
   const result = runCli(["--json", "open", "camelpay.localhost"]);
-
   assert.equal(result.status, 1);
   assert.ok(result.stdout.trim().startsWith('{"ok":false,'));
-
   const payload = parseJson(result.stdout);
   assert.deepEqual(Object.keys(payload), ["ok", "code", "message"]);
   assert.equal(payload.ok, false);
@@ -116,7 +111,6 @@ test("open invalid URL returns typed compact JSON failure", () => {
 
 test("--pretty switches to multiline JSON", () => {
   const result = runCli(["--json", "--pretty", "open", "camelpay.localhost"]);
-
   assert.equal(result.status, 1);
   assert.ok(result.stdout.includes("\n  \"ok\": false"));
   const payload = parseJson(result.stdout);
@@ -125,7 +119,6 @@ test("--pretty switches to multiline JSON", () => {
 
 test("session attach requires explicit valid CDP origin", () => {
   const result = runCli(["--json", "session", "attach", "--cdp", "not-a-url"]);
-
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
@@ -135,7 +128,6 @@ test("session attach requires explicit valid CDP origin", () => {
 test("contract command returns machine-readable command and error metadata", () => {
   const result = runCli(["--json", "contract"]);
   assert.equal(result.status, 0);
-
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.name, "surfwright");
@@ -146,6 +138,8 @@ test("contract command returns machine-readable command and error metadata", () 
   assert.equal(payload.commands.some((entry) => entry.id === "target.list"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.snapshot"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.find"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.read"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.wait"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "contract"), true);
   assert.equal(payload.errors.some((entry) => entry.code === "E_URL_INVALID"), true);
   assert.equal(payload.errors.some((entry) => entry.code === "E_TARGET_NOT_FOUND"), true);
@@ -164,7 +158,9 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(ensurePayload.kind, "managed");
   assert.equal(ensurePayload.active, true);
 
-  const dataUrl = "data:text/html,<title>Contract%20Test%20Page</title><h1>ok</h1>";
+  const longText = "chunk ".repeat(320);
+  const html = `<title>Contract Test Page</title><main><h1>ok heading</h1><p>${longText}</p><p style=\"display:none\">secret hidden</p></main>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
   const openResult = runCli([
     "--json",
     "--session",
@@ -187,6 +183,22 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(openPayload.url, dataUrl);
   assert.equal(openPayload.status, null);
   assert.equal(openPayload.title, "Contract Test Page");
+
+  const reopenReuseResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "open",
+    dataUrl,
+    "--reuse-url",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(reopenReuseResult.status, 0);
+  const reopenReusePayload = parseJson(reopenReuseResult.stdout);
+  assert.equal(reopenReusePayload.ok, true);
+  assert.equal(reopenReusePayload.targetId, openPayload.targetId);
+  assert.equal(reopenReusePayload.status, null);
 
   const listResult = runCli([
     "--json",
@@ -225,6 +237,7 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "targetId",
     "url",
     "title",
+    "scope",
     "textPreview",
     "headings",
     "buttons",
@@ -236,6 +249,8 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(snapshotPayload.targetId, openPayload.targetId);
   assert.equal(snapshotPayload.url, dataUrl);
   assert.equal(snapshotPayload.title, "Contract Test Page");
+  assert.equal(typeof snapshotPayload.scope, "object");
+  assert.equal(snapshotPayload.scope.selector, null);
   assert.equal(typeof snapshotPayload.textPreview, "string");
   assert.equal(Array.isArray(snapshotPayload.headings), true);
   assert.equal(Array.isArray(snapshotPayload.buttons), true);
@@ -263,6 +278,10 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "sessionId",
     "targetId",
     "mode",
+    "selector",
+    "contains",
+    "visibleOnly",
+    "first",
     "query",
     "count",
     "limit",
@@ -273,6 +292,10 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(findByTextPayload.sessionId, ensurePayload.sessionId);
   assert.equal(findByTextPayload.targetId, openPayload.targetId);
   assert.equal(findByTextPayload.mode, "text");
+  assert.equal(findByTextPayload.selector, null);
+  assert.equal(findByTextPayload.contains, null);
+  assert.equal(findByTextPayload.visibleOnly, false);
+  assert.equal(findByTextPayload.first, false);
   assert.equal(findByTextPayload.query, "ok");
   assert.equal(typeof findByTextPayload.count, "number");
   assert.equal(findByTextPayload.limit, 5);
@@ -299,6 +322,32 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(findBySelectorPayload.mode, "selector");
   assert.equal(findBySelectorPayload.query, "h1");
 
+  const findBySelectorContainsResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "find",
+    openPayload.targetId,
+    "--selector",
+    "h1",
+    "--contains",
+    "ok",
+    "--first",
+    "--visible-only",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(findBySelectorContainsResult.status, 0);
+  const findBySelectorContainsPayload = parseJson(findBySelectorContainsResult.stdout);
+  assert.equal(findBySelectorContainsPayload.ok, true);
+  assert.equal(findBySelectorContainsPayload.mode, "selector");
+  assert.equal(findBySelectorContainsPayload.selector, "h1");
+  assert.equal(findBySelectorContainsPayload.contains, "ok");
+  assert.equal(findBySelectorContainsPayload.first, true);
+  assert.equal(findBySelectorContainsPayload.visibleOnly, true);
+  assert.equal(findBySelectorContainsPayload.limit, 1);
+
   const findMissingQueryResult = runCli([
     "--json",
     "--session",
@@ -313,6 +362,83 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   const findMissingQueryPayload = parseJson(findMissingQueryResult.stdout);
   assert.equal(findMissingQueryPayload.ok, false);
   assert.equal(findMissingQueryPayload.code, "E_QUERY_INVALID");
+
+  const readResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "read",
+    openPayload.targetId,
+    "--selector",
+    "main",
+    "--visible-only",
+    "--chunk-size",
+    "80",
+    "--chunk",
+    "1",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(readResult.status, 0);
+  const readPayload = parseJson(readResult.stdout);
+  assert.deepEqual(Object.keys(readPayload), [
+    "ok",
+    "sessionId",
+    "targetId",
+    "url",
+    "title",
+    "scope",
+    "chunkSize",
+    "chunkIndex",
+    "totalChunks",
+    "totalChars",
+    "text",
+    "truncated",
+  ]);
+  assert.equal(readPayload.ok, true);
+  assert.equal(readPayload.scope.selector, "main");
+  assert.equal(readPayload.scope.visibleOnly, true);
+  assert.equal(readPayload.chunkSize, 80);
+  assert.equal(readPayload.chunkIndex, 1);
+  assert.equal(typeof readPayload.totalChars, "number");
+  assert.equal(typeof readPayload.text, "string");
+
+  const waitSelectorResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "wait",
+    openPayload.targetId,
+    "--for-selector",
+    "h1",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(waitSelectorResult.status, 0);
+  const waitSelectorPayload = parseJson(waitSelectorResult.stdout);
+  assert.deepEqual(Object.keys(waitSelectorPayload), ["ok", "sessionId", "targetId", "url", "title", "mode", "value"]);
+  assert.equal(waitSelectorPayload.ok, true);
+  assert.equal(waitSelectorPayload.mode, "selector");
+  assert.equal(waitSelectorPayload.value, "h1");
+
+  const waitNetworkIdleResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "wait",
+    openPayload.targetId,
+    "--network-idle",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(waitNetworkIdleResult.status, 0);
+  const waitNetworkIdlePayload = parseJson(waitNetworkIdleResult.stdout);
+  assert.equal(waitNetworkIdlePayload.ok, true);
+  assert.equal(waitNetworkIdlePayload.mode, "network-idle");
+  assert.equal(waitNetworkIdlePayload.value, null);
 });
 
 test("session new and session use switch active pointer", { skip: !hasBrowser() }, () => {

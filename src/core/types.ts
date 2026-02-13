@@ -3,6 +3,7 @@ export const DEFAULT_OPEN_TIMEOUT_MS = 20000;
 export const DEFAULT_SESSION_TIMEOUT_MS = 12000;
 export const DEFAULT_TARGET_TIMEOUT_MS = 10000;
 export const DEFAULT_TARGET_FIND_LIMIT = 12;
+export const DEFAULT_TARGET_READ_CHUNK_SIZE = 1200;
 export const STATE_VERSION = 2;
 
 export type DoctorReport = {
@@ -67,6 +68,11 @@ export type TargetSnapshotReport = {
   targetId: string;
   url: string;
   title: string;
+  scope: {
+    selector: string | null;
+    matched: boolean;
+    visibleOnly: boolean;
+  };
   textPreview: string;
   headings: string[];
   buttons: string[];
@@ -87,6 +93,10 @@ export type TargetFindReport = {
   sessionId: string;
   targetId: string;
   mode: "text" | "selector";
+  selector: string | null;
+  contains: string | null;
+  visibleOnly: boolean;
+  first: boolean;
   query: string;
   count: number;
   limit: number;
@@ -97,6 +107,35 @@ export type TargetFindReport = {
     selectorHint: string | null;
   }>;
   truncated: boolean;
+};
+
+export type TargetReadReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  url: string;
+  title: string;
+  scope: {
+    selector: string | null;
+    matched: boolean;
+    visibleOnly: boolean;
+  };
+  chunkSize: number;
+  chunkIndex: number;
+  totalChunks: number;
+  totalChars: number;
+  text: string;
+  truncated: boolean;
+};
+
+export type TargetWaitReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  url: string;
+  title: string;
+  mode: "text" | "selector" | "network-idle";
+  value: string | null;
 };
 
 export type CliFailure = {

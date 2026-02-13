@@ -94,10 +94,12 @@ surfwright session new [--session-id <id>] [--timeout-ms <ms>] [--json] [--prett
 surfwright session attach --cdp <origin> [--session-id <id>] [--json] [--pretty]
 surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session list [--json] [--pretty]
-surfwright open <url> [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright open <url> [--reuse-url] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target list [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target snapshot <targetId> [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target find <targetId> (--text <query> | --selector <query>) [--limit <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target read <targetId> [--selector <query>] [--visible-only] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 ```
 
 Machine-readable runtime contract:
@@ -110,10 +112,12 @@ Default workflow for agent loops:
 
 ```bash
 surfwright --json session ensure
-surfwright --json open https://example.com
+surfwright --json open https://example.com --reuse-url
 surfwright --json target list
 surfwright --json target snapshot <targetId>
-surfwright --json target find <targetId> --text "Checkout"
+surfwright --json target find <targetId> --selector a --contains "Checkout" --first --visible-only
+surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
+surfwright --json target wait <targetId> --for-selector "h1"
 ```
 
 `open` intentionally returns a minimal success shape for agent loops:
@@ -132,6 +136,12 @@ surfwright --json target find <targetId> --text "Checkout"
 
 ```json
 {"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","mode":"text","query":"Checkout","count":9,"limit":5,"matches":[{"index":0,"text":"Cross-chain crypto checkout, made simple","visible":true,"selectorHint":"h1"}],"truncated":true}
+```
+
+`target read` returns deterministic text chunks for long pages:
+
+```json
+{"ok":true,"sessionId":"s-default","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","scope":{"selector":"main","matched":true,"visibleOnly":true},"chunkSize":1200,"chunkIndex":1,"totalChunks":2,"totalChars":2200,"text":"Cross-chain crypto checkout, made simple ...","truncated":true}
 ```
 
 Errors are typed and short:

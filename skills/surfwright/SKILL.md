@@ -28,12 +28,14 @@ surfwright --json contract
 
 ```bash
 surfwright --json session ensure
-surfwright --json open https://example.com
+surfwright --json open https://example.com --reuse-url
 surfwright --json target snapshot <targetId>
-surfwright --json target find <targetId> --text "query"
+surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
+surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
+surfwright --json target wait <targetId> --for-selector "h1"
 ```
 
-`open` returns `sessionId` and `targetId`; persist these handles in your run state and use `target snapshot` / `target find` for bounded page reads and match checks.
+`open` returns `sessionId` and `targetId`; persist these handles in your run state and use `target snapshot` / `target find` / `target read` / `target wait` for bounded page reads and deterministic readiness checks.
 
 ## Error discipline
 

@@ -4,6 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
+import { registerTargetCommands } from "./cli-target.js";
 import { toCliFailure } from "./core/errors.js";
 import {
   getCliContractReport,
@@ -14,24 +15,16 @@ import {
   sessionList,
   sessionNew,
   sessionUse,
-  targetFind,
-  targetList,
-  targetSnapshot,
 } from "./core/usecases.js";
 import {
-  DEFAULT_TARGET_FIND_LIMIT,
   DEFAULT_OPEN_TIMEOUT_MS,
   DEFAULT_SESSION_TIMEOUT_MS,
-  DEFAULT_TARGET_TIMEOUT_MS,
   type CliFailure,
   type CliContractReport,
   type DoctorReport,
   type OpenReport,
   type SessionListReport,
   type SessionReport,
-  type TargetFindReport,
-  type TargetListReport,
-  type TargetSnapshotReport,
 } from "./core/types.js";
 
 type OutputOpts = {
@@ -152,36 +145,6 @@ function printSessionSuccess(report: SessionReport | SessionListReport, opts: Ou
   );
 }
 
-function printTargetSuccess(report: TargetListReport | TargetSnapshotReport | TargetFindReport, opts: OutputOpts) {
-  if (opts.json) {
-    writeJson(report, { pretty: opts.pretty });
-    return;
-  }
-
-  if ("targets" in report) {
-    process.stdout.write(`ok sessionId=${report.sessionId} targets=${report.targets.length}\n`);
-    return;
-  }
-
-  if ("matches" in report) {
-    process.stdout.write(
-      [
-        "ok",
-        `sessionId=${report.sessionId}`,
-        `targetId=${report.targetId}`,
-        `mode=${report.mode}`,
-        `count=${report.count}`,
-        `returned=${report.matches.length}`,
-      ].join(" ") + "\n",
-    );
-    return;
-  }
-
-  process.stdout.write(
-    ["ok", `sessionId=${report.sessionId}`, `targetId=${report.targetId}`, `url=${report.url}`].join(" ") + "\n",
-  );
-}
-
 function parseTimeoutMs(input: string): number {
   const value = Number.parseInt(input, 10);
   if (!Number.isFinite(value) || value <= 0) {
@@ -257,8 +220,9 @@ program
   .command("open")
   .description("Open a URL in Chrome and return a minimal page report")
   .argument("<url>", "Absolute URL to open")
+  .option("--reuse-url", "Reuse existing tab for same URL if present", false)
   .option("--timeout-ms <ms>", "Navigation timeout in milliseconds", parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
-  .action(async (url: string, options: { timeoutMs: number }) => {
+  .action(async (url: string, options: { timeoutMs: number; reuseUrl?: boolean }) => {
     const opts = globalOutputOpts();
     const globalOpts = program.opts<{ session?: string }>();
 
@@ -266,6 +230,7 @@ program
       const report = await openUrl({
         inputUrl: url,
         timeoutMs: options.timeoutMs,
+        reuseUrl: Boolean(options.reuseUrl),
         sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
       });
       printOpenSuccess(report, opts);
@@ -359,76 +324,11 @@ session
     }
   });
 
-const target = program.command("target").description("Inspect browser targets in a session");
-
-target
-  .command("list")
-  .description("List current page targets with explicit handles")
-  .option("--timeout-ms <ms>", "Target listing timeout in milliseconds", parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-  .action(async (options: { timeoutMs: number }) => {
-    const opts = globalOutputOpts();
-    const globalOpts = program.opts<{ session?: string }>();
-    try {
-      const report = await targetList({
-        timeoutMs: options.timeoutMs,
-        sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
-      });
-      printTargetSuccess(report, opts);
-    } catch (error) {
-      handleFailure(error, opts);
-    }
-  });
-
-target
-  .command("snapshot")
-  .description("Read bounded text and UI primitives for a target")
-  .argument("<targetId>", "Target handle returned by open/target list")
-  .option("--timeout-ms <ms>", "Snapshot timeout in milliseconds", parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-  .action(async (targetId: string, options: { timeoutMs: number }) => {
-    const opts = globalOutputOpts();
-    const globalOpts = program.opts<{ session?: string }>();
-    try {
-      const report = await targetSnapshot({
-        targetId,
-        timeoutMs: options.timeoutMs,
-        sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
-      });
-      printTargetSuccess(report, opts);
-    } catch (error) {
-      handleFailure(error, opts);
-    }
-  });
-
-target
-  .command("find")
-  .description("Find elements by text or selector in a target")
-  .argument("<targetId>", "Target handle returned by open/target list")
-  .option("--text <query>", "Text query for fuzzy text match")
-  .option("--selector <query>", "CSS/Playwright selector query")
-  .option("--limit <n>", "Maximum matches to return", String(DEFAULT_TARGET_FIND_LIMIT))
-  .option("--timeout-ms <ms>", "Find timeout in milliseconds", parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-  .action(
-    async (
-      targetId: string,
-      options: { text?: string; selector?: string; limit: string; timeoutMs: number },
-    ) => {
-      const opts = globalOutputOpts();
-      const globalOpts = program.opts<{ session?: string }>();
-      const parsedLimit = Number.parseInt(options.limit, 10);
-      try {
-        const report = await targetFind({
-          targetId,
-          timeoutMs: options.timeoutMs,
-          sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
-          textQuery: options.text,
-          selectorQuery: options.selector,
-          limit: parsedLimit,
-        });
-        printTargetSuccess(report, opts);
-      } catch (error) {
-        handleFailure(error, opts);
-      }
-    },
-  );
+registerTargetCommands({
+  program,
+  parseTimeoutMs,
+  globalOutputOpts,
+  handleFailure,
+});
 
 program.parse(normalizeArgv(process.argv));

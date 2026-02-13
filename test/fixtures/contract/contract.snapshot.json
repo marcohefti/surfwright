@@ -104,6 +104,11 @@
       "summary": "return target diagnostics with readiness checks and hints"
     },
     {
+      "id": "target.hover",
+      "usage": "surfwright target hover <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--properties <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "hover the first matching element and return compact style diffs"
+    },
+    {
       "id": "target.hud",
       "usage": "surfwright target hud <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "return compact operator HUD payload for fast triage"
@@ -112,6 +117,11 @@
       "id": "target.list",
       "usage": "surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "list current page targets with explicit target handles"
+    },
+    {
+      "id": "target.motion-detect",
+      "usage": "surfwright target motion-detect <targetId> --selector <query> [--contains <text>] [--visible-only] [--property <name>] [--interval-ms <ms>] [--duration-ms <ms>] [--max-samples <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "detect autonomous property motion for a selector over a bounded window"
     },
     {
       "id": "target.network",
@@ -179,6 +189,11 @@
       "summary": "execute deterministic scroll steps and report requested vs achieved positions"
     },
     {
+      "id": "target.scroll-reveal-scan",
+      "usage": "surfwright target scroll-reveal-scan <targetId> [--selector <query>] [--contains <text>] [--visible-only] [--max-candidates <n>] [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "scan reveal-style candidates across scroll steps and report before/after deltas"
+    },
+    {
       "id": "target.scroll-sample",
       "usage": "surfwright target scroll-sample <targetId> --selector <query> [--contains <text>] [--visible-only] [--property <name>] [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "execute deterministic scroll steps and sample selector property values at each step"
@@ -192,6 +207,16 @@
       "id": "target.snapshot",
       "usage": "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "read bounded text and UI primitives for a target"
+    },
+    {
+      "id": "target.sticky-check",
+      "usage": "surfwright target sticky-check <targetId> [--selector <query>] [--contains <text>] [--visible-only] [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "assert sticky behavior with deterministic scroll evidence"
+    },
+    {
+      "id": "target.transition-assert",
+      "usage": "surfwright target transition-assert <targetId> [--cycles <n>] [--capture-ms <ms>] [--max-events <n>] [--click-text <query> | --click-selector <query>] [--contains <text>] [--visible-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "run repeated trigger cycles and assert transition/animation event evidence"
     },
     {
       "id": "target.transition-trace",

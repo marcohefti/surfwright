@@ -26,6 +26,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "click the first matching element in a target",
   },
   {
+    id: "target.hover",
+    usage:
+      "surfwright target hover <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--properties <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "hover the first matching element and return compact style diffs",
+  },
+  {
     id: "target.read",
     usage:
       "surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
@@ -50,6 +56,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "capture bounded time-series samples for a selector property on a target",
   },
   {
+    id: "target.motion-detect",
+    usage:
+      "surfwright target motion-detect <targetId> --selector <query> [--contains <text>] [--visible-only] [--property <name>] [--interval-ms <ms>] [--duration-ms <ms>] [--max-samples <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "detect autonomous property motion for a selector over a bounded window",
+  },
+  {
     id: "target.scroll-plan",
     usage:
       "surfwright target scroll-plan <targetId> [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
@@ -66,6 +78,24 @@ export const targetCommandManifest: CliCommandContract[] = [
     usage:
       "surfwright target scroll-watch <targetId> --selector <query> [--contains <text>] [--visible-only] [--properties <csv>] [--steps <csv>] [--settle-ms <ms>] [--max-events <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "watch class/computed-style deltas and transition events while running a scroll plan",
+  },
+  {
+    id: "target.scroll-reveal-scan",
+    usage:
+      "surfwright target scroll-reveal-scan <targetId> [--selector <query>] [--contains <text>] [--visible-only] [--max-candidates <n>] [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "scan reveal-style candidates across scroll steps and report before/after deltas",
+  },
+  {
+    id: "target.sticky-check",
+    usage:
+      "surfwright target sticky-check <targetId> [--selector <query>] [--contains <text>] [--visible-only] [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "assert sticky behavior with deterministic scroll evidence",
+  },
+  {
+    id: "target.transition-assert",
+    usage:
+      "surfwright target transition-assert <targetId> [--cycles <n>] [--capture-ms <ms>] [--max-events <n>] [--click-text <query> | --click-selector <query>] [--contains <text>] [--visible-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "run repeated trigger cycles and assert transition/animation event evidence",
   },
   {
     id: "target.transition-trace",

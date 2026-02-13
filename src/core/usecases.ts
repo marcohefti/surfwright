@@ -37,6 +37,12 @@ import { targetEval } from "./target/target-eval.js";
 import { targetExtract } from "./target/target-extract.js";
 import { targetFind } from "./target/target-find.js";
 import { targetObserve } from "./target/effects/target-observe.js";
+import {
+  targetHover,
+  targetMotionDetect,
+  targetStickyCheck,
+} from "./target/effects/target-effect-assertions.js";
+import { targetScrollRevealScan, targetTransitionAssert } from "./target/effects/target-effect-assertions-advanced.js";
 import { targetScrollPlan } from "./target/effects/target-scroll-plan.js";
 import { targetScrollSample } from "./target/effects/target-scroll-sample.js";
 import { targetScrollWatch } from "./target/effects/target-scroll-watch.js";
@@ -460,5 +466,19 @@ export async function runPipeline(opts: {
 export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail } from "../features/network/usecases/index.js";
 export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
 export { targetFind, targetRead, targetWait, targetClick, targetEval, targetList, targetSnapshot, targetExtract };
-export { targetConsoleTail, targetHealth, targetHud, targetObserve, targetScrollPlan, targetScrollSample, targetScrollWatch, targetTransitionTrace };
+export {
+  targetConsoleTail,
+  targetHealth,
+  targetHover,
+  targetHud,
+  targetMotionDetect,
+  targetObserve,
+  targetScrollPlan,
+  targetScrollRevealScan,
+  targetScrollSample,
+  targetScrollWatch,
+  targetStickyCheck,
+  targetTransitionAssert,
+  targetTransitionTrace,
+};
 export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";

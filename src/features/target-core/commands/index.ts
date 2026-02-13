@@ -6,6 +6,13 @@ import {
   targetScrollWatchCommandSpec,
   targetTransitionTraceCommandSpec,
 } from "./effects/target-effects.js";
+import {
+  targetHoverCommandSpec,
+  targetMotionDetectCommandSpec,
+  targetScrollRevealScanCommandSpec,
+  targetStickyCheckCommandSpec,
+  targetTransitionAssertCommandSpec,
+} from "./effects/target-effect-assertions.js";
 import { targetEvalCommandSpec } from "./target-eval.js";
 import { targetFindCommandSpec } from "./target-find.js";
 import { targetListCommandSpec } from "./target-list.js";
@@ -22,10 +29,15 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetSnapshotCommandSpec,
   targetFindCommandSpec,
   targetClickCommandSpec,
+  targetHoverCommandSpec,
+  targetStickyCheckCommandSpec,
+  targetMotionDetectCommandSpec,
   targetObserveCommandSpec,
   targetScrollPlanCommandSpec,
   targetScrollSampleCommandSpec,
   targetScrollWatchCommandSpec,
+  targetScrollRevealScanCommandSpec,
+  targetTransitionAssertCommandSpec,
   targetTransitionTraceCommandSpec,
   targetEvalCommandSpec,
   targetReadCommandSpec,

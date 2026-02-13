@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-target-effects-"));
+const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-target-effects-reco-"));
 
 function stateFilePath() {
   return path.join(TEST_STATE_DIR, "state.json");
@@ -74,14 +74,12 @@ process.on("exit", () => {
   }
 });
 
-test("target scroll-plan validates steps before session resolution", () => {
+test("target hover requires query before session resolution", () => {
   const result = runCli([
     "--json",
     "target",
-    "scroll-plan",
+    "hover",
     "ABCDEF123456",
-    "--steps",
-    "0,abc,50",
     "--timeout-ms",
     "1000",
   ]);
@@ -91,13 +89,47 @@ test("target scroll-plan validates steps before session resolution", () => {
   assert.equal(payload.code, "E_QUERY_INVALID");
 });
 
-test("target transition-trace validates max-events before session resolution", () => {
+test("target motion-detect requires selector before session resolution", () => {
   const result = runCli([
     "--json",
     "target",
-    "transition-trace",
+    "motion-detect",
     "ABCDEF123456",
-    "--max-events",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+});
+
+test("target transition-assert validates cycle bounds", () => {
+  const result = runCli([
+    "--json",
+    "target",
+    "transition-assert",
+    "ABCDEF123456",
+    "--cycles",
+    "0",
+    "--click-selector",
+    "#btn",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+});
+
+test("target scroll-reveal-scan validates two-step minimum", () => {
+  const result = runCli([
+    "--json",
+    "target",
+    "scroll-reveal-scan",
+    "ABCDEF123456",
+    "--steps",
     "0",
     "--timeout-ms",
     "1000",
@@ -108,33 +140,14 @@ test("target transition-trace validates max-events before session resolution", (
   assert.equal(payload.code, "E_QUERY_INVALID");
 });
 
-test("target observe requires selector before session resolution", () => {
+test("target sticky-check validates step shape before session resolution", () => {
   const result = runCli([
     "--json",
     "target",
-    "observe",
+    "sticky-check",
     "ABCDEF123456",
-    "--property",
-    "transform",
-    "--timeout-ms",
-    "1000",
-  ]);
-  assert.equal(result.status, 1);
-  const payload = parseJson(result.stdout);
-  assert.equal(payload.ok, false);
-  assert.equal(payload.code, "E_QUERY_INVALID");
-});
-
-test("target scroll-sample validates steps before session resolution", () => {
-  const result = runCli([
-    "--json",
-    "target",
-    "scroll-sample",
-    "ABCDEF123456",
-    "--selector",
-    "body",
     "--steps",
-    "0,bad,10",
+    "0,bad,100",
     "--timeout-ms",
     "1000",
   ]);
@@ -144,63 +157,127 @@ test("target scroll-sample validates steps before session resolution", () => {
   assert.equal(payload.code, "E_QUERY_INVALID");
 });
 
-test("target scroll-watch validates properties before session resolution", () => {
-  const result = runCli([
-    "--json",
-    "target",
-    "scroll-watch",
-    "ABCDEF123456",
-    "--selector",
-    "body",
-    "--properties",
-    ",",
-    "--timeout-ms",
-    "1000",
-  ]);
-  assert.equal(result.status, 1);
-  const payload = parseJson(result.stdout);
-  assert.equal(payload.ok, false);
-  assert.equal(payload.code, "E_QUERY_INVALID");
-});
-
-
-test("target scroll-plan returns deterministic shape", { skip: !hasBrowser() }, () => {
-  const html = `<title>Scroll Plan</title><main style="height:4000px"><h1>scroll-page</h1></main>`;
+test("target hover returns style diffs", { skip: !hasBrowser() }, () => {
+  const html = `<!doctype html>
+  <html><head><title>Hover</title>
+  <style>
+    #cta { color: rgb(0, 0, 0); background: rgb(255, 255, 255); }
+    #cta:hover { color: rgb(255, 255, 255); background: rgb(0, 128, 0); transform: translateY(-2px); }
+  </style>
+  </head><body>
+  <button id="cta">Pay</button>
+  </body></html>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
   const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const planResult = runCli([
+  const hoverResult = runCli([
     "--json",
     "target",
-    "scroll-plan",
+    "hover",
     openPayload.targetId,
-    "--steps",
-    "0,120,1200",
+    "--selector",
+    "#cta",
+    "--properties",
+    "color,background-color,transform",
     "--settle-ms",
-    "0",
+    "120",
     "--timeout-ms",
     "5000",
   ]);
-  assert.equal(planResult.status, 0);
-  const payload = parseJson(planResult.stdout);
+  assert.equal(hoverResult.status, 0);
+  const payload = parseJson(hoverResult.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.targetId, openPayload.targetId);
-  assert.equal(typeof payload.actionId, "string");
-  assert.equal(Array.isArray(payload.steps), true);
-  assert.equal(payload.steps.length, 3);
-  assert.equal(typeof payload.maxScroll, "number");
-  assert.equal(typeof payload.viewport.width, "number");
-  assert.equal(typeof payload.viewport.height, "number");
-  assert.equal(payload.steps[0].requestedY, 0);
-  assert.equal(typeof payload.steps[2].achievedY, "number");
-  assert.equal(typeof payload.steps[2].deltaY, "number");
+  assert.equal(payload.changedCount > 0, true);
+  assert.equal(Array.isArray(payload.diffs), true);
 });
 
-test("target transition-trace captures transition events after click", { skip: !hasBrowser() }, () => {
+test("target sticky-check reports sticky evidence", { skip: !hasBrowser() }, () => {
   const html = `<!doctype html>
-  <html><head><title>Transition Trace</title>
+  <html><head><title>Sticky</title>
+  <style>
+    body { margin: 0; height: 4000px; }
+    header { position: sticky; top: 0; height: 48px; background: #111; color: #fff; }
+  </style>
+  </head><body>
+  <header id="hdr">Header</header>
+  <main style="height:3800px"></main>
+  </body></html>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const stickyResult = runCli([
+    "--json",
+    "target",
+    "sticky-check",
+    openPayload.targetId,
+    "--selector",
+    "#hdr",
+    "--steps",
+    "0,220,640,0",
+    "--settle-ms",
+    "150",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(stickyResult.status, 0);
+  const payload = parseJson(stickyResult.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.targetId, openPayload.targetId);
+  assert.equal(typeof payload.sticky, "boolean");
+  assert.equal(payload.sticky, true);
+});
+
+test("target motion-detect reports autonomous movement", { skip: !hasBrowser() }, () => {
+  const html = `<!doctype html>
+  <html><head><title>Motion</title></head><body>
+  <div id="auto" style="transform:translateX(0px)">auto</div>
+  <script>
+    let x = 0;
+    setInterval(() => {
+      x += 6;
+      const el = document.getElementById("auto");
+      if (el) el.style.transform = "translateX(" + x + "px)";
+    }, 120);
+  </script>
+  </body></html>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const motionResult = runCli([
+    "--json",
+    "target",
+    "motion-detect",
+    openPayload.targetId,
+    "--selector",
+    "#auto",
+    "--property",
+    "transform",
+    "--interval-ms",
+    "120",
+    "--duration-ms",
+    "900",
+    "--max-samples",
+    "30",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(motionResult.status, 0);
+  const payload = parseJson(motionResult.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.targetId, openPayload.targetId);
+  assert.equal(payload.motionDetected, true);
+});
+
+test("target transition-assert aggregates repeated transitions", { skip: !hasBrowser() }, () => {
+  const html = `<!doctype html>
+  <html><head><title>Transition Assert</title>
   <style>
     #box { opacity: 1; transition: opacity 0.2s ease; }
     body.faded #box { opacity: 0.2; }
@@ -214,152 +291,46 @@ test("target transition-trace captures transition events after click", { skip: !
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const traceResult = runCli([
+  const assertResult = runCli([
     "--json",
     "target",
-    "transition-trace",
+    "transition-assert",
     openPayload.targetId,
+    "--cycles",
+    "2",
     "--click-selector",
     "#btn",
     "--capture-ms",
-    "800",
+    "700",
     "--max-events",
     "120",
     "--timeout-ms",
     "5000",
   ]);
-  assert.equal(traceResult.status, 0);
-  const payload = parseJson(traceResult.stdout);
+  assert.equal(assertResult.status, 0);
+  const payload = parseJson(assertResult.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.targetId, openPayload.targetId);
-  assert.equal(typeof payload.actionId, "string");
-  assert.equal(typeof payload.captureMs, "number");
-  assert.equal(typeof payload.maxEvents, "number");
-  assert.equal(typeof payload.eventCount, "number");
-  assert.equal(Array.isArray(payload.events), true);
-  assert.equal(payload.trigger.mode, "selector");
-  assert.equal(payload.trigger.query, "#btn");
-  assert.equal(typeof payload.trigger.clicked.selectorHint, "string");
-  assert.equal(payload.events.some((entry) => entry.kind === "transitionstart"), true);
-  assert.equal(payload.events.some((entry) => entry.propertyName === "opacity"), true);
+  assert.equal(payload.cycles, 2);
+  assert.equal(Array.isArray(payload.runs), true);
+  assert.equal(payload.runs.length, 2);
+  assert.equal(payload.asserted, true);
 });
 
-test("target observe captures sampled property changes", { skip: !hasBrowser() }, () => {
+test("target scroll-reveal-scan reports revealed candidates", { skip: !hasBrowser() }, () => {
   const html = `<!doctype html>
-  <html><head><title>Observe</title></head><body>
-  <div id="auto" style="width:80px;height:30px;transform:translateX(0px)">auto</div>
-  <script>
-    let step = 0;
-    setInterval(() => {
-      step += 1;
-      const el = document.getElementById("auto");
-      if (el) {
-        el.style.transform = "translateX(" + (step * 8) + "px)";
-      }
-    }, 120);
-  </script>
-  </body></html>`;
-  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
-  assert.equal(openResult.status, 0);
-  const openPayload = parseJson(openResult.stdout);
-
-  const observeResult = runCli([
-    "--json",
-    "target",
-    "observe",
-    openPayload.targetId,
-    "--selector",
-    "#auto",
-    "--property",
-    "transform",
-    "--interval-ms",
-    "120",
-    "--duration-ms",
-    "900",
-    "--max-samples",
-    "20",
-    "--timeout-ms",
-    "5000",
-  ]);
-  assert.equal(observeResult.status, 0);
-  const payload = parseJson(observeResult.stdout);
-  assert.equal(payload.ok, true);
-  assert.equal(payload.targetId, openPayload.targetId);
-  assert.equal(payload.query.selector, "#auto");
-  assert.equal(payload.property, "transform");
-  assert.equal(Array.isArray(payload.samples), true);
-  assert.equal(payload.sampleCount, payload.samples.length);
-  assert.equal(payload.sampleCount > 2, true);
-  assert.equal(payload.changes > 0, true);
-});
-
-test("target scroll-sample returns sampled values across steps", { skip: !hasBrowser() }, () => {
-  const html = `<!doctype html>
-  <html><head><title>Scroll Sample</title></head>
-  <body style="height:4000px;margin:0">
-  <div id="probe" style="position:fixed;top:10px;left:10px;transform:translateY(0px)">probe</div>
-  <script>
-    const probe = document.getElementById("probe");
-    const apply = () => {
-      if (probe) {
-        probe.style.transform = "translateY(" + Math.round(window.scrollY / 2) + "px)";
-      }
-    };
-    apply();
-    window.addEventListener("scroll", apply, { passive: true });
-  </script>
-  </body></html>`;
-  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
-  assert.equal(openResult.status, 0);
-  const openPayload = parseJson(openResult.stdout);
-
-  const sampleResult = runCli([
-    "--json",
-    "target",
-    "scroll-sample",
-    openPayload.targetId,
-    "--selector",
-    "#probe",
-    "--property",
-    "transform",
-    "--steps",
-    "0,200,800",
-    "--settle-ms",
-    "120",
-    "--timeout-ms",
-    "5000",
-  ]);
-  assert.equal(sampleResult.status, 0);
-  const payload = parseJson(sampleResult.stdout);
-  assert.equal(payload.ok, true);
-  assert.equal(payload.targetId, openPayload.targetId);
-  assert.equal(payload.query.selector, "#probe");
-  assert.equal(payload.property, "transform");
-  assert.equal(Array.isArray(payload.steps), true);
-  assert.equal(payload.steps.length, 3);
-  assert.equal(typeof payload.steps[0].value, "string");
-  assert.equal(payload.valueChanges > 0, true);
-});
-
-test("target scroll-watch returns class/style deltas and transition events", { skip: !hasBrowser() }, () => {
-  const html = `<!doctype html>
-  <html><head><title>Scroll Watch</title>
+  <html><head><title>Reveal Scan</title>
   <style>
     body { margin: 0; height: 4000px; }
-    #hdr { position: fixed; top: 0; left: 0; right: 0; height: 48px; opacity: 1; transition: opacity 0.15s linear; background: #222; color: #fff; }
-    body.scrolled #hdr { opacity: 0.6; }
+    .reveal { opacity: 0.2; transform: translateY(30px); transition: opacity 0.15s linear, transform 0.15s linear; margin-top: 900px; }
+    body.scrolled .reveal { opacity: 1; transform: translateY(0); }
   </style>
   </head><body>
-  <header id="hdr">Header</header>
+  <section class="reveal" id="reveal-item">Reveal</section>
   <script>
     const apply = () => {
-      if (window.scrollY > 120) {
-        document.body.classList.add("scrolled");
-      } else {
-        document.body.classList.remove("scrolled");
-      }
+      if (window.scrollY > 240) document.body.classList.add("scrolled");
+      else document.body.classList.remove("scrolled");
     };
     apply();
     window.addEventListener("scroll", apply, { passive: true });
@@ -370,32 +341,25 @@ test("target scroll-watch returns class/style deltas and transition events", { s
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const watchResult = runCli([
+  const revealResult = runCli([
     "--json",
     "target",
-    "scroll-watch",
+    "scroll-reveal-scan",
     openPayload.targetId,
-    "--selector",
-    "#hdr",
-    "--properties",
-    "opacity,position",
+    "--max-candidates",
+    "5",
     "--steps",
-    "0,180,0",
+    "0,300,650",
     "--settle-ms",
-    "300",
-    "--max-events",
-    "120",
+    "220",
     "--timeout-ms",
     "5000",
   ]);
-  assert.equal(watchResult.status, 0);
-  const payload = parseJson(watchResult.stdout);
+  assert.equal(revealResult.status, 0);
+  const payload = parseJson(revealResult.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.targetId, openPayload.targetId);
-  assert.equal(payload.query.selector, "#hdr");
-  assert.equal(Array.isArray(payload.samples), true);
-  assert.equal(payload.samples.length, 3);
-  assert.equal(payload.changeCount > 0, true);
-  assert.equal(typeof payload.transition.emitted, "number");
-  assert.equal(payload.transition.emitted > 0, true);
+  assert.equal(typeof payload.revealedCount, "number");
+  assert.equal(payload.scannedCount > 0, true);
+  assert.equal(payload.revealedCount > 0, true);
 });

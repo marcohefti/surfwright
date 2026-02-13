@@ -4,6 +4,10 @@ export const DEFAULT_SESSION_TIMEOUT_MS = 12000;
 export const DEFAULT_TARGET_TIMEOUT_MS = 10000;
 export const DEFAULT_TARGET_FIND_LIMIT = 12;
 export const DEFAULT_TARGET_READ_CHUNK_SIZE = 1200;
+export const DEFAULT_TARGET_NETWORK_CAPTURE_MS = 2500;
+export const DEFAULT_TARGET_NETWORK_MAX_REQUESTS = 120;
+export const DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS = 24;
+export const DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES = 120;
 export const STATE_VERSION = 2;
 
 export type DoctorReport = {
@@ -160,6 +164,124 @@ export type TargetWaitReport = {
   title: string;
   mode: "text" | "selector" | "network-idle";
   value: string | null;
+};
+
+export type TargetNetworkRequestReport = {
+  id: number;
+  url: string;
+  method: string;
+  resourceType: string;
+  navigation: boolean;
+  startMs: number;
+  endMs: number | null;
+  durationMs: number | null;
+  ttfbMs: number | null;
+  status: number | null;
+  ok: boolean | null;
+  failure: string | null;
+  bytesApprox: number | null;
+  requestHeaders?: Record<string, string>;
+  responseHeaders?: Record<string, string>;
+  postDataPreview?: string | null;
+};
+
+export type TargetNetworkWebSocketMessageReport = {
+  direction: "sent" | "received";
+  atMs: number;
+  opcode: number | null;
+  sizeBytes: number;
+  preview: string;
+};
+
+export type TargetNetworkWebSocketReport = {
+  id: number;
+  url: string;
+  startMs: number;
+  closeMs: number | null;
+  durationMs: number | null;
+  closed: boolean;
+  error: string | null;
+  messageCount: number;
+  messages: TargetNetworkWebSocketMessageReport[];
+};
+
+export type TargetNetworkReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  url: string;
+  title: string;
+  capture: {
+    startedAt: string;
+    endedAt: string;
+    durationMs: number;
+    captureMs: number;
+    reload: boolean;
+  };
+  filters: {
+    urlContains: string | null;
+    method: string | null;
+    resourceType: string | null;
+    status: string | null;
+    failedOnly: boolean;
+  };
+  limits: {
+    maxRequests: number;
+    maxWebSockets: number;
+    maxWsMessages: number;
+  };
+  counts: {
+    requestsSeen: number;
+    requestsReturned: number;
+    responsesSeen: number;
+    failedSeen: number;
+    webSocketsSeen: number;
+    webSocketsReturned: number;
+    wsMessagesSeen: number;
+    wsMessagesReturned: number;
+    droppedRequests: number;
+    droppedWebSockets: number;
+    droppedWsMessages: number;
+  };
+  performance: {
+    completedRequests: number;
+    bytesApproxTotal: number;
+    statusBuckets: {
+      "2xx": number;
+      "3xx": number;
+      "4xx": number;
+      "5xx": number;
+      other: number;
+    };
+    latencyMs: {
+      min: number | null;
+      max: number | null;
+      avg: number | null;
+      p50: number | null;
+      p95: number | null;
+    };
+    ttfbMs: {
+      min: number | null;
+      max: number | null;
+      avg: number | null;
+      p50: number | null;
+      p95: number | null;
+    };
+    slowest: Array<{
+      id: number;
+      url: string;
+      resourceType: string;
+      status: number | null;
+      durationMs: number;
+    }>;
+  };
+  truncated: {
+    requests: boolean;
+    webSockets: boolean;
+    wsMessages: boolean;
+  };
+  requests: TargetNetworkRequestReport[];
+  webSockets: TargetNetworkWebSocketReport[];
 };
 
 export type StateReconcileReport = {

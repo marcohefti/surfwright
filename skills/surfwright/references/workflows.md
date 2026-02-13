@@ -19,6 +19,7 @@ surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
+surfwright --json target network <targetId> --capture-ms 2500 --status 2xx
 ```
 
 - `session ensure` guarantees a reachable active session (or creates managed default).
@@ -28,6 +29,7 @@ surfwright --json target wait <targetId> --for-selector "h1"
 - `target find` checks match counts and returns bounded match metadata for one explicit query.
 - `target read` returns deterministic chunks for long text extraction.
 - `target wait` blocks until text/selector/network-idle readiness is met.
+- `target network` captures bounded request/websocket diagnostics with filterable performance summary.
 
 ## 3) Explicit session lifecycle
 

@@ -4,13 +4,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-contract-"));
-
 function stateFilePath() {
   return path.join(TEST_STATE_DIR, "state.json");
 }
-
 function runCli(args) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
     encoding: "utf8",
@@ -36,12 +33,10 @@ function runCliAsync(args) {
     child.stdout.on("data", (chunk) => {
       stdout += chunk;
     });
-
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk) => {
       stderr += chunk;
     });
-
     child.on("error", reject);
     child.on("close", (status) => {
       resolve({ status, stdout, stderr });
@@ -54,11 +49,16 @@ function parseJson(stdout) {
   assert.notEqual(text.length, 0, "Expected JSON output on stdout");
   return JSON.parse(text);
 }
-
+let hasBrowserCache;
 function hasBrowser() {
+  if (typeof hasBrowserCache === "boolean") {
+    return hasBrowserCache;
+  }
   const result = runCli(["--json", "doctor"]);
   const payload = parseJson(result.stdout);
-  return payload?.chrome?.found === true;
+  hasBrowserCache =
+    payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
+  return hasBrowserCache;
 }
 
 function cleanupManagedBrowsers() {
@@ -140,6 +140,7 @@ test("contract command returns machine-readable command and error metadata", () 
   assert.equal(payload.commands.some((entry) => entry.id === "target.find"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.read"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.wait"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.network"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "contract"), true);
   assert.equal(payload.errors.some((entry) => entry.code === "E_URL_INVALID"), true);
   assert.equal(payload.errors.some((entry) => entry.code === "E_TARGET_NOT_FOUND"), true);

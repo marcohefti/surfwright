@@ -6,6 +6,17 @@ Use this document to decide what to update when changing SurfWright.
 
 Keep code behavior, runtime skill guidance, and maintainer docs synchronized with minimal drift and minimal token overhead.
 
+## Agent-First Evaluation Rule
+
+For feature work, refactors, and optimizations, default to an evidence-first loop run by the agent:
+
+1. Execute focused scripts/commands (Playwright allowed and expected) to observe real behavior.
+2. Prefer CLI/API shapes that maximize agent parseability and minimize token/runtime overhead.
+3. Evaluate proposals by three explicit outcomes:
+   - higher agent/operator workflow clarity,
+   - faster execution and iteration speed,
+   - better answer quality from bounded machine output.
+
 ## First-Open Workflow (for an agent)
 
 1. Read `AGENTS.md` for repo intent and routing.

@@ -165,6 +165,12 @@ export function getCliContractReport(version: string): CliContractReport {
         summary: "wait for deterministic readiness condition on a target",
       },
       {
+        id: "target.network",
+        usage:
+          "surfwright target network <targetId> [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+        summary: "capture bounded network/websocket diagnostics and performance summary for a target",
+      },
+      {
         id: "target.prune",
         usage: "surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]",
         summary: "prune stale/orphan target metadata with age and size caps",
@@ -482,6 +488,7 @@ export function sessionList(): SessionListReport {
 }
 
 export { targetFind } from "./target-find.js";
+export { targetNetwork } from "./target-network.js";
 export { targetRead } from "./target-read.js";
 export { targetWait } from "./target-wait.js";
 export { targetList, targetSnapshot } from "./targets.js";

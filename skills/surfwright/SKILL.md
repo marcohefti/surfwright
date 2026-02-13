@@ -33,9 +33,10 @@ surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target wait <targetId> --for-selector "h1"
+surfwright --json target network <targetId> --capture-ms 2500 --status 2xx
 ```
 
-`open` returns `sessionId` and `targetId`; persist these handles in your run state and use `target snapshot` / `target find` / `target read` / `target wait` for bounded page reads and deterministic readiness checks.
+`open` returns `sessionId` and `targetId`; persist these handles in your run state and use `target snapshot` / `target find` / `target read` / `target wait` / `target network` for bounded page reads, deterministic readiness checks, and compact network diagnostics.
 
 If local state may be stale (machine restart, browser crash), run:
 

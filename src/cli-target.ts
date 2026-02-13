@@ -1,11 +1,16 @@
 import { type Command } from "commander";
-import { targetFind, targetList, targetPrune, targetRead, targetSnapshot, targetWait } from "./core/usecases.js";
+import { targetFind, targetList, targetNetwork, targetPrune, targetRead, targetSnapshot, targetWait } from "./core/usecases.js";
 import {
   DEFAULT_TARGET_FIND_LIMIT,
+  DEFAULT_TARGET_NETWORK_CAPTURE_MS,
+  DEFAULT_TARGET_NETWORK_MAX_REQUESTS,
+  DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS,
+  DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES,
   DEFAULT_TARGET_READ_CHUNK_SIZE,
   DEFAULT_TARGET_TIMEOUT_MS,
   type TargetFindReport,
   type TargetListReport,
+  type TargetNetworkReport,
   type TargetPruneReport,
   type TargetReadReport,
   type TargetSnapshotReport,
@@ -28,6 +33,7 @@ function printTargetSuccess(
     | TargetFindReport
     | TargetReadReport
     | TargetWaitReport
+    | TargetNetworkReport
     | TargetPruneReport,
   opts: TargetOutputOpts,
 ) {
@@ -76,6 +82,21 @@ function printTargetSuccess(
         `targetId=${report.targetId}`,
         `mode=${report.mode}`,
         `value=${report.value ?? "null"}`,
+      ].join(" ") + "\n",
+    );
+    return;
+  }
+
+  if ("capture" in report) {
+    process.stdout.write(
+      [
+        "ok",
+        `sessionId=${report.sessionId}`,
+        `targetId=${report.targetId}`,
+        `requests=${report.counts.requestsReturned}`,
+        `responses=${report.counts.responsesSeen}`,
+        `failed=${report.counts.failedSeen}`,
+        `websockets=${report.counts.webSocketsReturned}`,
       ].join(" ") + "\n",
     );
     return;
@@ -280,6 +301,80 @@ export function registerTargetCommands(opts: {
             forText: options.forText,
             forSelector: options.forSelector,
             networkIdle: Boolean(options.networkIdle),
+          });
+          printTargetSuccess(report, output);
+        } catch (error) {
+          opts.handleFailure(error, output);
+        }
+      },
+    );
+
+  target
+    .command("network")
+    .description("Capture bounded network + websocket diagnostics and performance summary")
+    .argument("<targetId>", "Target handle returned by open/target list")
+    .option("--capture-ms <ms>", "Capture duration in milliseconds", String(DEFAULT_TARGET_NETWORK_CAPTURE_MS))
+    .option("--max-requests <n>", "Maximum request records to retain", String(DEFAULT_TARGET_NETWORK_MAX_REQUESTS))
+    .option("--max-websockets <n>", "Maximum websocket records to retain", String(DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS))
+    .option(
+      "--max-ws-messages <n>",
+      "Maximum websocket frame previews to retain across all sockets",
+      String(DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES),
+    )
+    .option("--url-contains <text>", "Only return requests/websockets whose URL contains text")
+    .option("--method <verb>", "Only return requests with this HTTP verb (e.g. GET)")
+    .option("--resource-type <type>", "Only return requests with this Playwright resource type")
+    .option("--status <codeOrClass>", "Only return requests matching status code (200) or class (2xx)")
+    .option("--failed-only", "Only return failed requests")
+    .option("--include-headers", "Include request/response headers (bounded by max item limits)")
+    .option("--include-post-data", "Include bounded request post-data preview")
+    .option("--no-ws-messages", "Disable websocket frame preview capture")
+    .option("--reload", "Reload page before capture to observe startup requests")
+    .option("--timeout-ms <ms>", "Connection/reload timeout in milliseconds", opts.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+    .action(
+      async (
+        targetId: string,
+        options: {
+          captureMs: string;
+          maxRequests: string;
+          maxWebsockets: string;
+          maxWsMessages: string;
+          urlContains?: string;
+          method?: string;
+          resourceType?: string;
+          status?: string;
+          failedOnly?: boolean;
+          includeHeaders?: boolean;
+          includePostData?: boolean;
+          wsMessages?: boolean;
+          reload?: boolean;
+          timeoutMs: number;
+        },
+      ) => {
+        const output = opts.globalOutputOpts();
+        const globalOpts = opts.program.opts<{ session?: string }>();
+        const captureMs = Number.parseInt(options.captureMs, 10);
+        const maxRequests = Number.parseInt(options.maxRequests, 10);
+        const maxWebSockets = Number.parseInt(options.maxWebsockets, 10);
+        const maxWsMessages = Number.parseInt(options.maxWsMessages, 10);
+        try {
+          const report = await targetNetwork({
+            targetId,
+            timeoutMs: options.timeoutMs,
+            sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+            captureMs,
+            maxRequests,
+            maxWebSockets,
+            maxWsMessages,
+            urlContains: options.urlContains,
+            method: options.method,
+            resourceType: options.resourceType,
+            status: options.status,
+            failedOnly: Boolean(options.failedOnly),
+            includeHeaders: Boolean(options.includeHeaders),
+            includePostData: Boolean(options.includePostData),
+            includeWsMessages: options.wsMessages !== false,
+            reload: Boolean(options.reload),
           });
           printTargetSuccess(report, output);
         } catch (error) {

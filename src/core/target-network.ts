@@ -1,8 +1,9 @@
+import fs from "node:fs";
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
 import { nowIso, upsertTargetState } from "./state.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {
-  buildPerformanceSummary,
   matchesRequestFilters,
   parseNetworkInput,
   postDataPreview,
@@ -30,6 +31,10 @@ export async function targetNetwork(opts: {
   targetId: string;
   timeoutMs: number;
   sessionId?: string;
+  captureId?: string | null;
+  profile?: string;
+  view?: string;
+  fields?: string;
   captureMs?: number;
   maxRequests?: number;
   maxWebSockets?: number;
@@ -43,9 +48,13 @@ export async function targetNetwork(opts: {
   resourceType?: string;
   status?: string;
   failedOnly?: boolean;
+  stopSignalPath?: string;
 }): Promise<TargetNetworkReport> {
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const parsed = parseNetworkInput({
+    profile: opts.profile,
+    view: opts.view,
+    fields: opts.fields,
     captureMs: opts.captureMs,
     maxRequests: opts.maxRequests,
     maxWebSockets: opts.maxWebSockets,
@@ -101,6 +110,8 @@ export async function targetNetwork(opts: {
 
       const record: MutableRequest = {
         id: nextRequestId,
+        captureKey: `${opts.captureId ?? "live"}:req:${nextRequestId}`,
+        redirectedFromId: null,
         url: request.url(),
         method: request.method().toUpperCase(),
         resourceType: request.resourceType(),
@@ -117,6 +128,13 @@ export async function targetNetwork(opts: {
       nextRequestId += 1;
       requests.push(record);
       requestByHandle.set(request, record);
+      const redirectedFrom = request.redirectedFrom();
+      if (redirectedFrom) {
+        const prev = requestByHandle.get(redirectedFrom);
+        if (prev) {
+          record.redirectedFromId = prev.id;
+        }
+      }
 
       if (parsed.includeHeaders || parsed.includePostData) {
         pushBackgroundTask(backgroundTasks, async () => {
@@ -185,6 +203,7 @@ export async function targetNetwork(opts: {
 
       const socket: MutableWebSocket = {
         id: nextWebSocketId,
+        captureKey: `${opts.captureId ?? "live"}:ws:${nextWebSocketId}`,
         url: webSocket.url(),
         startMs: toRelativeMs(captureStartEpochMs),
         closeMs: null,
@@ -247,7 +266,7 @@ export async function targetNetwork(opts: {
           timeout: opts.timeoutMs,
         });
       }
-      await sleep(parsed.captureMs);
+      await waitForCaptureEnd(parsed.captureMs, opts.stopSignalPath);
       await Promise.all(backgroundTasks);
     } finally {
       target.page.off("request", onRequest);
@@ -267,10 +286,24 @@ export async function targetNetwork(opts: {
     const captureEndedAtIso = nowIso();
     const captureDurationMs = toRelativeMs(captureStartEpochMs);
 
+    const hints = buildTruncationHints({
+      droppedRequests: counts.droppedRequests,
+      droppedWebSockets: counts.droppedWebSockets,
+      droppedWsMessages: counts.droppedWsMessages,
+      maxRequests: parsed.maxRequests,
+      maxWebSockets: parsed.maxWebSockets,
+      maxWsMessages: parsed.maxWsMessages,
+    });
+    const insights = buildInsights(filteredRequests, filteredWebSockets);
+    const tableRows = parsed.view === "table" ? toTableRows(filteredRequests, parsed.fields) : [];
+    const requestsOut = parsed.view === "summary" ? [] : filteredRequests;
+    const webSocketsOut = parsed.view === "summary" ? [] : filteredWebSockets;
+
     const report: TargetNetworkReport = {
       ok: true,
       sessionId: session.sessionId,
       targetId: requestedTargetId,
+      captureId: opts.captureId ?? null,
       url: pageUrl,
       title: pageTitle,
       capture: {
@@ -286,7 +319,11 @@ export async function targetNetwork(opts: {
         resourceType: parsed.resourceType,
         status: parsed.statusInput,
         failedOnly: parsed.failedOnly,
+        profile: parsed.profile,
       },
+      view: parsed.view,
+      fields: parsed.fields,
+      tableRows,
       limits: {
         maxRequests: parsed.maxRequests,
         maxWebSockets: parsed.maxWebSockets,
@@ -299,8 +336,10 @@ export async function targetNetwork(opts: {
         webSockets: counts.droppedWebSockets > 0,
         wsMessages: counts.droppedWsMessages > 0,
       },
-      requests: filteredRequests,
-      webSockets: filteredWebSockets,
+      hints,
+      insights,
+      requests: requestsOut,
+      webSockets: webSocketsOut,
     };
 
     await upsertTargetState({
@@ -323,4 +362,18 @@ function filterWebSocketsByUrl(webSockets: MutableWebSocket[], parsed: ParsedNet
     return webSockets;
   }
   return webSockets.filter((socket) => socket.url.includes(parsed.urlContains ?? ""));
+}
+
+async function waitForCaptureEnd(captureMs: number, stopSignalPath?: string): Promise<void> {
+  if (!stopSignalPath) {
+    await sleep(captureMs);
+    return;
+  }
+  const deadline = Date.now() + captureMs;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(stopSignalPath)) {
+      return;
+    }
+    await sleep(150);
+  }
 }

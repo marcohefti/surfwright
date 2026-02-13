@@ -42,7 +42,6 @@ function runCliAsync(args) {
     });
   });
 }
-
 function parseJson(stdout) {
   const text = stdout.trim();
   assert.notEqual(text.length, 0, "Expected JSON output on stdout");
@@ -59,7 +58,6 @@ function hasBrowser() {
     payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
 }
-
 function cleanupManagedBrowsers() {
   try {
     const statePath = stateFilePath();
@@ -96,7 +94,6 @@ process.on("exit", () => {
     // ignore cleanup failures
   }
 });
-
 test("open invalid URL returns typed compact JSON failure", () => {
   const result = runCli(["--json", "open", "camelpay.localhost"]);
   assert.equal(result.status, 1);
@@ -107,7 +104,6 @@ test("open invalid URL returns typed compact JSON failure", () => {
   assert.equal(payload.code, "E_URL_INVALID");
   assert.equal(typeof payload.message, "string");
 });
-
 test("--pretty switches to multiline JSON", () => {
   const result = runCli(["--json", "--pretty", "open", "camelpay.localhost"]);
   assert.equal(result.status, 1);
@@ -115,7 +111,6 @@ test("--pretty switches to multiline JSON", () => {
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
 });
-
 test("session attach requires explicit valid CDP origin", () => {
   const result = runCli(["--json", "session", "attach", "--cdp", "not-a-url"]);
   assert.equal(result.status, 1);
@@ -123,7 +118,6 @@ test("session attach requires explicit valid CDP origin", () => {
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_CDP_INVALID");
 });
-
 test("contract command returns machine-readable command and error metadata", () => {
   const result = runCli(["--json", "contract"]);
   assert.equal(result.status, 0);
@@ -141,7 +135,11 @@ test("contract command returns machine-readable command and error metadata", () 
   assert.equal(payload.commands.some((entry) => entry.id === "target.wait"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.network"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.network-export"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.network-begin"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.network-end"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.network-export-list"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.network-export" && entry.usage.includes("--out <path>")), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.network" && entry.usage.includes("--profile <preset>")), true);
   assert.equal(payload.commands.some((entry) => entry.id === "contract"), true);
   assert.equal(payload.errors.some((entry) => entry.code === "E_URL_INVALID"), true);
   assert.equal(payload.errors.some((entry) => entry.code === "E_TARGET_NOT_FOUND"), true);
@@ -149,17 +147,14 @@ test("contract command returns machine-readable command and error metadata", () 
   assert.equal(payload.errors.some((entry) => entry.code === "E_SELECTOR_INVALID"), true);
   assert.equal(payload.errors.some((entry) => entry.code === "E_STATE_LOCK_TIMEOUT"), true);
 });
-
 test("session ensure + open success returns contract shape", { skip: !hasBrowser() }, () => {
   const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
-
   const ensurePayload = parseJson(ensureResult.stdout);
   assert.deepEqual(Object.keys(ensurePayload), ["ok", "sessionId", "kind", "cdpOrigin", "active", "created", "restarted"]);
   assert.equal(ensurePayload.ok, true);
   assert.equal(ensurePayload.kind, "managed");
   assert.equal(ensurePayload.active, true);
-
   const longText = "chunk ".repeat(320);
   const html = `<title>Contract Test Page</title><main><h1>ok heading</h1><p>${longText}</p><p style=\"display:none\">secret hidden</p></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
@@ -172,10 +167,8 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "--timeout-ms",
     "5000",
   ]);
-
   assert.equal(openResult.status, 0);
   assert.ok(openResult.stdout.trim().startsWith('{"ok":true,'));
-
   const openPayload = parseJson(openResult.stdout);
   assert.deepEqual(Object.keys(openPayload), ["ok", "sessionId", "targetId", "url", "status", "title"]);
   assert.equal(openPayload.ok, true);
@@ -185,7 +178,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(openPayload.url, dataUrl);
   assert.equal(openPayload.status, null);
   assert.equal(openPayload.title, "Contract Test Page");
-
   const reopenReuseResult = runCli([
     "--json",
     "--session",
@@ -201,7 +193,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(reopenReusePayload.ok, true);
   assert.equal(reopenReusePayload.targetId, openPayload.targetId);
   assert.equal(reopenReusePayload.status, null);
-
   const listResult = runCli([
     "--json",
     "--session",
@@ -211,7 +202,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "--timeout-ms",
     "5000",
   ]);
-
   assert.equal(listResult.status, 0);
   const listPayload = parseJson(listResult.stdout);
   assert.deepEqual(Object.keys(listPayload), ["ok", "sessionId", "targets"]);
@@ -219,7 +209,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(listPayload.sessionId, ensurePayload.sessionId);
   assert.equal(Array.isArray(listPayload.targets), true);
   assert.equal(listPayload.targets.some((entry) => entry.targetId === openPayload.targetId), true);
-
   const snapshotResult = runCli([
     "--json",
     "--session",
@@ -230,7 +219,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "--timeout-ms",
     "5000",
   ]);
-
   assert.equal(snapshotResult.status, 0);
   const snapshotPayload = parseJson(snapshotResult.stdout);
   assert.deepEqual(Object.keys(snapshotPayload), [
@@ -258,7 +246,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(Array.isArray(snapshotPayload.buttons), true);
   assert.equal(Array.isArray(snapshotPayload.links), true);
   assert.equal(typeof snapshotPayload.truncated, "object");
-
   const findByTextResult = runCli([
     "--json",
     "--session",
@@ -303,7 +290,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(findByTextPayload.limit, 5);
   assert.equal(Array.isArray(findByTextPayload.matches), true);
   assert.equal(typeof findByTextPayload.truncated, "boolean");
-
   const findBySelectorResult = runCli([
     "--json",
     "--session",
@@ -323,7 +309,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(findBySelectorPayload.ok, true);
   assert.equal(findBySelectorPayload.mode, "selector");
   assert.equal(findBySelectorPayload.query, "h1");
-
   const findBySelectorContainsResult = runCli([
     "--json",
     "--session",
@@ -349,7 +334,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(findBySelectorContainsPayload.first, true);
   assert.equal(findBySelectorContainsPayload.visibleOnly, true);
   assert.equal(findBySelectorContainsPayload.limit, 1);
-
   const findMissingQueryResult = runCli([
     "--json",
     "--session",
@@ -364,7 +348,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   const findMissingQueryPayload = parseJson(findMissingQueryResult.stdout);
   assert.equal(findMissingQueryPayload.ok, false);
   assert.equal(findMissingQueryPayload.code, "E_QUERY_INVALID");
-
   const readResult = runCli([
     "--json",
     "--session",
@@ -405,7 +388,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(readPayload.chunkIndex, 1);
   assert.equal(typeof readPayload.totalChars, "number");
   assert.equal(typeof readPayload.text, "string");
-
   const waitSelectorResult = runCli([
     "--json",
     "--session",
@@ -424,7 +406,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(waitSelectorPayload.ok, true);
   assert.equal(waitSelectorPayload.mode, "selector");
   assert.equal(waitSelectorPayload.value, "h1");
-
   const waitNetworkIdleResult = runCli([
     "--json",
     "--session",
@@ -442,10 +423,8 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(waitNetworkIdlePayload.mode, "network-idle");
   assert.equal(waitNetworkIdlePayload.value, null);
 });
-
 test("session new and session use switch active pointer", { skip: !hasBrowser() }, () => {
   const sessionId = `s-contract-${Date.now()}`;
-
   const createResult = runCli([
     "--json",
     "session",
@@ -456,44 +435,35 @@ test("session new and session use switch active pointer", { skip: !hasBrowser() 
     "6000",
   ]);
   assert.equal(createResult.status, 0);
-
   const createPayload = parseJson(createResult.stdout);
   assert.equal(createPayload.ok, true);
   assert.equal(createPayload.sessionId, sessionId);
   assert.equal(createPayload.kind, "managed");
   assert.equal(createPayload.active, true);
   assert.equal(createPayload.created, true);
-
   const useResult = runCli(["--json", "session", "use", sessionId, "--timeout-ms", "6000"]);
   assert.equal(useResult.status, 0);
-
   const usePayload = parseJson(useResult.stdout);
   assert.equal(usePayload.ok, true);
   assert.equal(usePayload.sessionId, sessionId);
   assert.equal(usePayload.active, true);
-
   const listResult = runCli(["--json", "session", "list"]);
   assert.equal(listResult.status, 0);
-
   const listPayload = parseJson(listResult.stdout);
   assert.equal(listPayload.ok, true);
   assert.equal(listPayload.activeSessionId, sessionId);
   assert.equal(Array.isArray(listPayload.sessions), true);
   assert.equal(listPayload.sessions.some((entry) => entry.sessionId === sessionId), true);
 });
-
 test("concurrent session new with same id returns one typed conflict", { skip: !hasBrowser() }, async () => {
   const sessionId = `s-concurrent-${Date.now()}`;
   const args = ["--json", "session", "new", "--session-id", sessionId, "--timeout-ms", "6000"];
-
   const [first, second] = await Promise.all([runCliAsync(args), runCliAsync(args)]);
   const results = [first, second];
   const successes = results.filter((result) => result.status === 0);
   const failures = results.filter((result) => result.status === 1);
-
   assert.equal(successes.length, 1);
   assert.equal(failures.length, 1);
-
   const failurePayload = parseJson(failures[0].stdout);
   assert.equal(failurePayload.ok, false);
   assert.equal(failurePayload.code, "E_SESSION_EXISTS");

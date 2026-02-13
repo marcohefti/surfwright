@@ -32,7 +32,6 @@ import type {
   SessionReport,
   SessionState,
 } from "./types.js";
-
 function sessionReport(
   session: SessionState,
   meta: {
@@ -60,7 +59,6 @@ export function getDoctorReport(): DoctorReport {
       return false;
     }
   });
-
   return {
     ok: found,
     node: {
@@ -74,7 +72,6 @@ export function getDoctorReport(): DoctorReport {
     },
   };
 }
-
 export function getCliContractReport(version: string): CliContractReport {
   return {
     ok: true,
@@ -165,14 +162,31 @@ export function getCliContractReport(version: string): CliContractReport {
       {
         id: "target.network",
         usage:
-          "surfwright target network <targetId> [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+          "surfwright target network <targetId> [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
         summary: "capture bounded network/websocket diagnostics and performance summary for a target",
       },
       {
         id: "target.network-export",
         usage:
-          "surfwright target network-export <targetId> --out <path> [--format har] [--capture-ms <ms>] [--max-requests <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+          "surfwright target network-export <targetId> --out <path> [--format har] [--profile <preset>] [--capture-ms <ms>] [--max-requests <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
         summary: "export filtered network capture as artifact (har)",
+      },
+      {
+        id: "target.network-begin",
+        usage:
+          "surfwright target network-begin <targetId> [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--include-headers] [--include-post-data] [--no-ws-messages] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+        summary: "start handle-based background network capture for an action window",
+      },
+      {
+        id: "target.network-end",
+        usage:
+          "surfwright target network-end <captureId> [--profile <preset>] [--view <mode>] [--fields <csv>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--timeout-ms <ms>] [--json] [--pretty]",
+        summary: "stop background capture handle and return projected analysis report",
+      },
+      {
+        id: "target.network-export-list",
+        usage: "surfwright target network-export-list [--limit <n>] [--json] [--pretty]",
+        summary: "list indexed network export artifacts",
       },
       {
         id: "target.prune",
@@ -280,7 +294,6 @@ export function getCliContractReport(version: string): CliContractReport {
     ],
   };
 }
-
 export async function openUrl(opts: {
   inputUrl: string;
   timeoutMs: number;
@@ -293,12 +306,10 @@ export async function openUrl(opts: {
   } catch {
     throw new CliError("E_URL_INVALID", "URL must be absolute (e.g. https://example.com)");
   }
-
   const { session } = await resolveSessionForAction(opts.sessionId, opts.timeoutMs);
   const browser = await chromium.connectOverCDP(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
-
   try {
     const context = browser.contexts()[0] ?? (await browser.newContext());
     if (opts.reuseUrl) {
@@ -312,7 +323,6 @@ export async function openUrl(opts: {
           status: null,
           title: await existing.title(),
         };
-
         await upsertTargetState({
           targetId: report.targetId,
           sessionId: report.sessionId,
@@ -321,19 +331,15 @@ export async function openUrl(opts: {
           status: report.status,
           updatedAt: nowIso(),
         });
-
         return report;
       }
     }
-
     const page = await context.newPage();
     const response = await page.goto(parsedUrl.toString(), {
       waitUntil: "domcontentloaded",
       timeout: opts.timeoutMs,
     });
-
     const targetId = await readPageTargetId(context, page);
-
     const report: OpenReport = {
       ok: true,
       sessionId: session.sessionId,
@@ -342,7 +348,6 @@ export async function openUrl(opts: {
       status: response?.status() ?? null,
       title: await page.title(),
     };
-
     await upsertTargetState({
       targetId: report.targetId,
       sessionId: report.sessionId,
@@ -351,13 +356,11 @@ export async function openUrl(opts: {
       status: report.status,
       updatedAt: nowIso(),
     });
-
     return report;
   } finally {
     await browser.close();
   }
 }
-
 export async function sessionEnsure(opts: { timeoutMs: number }): Promise<SessionReport> {
   return await updateState(async (state) => {
     if (state.activeSessionId && state.sessions[state.activeSessionId]) {
@@ -367,7 +370,6 @@ export async function sessionEnsure(opts: { timeoutMs: number }): Promise<Sessio
         const ensured = await ensureSessionReachable(activeSession, opts.timeoutMs);
         state.sessions[activeId] = ensured.session;
         state.activeSessionId = activeId;
-
         return sessionReport(ensured.session, {
           active: true,
           created: false,
@@ -381,10 +383,8 @@ export async function sessionEnsure(opts: { timeoutMs: number }): Promise<Sessio
         // fallback to a managed default session instead of probing/attaching elsewhere.
       }
     }
-
     const ensuredDefault = await ensureDefaultManagedSession(state, opts.timeoutMs);
     state.activeSessionId = ensuredDefault.session.sessionId;
-
     return sessionReport(ensuredDefault.session, {
       active: true,
       created: ensuredDefault.created,
@@ -392,12 +392,10 @@ export async function sessionEnsure(opts: { timeoutMs: number }): Promise<Sessio
     });
   });
 }
-
 export async function sessionNew(opts: { timeoutMs: number; requestedSessionId?: string }): Promise<SessionReport> {
   return await updateState(async (state) => {
     const sessionId = opts.requestedSessionId ? sanitizeSessionId(opts.requestedSessionId) : allocateSessionId(state, "s");
     assertSessionDoesNotExist(state, sessionId);
-
     const debugPort = await allocateFreePort();
     const session = await startManagedSession(
       {
@@ -408,10 +406,8 @@ export async function sessionNew(opts: { timeoutMs: number; requestedSessionId?:
       },
       opts.timeoutMs,
     );
-
     state.sessions[sessionId] = session;
     state.activeSessionId = sessionId;
-
     return sessionReport(session, {
       active: true,
       created: true,
@@ -419,18 +415,15 @@ export async function sessionNew(opts: { timeoutMs: number; requestedSessionId?:
     });
   });
 }
-
 export async function sessionAttach(opts: { requestedSessionId?: string; cdpOriginInput: string }): Promise<SessionReport> {
   return await updateState(async (state) => {
     const sessionId = opts.requestedSessionId ? sanitizeSessionId(opts.requestedSessionId) : allocateSessionId(state, "a");
     assertSessionDoesNotExist(state, sessionId);
-
     const cdpOrigin = normalizeCdpOrigin(opts.cdpOriginInput);
     const isAlive = await isCdpEndpointAlive(cdpOrigin, CDP_HEALTHCHECK_TIMEOUT_MS);
     if (!isAlive) {
       throw new CliError("E_CDP_UNREACHABLE", `CDP endpoint is not reachable at ${cdpOrigin}`);
     }
-
     const session: SessionState = {
       sessionId,
       kind: "attached",
@@ -441,10 +434,8 @@ export async function sessionAttach(opts: { requestedSessionId?: string; cdpOrig
       createdAt: nowIso(),
       lastSeenAt: nowIso(),
     };
-
     state.sessions[sessionId] = session;
     state.activeSessionId = sessionId;
-
     return sessionReport(session, {
       active: true,
       created: true,
@@ -452,7 +443,6 @@ export async function sessionAttach(opts: { requestedSessionId?: string; cdpOrig
     });
   });
 }
-
 export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: string }): Promise<SessionReport> {
   return await updateState(async (state) => {
     const sessionId = sanitizeSessionId(opts.sessionIdInput);
@@ -460,11 +450,9 @@ export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: stri
     if (!existing) {
       throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
     }
-
     const ensured = await ensureSessionReachable(existing, opts.timeoutMs);
     state.sessions[sessionId] = ensured.session;
     state.activeSessionId = sessionId;
-
     return sessionReport(ensured.session, {
       active: true,
       created: false,
@@ -472,7 +460,6 @@ export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: stri
     });
   });
 }
-
 export function sessionList(): SessionListReport {
   const state = readState();
   const sessions = Object.values(state.sessions)
@@ -489,8 +476,8 @@ export function sessionList(): SessionListReport {
     sessions,
   };
 }
-
 export { targetFind } from "./target-find.js";
+export { targetNetworkArtifactList, targetNetworkCaptureBegin, targetNetworkCaptureEnd } from "./target-network-capture.js";
 export { targetNetworkExport } from "./target-network-export.js";
 export { targetNetwork } from "./target-network.js";
 export { targetRead } from "./target-read.js";

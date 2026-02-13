@@ -8,6 +8,7 @@ export const DEFAULT_TARGET_NETWORK_CAPTURE_MS = 2500;
 export const DEFAULT_TARGET_NETWORK_MAX_REQUESTS = 120;
 export const DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS = 24;
 export const DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES = 120;
+export const DEFAULT_TARGET_NETWORK_MAX_RUNTIME_MS = 600000;
 export const STATE_VERSION = 2;
 
 export type DoctorReport = {
@@ -168,6 +169,8 @@ export type TargetWaitReport = {
 
 export type TargetNetworkRequestReport = {
   id: number;
+  captureKey: string;
+  redirectedFromId: number | null;
   url: string;
   method: string;
   resourceType: string;
@@ -195,6 +198,7 @@ export type TargetNetworkWebSocketMessageReport = {
 
 export type TargetNetworkWebSocketReport = {
   id: number;
+  captureKey: string;
   url: string;
   startMs: number;
   closeMs: number | null;
@@ -218,6 +222,7 @@ export type TargetNetworkReport = {
   ok: true;
   sessionId: string;
   targetId: string;
+  captureId: string | null;
   url: string;
   title: string;
   capture: {
@@ -233,7 +238,11 @@ export type TargetNetworkReport = {
     resourceType: string | null;
     status: string | null;
     failedOnly: boolean;
+    profile: "custom" | "api" | "page" | "ws" | "perf";
   };
+  view: "raw" | "summary" | "table";
+  fields: string[];
+  tableRows: Array<Record<string, string | number | boolean | null>>;
   limits: {
     maxRequests: number;
     maxWebSockets: number;
@@ -289,6 +298,33 @@ export type TargetNetworkReport = {
     webSockets: boolean;
     wsMessages: boolean;
   };
+  hints: {
+    shouldRecapture: boolean;
+    suggested: {
+      maxRequests: number;
+      maxWebSockets: number;
+      maxWsMessages: number;
+    };
+  };
+  insights: {
+    topHosts: Array<{
+      host: string;
+      requests: number;
+      failures: number;
+      avgLatencyMs: number | null;
+    }>;
+    errorHotspots: Array<{
+      url: string;
+      failures: number;
+      status4xx: number;
+      status5xx: number;
+    }>;
+    websocketHotspots: Array<{
+      url: string;
+      messages: number;
+      durationMs: number | null;
+    }>;
+  };
   requests: TargetNetworkRequestReport[];
   webSockets: TargetNetworkWebSocketReport[];
 };
@@ -307,6 +343,40 @@ export type TargetNetworkExportReport = {
     requestsReturned: number;
     truncatedRequests: boolean;
   };
+};
+
+export type TargetNetworkCaptureStatus = "recording" | "stopped" | "failed";
+
+export type TargetNetworkCaptureBeginReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  captureId: string;
+  status: TargetNetworkCaptureStatus;
+  profile: "custom" | "api" | "page" | "ws" | "perf";
+  startedAt: string;
+  maxRuntimeMs: number;
+};
+
+export type TargetNetworkCaptureEndReport = TargetNetworkReport & {
+  status: TargetNetworkCaptureStatus;
+};
+
+export type TargetNetworkArtifactListReport = {
+  ok: true;
+  total: number;
+  returned: number;
+  artifacts: Array<{
+    artifactId: string;
+    createdAt: string;
+    format: "har";
+    path: string;
+    sessionId: string;
+    targetId: string;
+    captureId: string | null;
+    entries: number;
+    bytes: number;
+  }>;
 };
 
 export type StateReconcileReport = {
@@ -362,8 +432,41 @@ export type SurfwrightState = {
   version: number;
   activeSessionId: string | null;
   nextSessionOrdinal: number;
+  nextCaptureOrdinal: number;
+  nextArtifactOrdinal: number;
   sessions: Record<string, SessionState>;
   targets: Record<string, TargetState>;
+  networkCaptures: Record<
+    string,
+    {
+      captureId: string;
+      sessionId: string;
+      targetId: string;
+      startedAt: string;
+      status: TargetNetworkCaptureStatus;
+      profile: "custom" | "api" | "page" | "ws" | "perf";
+      maxRuntimeMs: number;
+      workerPid: number | null;
+      stopSignalPath: string;
+      donePath: string;
+      resultPath: string;
+      endedAt: string | null;
+    }
+  >;
+  networkArtifacts: Record<
+    string,
+    {
+      artifactId: string;
+      createdAt: string;
+      format: "har";
+      path: string;
+      sessionId: string;
+      targetId: string;
+      captureId: string | null;
+      entries: number;
+      bytes: number;
+    }
+  >;
 };
 
 export type CliCommandContract = {

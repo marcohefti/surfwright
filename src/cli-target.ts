@@ -1,9 +1,8 @@
 import { type Command } from "commander";
+import { registerNetworkCommands } from "./cli-network.js";
 import {
   targetFind,
   targetList,
-  targetNetwork,
-  targetNetworkExport,
   targetPrune,
   targetRead,
   targetSnapshot,
@@ -11,13 +10,12 @@ import {
 } from "./core/usecases.js";
 import {
   DEFAULT_TARGET_FIND_LIMIT,
-  DEFAULT_TARGET_NETWORK_CAPTURE_MS,
-  DEFAULT_TARGET_NETWORK_MAX_REQUESTS,
-  DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS,
-  DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES,
   DEFAULT_TARGET_READ_CHUNK_SIZE,
   DEFAULT_TARGET_TIMEOUT_MS,
   type TargetFindReport,
+  type TargetNetworkArtifactListReport,
+  type TargetNetworkCaptureBeginReport,
+  type TargetNetworkCaptureEndReport,
   type TargetNetworkExportReport,
   type TargetListReport,
   type TargetNetworkReport,
@@ -42,6 +40,9 @@ function printTargetSuccess(
     | TargetSnapshotReport
     | TargetFindReport
     | TargetReadReport
+    | TargetNetworkCaptureBeginReport
+    | TargetNetworkCaptureEndReport
+    | TargetNetworkArtifactListReport
     | TargetNetworkExportReport
     | TargetWaitReport
     | TargetNetworkReport
@@ -113,6 +114,24 @@ function printTargetSuccess(
     return;
   }
 
+  if ("artifacts" in report) {
+    process.stdout.write(["ok", `total=${report.total}`, `returned=${report.returned}`].join(" ") + "\n");
+    return;
+  }
+
+  if ("captureId" in report && "maxRuntimeMs" in report) {
+    process.stdout.write(
+      [
+        "ok",
+        `sessionId=${report.sessionId}`,
+        `targetId=${report.targetId}`,
+        `captureId=${report.captureId}`,
+        `status=${report.status}`,
+      ].join(" ") + "\n",
+    );
+    return;
+  }
+
   if ("artifact" in report) {
     process.stdout.write(
       [
@@ -141,9 +160,13 @@ function printTargetSuccess(
     return;
   }
 
-  process.stdout.write(
-    ["ok", `sessionId=${report.sessionId}`, `targetId=${report.targetId}`, `url=${report.url}`].join(" ") + "\n",
-  );
+  if ("url" in report) {
+    process.stdout.write(
+      ["ok", `sessionId=${report.sessionId}`, `targetId=${report.targetId}`, `url=${report.url}`].join(" ") + "\n",
+    );
+    return;
+  }
+  process.stdout.write("ok\n");
 }
 
 export function registerTargetCommands(opts: {
@@ -335,138 +358,15 @@ export function registerTargetCommands(opts: {
       },
     );
 
-  target
-    .command("network")
-    .description("Capture bounded network + websocket diagnostics and performance summary")
-    .argument("<targetId>", "Target handle returned by open/target list")
-    .option("--capture-ms <ms>", "Capture duration in milliseconds", String(DEFAULT_TARGET_NETWORK_CAPTURE_MS))
-    .option("--max-requests <n>", "Maximum request records to retain", String(DEFAULT_TARGET_NETWORK_MAX_REQUESTS))
-    .option("--max-websockets <n>", "Maximum websocket records to retain", String(DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS))
-    .option(
-      "--max-ws-messages <n>",
-      "Maximum websocket frame previews to retain across all sockets",
-      String(DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES),
-    )
-    .option("--url-contains <text>", "Only return requests/websockets whose URL contains text")
-    .option("--method <verb>", "Only return requests with this HTTP verb (e.g. GET)")
-    .option("--resource-type <type>", "Only return requests with this Playwright resource type")
-    .option("--status <codeOrClass>", "Only return requests matching status code (200) or class (2xx)")
-    .option("--failed-only", "Only return failed requests")
-    .option("--include-headers", "Include request/response headers (bounded by max item limits)")
-    .option("--include-post-data", "Include bounded request post-data preview")
-    .option("--no-ws-messages", "Disable websocket frame preview capture")
-    .option("--reload", "Reload page before capture to observe startup requests")
-    .option("--timeout-ms <ms>", "Connection/reload timeout in milliseconds", opts.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-    .action(
-      async (
-        targetId: string,
-        options: {
-          captureMs: string;
-          maxRequests: string;
-          maxWebsockets: string;
-          maxWsMessages: string;
-          urlContains?: string;
-          method?: string;
-          resourceType?: string;
-          status?: string;
-          failedOnly?: boolean;
-          includeHeaders?: boolean;
-          includePostData?: boolean;
-          wsMessages?: boolean;
-          reload?: boolean;
-          timeoutMs: number;
-        },
-      ) => {
-        const output = opts.globalOutputOpts();
-        const globalOpts = opts.program.opts<{ session?: string }>();
-        const captureMs = Number.parseInt(options.captureMs, 10);
-        const maxRequests = Number.parseInt(options.maxRequests, 10);
-        const maxWebSockets = Number.parseInt(options.maxWebsockets, 10);
-        const maxWsMessages = Number.parseInt(options.maxWsMessages, 10);
-        try {
-          const report = await targetNetwork({
-            targetId,
-            timeoutMs: options.timeoutMs,
-            sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
-            captureMs,
-            maxRequests,
-            maxWebSockets,
-            maxWsMessages,
-            urlContains: options.urlContains,
-            method: options.method,
-            resourceType: options.resourceType,
-            status: options.status,
-            failedOnly: Boolean(options.failedOnly),
-            includeHeaders: Boolean(options.includeHeaders),
-            includePostData: Boolean(options.includePostData),
-            includeWsMessages: options.wsMessages !== false,
-            reload: Boolean(options.reload),
-          });
-          printTargetSuccess(report, output);
-        } catch (error) {
-          opts.handleFailure(error, output);
-        }
-      },
-    );
-
-  target
-    .command("network-export")
-    .description("Export filtered network capture as HAR artifact")
-    .argument("<targetId>", "Target handle returned by open/target list")
-    .requiredOption("--out <path>", "Artifact output path")
-    .option("--format <format>", "Artifact format (har)", "har")
-    .option("--capture-ms <ms>", "Capture duration in milliseconds", String(DEFAULT_TARGET_NETWORK_CAPTURE_MS))
-    .option("--max-requests <n>", "Maximum request records to retain", String(DEFAULT_TARGET_NETWORK_MAX_REQUESTS))
-    .option("--url-contains <text>", "Only include requests whose URL contains text")
-    .option("--method <verb>", "Only include requests with this HTTP verb (e.g. GET)")
-    .option("--resource-type <type>", "Only include requests with this Playwright resource type")
-    .option("--status <codeOrClass>", "Only include requests matching status code (200) or class (2xx)")
-    .option("--failed-only", "Only include failed requests")
-    .option("--reload", "Reload page before capture to observe startup requests")
-    .option("--timeout-ms <ms>", "Connection/reload timeout in milliseconds", opts.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-    .action(
-      async (
-        targetId: string,
-        options: {
-          out: string;
-          format: string;
-          captureMs: string;
-          maxRequests: string;
-          urlContains?: string;
-          method?: string;
-          resourceType?: string;
-          status?: string;
-          failedOnly?: boolean;
-          reload?: boolean;
-          timeoutMs: number;
-        },
-      ) => {
-        const output = opts.globalOutputOpts();
-        const globalOpts = opts.program.opts<{ session?: string }>();
-        const captureMs = Number.parseInt(options.captureMs, 10);
-        const maxRequests = Number.parseInt(options.maxRequests, 10);
-        try {
-          const report = await targetNetworkExport({
-            targetId,
-            timeoutMs: options.timeoutMs,
-            sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
-            outPath: options.out,
-            format: options.format,
-            captureMs,
-            maxRequests,
-            urlContains: options.urlContains,
-            method: options.method,
-            resourceType: options.resourceType,
-            status: options.status,
-            failedOnly: Boolean(options.failedOnly),
-            reload: Boolean(options.reload),
-          });
-          printTargetSuccess(report, output);
-        } catch (error) {
-          opts.handleFailure(error, output);
-        }
-      },
-    );
+  registerNetworkCommands({
+    target,
+    program: opts.program,
+    parseTimeoutMs: opts.parseTimeoutMs,
+    globalOutputOpts: opts.globalOutputOpts,
+    handleFailure: opts.handleFailure,
+    printTargetSuccess: (report: unknown, output: { json: boolean; pretty: boolean }) =>
+      printTargetSuccess(report as Parameters<typeof printTargetSuccess>[0], output),
+  });
 
   target
     .command("prune")

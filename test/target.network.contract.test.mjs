@@ -129,14 +129,20 @@ test("target network returns deterministic JSON shape", { skip: !hasBrowser() },
     "ok",
     "sessionId",
     "targetId",
+    "captureId",
     "url",
     "title",
     "capture",
     "filters",
+    "view",
+    "fields",
+    "tableRows",
     "limits",
     "counts",
     "performance",
     "truncated",
+    "hints",
+    "insights",
     "requests",
     "webSockets",
   ]);
@@ -146,8 +152,12 @@ test("target network returns deterministic JSON shape", { skip: !hasBrowser() },
   assert.equal(typeof networkPayload.capture.captureMs, "number");
   assert.equal(typeof networkPayload.capture.durationMs, "number");
   assert.equal(networkPayload.filters.status, "2xx");
+  assert.equal(networkPayload.filters.profile, "custom");
   assert.equal(Array.isArray(networkPayload.requests), true);
   assert.equal(Array.isArray(networkPayload.webSockets), true);
+  assert.equal(Array.isArray(networkPayload.tableRows), true);
+  assert.equal(typeof networkPayload.hints, "object");
+  assert.equal(typeof networkPayload.insights, "object");
   assert.equal(typeof networkPayload.performance, "object");
   assert.equal(typeof networkPayload.counts.requestsSeen, "number");
 });
@@ -199,4 +209,71 @@ test("target network-export writes HAR artifact metadata", { skip: !hasBrowser()
   const harPayload = JSON.parse(harRaw);
   assert.equal(typeof harPayload.log, "object");
   assert.equal(Array.isArray(harPayload.log.entries), true);
+});
+
+test("target network begin/end returns capture handle and projected report", { skip: !hasBrowser() }, () => {
+  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  assert.equal(ensureResult.status, 0);
+  const ensurePayload = parseJson(ensureResult.stdout);
+
+  const html = `<title>Handle Page</title><main><h1>handle ok</h1></main>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "open",
+    dataUrl,
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const beginResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "network-begin",
+    openPayload.targetId,
+    "--profile",
+    "api",
+    "--max-runtime-ms",
+    "10000",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(beginResult.status, 0);
+  const beginPayload = parseJson(beginResult.stdout);
+  assert.equal(beginPayload.ok, true);
+  assert.equal(typeof beginPayload.captureId, "string");
+  assert.equal(beginPayload.status, "recording");
+
+  const endResult = runCli([
+    "--json",
+    "target",
+    "network-end",
+    beginPayload.captureId,
+    "--view",
+    "summary",
+    "--timeout-ms",
+    "8000",
+  ]);
+  assert.equal(endResult.status, 0);
+  const endPayload = parseJson(endResult.stdout);
+  assert.equal(endPayload.ok, true);
+  assert.equal(endPayload.captureId, beginPayload.captureId);
+  assert.equal(typeof endPayload.status, "string");
+  assert.equal(endPayload.view, "summary");
+});
+
+test("target network-export-list returns indexed artifacts", () => {
+  const listResult = runCli(["--json", "target", "network-export-list", "--limit", "5"]);
+  assert.equal(listResult.status, 0);
+  const listPayload = parseJson(listResult.stdout);
+  assert.deepEqual(Object.keys(listPayload), ["ok", "total", "returned", "artifacts"]);
+  assert.equal(typeof listPayload.total, "number");
+  assert.equal(typeof listPayload.returned, "number");
+  assert.equal(Array.isArray(listPayload.artifacts), true);
 });

@@ -5,7 +5,7 @@ import {
   DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS,
   DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES,
 } from "./types.js";
-import type { TargetNetworkReport, TargetNetworkRequestReport } from "./types.js";
+import type { TargetNetworkRequestReport } from "./types.js";
 
 const NETWORK_CAPTURE_MIN_MS = 50;
 const NETWORK_CAPTURE_MAX_MS = 120000;
@@ -14,7 +14,6 @@ const NETWORK_MAX_WEBSOCKETS_CAP = 200;
 const NETWORK_MAX_WS_MESSAGES_CAP = 2000;
 const NETWORK_POST_DATA_PREVIEW_MAX_BYTES = 512;
 const NETWORK_WS_PREVIEW_MAX_CHARS = 220;
-const NETWORK_TOP_SLOWEST_LIMIT = 5;
 
 type StatusFilter = {
   kind: "exact" | "class";
@@ -22,6 +21,9 @@ type StatusFilter = {
 };
 
 export type ParsedNetworkInput = {
+  profile: "custom" | "api" | "page" | "ws" | "perf";
+  view: "raw" | "summary" | "table";
+  fields: string[];
   captureMs: number;
   maxRequests: number;
   maxWebSockets: number;
@@ -37,6 +39,106 @@ export type ParsedNetworkInput = {
   statusFilter: StatusFilter | null;
   failedOnly: boolean;
 };
+
+type NetworkProfileDefaults = {
+  captureMs: number;
+  maxRequests: number;
+  maxWebSockets: number;
+  maxWsMessages: number;
+  includeHeaders: boolean;
+  includePostData: boolean;
+  includeWsMessages: boolean;
+  reload: boolean;
+};
+
+const PROFILE_DEFAULTS: Record<ParsedNetworkInput["profile"], NetworkProfileDefaults> = {
+  custom: {
+    captureMs: DEFAULT_TARGET_NETWORK_CAPTURE_MS,
+    maxRequests: DEFAULT_TARGET_NETWORK_MAX_REQUESTS,
+    maxWebSockets: DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS,
+    maxWsMessages: DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES,
+    includeHeaders: false,
+    includePostData: false,
+    includeWsMessages: true,
+    reload: false,
+  },
+  api: {
+    captureMs: 3000,
+    maxRequests: 240,
+    maxWebSockets: 16,
+    maxWsMessages: 80,
+    includeHeaders: true,
+    includePostData: true,
+    includeWsMessages: false,
+    reload: false,
+  },
+  page: {
+    captureMs: 3200,
+    maxRequests: 220,
+    maxWebSockets: 24,
+    maxWsMessages: 120,
+    includeHeaders: false,
+    includePostData: false,
+    includeWsMessages: true,
+    reload: true,
+  },
+  ws: {
+    captureMs: 4500,
+    maxRequests: 140,
+    maxWebSockets: 80,
+    maxWsMessages: 600,
+    includeHeaders: false,
+    includePostData: false,
+    includeWsMessages: true,
+    reload: false,
+  },
+  perf: {
+    captureMs: 5000,
+    maxRequests: 320,
+    maxWebSockets: 24,
+    maxWsMessages: 120,
+    includeHeaders: false,
+    includePostData: false,
+    includeWsMessages: false,
+    reload: true,
+  },
+};
+
+function parseProfile(input: string | undefined): ParsedNetworkInput["profile"] {
+  if (typeof input !== "string" || input.trim().length === 0) {
+    return "custom";
+  }
+  const value = input.trim().toLowerCase();
+  if (value === "api" || value === "page" || value === "ws" || value === "perf" || value === "custom") {
+    return value;
+  }
+  throw new CliError("E_QUERY_INVALID", "profile must be one of: custom, api, page, ws, perf");
+}
+
+function parseView(input: string | undefined): ParsedNetworkInput["view"] {
+  if (typeof input !== "string" || input.trim().length === 0) {
+    return "raw";
+  }
+  const value = input.trim().toLowerCase();
+  if (value === "raw" || value === "summary" || value === "table") {
+    return value;
+  }
+  throw new CliError("E_QUERY_INVALID", "view must be one of: raw, summary, table");
+}
+
+function parseFields(input: string | undefined): string[] {
+  if (typeof input !== "string" || input.trim().length === 0) {
+    return ["id", "method", "status", "durationMs", "resourceType", "url"];
+  }
+  const fields = input
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  if (fields.length === 0) {
+    throw new CliError("E_QUERY_INVALID", "fields must not be empty");
+  }
+  return fields.slice(0, 16);
+}
 
 function parsePositiveInt(opts: {
   value: number | undefined;
@@ -130,6 +232,9 @@ function parseStatusFilter(input: string | undefined): {
 }
 
 export function parseNetworkInput(opts: {
+  profile?: string;
+  view?: string;
+  fields?: string;
   captureMs?: number;
   maxRequests?: number;
   maxWebSockets?: number;
@@ -144,40 +249,47 @@ export function parseNetworkInput(opts: {
   status?: string;
   failedOnly?: boolean;
 }): ParsedNetworkInput {
+  const profile = parseProfile(opts.profile);
+  const profileDefaults = PROFILE_DEFAULTS[profile];
+  const fields = parseFields(opts.fields);
   const status = parseStatusFilter(opts.status);
   return {
+    profile,
+    view: parseView(opts.view),
+    fields,
     captureMs: parsePositiveInt({
       value: opts.captureMs,
-      defaultValue: DEFAULT_TARGET_NETWORK_CAPTURE_MS,
+      defaultValue: profileDefaults.captureMs,
       min: NETWORK_CAPTURE_MIN_MS,
       max: NETWORK_CAPTURE_MAX_MS,
       name: "capture-ms",
     }),
     maxRequests: parsePositiveInt({
       value: opts.maxRequests,
-      defaultValue: DEFAULT_TARGET_NETWORK_MAX_REQUESTS,
+      defaultValue: profileDefaults.maxRequests,
       min: 1,
       max: NETWORK_MAX_REQUESTS_CAP,
       name: "max-requests",
     }),
     maxWebSockets: parsePositiveInt({
       value: opts.maxWebSockets,
-      defaultValue: DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS,
+      defaultValue: profileDefaults.maxWebSockets,
       min: 1,
       max: NETWORK_MAX_WEBSOCKETS_CAP,
       name: "max-websockets",
     }),
     maxWsMessages: parsePositiveInt({
       value: opts.maxWsMessages,
-      defaultValue: DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES,
+      defaultValue: profileDefaults.maxWsMessages,
       min: 1,
       max: NETWORK_MAX_WS_MESSAGES_CAP,
       name: "max-ws-messages",
     }),
-    reload: Boolean(opts.reload),
-    includeHeaders: Boolean(opts.includeHeaders),
-    includePostData: Boolean(opts.includePostData),
-    includeWsMessages: opts.includeWsMessages !== false,
+    reload: typeof opts.reload === "boolean" ? opts.reload : profileDefaults.reload,
+    includeHeaders: typeof opts.includeHeaders === "boolean" ? opts.includeHeaders : profileDefaults.includeHeaders,
+    includePostData: typeof opts.includePostData === "boolean" ? opts.includePostData : profileDefaults.includePostData,
+    includeWsMessages:
+      typeof opts.includeWsMessages === "boolean" ? opts.includeWsMessages : profileDefaults.includeWsMessages,
     urlContains: parseNonEmpty(opts.urlContains, "url-contains"),
     method: parseMethod(opts.method),
     resourceType: parseResourceType(opts.resourceType),
@@ -221,32 +333,6 @@ export function postDataPreview(buffer: Buffer): string {
 
 export function rounded(value: number): number {
   return Math.round(value * 100) / 100;
-}
-
-function statFromValues(values: number[]): { min: number | null; max: number | null; avg: number | null; p50: number | null; p95: number | null } {
-  if (values.length === 0) {
-    return {
-      min: null,
-      max: null,
-      avg: null,
-      p50: null,
-      p95: null,
-    };
-  }
-  const sorted = [...values].sort((a, b) => a - b);
-  const sum = sorted.reduce((acc, value) => acc + value, 0);
-  const pick = (percentile: number): number => {
-    const index = Math.max(0, Math.ceil((percentile / 100) * sorted.length) - 1);
-    return sorted[index] ?? sorted[sorted.length - 1] ?? 0;
-  };
-
-  return {
-    min: rounded(sorted[0] ?? 0),
-    max: rounded(sorted[sorted.length - 1] ?? 0),
-    avg: rounded(sum / sorted.length),
-    p50: rounded(pick(50)),
-    p95: rounded(pick(95)),
-  };
 }
 
 function matchesStatusFilter(status: number | null, filter: StatusFilter | null): boolean {
@@ -297,66 +383,4 @@ export function pushBackgroundTask(backgroundTasks: Promise<void>[], task: () =>
       // Network diagnostics should be best-effort and never fail the main flow on enrichment errors.
     }),
   );
-}
-
-function toStatusBuckets(requests: TargetNetworkRequestReport[]): TargetNetworkReport["performance"]["statusBuckets"] {
-  const buckets: TargetNetworkReport["performance"]["statusBuckets"] = {
-    "2xx": 0,
-    "3xx": 0,
-    "4xx": 0,
-    "5xx": 0,
-    other: 0,
-  };
-  for (const request of requests) {
-    const status = request.status;
-    if (status === null) {
-      continue;
-    }
-    if (status >= 200 && status < 300) {
-      buckets["2xx"] += 1;
-      continue;
-    }
-    if (status >= 300 && status < 400) {
-      buckets["3xx"] += 1;
-      continue;
-    }
-    if (status >= 400 && status < 500) {
-      buckets["4xx"] += 1;
-      continue;
-    }
-    if (status >= 500 && status < 600) {
-      buckets["5xx"] += 1;
-      continue;
-    }
-    buckets.other += 1;
-  }
-  return buckets;
-}
-
-export function buildPerformanceSummary(requests: TargetNetworkRequestReport[]): TargetNetworkReport["performance"] {
-  const completed = requests.filter((request) => typeof request.durationMs === "number" && request.durationMs >= 0);
-  const durations = completed.map((request) => request.durationMs ?? 0);
-  const ttfbValues = requests
-    .map((request) => request.ttfbMs)
-    .filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0);
-  const bytesApproxTotal = requests.reduce((acc, request) => acc + (request.bytesApprox ?? 0), 0);
-  const slowest = [...completed]
-    .sort((a, b) => (b.durationMs ?? 0) - (a.durationMs ?? 0))
-    .slice(0, NETWORK_TOP_SLOWEST_LIMIT)
-    .map((request) => ({
-      id: request.id,
-      url: request.url,
-      resourceType: request.resourceType,
-      status: request.status,
-      durationMs: rounded(request.durationMs ?? 0),
-    }));
-
-  return {
-    completedRequests: completed.length,
-    bytesApproxTotal,
-    statusBuckets: toStatusBuckets(requests),
-    latencyMs: statFromValues(durations),
-    ttfbMs: statFromValues(ttfbValues),
-    slowest,
-  };
 }

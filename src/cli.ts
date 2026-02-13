@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { registerTargetCommands } from "./cli-target.js";
 import { toCliFailure } from "./core/errors.js";
+import { parseWorkerArgv, runTargetNetworkWorker } from "./core/target-network-capture.js";
 import {
   getCliContractReport,
   getDoctorReport,
@@ -192,6 +193,20 @@ function normalizeArgv(argv: string[]): string[] {
     out.splice(2, 1);
   }
   return out;
+}
+
+async function maybeRunInternalWorker(): Promise<boolean> {
+  if (process.argv[2] !== "__network-worker") {
+    return false;
+  }
+  try {
+    const workerOpts = parseWorkerArgv(process.argv.slice(3));
+    await runTargetNetworkWorker(workerOpts);
+    process.exitCode = 0;
+  } catch {
+    process.exitCode = 1;
+  }
+  return true;
 }
 
 const program = new Command();
@@ -409,11 +424,14 @@ program
     },
   );
 
-registerTargetCommands({
-  program,
-  parseTimeoutMs,
-  globalOutputOpts,
-  handleFailure,
-});
+const ranWorker = await maybeRunInternalWorker();
+if (!ranWorker) {
+  registerTargetCommands({
+    program,
+    parseTimeoutMs,
+    globalOutputOpts,
+    handleFailure,
+  });
 
-program.parse(normalizeArgv(process.argv));
+  program.parse(normalizeArgv(process.argv));
+}

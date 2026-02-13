@@ -1,5 +1,6 @@
 import path from "node:path";
 import { CliError } from "./errors.js";
+import { recordNetworkArtifact } from "./target-network-capture.js";
 import { targetNetwork } from "./target-network.js";
 import { writeHarFile } from "./target-network-har.js";
 import type { TargetNetworkExportReport } from "./types.js";
@@ -29,8 +30,12 @@ export async function targetNetworkExport(opts: {
   outPath: string;
   format?: string;
   sessionId?: string;
+  captureId?: string | null;
+  profile?: string;
   captureMs?: number;
   maxRequests?: number;
+  view?: string;
+  fields?: string;
   reload?: boolean;
   urlContains?: string;
   method?: string;
@@ -45,6 +50,10 @@ export async function targetNetworkExport(opts: {
     targetId: opts.targetId,
     timeoutMs: opts.timeoutMs,
     sessionId: opts.sessionId,
+    captureId: opts.captureId ?? null,
+    profile: opts.profile,
+    view: opts.view,
+    fields: opts.fields,
     captureMs: opts.captureMs,
     maxRequests: opts.maxRequests,
     reload: opts.reload,
@@ -65,8 +74,7 @@ export async function targetNetworkExport(opts: {
     targetId: capture.targetId,
     requests: capture.requests,
   });
-
-  return {
+  const report: TargetNetworkExportReport = {
     ok: true,
     sessionId: capture.sessionId,
     targetId: capture.targetId,
@@ -81,4 +89,9 @@ export async function targetNetworkExport(opts: {
       truncatedRequests: capture.truncated.requests,
     },
   };
+  await recordNetworkArtifact({
+    report,
+    captureId: opts.captureId ?? null,
+  });
+  return report;
 }

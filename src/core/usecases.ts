@@ -18,11 +18,11 @@ import {
   defaultSessionUserDataDir,
   inferDebugPortFromCdpOrigin,
   nowIso,
-  readState,
   sanitizeSessionId,
   updateState,
   upsertTargetState,
 } from "./state.js";
+import { listSessionsSnapshot } from "./state-repos/session-repo.js";
 import { readPageTargetId, resolveSessionForAction } from "./targets.js";
 import { sessionPrune, stateReconcile, targetPrune } from "./state-maintenance.js";
 import type {
@@ -249,9 +249,8 @@ export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: stri
   });
 }
 export function sessionList(): SessionListReport {
-  const state = readState();
-  const sessions = Object.values(state.sessions)
-    .sort((a, b) => a.sessionId.localeCompare(b.sessionId))
+  const state = listSessionsSnapshot();
+  const sessions = state.sessions
     .map((session) => ({
       sessionId: session.sessionId,
       kind: session.kind,
@@ -265,13 +264,17 @@ export function sessionList(): SessionListReport {
   };
 }
 export { targetFind } from "./target-find.js";
-export { targetNetworkCaptureBegin, targetNetworkCaptureEnd } from "./target-network-capture.js";
-export { targetNetworkArtifactList, targetNetworkArtifactPrune } from "./target-network-artifacts.js";
-export { targetNetworkCheck } from "./target-network-check.js";
-export { targetNetworkExport } from "./target-network-export.js";
-export { targetNetworkQuery } from "./target-network-query.js";
-export { targetNetworkTail } from "./target-network-tail.js";
-export { targetNetwork } from "./target-network.js";
+export {
+  targetNetwork,
+  targetNetworkArtifactList,
+  targetNetworkArtifactPrune,
+  targetNetworkCaptureBegin,
+  targetNetworkCaptureEnd,
+  targetNetworkCheck,
+  targetNetworkExport,
+  targetNetworkQuery,
+  targetNetworkTail,
+} from "../features/network/usecases/index.js";
 export { targetRead } from "./target-read.js";
 export { targetWait } from "./target-wait.js";
 export { targetList, targetSnapshot } from "./targets.js";

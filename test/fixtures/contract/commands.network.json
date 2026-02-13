@@ -1,0 +1,11 @@
+[
+  { "id": "target.network", "usageMustContain": "target network <targetId>" },
+  { "id": "target.network-tail", "usageMustContain": "target network-tail <targetId>" },
+  { "id": "target.network-query", "usageMustContain": "target network-query" },
+  { "id": "target.network-export", "usageMustContain": "target network-export <targetId> --out <path>" },
+  { "id": "target.network-export-list", "usageMustContain": "target network-export-list" },
+  { "id": "target.network-export-prune", "usageMustContain": "target network-export-prune" },
+  { "id": "target.network-begin", "usageMustContain": "target network-begin <targetId>" },
+  { "id": "target.network-end", "usageMustContain": "target network-end <captureId>" },
+  { "id": "target.network-check", "usageMustContain": "target network-check [targetId] --budget <path>" }
+]

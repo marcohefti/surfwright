@@ -1,11 +1,9 @@
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
 import { sanitizeActionId } from "./action-id.js";
-import { readState } from "./state.js";
+import { readRecentTargetAction } from "./state-repos/target-repo.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { parseNetworkInput, wsFramePreview } from "./target-network-utils.js";
 import type { TargetNetworkTailReport } from "./types.js";
-
-const ACTION_CORRELATION_WINDOW_MS = 2 * 60 * 1000;
 
 function resolveTailActionId(opts: {
   actionId?: string;
@@ -15,18 +13,10 @@ function resolveTailActionId(opts: {
   if (typeof opts.actionId === "string" && opts.actionId.trim().length > 0) {
     return sanitizeActionId(opts.actionId);
   }
-  const target = readState().targets[opts.targetId];
-  if (!target || target.sessionId !== opts.sessionId || !target.lastActionId || !target.lastActionAt) {
-    return null;
-  }
-  const actionAtMs = Date.parse(target.lastActionAt);
-  if (!Number.isFinite(actionAtMs)) {
-    return null;
-  }
-  if (Date.now() - actionAtMs > ACTION_CORRELATION_WINDOW_MS) {
-    return null;
-  }
-  return target.lastActionId;
+  return readRecentTargetAction({
+    targetId: opts.targetId,
+    sessionId: opts.sessionId,
+  });
 }
 
 function sleep(ms: number): Promise<void> {

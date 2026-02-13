@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { registerTargetCommands } from "./cli-target.js";
 import { toCliFailure } from "./core/errors.js";
-import { parseWorkerArgv, runTargetNetworkWorker } from "./core/target-network-capture.js";
+import { parseWorkerArgv, runTargetNetworkWorker } from "./features/network/index.js";
 import {
   getCliContractReport,
   getDoctorReport,

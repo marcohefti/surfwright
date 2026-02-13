@@ -5,6 +5,14 @@
   },
   "rules": [
     {
+      "name": "feature-boundaries",
+      "enabled": true,
+      "options": {
+        "include": ["src/features/**/*.ts"],
+        "exclude": []
+      }
+    },
+    {
       "name": "max-loc",
       "enabled": true,
       "options": {

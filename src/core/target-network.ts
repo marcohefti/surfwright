@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
 import { sanitizeActionId } from "./action-id.js";
-import { nowIso, readState, upsertTargetState } from "./state.js";
+import { nowIso, upsertTargetState } from "./state.js";
+import { readRecentTargetAction } from "./state-repos/target-repo.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {
@@ -27,8 +28,6 @@ import type {
 type MutableRequest = TargetNetworkRequestReport;
 type MutableWebSocket = TargetNetworkWebSocketReport;
 type NetworkCounts = TargetNetworkReport["counts"];
-const ACTION_CORRELATION_WINDOW_MS = 2 * 60 * 1000;
-
 function resolveCaptureActionId(opts: {
   actionId?: string;
   sessionId: string;
@@ -37,18 +36,10 @@ function resolveCaptureActionId(opts: {
   if (typeof opts.actionId === "string" && opts.actionId.trim().length > 0) {
     return sanitizeActionId(opts.actionId);
   }
-  const target = readState().targets[opts.targetId];
-  if (!target || target.sessionId !== opts.sessionId || !target.lastActionId || !target.lastActionAt) {
-    return null;
-  }
-  const actionAtMs = Date.parse(target.lastActionAt);
-  if (!Number.isFinite(actionAtMs)) {
-    return null;
-  }
-  if (Date.now() - actionAtMs > ACTION_CORRELATION_WINDOW_MS) {
-    return null;
-  }
-  return target.lastActionId;
+  return readRecentTargetAction({
+    targetId: opts.targetId,
+    sessionId: opts.sessionId,
+  });
 }
 
 export async function targetNetwork(opts: {

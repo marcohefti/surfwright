@@ -1,0 +1,26 @@
+import type { CliErrorContract } from "../types.js";
+
+export const errorContracts: CliErrorContract[] = [
+  { code: "E_URL_INVALID", message: "URL must be absolute (e.g. https://example.com)", retryable: false },
+  {
+    code: "E_SESSION_ID_INVALID",
+    message: "sessionId may only contain letters, numbers, dot, underscore, and dash",
+    retryable: false,
+  },
+  { code: "E_SESSION_NOT_FOUND", message: "Requested session was not found in state", retryable: false },
+  { code: "E_SESSION_EXISTS", message: "Session id already exists", retryable: false },
+  { code: "E_SESSION_UNREACHABLE", message: "Attached session endpoint is not reachable", retryable: true },
+  { code: "E_SESSION_CONFLICT", message: "Reserved default session id has conflicting kind", retryable: false },
+  { code: "E_TARGET_ID_INVALID", message: "targetId contains invalid characters", retryable: false },
+  { code: "E_TARGET_NOT_FOUND", message: "Requested target was not found in session", retryable: false },
+  { code: "E_QUERY_INVALID", message: "Query input is invalid or missing", retryable: false },
+  { code: "E_SELECTOR_INVALID", message: "Selector query is invalid", retryable: false },
+  { code: "E_CDP_INVALID", message: "CDP URL is invalid", retryable: false },
+  { code: "E_CDP_UNREACHABLE", message: "CDP endpoint is not reachable", retryable: true },
+  { code: "E_BROWSER_NOT_FOUND", message: "No compatible Chrome/Chromium binary found", retryable: false },
+  { code: "E_BROWSER_START_FAILED", message: "Chrome/Chromium process failed to start", retryable: true },
+  { code: "E_BROWSER_START_TIMEOUT", message: "CDP endpoint did not become ready in time", retryable: true },
+  { code: "E_STATE_LOCK_TIMEOUT", message: "Timed out waiting for state lock", retryable: true },
+  { code: "E_STATE_LOCK_IO", message: "State lock file I/O failed", retryable: true },
+  { code: "E_INTERNAL", message: "Unexpected runtime failure", retryable: true },
+];

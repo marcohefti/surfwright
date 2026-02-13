@@ -10,26 +10,28 @@ To keep both fast and maintainable, we separate guidance into explicit layers wi
 ## Source-of-truth map
 
 - Runtime contract (machine): `surfwright --json contract`
-- Runtime behavior (verification): `test/cli.contract.test.mjs`
+- Runtime behavior (verification): `test/*.contract.test.mjs` (core + feature suites)
 - Product/developer narrative (human): `README.md`, `AGENTS.md`, `docs/*.md`
 - Installed skill for active usage: `skills/surfwright/`
 
 ## Storage model
 
 - `src/`: executable behavior only.
+- `src/features/<feature>/`: feature packages with `commands/`, `usecases/`, `domain/`, `infra/` entrypoints.
 - `docs/`: maintainer-facing architecture and update procedures.
 - `skills/surfwright/`: Codex skill package for runtime invocation.
 - `scripts/`: install/validate automation for skills.
 
 ## Design rules
 
-1. Do not duplicate command contracts in multiple files. Use `surfwright --json contract` as canonical machine reference.
+1. Command contracts are manifest-driven. Update feature command specs and derive `surfwright --json contract` from those specs.
 2. Keep `skills/surfwright/SKILL.md` concise and procedural; push detail to `skills/surfwright/references/*`.
 3. Keep docs for humans in `docs/`; avoid auxiliary docs inside skill directories.
 4. Any new/changed error code must be reflected in:
-   - `src/core/usecases.ts` contract payload
+   - `src/core/contracts/error-contracts.ts`
    - `skills/surfwright/references/error-handling.md`
    - contract tests
+5. Feature internals are private. Cross-feature imports must go through `src/features/<feature>/index.ts` (enforced by `ARC001` policy rule).
 
 ## Agent UX baseline
 

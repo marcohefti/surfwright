@@ -8,9 +8,10 @@ For routing decisions (what to update, where, and why), use `docs/agent-dev-flow
 Update these in the same PR:
 
 1. Code in `src/core/*` and/or `src/cli.ts`
-2. Contract payload in `src/core/usecases.ts` (`getCliContractReport`)
-3. Contract tests in `test/cli.contract.test.mjs`
-4. Skill references in `skills/surfwright/references/*` when workflows/errors change
+2. Feature command specs in `src/features/*/commands/*` (single source for CLI + contract)
+3. Contract composition in `src/core/cli-contract.ts`
+4. Contract tests in `test/contract.commands.test.mjs`
+5. Skill references in `skills/surfwright/references/*` when workflows/errors change
 
 ## 2) Validate before merge
 

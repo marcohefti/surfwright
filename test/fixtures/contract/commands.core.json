@@ -1,0 +1,18 @@
+[
+  { "id": "doctor", "usageMustContain": "surfwright doctor" },
+  { "id": "contract", "usageMustContain": "surfwright contract" },
+  { "id": "session.ensure", "usageMustContain": "session ensure" },
+  { "id": "session.new", "usageMustContain": "session new" },
+  { "id": "session.attach", "usageMustContain": "session attach" },
+  { "id": "session.use", "usageMustContain": "session use" },
+  { "id": "session.list", "usageMustContain": "session list" },
+  { "id": "session.prune", "usageMustContain": "session prune" },
+  { "id": "open", "usageMustContain": "open <url>" },
+  { "id": "target.list", "usageMustContain": "target list" },
+  { "id": "target.snapshot", "usageMustContain": "target snapshot" },
+  { "id": "target.find", "usageMustContain": "target find" },
+  { "id": "target.read", "usageMustContain": "target read" },
+  { "id": "target.wait", "usageMustContain": "target wait" },
+  { "id": "target.prune", "usageMustContain": "target prune" },
+  { "id": "state.reconcile", "usageMustContain": "state reconcile" }
+]

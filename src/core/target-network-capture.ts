@@ -5,7 +5,14 @@ import { spawn } from "node:child_process";
 import { chromium } from "playwright-core";
 import { newActionId, sanitizeActionId } from "./action-id.js";
 import { CliError } from "./errors.js";
-import { allocateCaptureId, nowIso, stateRootDir, updateState } from "./state.js";
+import { nowIso, stateRootDir } from "./state.js";
+import {
+  createNetworkCapture,
+  deleteNetworkCapture,
+  finalizeNetworkCapture,
+  readNetworkCapture,
+  setNetworkCaptureWorkerPid,
+} from "./state-repos/network-capture-repo.js";
 import { targetNetwork } from "./target-network.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {
@@ -105,27 +112,18 @@ export async function targetNetworkCaptureBegin(opts: {
   const root = captureDirPath();
   fs.mkdirSync(root, { recursive: true });
 
-  const captureRecord = await updateState(async (state) => {
-    const captureId = allocateCaptureId(state);
-    const stopSignalPath = path.join(root, `${captureId}.stop`);
-    const donePath = path.join(root, `${captureId}.done.json`);
-    const resultPath = path.join(root, `${captureId}.result.json`);
-    state.networkCaptures[captureId] = {
-      captureId,
-      sessionId,
-      targetId,
-      startedAt,
-      status: "recording",
-      profile: parsed.profile,
-      maxRuntimeMs,
-      workerPid: null,
-      stopSignalPath,
-      donePath,
-      resultPath,
-      endedAt: null,
-      actionId,
-    };
-    return state.networkCaptures[captureId];
+  const captureRecord = await createNetworkCapture({
+    sessionId,
+    targetId,
+    startedAt,
+    profile: parsed.profile,
+    maxRuntimeMs,
+    pathsForCaptureId: (captureId) => ({
+      stopSignalPath: path.join(root, `${captureId}.stop`),
+      donePath: path.join(root, `${captureId}.done.json`),
+      resultPath: path.join(root, `${captureId}.result.json`),
+    }),
+    actionId,
   });
 
   for (const pathToRemove of [captureRecord.stopSignalPath, captureRecord.donePath, captureRecord.resultPath]) {
@@ -188,19 +186,10 @@ export async function targetNetworkCaptureBegin(opts: {
   );
   child.unref();
   if (!child.pid || !Number.isFinite(child.pid)) {
-    await updateState(async (state) => {
-      delete state.networkCaptures[captureRecord.captureId];
-    });
+    await deleteNetworkCapture(captureRecord.captureId);
     throw new CliError("E_INTERNAL", "Failed to start network capture worker");
   }
-  const workerPid = child.pid;
-
-  await updateState(async (state) => {
-    const existing = state.networkCaptures[captureRecord.captureId];
-    if (existing) {
-      existing.workerPid = workerPid;
-    }
-  });
+  await setNetworkCaptureWorkerPid(captureRecord.captureId, child.pid);
 
   return {
     ok: true,
@@ -298,13 +287,10 @@ export async function targetNetworkCaptureEnd(opts: {
   failedOnly?: boolean;
 }): Promise<TargetNetworkCaptureEndReport> {
   const captureId = parseCaptureId(opts.captureId);
-  const capture = await updateState(async (state) => {
-    const existing = state.networkCaptures[captureId];
-    if (!existing) {
-      throw new CliError("E_QUERY_INVALID", `Capture ${captureId} not found`);
-    }
-    return { ...existing };
-  });
+  const capture = await readNetworkCapture(captureId);
+  if (!capture) {
+    throw new CliError("E_QUERY_INVALID", `Capture ${captureId} not found`);
+  }
 
   try {
     fs.mkdirSync(path.dirname(capture.stopSignalPath), { recursive: true });
@@ -334,13 +320,10 @@ export async function targetNetworkCaptureEnd(opts: {
   });
   const projected = applyCapturedView(raw, parsed);
 
-  await updateState(async (state) => {
-    const existing = state.networkCaptures[captureId];
-    if (existing) {
-      existing.status = done.status;
-      existing.endedAt = done.endedAt;
-      existing.workerPid = null;
-    }
+  await finalizeNetworkCapture({
+    captureId,
+    status: done.status,
+    endedAt: done.endedAt,
   });
 
   return {

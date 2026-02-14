@@ -478,3 +478,4 @@ export { targetFind, targetRead, targetWait, targetClick, targetFill, targetForm
 export { targetConsoleGet, targetConsoleTail, targetHealth, targetHover, targetHud, targetMotionDetect, targetObserve, targetScrollPlan, targetScrollRevealScan, targetScrollSample, targetScrollWatch, targetStickyCheck, targetTransitionAssert, targetTransitionTrace };
 export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
 export { sessionCookieCopy } from "./target/effects/session-cookie-copy.js";
+export { extensionList, extensionLoad, extensionReload, extensionUninstall } from "./extensions/index.js";

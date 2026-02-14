@@ -65,6 +65,21 @@ function cleanupManagedBrowsers(stateDir) {
   }
 }
 
+function createExtensionFixture(rootDir, name) {
+  const extensionDir = fs.mkdtempSync(path.join(rootDir, "extension-fixture-"));
+  const manifest = {
+    manifest_version: 3,
+    name,
+    version: "0.0.1",
+    background: {
+      service_worker: "background.js",
+    },
+  };
+  fs.writeFileSync(path.join(extensionDir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  fs.writeFileSync(path.join(extensionDir, "background.js"), "console.log('extension fixture');\n", "utf8");
+  return extensionDir;
+}
+
 process.on("exit", () => {
   cleanupManagedBrowsers(TEST_TARGET_STATE_DIR);
   try {
@@ -322,4 +337,75 @@ test("target trace begin export and insight return deterministic shapes", { skip
   assert.equal(typeof insightPayload.insight.summary, "string");
   assert.equal(typeof insightPayload.insight.severity, "string");
   assert.equal(typeof insightPayload.insight.evidence, "object");
+});
+
+test("extension lifecycle commands return deterministic fallback metadata", () => {
+  const extensionName = "SurfWright Parity Minimal Extension";
+  const extensionDir = createExtensionFixture(TEST_STATE_DIR, extensionName);
+
+  const loadResult = runCli(["--json", "extension", "load", extensionDir], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(loadResult.status, 0);
+  const loadPayload = parseJson(loadResult.stdout);
+  assert.equal(loadPayload.ok, true);
+  assert.equal(loadPayload.extension.name, extensionName);
+  assert.equal(loadPayload.extension.path, extensionDir);
+  assert.equal(loadPayload.capability.headlessMode, "headless-new");
+  assert.equal(loadPayload.capability.runtimeInstallSupported, false);
+  assert.equal(loadPayload.fallback.strategy, "registry-only");
+  assert.equal(loadPayload.fallback.applied, false);
+
+  const listResult = runCli(["--json", "extension", "list"], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(listResult.status, 0);
+  const listPayload = parseJson(listResult.stdout);
+  assert.equal(listPayload.ok, true);
+  assert.equal(listPayload.count >= 1, true);
+  const listed = listPayload.extensions.find((entry) => entry.name === extensionName);
+  assert.notEqual(listed, undefined);
+
+  const reloadResult = runCli(["--json", "extension", "reload", extensionName], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(reloadResult.status, 0);
+  const reloadPayload = parseJson(reloadResult.stdout);
+  assert.equal(reloadPayload.ok, true);
+  assert.equal(reloadPayload.reloaded, true);
+  assert.equal(reloadPayload.extension.name, extensionName);
+  assert.equal(reloadPayload.fallback.strategy, "registry-only");
+
+  const uninstallResult = runCli(["--json", "extension", "uninstall", listed.id], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(uninstallResult.status, 0);
+  const uninstallPayload = parseJson(uninstallResult.stdout);
+  assert.equal(uninstallPayload.ok, true);
+  assert.equal(uninstallPayload.removed, true);
+  assert.equal(uninstallPayload.extension.id, listed.id);
+  assert.equal(uninstallPayload.extension.name, extensionName);
+
+  const listAfterResult = runCli(["--json", "extension", "list"], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(listAfterResult.status, 0);
+  const listAfterPayload = parseJson(listAfterResult.stdout);
+  assert.equal(listAfterPayload.extensions.some((entry) => entry.id === listed.id), false);
+});
+
+test("extension lifecycle returns typed unknown-extension failure", () => {
+  const reloadResult = runCli(["--json", "extension", "reload", "missing-extension"], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(reloadResult.status, 1);
+  const reloadPayload = parseJson(reloadResult.stdout);
+  assert.equal(reloadPayload.code, "E_QUERY_INVALID");
+
+  const uninstallResult = runCli(["--json", "extension", "uninstall", "missing-extension"], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(uninstallResult.status, 1);
+  const uninstallPayload = parseJson(uninstallResult.stdout);
+  assert.equal(uninstallPayload.code, "E_QUERY_INVALID");
 });

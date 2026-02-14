@@ -1,5 +1,7 @@
 import type { Command } from "commander";
 import type { CliCommandContract } from "../core/types.js";
+import { extensionCommandManifest } from "./extensions/manifest.js";
+import { registerExtensionCommands } from "./extensions/register-commands.js";
 import { expEffectsCommandManifest, registerExpEffectsCommands } from "./experimental/effects/index.js";
 import { networkCommandManifest } from "./network/manifest.js";
 import { registerNetworkCommands } from "./network/register-commands.js";
@@ -50,6 +52,17 @@ export const stableFeaturePlugins: FeaturePlugin[] = [
       registerTargetCommands({
         program: ctx.program,
         parseTimeoutMs: ctx.parseTimeoutMs,
+        globalOutputOpts: ctx.globalOutputOpts,
+        handleFailure: ctx.handleFailure,
+      }),
+  },
+  {
+    id: "extensions",
+    stability: "stable",
+    commands: extensionCommandManifest,
+    register: (ctx) =>
+      registerExtensionCommands({
+        program: ctx.program,
         globalOutputOpts: ctx.globalOutputOpts,
         handleFailure: ctx.handleFailure,
       }),

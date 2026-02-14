@@ -34,6 +34,10 @@
   { "id": "target.health", "usageMustContain": "target health" },
   { "id": "target.hud", "usageMustContain": "target hud" },
   { "id": "target.prune", "usageMustContain": "target prune" },
+  { "id": "extension.load", "usageMustContain": "extension load <path>" },
+  { "id": "extension.list", "usageMustContain": "extension list" },
+  { "id": "extension.reload", "usageMustContain": "extension reload <extensionRef>" },
+  { "id": "extension.uninstall", "usageMustContain": "extension uninstall <extensionRef>" },
   { "id": "state.reconcile", "usageMustContain": "state reconcile" },
   { "id": "run", "usageMustContain": "run [--plan <path>|--plan-json <json>|--replay <path>]" }
 ]

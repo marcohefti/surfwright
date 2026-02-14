@@ -42,6 +42,10 @@ surfwright --json target network-export <targetId> --profile page --reload --cap
 surfwright --json target network-export-list --limit 20
 surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
 surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
+surfwright --json extension load ./tmp/parity-gap/assets/extensions/minimal-extension
+surfwright --json extension list
+surfwright --json extension reload "SurfWright Parity Minimal Extension"
+surfwright --json extension uninstall "SurfWright Parity Minimal Extension"
 ```
 
 - `open` without `--session` creates a new isolated ephemeral session and returns `sessionId`, `sessionSource`, and `targetId`.
@@ -73,6 +77,7 @@ surfwright --json target network-check <targetId> --budget ./budgets/network.jso
 - `target network-export --out <path>` writes a compact HAR artifact for deep offline inspection.
 - `target network-export-list` / `target network-export-prune` manage indexed artifacts with retention policies.
 - `target network-check` compares runtime metrics against explicit budget files.
+- `extension.*` commands provide deterministic extension lifecycle registry actions with typed capability/fallback metadata.
 
 ## 3) Explicit session lifecycle
 

@@ -21,6 +21,9 @@ surfwright --json target form-fill <targetId> --fields-json '{"#email":"agent@ex
 surfwright --json target upload <targetId> --selector "input[type=file]" --file ./assets/avatar.png
 surfwright --json target keypress <targetId> --key Enter --selector "input[name=search]"
 surfwright --json target drag-drop <targetId> --from "#card-a" --to "#column-done"
+surfwright --json target spawn <targetId> --selector "a[target=_blank]"
+surfwright --json target close <targetId>
+surfwright --json target dialog <targetId> --action accept --trigger-selector "#delete"
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
@@ -47,6 +50,9 @@ surfwright --json target network-check <targetId> --budget ./budgets/network.jso
 - `target upload` supports direct file-input upload with deterministic filechooser fallback.
 - `target keypress` sends one key input to page or a focused matched element.
 - `target drag-drop` executes one selector-to-selector drag operation.
+- `target spawn` returns a child `targetId` from a click that opens a new page/tab.
+- `target close` closes an explicit target handle and returns typed closure confirmation.
+- `target dialog` accepts/dismisses dialogs and can trigger the dialog source in one command.
 - `target read` returns deterministic chunks for long text extraction.
 - `target eval` executes bounded JavaScript in page context and returns typed result projection.
 - `target wait` blocks until text/selector/network-idle readiness is met.

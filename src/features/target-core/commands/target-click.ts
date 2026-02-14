@@ -2,9 +2,12 @@ import {
   parseFieldsCsv,
   projectReportFields,
   targetClick,
+  targetClose,
+  targetDialog,
   targetDragDrop,
   targetFill,
   targetKeypress,
+  targetSpawn,
   targetUpload,
 } from "../../../core/usecases.js";
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
@@ -283,6 +286,162 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               fromSelector: options.from,
               toSelector: options.to,
+              persistState: !Boolean(options.noPersist),
+            });
+            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
+          } catch (error) {
+            ctx.handleFailure(error, output);
+          }
+        },
+      );
+  },
+};
+
+const spawnMeta = targetCommandMeta("target.spawn");
+
+export const targetSpawnCommandSpec: TargetCommandSpec = {
+  id: spawnMeta.id,
+  usage: spawnMeta.usage,
+  summary: spawnMeta.summary,
+  register: (ctx) => {
+    ctx.target
+      .command("spawn")
+      .description(spawnMeta.summary)
+      .argument("<targetId>", "Target handle returned by open/target list")
+      .option("--text <query>", "Text query for fuzzy text match")
+      .option("--selector <query>", "CSS/Playwright selector query")
+      .option("--contains <text>", "Text filter to apply with --selector")
+      .option("--visible-only", "Only match visible elements")
+      .option("--timeout-ms <ms>", "Spawn timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--fields <csv>", "Return only selected top-level fields")
+      .action(
+        async (
+          targetId: string,
+          options: {
+            text?: string;
+            selector?: string;
+            contains?: string;
+            visibleOnly?: boolean;
+            timeoutMs: number;
+            noPersist?: boolean;
+            fields?: string;
+          },
+        ) => {
+          const output = ctx.globalOutputOpts();
+          const globalOpts = ctx.program.opts<{ session?: string }>();
+          const fields = parseFieldsCsv(options.fields);
+          try {
+            const report = await targetSpawn({
+              targetId,
+              timeoutMs: options.timeoutMs,
+              sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+              textQuery: options.text,
+              selectorQuery: options.selector,
+              containsQuery: options.contains,
+              visibleOnly: Boolean(options.visibleOnly),
+              persistState: !Boolean(options.noPersist),
+            });
+            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
+          } catch (error) {
+            ctx.handleFailure(error, output);
+          }
+        },
+      );
+  },
+};
+
+const closeMeta = targetCommandMeta("target.close");
+
+export const targetCloseCommandSpec: TargetCommandSpec = {
+  id: closeMeta.id,
+  usage: closeMeta.usage,
+  summary: closeMeta.summary,
+  register: (ctx) => {
+    ctx.target
+      .command("close")
+      .description(closeMeta.summary)
+      .argument("<targetId>", "Target handle returned by open/target list")
+      .option("--timeout-ms <ms>", "Close timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--fields <csv>", "Return only selected top-level fields")
+      .action(
+        async (
+          targetId: string,
+          options: {
+            timeoutMs: number;
+            noPersist?: boolean;
+            fields?: string;
+          },
+        ) => {
+          const output = ctx.globalOutputOpts();
+          const globalOpts = ctx.program.opts<{ session?: string }>();
+          const fields = parseFieldsCsv(options.fields);
+          try {
+            const report = await targetClose({
+              targetId,
+              timeoutMs: options.timeoutMs,
+              sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+              persistState: !Boolean(options.noPersist),
+            });
+            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
+          } catch (error) {
+            ctx.handleFailure(error, output);
+          }
+        },
+      );
+  },
+};
+
+const dialogMeta = targetCommandMeta("target.dialog");
+
+export const targetDialogCommandSpec: TargetCommandSpec = {
+  id: dialogMeta.id,
+  usage: dialogMeta.usage,
+  summary: dialogMeta.summary,
+  register: (ctx) => {
+    ctx.target
+      .command("dialog")
+      .description(dialogMeta.summary)
+      .argument("<targetId>", "Target handle returned by open/target list")
+      .option("--action <action>", "Dialog action: accept|dismiss", "accept")
+      .option("--prompt-text <text>", "Prompt text used when action=accept for prompt dialogs")
+      .option("--trigger-text <query>", "Optionally click a text-matched trigger before waiting for dialog")
+      .option("--trigger-selector <query>", "Optionally click a selector-matched trigger before waiting for dialog")
+      .option("--contains <text>", "Text filter to apply with --trigger-selector")
+      .option("--visible-only", "Only match visible trigger elements")
+      .option("--timeout-ms <ms>", "Dialog timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--fields <csv>", "Return only selected top-level fields")
+      .action(
+        async (
+          targetId: string,
+          options: {
+            action?: string;
+            promptText?: string;
+            triggerText?: string;
+            triggerSelector?: string;
+            contains?: string;
+            visibleOnly?: boolean;
+            timeoutMs: number;
+            noPersist?: boolean;
+            fields?: string;
+          },
+        ) => {
+          const output = ctx.globalOutputOpts();
+          const globalOpts = ctx.program.opts<{ session?: string }>();
+          const fields = parseFieldsCsv(options.fields);
+          try {
+            const report = await targetDialog({
+              targetId,
+              timeoutMs: options.timeoutMs,
+              sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+              action: options.action,
+              promptText: options.promptText,
+              triggerText: options.triggerText,
+              triggerSelector: options.triggerSelector,
+              containsQuery: options.contains,
+              visibleOnly: Boolean(options.visibleOnly),
               persistState: !Boolean(options.noPersist),
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

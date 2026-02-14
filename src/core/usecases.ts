@@ -32,8 +32,8 @@ import { resolveOpenSessionHint, resolvePipelineSessionId } from "./session-isol
 import { parseFieldsCsv, projectReportFields } from "./report-fields.js";
 import { listSessionsSnapshot } from "./state-repos/session-repo.js";
 import { saveTargetSnapshot } from "./state-repos/target-repo.js";
-import { targetClick, targetFill } from "./target/target-click.js";
-import { targetEval } from "./target/target-eval.js";
+import { targetClick, targetFill, targetSpawn } from "./target/target-click.js";
+import { targetClose, targetEval } from "./target/target-eval.js";
 import { targetExtract } from "./target/target-extract.js";
 import { targetDragDrop, targetFind, targetUpload } from "./target/target-find.js";
 import { targetObserve } from "./target/effects/target-observe.js";
@@ -49,7 +49,7 @@ import { targetScrollWatch } from "./target/effects/target-scroll-watch.js";
 import { targetTransitionTrace } from "./target/effects/target-transition-trace.js";
 import { targetConsoleTail, targetHealth, targetHud } from "./target/target-observability.js";
 import { targetFormFill, targetRead } from "./target/target-read.js";
-import { targetKeypress, targetWait } from "./target/target-wait.js";
+import { targetDialog, targetKeypress, targetWait } from "./target/target-wait.js";
 import { readPageTargetId, resolveSessionForAction, targetList, targetSnapshot } from "./target/targets.js";
 import { sessionClear, sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
 import type { SessionClearReport } from "./state/maintenance.js";
@@ -473,7 +473,7 @@ export async function runPipeline(opts: {
 }
 export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail } from "../features/network/usecases/index.js";
 export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
-export { targetFind, targetRead, targetWait, targetClick, targetFill, targetFormFill, targetUpload, targetKeypress, targetDragDrop, targetEval, targetList, targetSnapshot, targetExtract };
+export { targetFind, targetRead, targetWait, targetClick, targetFill, targetFormFill, targetUpload, targetKeypress, targetDragDrop, targetSpawn, targetClose, targetDialog, targetEval, targetList, targetSnapshot, targetExtract };
 export { targetConsoleTail, targetHealth, targetHover, targetHud, targetMotionDetect, targetObserve, targetScrollPlan, targetScrollRevealScan, targetScrollSample, targetScrollWatch, targetStickyCheck, targetTransitionAssert, targetTransitionTrace };
 export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
 export { sessionCookieCopy } from "./target/effects/session-cookie-copy.js";

@@ -1,8 +1,11 @@
 import {
   targetClickCommandSpec,
+  targetCloseCommandSpec,
+  targetDialogCommandSpec,
   targetDragDropCommandSpec,
   targetFillCommandSpec,
   targetKeypressCommandSpec,
+  targetSpawnCommandSpec,
   targetUploadCommandSpec,
 } from "./target-click.js";
 import {
@@ -39,6 +42,9 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetUploadCommandSpec,
   targetKeypressCommandSpec,
   targetDragDropCommandSpec,
+  targetSpawnCommandSpec,
+  targetCloseCommandSpec,
+  targetDialogCommandSpec,
   targetFormFillCommandSpec,
   targetHoverCommandSpec,
   targetStickyCheckCommandSpec,

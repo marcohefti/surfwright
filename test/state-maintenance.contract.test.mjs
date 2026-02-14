@@ -281,7 +281,7 @@ test("session prune removes unreachable attached sessions and can drop managed s
 });
 
 test("state reconcile combines session and target maintenance", () => {
-  const now = new Date("2026-02-13T10:00:00.000Z");
+  const now = new Date();
   const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
   const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 

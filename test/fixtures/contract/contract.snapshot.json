@@ -89,9 +89,19 @@
       "summary": "click the first matching element in a target"
     },
     {
+      "id": "target.close",
+      "usage": "surfwright target close <targetId> [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "close a target by handle with deterministic confirmation payload"
+    },
+    {
       "id": "target.console-tail",
       "usage": "surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--session <id>]",
       "summary": "stream live console/pageerror/requestfailed events as NDJSON"
+    },
+    {
+      "id": "target.dialog",
+      "usage": "surfwright target dialog <targetId> [--action <accept|dismiss>] [--prompt-text <text>] [--trigger-text <query> | --trigger-selector <query>] [--contains <text>] [--visible-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "accept or dismiss the next dialog, optionally with trigger click"
     },
     {
       "id": "target.drag-drop",
@@ -237,6 +247,11 @@
       "id": "target.snapshot",
       "usage": "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "read bounded text and UI primitives for a target"
+    },
+    {
+      "id": "target.spawn",
+      "usage": "surfwright target spawn <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "click a trigger and return deterministic child target handle"
     },
     {
       "id": "target.sticky-check",

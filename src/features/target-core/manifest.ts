@@ -56,6 +56,24 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "perform deterministic drag and drop between selectors",
   },
   {
+    id: "target.spawn",
+    usage:
+      "surfwright target spawn <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "click a trigger and return deterministic child target handle",
+  },
+  {
+    id: "target.close",
+    usage:
+      "surfwright target close <targetId> [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "close a target by handle with deterministic confirmation payload",
+  },
+  {
+    id: "target.dialog",
+    usage:
+      "surfwright target dialog <targetId> [--action <accept|dismiss>] [--prompt-text <text>] [--trigger-text <query> | --trigger-selector <query>] [--contains <text>] [--visible-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "accept or dismiss the next dialog, optionally with trigger click",
+  },
+  {
     id: "target.hover",
     usage:
       "surfwright target hover <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--properties <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",

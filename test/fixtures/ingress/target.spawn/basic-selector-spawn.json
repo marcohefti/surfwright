@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "caseId": "target-spawn-basic-selector",
+  "source": {
+    "capturedAt": "2026-02-14T10:00:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "Selector spawn returns deterministic parent/child handle metadata and timing envelope"
+  },
+  "command": {
+    "id": "target.spawn",
+    "input": {
+      "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+      "mode": "selector",
+      "query": "#open-child",
+      "visibleOnly": false
+    }
+  },
+  "observed": {
+    "ok": true,
+    "sessionId": "s-default",
+    "parentTargetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+    "childTargetId": "85FA26B6FC2F11C91174457EE13D1C0D",
+    "actionId": "a-mlkmix1x-b05e8h",
+    "query": "#open-child",
+    "url": "https://example.com/child",
+    "title": "Child",
+    "timingMs": {
+      "total": 151,
+      "resolveSession": 4,
+      "connectCdp": 26,
+      "action": 95,
+      "persistState": 26
+    }
+  },
+  "expect": {
+    "ok": true,
+    "query": "#open-child",
+    "urlContains": "/child"
+  }
+}

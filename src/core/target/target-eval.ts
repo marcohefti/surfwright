@@ -7,6 +7,20 @@ import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetEvalReport } from "../types.js";
 
+type TargetCloseReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  closed: true;
+  timingMs: {
+    total: number;
+    resolveSession: number;
+    connectCdp: number;
+    action: number;
+    persistState: number;
+  };
+};
+
 // Inline expressions are argv-bound and should stay small/deterministic.
 const EVAL_MAX_INLINE_EXPRESSION_CHARS = 4096;
 // File-based scripts avoid shell argv constraints but still need bounded input.
@@ -394,6 +408,60 @@ export async function targetEval(opts: {
     report.timingMs.persistState = persistedAt - persistStartedAt;
     report.timingMs.total = persistedAt - startedAt;
 
+    return report;
+  } finally {
+    await browser.close();
+  }
+}
+
+export async function targetClose(opts: {
+  targetId: string;
+  timeoutMs: number;
+  sessionId?: string;
+  persistState?: boolean;
+}): Promise<TargetCloseReport> {
+  const startedAt = Date.now();
+  const requestedTargetId = sanitizeTargetId(opts.targetId);
+
+  const { session } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: requestedTargetId,
+  });
+  const resolvedSessionAt = Date.now();
+  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+    timeout: opts.timeoutMs,
+  });
+  const connectedAt = Date.now();
+
+  try {
+    const target = await resolveTargetHandle(browser, requestedTargetId);
+    await target.page.close({
+      runBeforeUnload: false,
+    });
+    const actionCompletedAt = Date.now();
+
+    const report: TargetCloseReport = {
+      ok: true,
+      sessionId: session.sessionId,
+      targetId: requestedTargetId,
+      closed: true,
+      timingMs: {
+        total: 0,
+        resolveSession: resolvedSessionAt - startedAt,
+        connectCdp: connectedAt - resolvedSessionAt,
+        action: actionCompletedAt - connectedAt,
+        persistState: 0,
+      },
+    };
+
+    const persistStartedAt = Date.now();
+    if (opts.persistState !== false) {
+      // Close is runtime-scoped; stale target metadata is cleaned by target/session maintenance.
+    }
+    const persistedAt = Date.now();
+    report.timingMs.persistState = persistedAt - persistStartedAt;
+    report.timingMs.total = persistedAt - startedAt;
     return report;
   } finally {
     await browser.close();

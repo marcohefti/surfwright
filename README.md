@@ -4,11 +4,12 @@ You do not need a bigger browser tool.
 You need a sharper one.
 
 ```txt
-                 .  .  .  .  .
-              .                 .
-           .     surfwright      .
-              .                 .
-                 .  .  .  .  .
+                      \o/
+                       |
+      ________________/ \___________________
+    /    s  u  r  f  w  r  i  g  h  t        \
+    \________________________________________/
+~      ~      ~      ~      ~      ~      ~      ~      
 ```
 
 SurfWright is a CLI-first browser control surface designed for agents:
@@ -304,10 +305,13 @@ Declared: **February 13, 2026**
 We celebrate this as the milestone where fresh agents, with near-zero guidance, successfully discovered and used SurfWright workflows on first try.
 
 ```txt
-   ________  ______  __       ______
-  /__  __/ / __/ / / /      / ____/
-    / /   / /_/ /_/ /____  / /__
-   /_/    \__/\____/_____/ \___/
+  ┌─────────────────────────────────────────────┐
+  │                                             │
+  │   Z E R O   C O N T E X T   D A Y          │
+  │                                             │
+  │   the surface spoke for itself.             │
+  │                                             │
+  └─────────────────────────────────────────────┘
 ```
 
 ## Status
@@ -319,5 +323,3 @@ Everything can break, fast, on purpose, until the surface is right.
 
 Agent tooling should feel like a clean instrument:
 no noise, no surprises, just tight feedback loops.
-
-If SurfWright ever starts “explaining itself” unprompted, it is failing its job.

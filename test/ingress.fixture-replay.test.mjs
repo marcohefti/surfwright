@@ -137,6 +137,19 @@ function assertTargetClickFixture(fixture, filePath) {
   assert.equal(typeof observed.timingMs.total, "number", `${filePath}: timingMs.total must be a number`);
 }
 
+function assertTargetFillFixture(fixture, filePath) {
+  const { observed, expect, command } = fixture;
+  assert.equal(command.id, "target.fill", `${filePath}: expected target.fill command`);
+  assert.equal(observed.ok, true, `${filePath}: observed.ok should be true`);
+  assert.equal(observed.query, expect.query, `${filePath}: query mismatch`);
+  assert.equal(observed.valueLength, expect.valueLength, `${filePath}: valueLength mismatch`);
+  assert.equal(typeof observed.actionId, "string", `${filePath}: actionId must be a string`);
+  assert.equal(typeof observed.url, "string", `${filePath}: url must be a string`);
+  assert.equal(typeof observed.title, "string", `${filePath}: title must be a string`);
+  assert.equal(typeof observed.timingMs, "object", `${filePath}: timingMs must be an object`);
+  assert.equal(typeof observed.timingMs.total, "number", `${filePath}: timingMs.total must be a number`);
+}
+
 function assertFixtureCasesPresent(fixturesByCaseId) {
   const required = [
     "target-find-invalid-selector",
@@ -146,6 +159,7 @@ function assertFixtureCasesPresent(fixturesByCaseId) {
     "target-list-duplicate-url-different-targets",
     "session-attach-slow-healthcheck-timeout-window",
     "target-click-basic-selector",
+    "target-fill-basic-selector",
   ];
   for (const caseId of required) {
     assert.equal(fixturesByCaseId.has(caseId), true, `Missing required ingress fixture case: ${caseId}`);
@@ -182,6 +196,10 @@ test("ingress fixture replay cases are present and valid", () => {
     }
     if (fixture.command.id === "target.click") {
       assertTargetClickFixture(fixture, filePath);
+      continue;
+    }
+    if (fixture.command.id === "target.fill") {
+      assertTargetFillFixture(fixture, filePath);
       continue;
     }
     assert.fail(`${filePath}: unsupported command id ${fixture.command.id}`);

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "caseId": "target-fill-basic-selector",
+  "source": {
+    "capturedAt": "2026-02-14T08:00:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "Selector fill returns deterministic action metadata and timing envelope"
+  },
+  "command": {
+    "id": "target.fill",
+    "input": {
+      "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+      "mode": "selector",
+      "query": "#email",
+      "valueLength": 17
+    }
+  },
+  "observed": {
+    "ok": true,
+    "sessionId": "s-default",
+    "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+    "actionId": "a-mlkmix1x-b05e8h",
+    "query": "#email",
+    "valueLength": 17,
+    "url": "http://camelpay.localhost/#profile",
+    "title": "CamelPay — Profile",
+    "timingMs": {
+      "total": 104,
+      "resolveSession": 4,
+      "connectCdp": 21,
+      "action": 60,
+      "persistState": 19
+    }
+  },
+  "expect": {
+    "ok": true,
+    "query": "#email",
+    "valueLength": 17
+  }
+}

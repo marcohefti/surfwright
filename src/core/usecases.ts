@@ -33,6 +33,7 @@ import { parseFieldsCsv, projectReportFields } from "./report-fields.js";
 import { listSessionsSnapshot } from "./state-repos/session-repo.js";
 import { saveTargetSnapshot } from "./state-repos/target-repo.js";
 import { targetClick } from "./target/target-click.js";
+import { targetFill } from "./target/target-click.js";
 import { targetEval } from "./target/target-eval.js";
 import { targetExtract } from "./target/target-extract.js";
 import { targetFind } from "./target/target-find.js";
@@ -48,7 +49,7 @@ import { targetScrollSample } from "./target/effects/target-scroll-sample.js";
 import { targetScrollWatch } from "./target/effects/target-scroll-watch.js";
 import { targetTransitionTrace } from "./target/effects/target-transition-trace.js";
 import { targetConsoleTail, targetHealth, targetHud } from "./target/target-observability.js";
-import { targetRead } from "./target/target-read.js";
+import { targetFormFill, targetRead } from "./target/target-read.js";
 import { targetWait } from "./target/target-wait.js";
 import { readPageTargetId, resolveSessionForAction, targetList, targetSnapshot } from "./target/targets.js";
 import { sessionClear, sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
@@ -473,7 +474,7 @@ export async function runPipeline(opts: {
 }
 export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail } from "../features/network/usecases/index.js";
 export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
-export { targetFind, targetRead, targetWait, targetClick, targetEval, targetList, targetSnapshot, targetExtract };
+export { targetFind, targetRead, targetWait, targetClick, targetFill, targetFormFill, targetEval, targetList, targetSnapshot, targetExtract };
 export {
   targetConsoleTail,
   targetHealth,

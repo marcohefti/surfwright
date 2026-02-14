@@ -207,3 +207,200 @@ test("target click returns typed query failure when no match exists", { skip: !h
   assert.equal(clickPayload.ok, false);
   assert.equal(clickPayload.code, "E_QUERY_INVALID");
 });
+
+test("target fill and form-fill return deterministic compact shapes", { skip: !hasBrowser() }, () => {
+  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  assert.equal(ensureResult.status, 0);
+  const ensurePayload = parseJson(ensureResult.stdout);
+
+  const html = `
+    <title>Fill Contract Test</title>
+    <form id="profile">
+      <input id="email" name="email" />
+      <input id="password" name="password" type="password" />
+      <input id="agree" name="agree" type="checkbox" />
+      <select id="role" name="role">
+        <option value="viewer">Viewer</option>
+        <option value="editor">Editor</option>
+      </select>
+    </form>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const fillResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "fill",
+    openPayload.targetId,
+    "--selector",
+    "#email",
+    "--value",
+    "person@example.com",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(fillResult.status, 0);
+  const fillPayload = parseJson(fillResult.stdout);
+  assert.deepEqual(Object.keys(fillPayload), [
+    "ok",
+    "sessionId",
+    "targetId",
+    "actionId",
+    "query",
+    "valueLength",
+    "url",
+    "title",
+    "timingMs",
+  ]);
+  assert.equal(fillPayload.ok, true);
+  assert.equal(fillPayload.sessionId, ensurePayload.sessionId);
+  assert.equal(fillPayload.targetId, openPayload.targetId);
+  assert.equal(fillPayload.query, "#email");
+  assert.equal(fillPayload.valueLength, "person@example.com".length);
+  assert.equal(typeof fillPayload.actionId, "string");
+  assert.equal(typeof fillPayload.timingMs.total, "number");
+
+  const verifyFillResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "eval",
+    openPayload.targetId,
+    "--expression",
+    "return document.querySelector('#email').value",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(verifyFillResult.status, 0);
+  const verifyFillPayload = parseJson(verifyFillResult.stdout);
+  assert.equal(verifyFillPayload.result.value, "person@example.com");
+
+  const fieldsJson = JSON.stringify({
+    "#email": "second@example.com",
+    "#password": "s3cret!",
+    "#agree": true,
+    "#role": "editor",
+  });
+  const formFillResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "form-fill",
+    openPayload.targetId,
+    "--fields-json",
+    fieldsJson,
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(formFillResult.status, 0);
+  const formFillPayload = parseJson(formFillResult.stdout);
+  assert.deepEqual(Object.keys(formFillPayload), [
+    "ok",
+    "sessionId",
+    "targetId",
+    "actionId",
+    "applied",
+    "count",
+    "submitted",
+    "timingMs",
+  ]);
+  assert.equal(formFillPayload.ok, true);
+  assert.equal(formFillPayload.sessionId, ensurePayload.sessionId);
+  assert.equal(formFillPayload.targetId, openPayload.targetId);
+  assert.equal(formFillPayload.count, 4);
+  assert.equal(formFillPayload.submitted, false);
+  assert.equal(Array.isArray(formFillPayload.applied), true);
+  assert.equal(formFillPayload.applied.length, 4);
+  assert.equal(typeof formFillPayload.timingMs.total, "number");
+
+  const verifyFormResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "eval",
+    openPayload.targetId,
+    "--expression",
+    "return {email: document.querySelector('#email').value, password: document.querySelector('#password').value, agree: document.querySelector('#agree').checked, role: document.querySelector('#role').value}",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(verifyFormResult.status, 0);
+  const verifyFormPayload = parseJson(verifyFormResult.stdout);
+  assert.deepEqual(verifyFormPayload.result.value, {
+    email: "second@example.com",
+    password: "s3cret!",
+    agree: true,
+    role: "editor",
+  });
+});
+
+test("target fill and form-fill return typed validation failures", { skip: !hasBrowser() }, () => {
+  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  assert.equal(ensureResult.status, 0);
+  const ensurePayload = parseJson(ensureResult.stdout);
+
+  const html = `<title>Fill Failure Test</title><main><input id="email" /></main>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const missingQueryFill = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "fill",
+    openPayload.targetId,
+    "--value",
+    "hello",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(missingQueryFill.status, 1);
+  const missingQueryPayload = parseJson(missingQueryFill.stdout);
+  assert.equal(missingQueryPayload.ok, false);
+  assert.equal(missingQueryPayload.code, "E_QUERY_INVALID");
+
+  const invalidJson = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "form-fill",
+    openPayload.targetId,
+    "--fields-json",
+    "{bad-json}",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(invalidJson.status, 1);
+  const invalidJsonPayload = parseJson(invalidJson.stdout);
+  assert.equal(invalidJsonPayload.ok, false);
+  assert.equal(invalidJsonPayload.code, "E_QUERY_INVALID");
+
+  const arrayPayload = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "form-fill",
+    openPayload.targetId,
+    "--fields-json",
+    "[1,2,3]",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(arrayPayload.status, 1);
+  const arrayPayloadJson = parseJson(arrayPayload.stdout);
+  assert.equal(arrayPayloadJson.ok, false);
+  assert.equal(arrayPayloadJson.code, "E_QUERY_INVALID");
+});

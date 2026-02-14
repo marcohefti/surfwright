@@ -26,6 +26,18 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "click the first matching element in a target",
   },
   {
+    id: "target.fill",
+    usage:
+      "surfwright target fill <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] --value <text> [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "fill the first matching form control in a target",
+  },
+  {
+    id: "target.form-fill",
+    usage:
+      "surfwright target form-fill <targetId> (--fields-json <json> | --fields-file <path>) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "fill multiple form controls in one deterministic command",
+  },
+  {
     id: "target.hover",
     usage:
       "surfwright target hover <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--properties <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",

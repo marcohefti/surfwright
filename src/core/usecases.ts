@@ -319,7 +319,8 @@ export { targetDragDrop, targetFind, targetUpload } from "./target/target-find.j
 export { targetConsoleGet, targetConsoleTail, targetHealth, targetHud } from "./target/target-observability.js";
 export { targetFormFill, targetRead } from "./target/target-read.js";
 export { targetDialog, targetKeypress, targetWait } from "./target/target-wait.js";
-export { targetList, targetSnapshot } from "./target/targets.js";
+export { targetList } from "./target/targets.js";
+export { targetSnapshot } from "./target/snapshot/target-snapshot.js";
 export { targetFrames } from "./target/frames/target-frames.js";
 export { targetUrlAssert } from "./target/url/url-assert.js";
 export { targetObserve } from "./target/effects/target-observe.js";

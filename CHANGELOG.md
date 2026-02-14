@@ -15,6 +15,9 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target eval --expr <js>` (value-expression mode), `--frame-id <id>`, and compact `context` metadata in eval output.
 - [target] Added `target click --index <n>` (0-based) and selection evidence (`matchCount`, `pickedIndex`) for deterministic multi-match actions.
 - [target] Added `target click --explain` for bounded match selection/rejection diagnostics without clicking.
+- [target] Added `target snapshot --mode <snapshot|orient>` for quiet first-load orientation payloads (`orient` returns `h1` and scopes `links` to header/nav links).
+- [target] Added `target snapshot` paging via `--cursor <token>` and `nextCursor` in the report.
+- [target] Added `target snapshot --include-selector-hints` returning bounded `items` rows with `selectorHint`.
 
 ### Changed
 - [release] Publish and release-draft workflows now use shared smoke script `scripts/release/smoke-contract.mjs`.
@@ -22,6 +25,7 @@ All notable changes to SurfWright are documented here.
 - [docs] `docs-check` now enforces full `Unreleased` skeleton buckets with list items.
 - [contract] `session list` now includes `browserMode` per session row.
 - [docs] Documented headed/headless defaults and a minimal human login handoff recipe (README + skill).
+- [target] `target snapshot` now accepts `0` for `--max-chars`, `--max-headings`, `--max-buttons`, and `--max-links` to omit categories.
 
 ### Fixed
 - [release] Removed drift-prone duplicate smoke command logic across release workflows.

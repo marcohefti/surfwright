@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:f2d5d43afc3bfbd049be0dea76567a6fa92d7827d065c03d17288f75375eb3ae",
+  "contractFingerprint": "sha256:3315ecaf9d28b9244dcce67554612ad9ee0b979cddd6b24cd4abc1cf4d0df537",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -307,7 +307,7 @@
     },
     {
       "id": "target.snapshot",
-      "usage": "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "usage": "surfwright target snapshot <targetId> [--mode <snapshot|orient>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "read bounded text and UI primitives for a target"
     },
     {

@@ -4,24 +4,15 @@ import { CliError } from "../errors.js";
 import { withSessionHeartbeat } from "../session/index.js";
 import { allocateSessionId, defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId, updateState } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
-import { extractScopedSnapshotSample } from "./snapshot-sample.js";
-import { frameScopeHints, framesForScope, parseFrameScope } from "./target-find.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
   type ManagedBrowserMode,
   type SessionSource,
   type SessionState,
   type TargetListReport,
-  type TargetSnapshotReport,
 } from "../types.js";
 
 const TARGET_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
-const SNAPSHOT_TEXT_MAX_CHARS = 1200;
-const SNAPSHOT_MAX_HEADINGS = 12;
-const SNAPSHOT_MAX_BUTTONS = 12;
-const SNAPSHOT_MAX_LINKS = 12;
-const SNAPSHOT_MAX_TEXT_CAP = 20000;
-const SNAPSHOT_MAX_ITEMS_CAP = 200;
 
 // tsx/esbuild dev transpilation may inject __name(...) wrappers into callbacks
 // we pass to frame/page.evaluate. Browser contexts do not define __name, so
@@ -49,24 +40,6 @@ function stableTargetId(url: string): string {
     hash = Math.imul(hash, 0x01000193);
   }
   return `t${(hash >>> 0).toString(16).padStart(8, "0")}`;
-}
-
-function parsePositiveIntInRange(opts: {
-  value: number | undefined;
-  defaultValue: number;
-  min: number;
-  max: number;
-  name: string;
-}): number {
-  if (typeof opts.value === "undefined") {
-    return opts.defaultValue;
-  }
-
-  if (!Number.isFinite(opts.value) || !Number.isInteger(opts.value) || opts.value < opts.min || opts.value > opts.max) {
-    throw new CliError("E_QUERY_INVALID", `${opts.name} must be an integer between ${opts.min} and ${opts.max}`);
-  }
-
-  return opts.value;
 }
 
 export function sanitizeTargetId(input: string): string {
@@ -314,180 +287,6 @@ export async function targetList(opts: { timeoutMs: number; sessionId?: string; 
         persistState: persistedAt - persistStartedAt,
       },
     };
-  } finally {
-    await browser.close();
-  }
-}
-
-export async function targetSnapshot(opts: {
-  targetId: string;
-  timeoutMs: number;
-  sessionId?: string;
-  persistState?: boolean;
-  selectorQuery?: string;
-  visibleOnly?: boolean;
-  frameScope?: string;
-  maxChars?: number;
-  maxHeadings?: number;
-  maxButtons?: number;
-  maxLinks?: number;
-}): Promise<TargetSnapshotReport> {
-  const startedAt = Date.now();
-  const requestedTargetId = sanitizeTargetId(opts.targetId);
-  const selectorQuery = normalizeSelectorQuery(opts.selectorQuery);
-  const visibleOnly = Boolean(opts.visibleOnly);
-  const frameScope = parseFrameScope(opts.frameScope);
-  const textMaxChars = parsePositiveIntInRange({
-    value: opts.maxChars,
-    defaultValue: SNAPSHOT_TEXT_MAX_CHARS,
-    min: 1,
-    max: SNAPSHOT_MAX_TEXT_CAP,
-    name: "max-chars",
-  });
-  const maxHeadings = parsePositiveIntInRange({
-    value: opts.maxHeadings,
-    defaultValue: SNAPSHOT_MAX_HEADINGS,
-    min: 1,
-    max: SNAPSHOT_MAX_ITEMS_CAP,
-    name: "max-headings",
-  });
-  const maxButtons = parsePositiveIntInRange({
-    value: opts.maxButtons,
-    defaultValue: SNAPSHOT_MAX_BUTTONS,
-    min: 1,
-    max: SNAPSHOT_MAX_ITEMS_CAP,
-    name: "max-buttons",
-  });
-  const maxLinks = parsePositiveIntInRange({
-    value: opts.maxLinks,
-    defaultValue: SNAPSHOT_MAX_LINKS,
-    min: 1,
-    max: SNAPSHOT_MAX_ITEMS_CAP,
-    name: "max-links",
-  });
-
-  const { session, sessionSource } = await resolveSessionForAction({
-    sessionHint: opts.sessionId,
-    timeoutMs: opts.timeoutMs,
-    targetIdHint: requestedTargetId,
-  });
-  const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
-    timeout: opts.timeoutMs,
-  });
-  const connectedAt = Date.now();
-
-  try {
-    const target = await resolveTargetHandle(browser, requestedTargetId);
-    const frames = framesForScope(target.page, frameScope);
-    const hints = frameScopeHints({
-      frameScope,
-      frameCount: target.page.frames().length,
-      command: "target.snapshot",
-      targetId: requestedTargetId,
-    });
-    if (selectorQuery) {
-      for (const frame of frames) {
-        try {
-          await frame.locator(selectorQuery).count();
-        } catch {
-          throw new CliError("E_SELECTOR_INVALID", `Invalid selector query: ${selectorQuery}`);
-        }
-      }
-    }
-
-    let scopeMatched = false;
-    let totalTextLength = 0;
-    let totalHeadings = 0;
-    let totalButtons = 0;
-    let totalLinks = 0;
-    const headings: string[] = [];
-    const buttons: string[] = [];
-    const links: Array<{ text: string; href: string }> = [];
-    let textPreview = "";
-    for (const frame of frames) {
-      const remainingText = Math.max(0, textMaxChars - textPreview.length);
-      const remainingHeadings = Math.max(0, maxHeadings - headings.length);
-      const remainingButtons = Math.max(0, maxButtons - buttons.length);
-      const remainingLinks = Math.max(0, maxLinks - links.length);
-      const sample = await extractScopedSnapshotSample({
-        evaluator: frame,
-        selectorQuery,
-        visibleOnly,
-        textMaxChars: Math.max(1, remainingText),
-        maxHeadings: Math.max(1, remainingHeadings),
-        maxButtons: Math.max(1, remainingButtons),
-        maxLinks: Math.max(1, remainingLinks),
-      });
-      scopeMatched = scopeMatched || sample.scopeMatched;
-      totalTextLength += sample.counts.textLength;
-      totalHeadings += sample.counts.headings;
-      totalButtons += sample.counts.buttons;
-      totalLinks += sample.counts.links;
-      if (remainingText > 0 && sample.textPreview.length > 0) {
-        textPreview = `${textPreview}${textPreview.length > 0 ? "\n" : ""}${sample.textPreview}`.slice(0, textMaxChars);
-      }
-      if (remainingHeadings > 0 && sample.headings.length > 0) {
-        headings.push(...sample.headings.slice(0, remainingHeadings));
-      }
-      if (remainingButtons > 0 && sample.buttons.length > 0) {
-        buttons.push(...sample.buttons.slice(0, remainingButtons));
-      }
-      if (remainingLinks > 0 && sample.links.length > 0) {
-        links.push(...sample.links.slice(0, remainingLinks));
-      }
-    }
-    const actionCompletedAt = Date.now();
-
-    const report: TargetSnapshotReport = {
-      ok: true,
-      sessionId: session.sessionId,
-      sessionSource,
-      targetId: requestedTargetId,
-      url: target.page.url(),
-      title: await target.page.title(),
-      scope: {
-        selector: selectorQuery,
-        matched: scopeMatched,
-        visibleOnly,
-        frameScope,
-      },
-      textPreview,
-      headings,
-      buttons,
-      links,
-      truncated: {
-        text: totalTextLength > textMaxChars,
-        headings: totalHeadings > maxHeadings,
-        buttons: totalButtons > maxButtons,
-        links: totalLinks > maxLinks,
-      },
-      hints,
-      timingMs: {
-        total: 0,
-        resolveSession: resolvedSessionAt - startedAt,
-        connectCdp: connectedAt - resolvedSessionAt,
-        action: actionCompletedAt - connectedAt,
-        persistState: 0,
-      },
-    };
-
-    const persistStartedAt = Date.now();
-    if (opts.persistState !== false) {
-      await saveTargetSnapshot({
-        targetId: report.targetId,
-        sessionId: report.sessionId,
-        url: report.url,
-        title: report.title,
-        status: null,
-        updatedAt: nowIso(),
-      });
-    }
-    const persistedAt = Date.now();
-    report.timingMs.persistState = persistedAt - persistStartedAt;
-    report.timingMs.total = persistedAt - startedAt;
-
-    return report;
   } finally {
     await browser.close();
   }

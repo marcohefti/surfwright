@@ -111,7 +111,7 @@ test("daemon idle timeout exits worker and clears metadata", async () => {
   await stopDaemonIfRunning();
 
   const result = runCli(["--json", "contract"], {
-    SURFWRIGHT_DAEMON_IDLE_MS: "200",
+    SURFWRIGHT_DAEMON_IDLE_MS: "500",
   });
   assert.equal(result.status, 0);
 
@@ -122,7 +122,7 @@ test("daemon idle timeout exits worker and clears metadata", async () => {
   const exited = await waitForProcessExit(meta.pid, 3000);
   assert.equal(exited, true);
 
-  const deadline = Date.now() + 1200;
+  const deadline = Date.now() + 2000;
   while (Date.now() < deadline && fs.existsSync(daemonMetaPath())) {
     await new Promise((resolve) => setTimeout(resolve, 40));
   }

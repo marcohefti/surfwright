@@ -149,7 +149,7 @@ surfwright skill doctor [--dest <path>] [--lock <path>] [--json] [--pretty]
 surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]
 surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target frames <targetId> [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target snapshot <targetId> [--mode <snapshot|orient>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
@@ -266,8 +266,12 @@ surfwright --json state reconcile
 `target snapshot` returns bounded page-read primitives for deterministic agent parsing:
 
 ```json
-{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","textPreview":"CamelPay is in early access ...","headings":["Cross-chain crypto checkout, made simple"],"buttons":["Start Checkout"],"links":[{"text":"Read the docs","href":"http://localhost:3002/developers/quickstart"}],"truncated":{"text":false,"headings":false,"buttons":false,"links":false},"timingMs":{"total":147,"resolveSession":4,"connectCdp":26,"action":104,"persistState":13}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","mode":"snapshot","cursor":null,"nextCursor":null,"url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","scope":{"selector":null,"matched":true,"visibleOnly":false,"frameScope":"main"},"textPreview":"CamelPay is in early access ...","headings":["Cross-chain crypto checkout, made simple"],"buttons":["Start Checkout"],"links":[{"text":"Read the docs","href":"http://localhost:3002/developers/quickstart"}],"truncated":{"text":false,"headings":false,"buttons":false,"links":false},"hints":[],"timingMs":{"total":147,"resolveSession":4,"connectCdp":26,"action":104,"persistState":13}}
 ```
+
+Use `--max-... 0` to omit a category. If `nextCursor` is non-null, pass it back via `--cursor` to page through large inventories with stable ordering.
+
+Use `--include-selector-hints` to include bounded `items.*.selectorHint` rows. Use `--mode orient` for a quiet first-load payload (returns `h1` and limits `links` to header/nav links; defaults `--max-buttons 0`).
 
 `target find` returns bounded match records for text/selector queries:
 

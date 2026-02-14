@@ -55,6 +55,32 @@ surfwright --json session cookie-copy --from-session a-login --to-session s-chec
 
 `open` returns `sessionId`, `sessionSource`, and `targetId`; persist these handles in your run state. `target *` commands can infer the session from `targetId` when `--session` is omitted.
 
+## Snapshot Orientation (Quiet First Pass)
+
+Use `target snapshot --mode orient` when you want a compact first-load orientation payload without noisy inventories:
+
+```bash
+surfwright --json target snapshot <targetId> --mode orient --visible-only
+```
+
+In `orient` mode, `links` are scoped to header/nav links (bounded) and the report includes `h1` when available.
+
+## Snapshot Paging + Selector Hints
+
+If a snapshot inventory is too large, page it deterministically via `nextCursor`:
+
+```bash
+PAGE1=$(surfwright --json target snapshot <targetId> --max-links 20 --max-buttons 0)
+CURSOR=$(printf '%s' "$PAGE1" | jq -r '.nextCursor // empty')
+PAGE2=$(surfwright --json target snapshot <targetId> --cursor "$CURSOR" --max-links 20 --max-buttons 0)
+```
+
+Use `--include-selector-hints` when you want bounded `items.*.selectorHint` rows for direct follow-up actions:
+
+```bash
+surfwright --json target snapshot <targetId> --include-selector-hints --max-buttons 12 --max-links 12
+```
+
 ## Frames + iframe eval
 
 Use `target frames` to enumerate stable `frameId` handles. Use `--frame-id` on `target eval` to run JS inside a specific iframe. Prefer `--expr` when you want expression values without remembering `return`.

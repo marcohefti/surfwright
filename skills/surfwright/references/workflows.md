@@ -18,6 +18,9 @@ surfwright --json target find <targetId> --selector a --contains "query" --first
 surfwright --json target click <targetId> --text "query" --visible-only
 surfwright --json target fill <targetId> --selector "#email" --value "agent@example.com"
 surfwright --json target form-fill <targetId> --fields-json '{"#email":"agent@example.com","#agree":true}'
+surfwright --json target upload <targetId> --selector "input[type=file]" --file ./assets/avatar.png
+surfwright --json target keypress <targetId> --key Enter --selector "input[name=search]"
+surfwright --json target drag-drop <targetId> --from "#card-a" --to "#column-done"
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
@@ -41,6 +44,9 @@ surfwright --json target network-check <targetId> --budget ./budgets/network.jso
 - `target click` executes one explicit click action from text/selector query semantics.
 - `target fill` executes one explicit form-control fill from text/selector query semantics.
 - `target form-fill` applies multiple selector/value entries in one deterministic action.
+- `target upload` supports direct file-input upload with deterministic filechooser fallback.
+- `target keypress` sends one key input to page or a focused matched element.
+- `target drag-drop` executes one selector-to-selector drag operation.
 - `target read` returns deterministic chunks for long text extraction.
 - `target eval` executes bounded JavaScript in page context and returns typed result projection.
 - `target wait` blocks until text/selector/network-idle readiness is met.

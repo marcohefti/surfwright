@@ -1,10 +1,13 @@
+import fs from "node:fs";
+import path from "node:path";
 import { chromium, type Locator } from "playwright-core";
+import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
 import { nowIso } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "./target-query.js";
 import { DEFAULT_TARGET_FIND_LIMIT } from "../types.js";
-import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetFindReport } from "../types.js";
 
 const FIND_MAX_LIMIT = 50;
@@ -13,6 +16,45 @@ type ParsedFindInput = {
   query: ReturnType<typeof parseTargetQueryInput>;
   limit: number;
   first: boolean;
+};
+
+type TargetDragDropReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  actionId: string;
+  from: string;
+  to: string;
+  result: "dragged";
+  timingMs: {
+    total: number;
+    resolveSession: number;
+    connectCdp: number;
+    action: number;
+    persistState: number;
+  };
+};
+
+type TargetUploadReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  actionId: string;
+  selector: string;
+  files: Array<{
+    name: string;
+    size: number;
+    type: string;
+  }>;
+  fileCount: number;
+  mode: "direct-input" | "filechooser";
+  timingMs: {
+    total: number;
+    resolveSession: number;
+    connectCdp: number;
+    action: number;
+    persistState: number;
+  };
 };
 
 function parseFindInput(opts: {
@@ -39,6 +81,74 @@ function parseFindInput(opts: {
     limit: limitRaw,
     first,
   };
+}
+
+function parseRequiredSelector(input: string | undefined, optionName: string): string {
+  const selector = typeof input === "string" ? input.trim() : "";
+  if (selector.length === 0) {
+    throw new CliError("E_QUERY_INVALID", `${optionName} selector is required`);
+  }
+  return selector;
+}
+
+function mimeFromName(name: string): string {
+  const ext = path.extname(name).toLowerCase();
+  if (ext === ".png") {
+    return "image/png";
+  }
+  if (ext === ".jpg" || ext === ".jpeg") {
+    return "image/jpeg";
+  }
+  if (ext === ".webp") {
+    return "image/webp";
+  }
+  if (ext === ".gif") {
+    return "image/gif";
+  }
+  if (ext === ".pdf") {
+    return "application/pdf";
+  }
+  if (ext === ".json") {
+    return "application/json";
+  }
+  if (ext === ".txt") {
+    return "text/plain";
+  }
+  if (ext === ".csv") {
+    return "text/csv";
+  }
+  return "application/octet-stream";
+}
+
+function parseUploadFiles(input: string | string[] | undefined): Array<{ absolutePath: string; name: string; size: number; type: string }> {
+  const raw = Array.isArray(input)
+    ? input
+    : typeof input === "string"
+      ? [input]
+      : [];
+  const files = raw.map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+  if (files.length === 0) {
+    throw new CliError("E_QUERY_INVALID", "Provide at least one --file <path>");
+  }
+
+  return files.map((filePath) => {
+    const absolutePath = path.resolve(filePath);
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(absolutePath);
+    } catch {
+      throw new CliError("E_QUERY_INVALID", `file is not readable: ${filePath}`);
+    }
+    if (!stat.isFile()) {
+      throw new CliError("E_QUERY_INVALID", `file must point to a regular file: ${filePath}`);
+    }
+    return {
+      absolutePath,
+      name: path.basename(absolutePath),
+      size: stat.size,
+      type: mimeFromName(path.basename(absolutePath)),
+    };
+  });
 }
 
 export async function targetFind(opts: {
@@ -154,6 +264,195 @@ export async function targetFind(opts: {
     report.timingMs.persistState = persistedAt - persistStartedAt;
     report.timingMs.total = persistedAt - startedAt;
 
+    return report;
+  } finally {
+    await browser.close();
+  }
+}
+
+export async function targetDragDrop(opts: {
+  targetId: string;
+  timeoutMs: number;
+  sessionId?: string;
+  persistState?: boolean;
+  fromSelector?: string;
+  toSelector?: string;
+}): Promise<TargetDragDropReport> {
+  const startedAt = Date.now();
+  const requestedTargetId = sanitizeTargetId(opts.targetId);
+  const fromSelector = parseRequiredSelector(opts.fromSelector, "from");
+  const toSelector = parseRequiredSelector(opts.toSelector, "to");
+
+  const { session } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: requestedTargetId,
+  });
+  const resolvedSessionAt = Date.now();
+  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+    timeout: opts.timeoutMs,
+  });
+  const connectedAt = Date.now();
+
+  try {
+    const target = await resolveTargetHandle(browser, requestedTargetId);
+    await ensureValidSelector(target.page, fromSelector);
+    await ensureValidSelector(target.page, toSelector);
+
+    const fromCount = await target.page.locator(fromSelector).count();
+    if (fromCount < 1) {
+      throw new CliError("E_QUERY_INVALID", `No element matched source selector: ${fromSelector}`);
+    }
+    const toCount = await target.page.locator(toSelector).count();
+    if (toCount < 1) {
+      throw new CliError("E_QUERY_INVALID", `No element matched destination selector: ${toSelector}`);
+    }
+
+    await target.page.dragAndDrop(fromSelector, toSelector, {
+      timeout: opts.timeoutMs,
+    });
+    const actionCompletedAt = Date.now();
+
+    const report: TargetDragDropReport = {
+      ok: true,
+      sessionId: session.sessionId,
+      targetId: requestedTargetId,
+      actionId: newActionId(),
+      from: fromSelector,
+      to: toSelector,
+      result: "dragged",
+      timingMs: {
+        total: 0,
+        resolveSession: resolvedSessionAt - startedAt,
+        connectCdp: connectedAt - resolvedSessionAt,
+        action: actionCompletedAt - connectedAt,
+        persistState: 0,
+      },
+    };
+
+    const persistStartedAt = Date.now();
+    if (opts.persistState !== false) {
+      await saveTargetSnapshot({
+        targetId: report.targetId,
+        sessionId: report.sessionId,
+        url: target.page.url(),
+        title: await target.page.title(),
+        status: null,
+        lastActionId: report.actionId,
+        lastActionAt: nowIso(),
+        lastActionKind: "drag-drop",
+        updatedAt: nowIso(),
+      });
+    }
+    const persistedAt = Date.now();
+    report.timingMs.persistState = persistedAt - persistStartedAt;
+    report.timingMs.total = persistedAt - startedAt;
+    return report;
+  } finally {
+    await browser.close();
+  }
+}
+
+export async function targetUpload(opts: {
+  targetId: string;
+  timeoutMs: number;
+  sessionId?: string;
+  persistState?: boolean;
+  selectorQuery?: string;
+  files?: string | string[];
+}): Promise<TargetUploadReport> {
+  const startedAt = Date.now();
+  const requestedTargetId = sanitizeTargetId(opts.targetId);
+  const selector = parseRequiredSelector(opts.selectorQuery, "selector");
+  const fileInputs = parseUploadFiles(opts.files);
+
+  const { session } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: requestedTargetId,
+  });
+  const resolvedSessionAt = Date.now();
+  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+    timeout: opts.timeoutMs,
+  });
+  const connectedAt = Date.now();
+
+  try {
+    const target = await resolveTargetHandle(browser, requestedTargetId);
+    await ensureValidSelector(target.page, selector);
+    const locator = target.page.locator(selector).first();
+    const count = await target.page.locator(selector).count();
+    if (count < 1) {
+      throw new CliError("E_QUERY_INVALID", `No element matched upload selector: ${selector}`);
+    }
+
+    const absolutePaths = fileInputs.map((entry) => entry.absolutePath);
+    const isFileInput = await locator.evaluate((node: any) => {
+      const tagName = typeof node?.tagName === "string" ? node.tagName.toLowerCase() : "";
+      const inputType = typeof node?.type === "string" ? node.type.toLowerCase() : "";
+      return tagName === "input" && inputType === "file";
+    });
+
+    let mode: TargetUploadReport["mode"] = "direct-input";
+    if (isFileInput) {
+      await locator.setInputFiles(absolutePaths, {
+        timeout: opts.timeoutMs,
+      });
+    } else {
+      mode = "filechooser";
+      const chooserPromise = target.page.waitForEvent("filechooser", {
+        timeout: opts.timeoutMs,
+      });
+      await locator.click({
+        timeout: opts.timeoutMs,
+      });
+      let chooser: { setFiles(files: string[], options?: { timeout?: number }): Promise<void> };
+      try {
+        chooser = await chooserPromise;
+      } catch {
+        throw new CliError("E_QUERY_INVALID", "selector did not trigger a file chooser");
+      }
+      await chooser.setFiles(absolutePaths, {
+        timeout: opts.timeoutMs,
+      });
+    }
+
+    const actionCompletedAt = Date.now();
+    const report: TargetUploadReport = {
+      ok: true,
+      sessionId: session.sessionId,
+      targetId: requestedTargetId,
+      actionId: newActionId(),
+      selector,
+      files: fileInputs.map(({ name, size, type }) => ({ name, size, type })),
+      fileCount: fileInputs.length,
+      mode,
+      timingMs: {
+        total: 0,
+        resolveSession: resolvedSessionAt - startedAt,
+        connectCdp: connectedAt - resolvedSessionAt,
+        action: actionCompletedAt - connectedAt,
+        persistState: 0,
+      },
+    };
+
+    const persistStartedAt = Date.now();
+    if (opts.persistState !== false) {
+      await saveTargetSnapshot({
+        targetId: report.targetId,
+        sessionId: report.sessionId,
+        url: target.page.url(),
+        title: await target.page.title(),
+        status: null,
+        lastActionId: report.actionId,
+        lastActionAt: nowIso(),
+        lastActionKind: "upload",
+        updatedAt: nowIso(),
+      });
+    }
+    const persistedAt = Date.now();
+    report.timingMs.persistState = persistedAt - persistStartedAt;
+    report.timingMs.total = persistedAt - startedAt;
     return report;
   } finally {
     await browser.close();

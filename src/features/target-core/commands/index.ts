@@ -1,4 +1,10 @@
-import { targetClickCommandSpec, targetFillCommandSpec } from "./target-click.js";
+import {
+  targetClickCommandSpec,
+  targetDragDropCommandSpec,
+  targetFillCommandSpec,
+  targetKeypressCommandSpec,
+  targetUploadCommandSpec,
+} from "./target-click.js";
 import {
   targetObserveCommandSpec,
   targetScrollPlanCommandSpec,
@@ -30,6 +36,9 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetFindCommandSpec,
   targetClickCommandSpec,
   targetFillCommandSpec,
+  targetUploadCommandSpec,
+  targetKeypressCommandSpec,
+  targetDragDropCommandSpec,
   targetFormFillCommandSpec,
   targetHoverCommandSpec,
   targetStickyCheckCommandSpec,

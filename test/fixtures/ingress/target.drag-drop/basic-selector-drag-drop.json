@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "caseId": "target-drag-drop-basic-selector",
+  "source": {
+    "capturedAt": "2026-02-14T09:00:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "Selector drag/drop returns deterministic action metadata and timing envelope"
+  },
+  "command": {
+    "id": "target.drag-drop",
+    "input": {
+      "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+      "from": "#card-a",
+      "to": "#column-done"
+    }
+  },
+  "observed": {
+    "ok": true,
+    "sessionId": "s-default",
+    "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+    "actionId": "a-mlkmix1x-b05e8h",
+    "from": "#card-a",
+    "to": "#column-done",
+    "result": "dragged",
+    "timingMs": {
+      "total": 138,
+      "resolveSession": 5,
+      "connectCdp": 24,
+      "action": 89,
+      "persistState": 20
+    }
+  },
+  "expect": {
+    "ok": true,
+    "from": "#card-a",
+    "to": "#column-done",
+    "result": "dragged"
+  }
+}

@@ -404,3 +404,92 @@ test("target fill and form-fill return typed validation failures", { skip: !hasB
   assert.equal(arrayPayloadJson.ok, false);
   assert.equal(arrayPayloadJson.code, "E_QUERY_INVALID");
 });
+
+test("target upload keypress and drag-drop return deterministic shapes", { skip: !hasBrowser() }, () => {
+  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  assert.equal(ensureResult.status, 0);
+  const ensurePayload = parseJson(ensureResult.stdout);
+
+  const fixturePath = path.join(TEST_STATE_DIR, "upload-fixture.txt");
+  fs.writeFileSync(fixturePath, "hello upload");
+  const html = `
+    <title>Interaction Contract Test</title>
+    <main>
+      <input id="file-input" type="file" />
+      <input id="hidden-file" type="file" style="display:none" />
+      <button id="upload-trigger" onclick="document.getElementById('hidden-file').click()">Upload</button>
+      <input id="search" value="typed value" />
+      <div id="drag-source" draggable="true">Card A</div>
+      <div id="drop-target">Drop Here</div>
+      <div id="drop-result"></div>
+      <script>
+        const source = document.getElementById('drag-source');
+        const target = document.getElementById('drop-target');
+        source.addEventListener('dragstart', (event) => event.dataTransfer.setData('text/plain', 'card-a'));
+        target.addEventListener('dragover', (event) => event.preventDefault());
+        target.addEventListener('drop', (event) => {
+          event.preventDefault();
+          document.getElementById('drop-result').textContent = event.dataTransfer.getData('text/plain');
+        });
+      </script>
+    </main>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const uploadDirect = runCli(["--json", "--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId, "--selector", "#file-input", "--file", fixturePath, "--timeout-ms", "5000"]);
+  assert.equal(uploadDirect.status, 0);
+  const uploadDirectPayload = parseJson(uploadDirect.stdout);
+  assert.equal(uploadDirectPayload.mode, "direct-input");
+  assert.equal(uploadDirectPayload.fileCount, 1);
+
+  const uploadChooser = runCli(["--json", "--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId, "--selector", "#upload-trigger", "--file", fixturePath, "--timeout-ms", "5000"]);
+  assert.equal(uploadChooser.status, 0);
+  const uploadChooserPayload = parseJson(uploadChooser.stdout);
+  assert.equal(uploadChooserPayload.mode, "filechooser");
+
+  const keypressResult = runCli(["--json", "--session", ensurePayload.sessionId, "target", "keypress", openPayload.targetId, "--selector", "#search", "--key", "Enter", "--timeout-ms", "5000"]);
+  assert.equal(keypressResult.status, 0);
+  const keypressPayload = parseJson(keypressResult.stdout);
+  assert.equal(keypressPayload.key, "Enter");
+  assert.equal(keypressPayload.selector, "#search");
+  assert.equal(typeof keypressPayload.resultText, "string");
+
+  const dragDropResult = runCli(["--json", "--session", ensurePayload.sessionId, "target", "drag-drop", openPayload.targetId, "--from", "#drag-source", "--to", "#drop-target", "--timeout-ms", "5000"]);
+  assert.equal(dragDropResult.status, 0);
+  const dragDropPayload = parseJson(dragDropResult.stdout);
+  assert.equal(dragDropPayload.result, "dragged");
+  assert.equal(dragDropPayload.from, "#drag-source");
+  assert.equal(dragDropPayload.to, "#drop-target");
+
+  const verifyDrag = runCli([
+    "--json", "--session", ensurePayload.sessionId, "target", "eval", openPayload.targetId,
+    "--expression", "return document.querySelector('#drop-result').textContent", "--timeout-ms", "5000",
+  ]);
+  assert.equal(verifyDrag.status, 0);
+  const verifyDragPayload = parseJson(verifyDrag.stdout);
+  assert.equal(verifyDragPayload.result.value, "card-a");
+
+  const uploadMissingFile = runCli([
+    "--json", "--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId,
+    "--selector", "#search", "--file", "/tmp/does-not-exist.txt", "--timeout-ms", "5000",
+  ]);
+  assert.equal(uploadMissingFile.status, 1);
+  assert.equal(parseJson(uploadMissingFile.stdout).code, "E_QUERY_INVALID");
+
+  const keypressMissingSelector = runCli([
+    "--json", "--session", ensurePayload.sessionId, "target", "keypress", openPayload.targetId,
+    "--selector", "#missing", "--key", "Enter", "--timeout-ms", "5000",
+  ]);
+  assert.equal(keypressMissingSelector.status, 1);
+  assert.equal(parseJson(keypressMissingSelector.stdout).code, "E_QUERY_INVALID");
+
+  const dragDropInvalidSelector = runCli([
+    "--json", "--session", ensurePayload.sessionId, "target", "drag-drop", openPayload.targetId,
+    "--from", "[[", "--to", "#dst", "--timeout-ms", "5000",
+  ]);
+  assert.equal(dragDropInvalidSelector.status, 1);
+  assert.equal(parseJson(dragDropInvalidSelector.stdout).code, "E_SELECTOR_INVALID");
+});

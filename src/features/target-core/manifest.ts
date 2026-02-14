@@ -38,6 +38,24 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "fill multiple form controls in one deterministic command",
   },
   {
+    id: "target.upload",
+    usage:
+      "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "upload one or more files via input or file chooser fallback",
+  },
+  {
+    id: "target.keypress",
+    usage:
+      "surfwright target keypress <targetId> --key <key> [--text <query> | --selector <query>] [--contains <text>] [--visible-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "send a deterministic keypress to page or focused matched element",
+  },
+  {
+    id: "target.drag-drop",
+    usage:
+      "surfwright target drag-drop <targetId> --from <selector> --to <selector> [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "perform deterministic drag and drop between selectors",
+  },
+  {
     id: "target.hover",
     usage:
       "surfwright target hover <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--properties <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",

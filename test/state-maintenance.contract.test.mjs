@@ -131,7 +131,7 @@ test("v2 session payload migrates policy and lease hygiene fields", () => {
 });
 
 test("target prune removes orphaned, stale, and overflow metadata", () => {
-  const now = new Date("2026-02-13T10:00:00.000Z");
+  const now = new Date();
   const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
   const twentyMinutesAgo = new Date(now.getTime() - 20 * 60 * 1000);
   const thirtyHoursAgo = new Date(now.getTime() - 30 * 60 * 60 * 1000);

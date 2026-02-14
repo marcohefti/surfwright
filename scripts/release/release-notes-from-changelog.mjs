@@ -55,19 +55,17 @@ const outPath = path.resolve(args.out);
 const changelog = fs.readFileSync(changelogPath, "utf8");
 
 const versionHeading = `## [${args.version}]`;
-const unreleasedHeading = "## [Unreleased]";
-
-let body = sectionBody(changelog, versionHeading);
-let source = "version";
+const body = sectionBody(changelog, versionHeading);
 if (!body || body.length === 0) {
-  body = sectionBody(changelog, unreleasedHeading) ?? "No notes.";
-  source = "unreleased";
+  throw new Error(
+    `Missing changelog section for ${args.version}. Add '## [${args.version}] - YYYY-MM-DD' before release/publish.`,
+  );
 }
 
 const notes = [
   `## SurfWright v${args.version}`,
   "",
-  `Generated from changelog (${source} section).`,
+  "Generated from changelog (version section).",
   "",
   body,
   "",

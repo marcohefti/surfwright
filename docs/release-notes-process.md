@@ -19,6 +19,7 @@
 3. Move `Unreleased` entries into `## [x.y.z] - YYYY-MM-DD`.
 4. Recreate empty `Unreleased` skeleton.
 5. Generate release notes using the template below.
+6. Release automation requires the explicit `## [x.y.z]` changelog section; publish/draft fail if it is missing.
 
 ## Release Notes Template
 

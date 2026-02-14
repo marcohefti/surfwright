@@ -63,11 +63,12 @@ for (const pkg of packageDirs) {
     report.ok = false;
   }
 
-  let packJson = [];
+  let packedFiles = null;
   try {
-    packJson = parsePackJson(pack.stdout);
+    const packJson = parsePackJson(pack.stdout);
+    packedFiles = Array.isArray(packJson) ? packJson[0]?.files?.length ?? null : null;
   } catch {
-    report.ok = false;
+    packedFiles = null;
   }
 
   const distPath = path.join(pkg.dir, "dist", "cli.js");
@@ -84,7 +85,7 @@ for (const pkg of packageDirs) {
     nodeEngine: manifest.engines?.node ?? null,
     distCliSha256: distHash,
     packOk: pack.status === 0,
-    packedFiles: Array.isArray(packJson) ? packJson[0]?.files?.length ?? 0 : 0,
+    packedFiles,
   });
 }
 

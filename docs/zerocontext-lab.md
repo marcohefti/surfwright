@@ -60,15 +60,19 @@ natural command demand and where agents get stuck.
 
 Keep campaign prompts/assets in a temporary workspace (for example `tmp/zero-context-gap/`) and exclude them from version control.
 
-Follow-up response schema used in this repo:
+Follow-up prompting (default):
 
-```txt
-DECISION_TAG=<missing_primitive|naming_ux|output_shape|already_possible_better_way>
-MISSING_COMMAND=<dot.command.name>
-PROPOSED_USAGE=<single usage line>
-WHY_BETTER=<one sentence>
-EXAMPLE_OUTPUT=<one-line minified JSON>
-```
+Ask for a natural-language proposal for how the CLI should improve.
+
+Prefer that the agent includes:
+
+- what they tried and where they got stuck
+- one concrete improvement proposal (new command/flag, rename, output reshape, or “document existing”)
+- an example usage line and an example one-line JSON output (when possible)
+
+If the follow-up is vague or does not contain a concrete proposal, send a second follow-up prompt asking for a single concrete change (name + usage + one-line example output).
+
+If you need a machine-parsed summary, instruct the agent to end with exactly one line prefixed by `ZCL_FEEDBACK:` followed by JSON (see “What It Captures”).
 
 Decision tags:
 

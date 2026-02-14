@@ -31,11 +31,12 @@ Do not version control campaign artifacts.
 2. Do not coach during mission execution.
 3. Use a 120-second soft timeout boundary.
 4. If the mission has not completed by 120 seconds, interrupt mission execution.
-5. Send follow-up prompt asking for one CLI improvement proposal.
-6. Collect:
-   - follow-up structured response,
+5. Send follow-up prompt asking how the CLI should improve (natural language).
+6. If the follow-up is vague or lacks a concrete proposal, send a second follow-up asking for one concrete change (name + usage + one-line example JSON).
+7. Collect:
+   - follow-up response(s),
    - trace artifacts (`commands.jsonl`, stdout/stderr logs).
-7. Classify outcome and record decision tag.
+8. Classify outcome and record decision tag.
 
 ## Timeout Policy
 
@@ -53,15 +54,17 @@ Browser actions must use `surfwright` directly.
 
 If mission actions bypass the traced binary, mark run invalid for discovery scoring.
 
-## Follow-Up Response Contract
+## Follow-Up Prompt Policy
 
-```txt
-DECISION_TAG=<missing_primitive|naming_ux|output_shape|already_possible_better_way>
-MISSING_COMMAND=<dot.command.name>
-PROPOSED_USAGE=<single usage line>
-WHY_BETTER=<one sentence>
-EXAMPLE_OUTPUT=<one-line minified JSON>
-```
+Default: ask for a natural-language proposal.
+
+Prefer the agent includes:
+
+- what they tried and where they got stuck
+- one concrete SurfWright improvement (missing primitive, naming, output shape, or “document existing”)
+- an example usage line and one-line example JSON output (when possible)
+
+If you need a machine-parsed summary, request exactly one trailing line prefixed by `ZCL_FEEDBACK:` followed by JSON.
 
 ## Decision Tag Rubric
 

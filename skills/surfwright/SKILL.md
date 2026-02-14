@@ -60,6 +60,12 @@ If local state may be stale (machine restart, browser crash), run:
 surfwright --json state reconcile
 ```
 
+For full teardown between runs (state + processes), run:
+
+```bash
+surfwright --json session clear
+```
+
 ## Error discipline
 
 - Retry only retryable infrastructure failures (`E_CDP_UNREACHABLE`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_TIMEOUT`, `E_INTERNAL`, `E_WAIT_TIMEOUT`).

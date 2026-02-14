@@ -81,6 +81,15 @@ This combines:
 - `session prune` (remove unreachable attached sessions; repair stale managed pid metadata)
 - `target prune` (remove orphaned/aged target metadata and enforce per-session cap)
 
+For explicit teardown, use:
+
+```bash
+surfwright --json session clear
+```
+
+- default behavior clears sessions/targets and shuts down associated browser processes
+- use `--keep-processes` only when you intentionally want state reset without process teardown
+
 For long-lived automation, use per-agent state namespaces with `SURFWRIGHT_AGENT_ID=<agentId>`.
 
 `session ensure` includes an automatic session hygiene pass for shared-session workflows, but a scheduled weekly `state reconcile` is still a good full cleanup baseline.

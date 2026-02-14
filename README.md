@@ -96,6 +96,7 @@ surfwright session attach --cdp <origin> [--session-id <id>] [--policy <policy>]
 surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session list [--json] [--pretty]
 surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--json] [--pretty]
+surfwright session clear [--keep-processes] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session cookie-copy --from-session <id> --to-session <id> --url <url> [--url <url> ...] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
@@ -179,11 +180,13 @@ State hygiene workflow for stale local metadata:
 
 ```bash
 surfwright --json session prune
+surfwright --json session clear
 surfwright --json target prune --max-age-hours 168 --max-per-session 200
 surfwright --json state reconcile
 ```
 
 - `session prune` removes unreachable attached sessions and repairs stale managed `browserPid`.
+- `session clear` clears all sessions/targets and shuts down associated browser processes by default (`--keep-processes` to opt out).
 - `target prune` removes orphaned/aged targets and caps retained targets per session.
 - `state reconcile` runs both in one pass (recommended after host/browser restarts).
 

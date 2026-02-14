@@ -51,7 +51,8 @@ import { targetConsoleTail, targetHealth, targetHud } from "./target/target-obse
 import { targetRead } from "./target/target-read.js";
 import { targetWait } from "./target/target-wait.js";
 import { readPageTargetId, resolveSessionForAction, targetList, targetSnapshot } from "./target/targets.js";
-import { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
+import { sessionClear, sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
+import type { SessionClearReport } from "./state/maintenance.js";
 import { executePipelinePlan } from "./pipeline.js";
 import type {
   DoctorReport,
@@ -386,6 +387,13 @@ export function sessionList(): SessionListReport {
     activeSessionId: state.activeSessionId,
     sessions,
   };
+}
+
+export async function sessionClearAll(opts: { timeoutMs: number; keepProcesses?: boolean }): Promise<SessionClearReport> {
+  return await sessionClear({
+    timeoutMs: opts.timeoutMs,
+    keepProcesses: Boolean(opts.keepProcesses),
+  });
 }
 
 export async function runPipeline(opts: {

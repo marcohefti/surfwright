@@ -64,6 +64,7 @@ test("contract includes state maintenance commands", () => {
   assert.equal(result.status, 0);
   const payload = parseJson(result.stdout);
   const commandIds = new Set(payload.commands.map((entry) => entry.id));
+  assert.equal(commandIds.has("session.clear"), true);
   assert.equal(commandIds.has("session.prune"), true);
   assert.equal(commandIds.has("target.prune"), true);
   assert.equal(commandIds.has("state.reconcile"), true);

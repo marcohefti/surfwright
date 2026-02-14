@@ -27,6 +27,7 @@ import {
 import { getCliContractReport } from "../../core/cli-contract.js";
 import { runtimeCommandMeta } from "./manifest.js";
 import { registerSessionCookieCopyCommand } from "./commands/session-cookie-copy.js";
+import { registerSessionClearCommand } from "./commands/session-clear.js";
 
 type RuntimeOutputOpts = {
   json: boolean;
@@ -370,6 +371,13 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         ctx.handleFailure(error, output);
       }
     });
+  registerSessionClearCommand({
+    session,
+    parseTimeoutMs: ctx.parseTimeoutMs,
+    globalOutputOpts: ctx.globalOutputOpts,
+    handleFailure: ctx.handleFailure,
+    commandMeta: runtimeCommandMeta("session.clear"),
+  });
   registerSessionCookieCopyCommand({
     session,
     parseTimeoutMs: ctx.parseTimeoutMs,

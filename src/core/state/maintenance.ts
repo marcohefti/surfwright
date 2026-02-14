@@ -1,4 +1,5 @@
 import process from "node:process";
+import { chromium } from "playwright-core";
 import { CDP_HEALTHCHECK_TIMEOUT_MS, isCdpEndpointAlive } from "../browser.js";
 import { CliError } from "../errors.js";
 import { hasSessionLeaseExpired, withSessionHeartbeat } from "../session/index.js";
@@ -11,7 +12,26 @@ const DEFAULT_TARGET_MAX_PER_SESSION = 200;
 const MAX_TARGET_MAX_AGE_HOURS = 8760;
 const MAX_TARGET_MAX_PER_SESSION = 5000;
 const SESSION_PRUNE_REACHABILITY_TIMEOUT_CAP_MS = 1500;
+const SESSION_CLEAR_SHUTDOWN_TIMEOUT_CAP_MS = 2000;
+const SESSION_CLEAR_SIGTERM_GRACE_MS = 500;
 
+export type SessionClearReport = {
+  ok: true;
+  activeSessionId: null;
+  scanned: number;
+  cleared: number;
+  clearedManaged: number;
+  clearedAttached: number;
+  keepProcesses: boolean;
+  processShutdown: {
+    requested: number;
+    succeeded: number;
+    failed: number;
+  };
+  targetsRemoved: number;
+  networkCapturesRemoved: number;
+  networkArtifactsRemoved: number;
+};
 function pidIsAlive(pid: number | null): boolean {
   if (!pid || !Number.isFinite(pid) || pid <= 0) {
     return false;
@@ -36,6 +56,74 @@ function stopManagedSessionProcess(session: SessionState): void {
   } catch {
     // best-effort termination for stale managed sessions
   }
+}
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function stopManagedSessionProcessStrict(session: SessionState, timeoutMs: number): Promise<boolean> {
+  const pid = session.browserPid ?? null;
+  if (!pidIsAlive(pid)) {
+    return true;
+  }
+  try {
+    process.kill(pid ?? 0, "SIGTERM");
+  } catch {
+    return false;
+  }
+
+  const waitUntil = Date.now() + Math.max(100, Math.min(timeoutMs, SESSION_CLEAR_SIGTERM_GRACE_MS));
+  while (Date.now() < waitUntil) {
+    if (!pidIsAlive(pid)) {
+      return true;
+    }
+    await delay(25);
+  }
+
+  if (!pidIsAlive(pid)) {
+    return true;
+  }
+
+  try {
+    process.kill(pid ?? 0, "SIGKILL");
+  } catch {
+    return false;
+  }
+  return !pidIsAlive(pid);
+}
+
+async function stopSessionViaCdp(session: SessionState, timeoutMs: number): Promise<boolean> {
+  const cdpTimeoutMs = Math.max(CDP_HEALTHCHECK_TIMEOUT_MS, Math.min(timeoutMs, SESSION_CLEAR_SHUTDOWN_TIMEOUT_CAP_MS));
+  const reachable = await isCdpEndpointAlive(session.cdpOrigin, cdpTimeoutMs);
+  if (!reachable) {
+    return false;
+  }
+
+  try {
+    const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+      timeout: cdpTimeoutMs,
+    });
+    try {
+      const cdp = await browser.newBrowserCDPSession();
+      await cdp.send("Browser.close");
+      return true;
+    } finally {
+      try {
+        await browser.close();
+      } catch {
+        // Browser.close may sever CDP before Playwright disconnect completes.
+      }
+    }
+  } catch {
+    return false;
+  }
+}
+
+async function stopSessionProcess(session: SessionState, timeoutMs: number): Promise<boolean> {
+  if (session.kind === "managed" && pidIsAlive(session.browserPid ?? null)) {
+    return await stopManagedSessionProcessStrict(session, timeoutMs);
+  }
+  return await stopSessionViaCdp(session, timeoutMs);
 }
 
 function parseOptionalPositiveIntInRange(opts: {
@@ -287,6 +375,73 @@ export async function sessionPrune(opts: {
     ok: true,
     ...summary,
   };
+}
+
+export async function sessionClear(opts: {
+  timeoutMs: number;
+  keepProcesses?: boolean;
+}): Promise<SessionClearReport> {
+  const timeoutMs = Math.max(
+    CDP_HEALTHCHECK_TIMEOUT_MS,
+    Math.min(opts.timeoutMs, SESSION_CLEAR_SHUTDOWN_TIMEOUT_CAP_MS),
+  );
+  const keepProcesses = Boolean(opts.keepProcesses);
+
+  return await updateState(async (state) => {
+    const sessions = Object.values(state.sessions).sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+    const scanned = sessions.length;
+    let clearedManaged = 0;
+    let clearedAttached = 0;
+    let shutdownRequested = 0;
+    let shutdownSucceeded = 0;
+    let shutdownFailed = 0;
+
+    for (const session of sessions) {
+      if (session.kind === "managed") {
+        clearedManaged += 1;
+      } else {
+        clearedAttached += 1;
+      }
+      if (keepProcesses) {
+        continue;
+      }
+      shutdownRequested += 1;
+      const stopped = await stopSessionProcess(session, timeoutMs);
+      if (stopped) {
+        shutdownSucceeded += 1;
+      } else {
+        shutdownFailed += 1;
+      }
+    }
+
+    const targetsRemoved = Object.keys(state.targets).length;
+    const networkCapturesRemoved = Object.keys(state.networkCaptures).length;
+    const networkArtifactsRemoved = Object.keys(state.networkArtifacts).length;
+
+    state.activeSessionId = null;
+    state.sessions = {};
+    state.targets = {};
+    state.networkCaptures = {};
+    state.networkArtifacts = {};
+
+    return {
+      ok: true,
+      activeSessionId: null,
+      scanned,
+      cleared: scanned,
+      clearedManaged,
+      clearedAttached,
+      keepProcesses,
+      processShutdown: {
+        requested: shutdownRequested,
+        succeeded: shutdownSucceeded,
+        failed: shutdownFailed,
+      },
+      targetsRemoved,
+      networkCapturesRemoved,
+      networkArtifactsRemoved,
+    };
+  });
 }
 
 export async function targetPrune(opts: { maxAgeHours?: number; maxPerSession?: number }): Promise<TargetPruneReport> {

@@ -8,6 +8,7 @@
   { "id": "session.use", "usageMustContain": "session use" },
   { "id": "session.list", "usageMustContain": "session list" },
   { "id": "session.prune", "usageMustContain": "session prune" },
+  { "id": "session.clear", "usageMustContain": "session clear" },
   { "id": "session.cookie-copy", "usageMustContain": "session cookie-copy" },
   { "id": "open", "usageMustContain": "open <url>" },
   { "id": "target.list", "usageMustContain": "target list" },

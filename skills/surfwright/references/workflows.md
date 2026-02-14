@@ -113,3 +113,12 @@ surfwright --json state reconcile
 - `session prune` removes unreachable attached sessions and repairs stale managed `browserPid`.
 - `target prune` removes orphaned/aged targets and caps target history per session.
 - `state reconcile` combines both reports in one deterministic response payload.
+
+For explicit teardown where you want all session state cleared and associated browsers closed:
+
+```bash
+surfwright --json session clear
+```
+
+- default behavior attempts browser shutdown for every tracked session before clearing state
+- use `--keep-processes` only when intentionally preserving running browsers

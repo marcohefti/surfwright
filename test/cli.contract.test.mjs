@@ -391,6 +391,7 @@ test("target eval returns deterministic shape and typed runtime failures", { ski
     "targetId",
     "actionId",
     "expression",
+    "context",
     "result",
     "console",
     "timingMs",

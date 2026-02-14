@@ -8,6 +8,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "list current page targets with explicit target handles",
   },
   {
+    id: "target.frames",
+    usage:
+      "surfwright target frames <targetId> [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "list frames for a target with stable frame handles",
+  },
+  {
     id: "target.snapshot",
     usage:
       "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
@@ -112,7 +118,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.eval",
     usage:
-      "surfwright target eval <targetId> (--expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "execute bounded JavaScript in page context for a target",
   },
   {

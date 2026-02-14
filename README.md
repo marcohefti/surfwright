@@ -148,12 +148,13 @@ surfwright skill install [--source <path>] [--dest <path>] [--lock <path>] [--js
 surfwright skill doctor [--dest <path>] [--lock <path>] [--json] [--pretty]
 surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]
 surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target frames <targetId> [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target eval <targetId> (--expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target url-assert <targetId> [--host <host>] [--origin <origin>] [--path-prefix <prefix>] [--url-prefix <prefix>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--session <id>]
@@ -186,12 +187,13 @@ Default workflow for agent loops:
 
 ```bash
 surfwright --json open https://example.com
+surfwright --json target frames <targetId>
 surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "Checkout" --first --visible-only
 surfwright --json target click <targetId> --text "Blog" --visible-only
 surfwright --json target read <targetId> --selector main --frame-scope main --chunk-size 1200 --chunk 1
 surfwright --json target extract <targetId> --kind blog --frame-scope all --limit 10
-surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
+surfwright --json target eval <targetId> --expr "console.log('hello from agent'), document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target url-assert <targetId> --host example.com --path-prefix /
 surfwright target console-tail <targetId> --capture-ms 2000 --levels error,warn
@@ -288,8 +290,10 @@ surfwright --json state reconcile
 `target eval` executes bounded page-context JavaScript for one explicit target:
 
 ```json
-{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pk-1xk9","expression":"console.log('hello from agent'); return document.title","result":{"type":"string","value":"CamelPay — Cross-chain crypto checkout","truncated":false},"console":{"captured":true,"count":1,"truncated":false,"entries":[{"level":"log","text":"hello from agent"}]},"timingMs":{"total":126,"resolveSession":4,"connectCdp":25,"action":84,"persistState":13}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pk-1xk9","expression":"console.log('hello from agent'), document.title","context":{"frameCount":1,"evaluatedFrameId":"f-0","evaluatedFrameUrl":"http://camelpay.localhost/","sameOrigin":true,"world":"main"},"result":{"type":"string","value":"CamelPay — Cross-chain crypto checkout","truncated":false},"console":{"captured":true,"count":1,"truncated":false,"entries":[{"level":"log","text":"hello from agent"}]},"timingMs":{"total":126,"resolveSession":4,"connectCdp":25,"action":84,"persistState":13}}
 ```
+
+Use `--expr` when you want the value of an expression without writing an explicit `return`. Use `target frames` to enumerate `frameId` handles and pass `--frame-id` when evaluating inside an iframe; `target eval` reports compact `context` metadata to clarify what was actually evaluated.
 
 `target network` returns bounded request/websocket diagnostics plus performance summary, correlation ids, hints, and insights:
 

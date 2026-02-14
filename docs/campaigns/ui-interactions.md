@@ -48,6 +48,7 @@ Back-compat:
 
 - New command: `target frames` (bounded list with truncation flags).
 - Frame handle field: `frameId` (stable handle within the current page state).
+  - Format: `f-<n>` (0-based, stable deterministic traversal order for the current page state).
 - Eval targeting flag: `target eval --frame-id <id>`
 
 ### `target eval` Expression Mode (Fix "undefined spiral")
@@ -64,4 +65,3 @@ Add a value-expression mode:
 
 - Delta flag: `target click --delta`
 - Output field: `delta` (bounded evidence-only payload; no semantic narratives)
-

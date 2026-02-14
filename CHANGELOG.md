@@ -11,6 +11,8 @@ All notable changes to SurfWright are documented here.
 - [contract] Added `browserMode` reporting to `open`/`session` JSON outputs (`unknown` for attached sessions).
 - [open] Added redirect evidence fields to `open` output: `requestedUrl`, `finalUrl`, `wasRedirected`, optional `redirectChain` + `redirectChainTruncated` (keeps `url` as final for back-compat).
 - [target] Added `target url-assert` for typed URL drift guards (`--host`, `--origin`, `--path-prefix`, `--url-prefix`).
+- [target] Added `target frames` for bounded frame enumeration with stable `frameId` handles.
+- [target] Added `target eval --expr <js>` (value-expression mode), `--frame-id <id>`, and compact `context` metadata in eval output.
 
 ### Changed
 - [release] Publish and release-draft workflows now use shared smoke script `scripts/release/smoke-contract.mjs`.

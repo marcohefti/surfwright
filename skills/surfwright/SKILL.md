@@ -30,12 +30,13 @@ surfwright --json contract
 
 ```bash
 surfwright --json open https://example.com
+surfwright --json target frames <targetId>
 surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
 surfwright --json target click <targetId> --text "query" --visible-only
 surfwright --json target read <targetId> --selector main --frame-scope main --chunk-size 1200 --chunk 1
 surfwright --json target extract <targetId> --kind blog --frame-scope all --limit 10
-surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
+surfwright --json target eval <targetId> --expr "console.log('hello from agent'), document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright target console-tail <targetId> --capture-ms 2000 --levels error,warn
 surfwright --json target health <targetId>
@@ -49,10 +50,19 @@ surfwright --json target network-export <targetId> --profile page --reload --cap
 surfwright --json target network-export-list --limit 20
 surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
 surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
-surfwright --json session cookie-copy --from-session a-login --to-session s-checkout --url https://dashboard.stripe.com --url https://access.stripe.com
+surfwright --json session cookie-copy --from-session a-login --to-session s-checkout --url https://github.com
 ```
 
 `open` returns `sessionId`, `sessionSource`, and `targetId`; persist these handles in your run state. `target *` commands can infer the session from `targetId` when `--session` is omitted.
+
+## Frames + iframe eval
+
+Use `target frames` to enumerate stable `frameId` handles. Use `--frame-id` on `target eval` to run JS inside a specific iframe. Prefer `--expr` when you want expression values without remembering `return`.
+
+```bash
+surfwright --json target frames <targetId> --limit 50
+surfwright --json target eval <targetId> --frame-id f-1 --expr "document.title"
+```
 
 ## URL drift guard (Optional)
 

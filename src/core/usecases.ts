@@ -320,6 +320,7 @@ export { targetConsoleGet, targetConsoleTail, targetHealth, targetHud } from "./
 export { targetFormFill, targetRead } from "./target/target-read.js";
 export { targetDialog, targetKeypress, targetWait } from "./target/target-wait.js";
 export { targetList, targetSnapshot } from "./target/targets.js";
+export { targetFrames } from "./target/frames/target-frames.js";
 export { targetUrlAssert } from "./target/url/url-assert.js";
 export { targetObserve } from "./target/effects/target-observe.js";
 export { targetHover, targetMotionDetect, targetStickyCheck } from "./target/effects/target-effect-assertions.js";

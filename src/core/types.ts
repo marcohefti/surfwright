@@ -112,6 +112,27 @@ export type TargetListReport = {
   }>;
   timingMs: ActionTimingMs;
 };
+export type TargetFramesReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  url: string;
+  title: string;
+  count: number;
+  limit: number;
+  frames: Array<{
+    frameId: string;
+    parentFrameId: string | null;
+    depth: number;
+    isMain: boolean;
+    sameOrigin: boolean;
+    url: string;
+    name: string | null;
+  }>;
+  truncated: boolean;
+  timingMs: ActionTimingMs;
+};
 export type TargetSnapshotReport = {
   ok: true;
   sessionId: string;
@@ -262,6 +283,13 @@ export type TargetEvalReport = {
   targetId: string;
   actionId: string;
   expression: string;
+  context: {
+    frameCount: number;
+    evaluatedFrameId: string;
+    evaluatedFrameUrl: string;
+    sameOrigin: boolean;
+    world: "main";
+  };
   result: {
     type: "undefined" | "null" | "boolean" | "number" | "string" | "bigint" | "array" | "object";
     value: unknown;
@@ -403,75 +431,7 @@ export type CliFailure = {
   code: string;
   message: string;
 };
-export type SessionState = {
-  sessionId: string;
-  kind: SessionKind;
-  policy: SessionPolicy;
-  browserMode: BrowserMode;
-  cdpOrigin: string;
-  debugPort: number | null;
-  userDataDir: string | null;
-  browserPid: number | null;
-  ownerId: string | null;
-  leaseExpiresAt: string | null;
-  leaseTtlMs: number | null;
-  managedUnreachableSince: string | null;
-  managedUnreachableCount: number;
-  createdAt: string;
-  lastSeenAt: string;
-};
-export type TargetState = {
-  targetId: string;
-  sessionId: string;
-  url: string;
-  title: string;
-  status: number | null;
-  lastActionId?: string | null;
-  lastActionAt?: string | null;
-  lastActionKind?: string | null;
-  updatedAt: string;
-};
-export type SurfwrightState = {
-  version: number;
-  activeSessionId: string | null;
-  nextSessionOrdinal: number;
-  nextCaptureOrdinal: number;
-  nextArtifactOrdinal: number;
-  sessions: Record<string, SessionState>;
-  targets: Record<string, TargetState>;
-  networkCaptures: Record<
-    string,
-    {
-      captureId: string;
-      sessionId: string;
-      targetId: string;
-      startedAt: string;
-      status: TargetNetworkCaptureStatus;
-      profile: "custom" | "api" | "page" | "ws" | "perf";
-      maxRuntimeMs: number;
-      workerPid: number | null;
-      stopSignalPath: string;
-      donePath: string;
-      resultPath: string;
-      endedAt: string | null;
-      actionId: string;
-    }
-  >;
-  networkArtifacts: Record<
-    string,
-    {
-      artifactId: string;
-      createdAt: string;
-      format: "har";
-      path: string;
-      sessionId: string;
-      targetId: string;
-      captureId: string | null;
-      entries: number;
-      bytes: number;
-    }
-  >;
-};
+export type { SessionState, TargetState, SurfwrightState } from "./types/state.js";
 export type CliCommandContract = {
   id: string;
   usage: string;
@@ -492,4 +452,3 @@ export type CliContractReport = {
   commands: CliCommandContract[];
   errors: CliErrorContract[];
 };
-import type { TargetNetworkCaptureStatus } from "./network-types.js";

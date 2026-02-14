@@ -268,7 +268,7 @@ test("target emulate and screenshot return typed validation failures", { skip: !
 });
 
 test("target console-get returns one structured event", { skip: !hasBrowser() }, () => {
-  const sentinel = "PARITY_CONSOLE_SENTINEL_20260214";
+  const sentinel = "CONSOLE_SENTINEL_EXAMPLE_20260214";
   const html = `<title>Console Get</title><script>console.error("${sentinel}")</script>`;
   const open = runCli(["--json", "open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
   assert.equal(open.status, 0);

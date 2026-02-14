@@ -27,7 +27,7 @@ surfwright --json target close <targetId>
 surfwright --json target dialog <targetId> --action accept --trigger-selector "#delete"
 surfwright --json target emulate <targetId> --width 390 --height 844 --color-scheme dark --touch --device-scale-factor 2
 surfwright --json target screenshot <targetId> --out ./artifacts/page.png --full-page
-surfwright --json target console-get <targetId> --contains "PARITY_CONSOLE_SENTINEL_20260214" --capture-ms 1200
+surfwright --json target console-get <targetId> --contains "CONSOLE_SENTINEL_EXAMPLE" --capture-ms 1200
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
@@ -43,10 +43,10 @@ surfwright --json target network-export <targetId> --profile page --reload --cap
 surfwright --json target network-export-list --limit 20
 surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
 surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
-surfwright --json extension load ./tmp/parity-gap/assets/extensions/minimal-extension
+surfwright --json extension load ./assets/extensions/minimal-extension
 surfwright --json extension list
-surfwright --json extension reload "SurfWright Parity Minimal Extension"
-surfwright --json extension uninstall "SurfWright Parity Minimal Extension"
+surfwright --json extension reload "Minimal Example Extension"
+surfwright --json extension uninstall "Minimal Example Extension"
 surfwright --json extension uninstall "missing-extension" --fail-if-missing
 ```
 

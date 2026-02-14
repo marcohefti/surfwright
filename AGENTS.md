@@ -18,6 +18,7 @@ This repo exists for one thing: a stable browser control surface that agents can
 4. `docs/policy-harness.md` for structural rule framework and plug-in rules.
 5. `docs/fixture-ingress-workflow.md` for adding regression fixtures when new edge cases appear.
 6. `docs/zerocontext-lab.md` for unbiased cold-start subagent evaluation workflow.
+7. `docs/zerocontext-gap-workflow.md` for one-agent-per-mission capability-gap discovery and evaluation.
 
 ## Runtime Source of Truth
 
@@ -66,6 +67,7 @@ Treat all feature work, refactors, and optimizations as agent-operator surface d
 When the user asks to "spawn agents", "zero context test", or evaluate fresh-agent intuition:
 
 - Use the ZeroContext Lab workflow in `docs/zerocontext-lab.md` (do not invent an ad-hoc process).
+- For capability-gap discovery, follow `docs/zerocontext-gap-workflow.md` (sparse mission prompts, 120s soft timeout, follow-up feedback, trace-first evaluation).
 - Keep task prompts short and unbiased; do not leak implementation hints or feature names unless explicitly requested.
 - Ensure runs are trace-backed (captured command artifacts/logs), then evaluate from those artifacts first.
 - Prefer evidence-based scoring: success/failure, command count, typed failures, and where agents got stuck.

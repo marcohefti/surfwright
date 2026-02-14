@@ -31,7 +31,7 @@ export const targetConsoleGetCommandSpec: TargetCommandSpec = {
         [
           "",
           "Examples:",
-          "  surfwright --json target console-get <targetId> --contains PARITY_CONSOLE_SENTINEL_20260214",
+          "  surfwright --json target console-get <targetId> --contains CONSOLE_SENTINEL_EXAMPLE",
           "  surfwright --json --session s-1 target console-get <targetId> --reload --capture-ms 1200 --levels error,warn",
         ].join("\n"),
       )

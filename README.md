@@ -114,7 +114,16 @@ pnpm skill:install
 | one-off guard | `npx -y surfwright@latest --json contract` |
 | pnpm dlx canonical | `pnpm dlx @marcohefti/surfwright@latest --json contract` |
 | pnpm dlx guard | `pnpm dlx surfwright@latest --json contract` |
-| Homebrew tap (planned) | `brew tap marcohefti/surfwright && brew install surfwright` |
+| Homebrew tap | `brew tap marcohefti/homebrew-tap && brew install surfwright` |
+
+Homebrew upgrade path:
+
+```bash
+brew update
+brew upgrade surfwright
+```
+
+Deferred distribution channels and enablement checklists are tracked in `docs/release-governance.md`.
 
 ## Commands (Current)
 

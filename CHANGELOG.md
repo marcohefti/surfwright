@@ -8,10 +8,13 @@ All notable changes to SurfWright are documented here.
 - [docs] Added release governance and contributor release-routing documentation.
 - [ci] Added explicit docs-check, release-check, and dual-package-parity CI jobs.
 - [npm] Added dual-package workspace manifests for `@marcohefti/surfwright` and `surfwright`.
+- [distribution] Added Homebrew tap sync workflow and deferred winget scaffold/backlog tracking.
 
 ### Changed
 - [ci] Hardened CI workflows with concurrency, per-job timeouts, artifact uploads, and SHA-pinned actions.
 - [contract] Release readiness checks now include dual-package parity validation and pack dry-run coverage.
+- [release] Publish workflow now supports idempotent dual-package recovery runs and verifies npm provenance attestations for both package names.
+- [docs] README install matrix now includes active Homebrew tap install/upgrade commands.
 
 ### Fixed
 - [docs] Enforced changelog/docs presence through `scripts/docs-check.mjs` wired into `pnpm validate`.

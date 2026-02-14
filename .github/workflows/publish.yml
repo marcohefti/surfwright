@@ -5,6 +5,10 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without v prefix (e.g. 0.1.1 or 0.2.0-next.1)"
+        required: true
 
 permissions:
   contents: read
@@ -39,10 +43,16 @@ jobs:
       - name: Resolve release context
         id: release
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          if [[ -z "$VERSION" || "$VERSION" == "$GITHUB_REF_NAME" ]]; then
-            echo "Tag must match vX.Y.Z format" >&2
-            exit 1
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ inputs.version }}"
+            RELEASE_REF="manual-v${VERSION}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+            RELEASE_REF="${GITHUB_REF_NAME}"
+            if [[ -z "$VERSION" || "$VERSION" == "$GITHUB_REF_NAME" ]]; then
+              echo "Tag must match vX.Y.Z format" >&2
+              exit 1
+            fi
           fi
           if [[ "$VERSION" == *-* ]]; then
             DIST_TAG="next"
@@ -54,23 +64,24 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
           echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "release_ref=$RELEASE_REF" >> "$GITHUB_OUTPUT"
 
       - name: Prepare package artifacts
         run: |
           node scripts/prepare-package-artifacts.mjs --package canonical
           node scripts/prepare-package-artifacts.mjs --package guard
 
-      - name: Guard package version parity and tag alignment
+      - name: Guard package version parity and release version alignment
         run: |
           CAN_VERSION=$(node -e "console.log(require('./packages/canonical/package.json').version)")
           GUARD_VERSION=$(node -e "console.log(require('./packages/guard/package.json').version)")
-          TAG_VERSION="${{ steps.release.outputs.version }}"
+          RELEASE_VERSION="${{ steps.release.outputs.version }}"
           if [[ "$CAN_VERSION" != "$GUARD_VERSION" ]]; then
             echo "Version mismatch: canonical=$CAN_VERSION guard=$GUARD_VERSION" >&2
             exit 1
           fi
-          if [[ "$CAN_VERSION" != "$TAG_VERSION" ]]; then
-            echo "Tag version mismatch: tag=$TAG_VERSION package=$CAN_VERSION" >&2
+          if [[ "$CAN_VERSION" != "$RELEASE_VERSION" ]]; then
+            echo "Release version mismatch: release=$RELEASE_VERSION package=$CAN_VERSION" >&2
             exit 1
           fi
 
@@ -85,25 +96,53 @@ jobs:
           mkdir -p artifacts/publish
           DIST_TAG="${{ steps.release.outputs.dist_tag }}"
           VERSION="${{ steps.release.outputs.version }}"
+          PUBLISH_TIMEOUT="20m"
 
-          set +e
-          (cd packages/canonical && npm publish --provenance --access public --tag "$DIST_TAG")
-          CAN_STATUS=$?
-          (cd packages/guard && npm publish --provenance --access public --tag "$DIST_TAG")
-          GUARD_STATUS=$?
-          set -e
+          publish_one() {
+            local package_name="$1"
+            local package_dir="$2"
+            local status_var="$3"
+            local mode_var="$4"
+
+            if npm view "${package_name}@${VERSION}" version >/dev/null 2>&1; then
+              printf -v "$status_var" '%s' "0"
+              printf -v "$mode_var" '%s' "already-published"
+              return
+            fi
+
+            set +e
+            (cd "$package_dir" && timeout "$PUBLISH_TIMEOUT" npm publish --provenance --access public --tag "$DIST_TAG" --ignore-scripts)
+            local status=$?
+            set -e
+
+            printf -v "$status_var" '%s' "$status"
+            if [[ "$status" -eq 0 ]]; then
+              printf -v "$mode_var" '%s' "published"
+            else
+              printf -v "$mode_var" '%s' "failed"
+            fi
+          }
+
+          publish_one "@marcohefti/surfwright" "packages/canonical" CAN_STATUS CAN_MODE
+          publish_one "surfwright" "packages/guard" GUARD_STATUS GUARD_MODE
 
           cat > artifacts/publish/publish-status.json <<JSON
           {
             "version": "$VERSION",
             "distTag": "$DIST_TAG",
-            "canonicalStatus": $CAN_STATUS,
-            "guardStatus": $GUARD_STATUS
+            "canonical": {
+              "status": $CAN_STATUS,
+              "mode": "$CAN_MODE"
+            },
+            "guard": {
+              "status": $GUARD_STATUS,
+              "mode": "$GUARD_MODE"
+            }
           }
           JSON
 
           if [[ "$CAN_STATUS" -ne 0 || "$GUARD_STATUS" -ne 0 ]]; then
-            echo "Dual publish failed (canonical=$CAN_STATUS guard=$GUARD_STATUS)" >&2
+            echo "Dual publish failed (canonical=$CAN_STATUS/$CAN_MODE guard=$GUARD_STATUS/$GUARD_MODE)" >&2
             exit 1
           fi
 
@@ -129,6 +168,42 @@ jobs:
           npx -y @marcohefti/surfwright@"$VERSION" --json contract > artifacts/publish/smoke/canonical-contract.json
           npx -y surfwright@"$VERSION" --json contract > artifacts/publish/smoke/guard-contract.json
 
+      - name: Verify npm provenance attestations for both packages
+        run: |
+          mkdir -p artifacts/publish
+          VERSION="${{ steps.release.outputs.version }}"
+          CAN_META=$(npm view @marcohefti/surfwright@"$VERSION" --json)
+          GUARD_META=$(npm view surfwright@"$VERSION" --json)
+          CAN_ATTEST_URL=$(printf '%s' "$CAN_META" | jq -r '.dist.attestations.url // empty')
+          GUARD_ATTEST_URL=$(printf '%s' "$GUARD_META" | jq -r '.dist.attestations.url // empty')
+          CAN_PREDICATE=$(printf '%s' "$CAN_META" | jq -r '.dist.attestations.provenance.predicateType // empty')
+          GUARD_PREDICATE=$(printf '%s' "$GUARD_META" | jq -r '.dist.attestations.provenance.predicateType // empty')
+          if [[ -z "$CAN_ATTEST_URL" || -z "$GUARD_ATTEST_URL" ]]; then
+            echo "Missing npm attestations URL for one or both packages" >&2
+            exit 1
+          fi
+          if [[ -z "$CAN_PREDICATE" || -z "$GUARD_PREDICATE" ]]; then
+            echo "Missing npm provenance predicateType for one or both packages" >&2
+            exit 1
+          fi
+          cat > artifacts/publish/provenance.json <<JSON
+          {
+            "version": "$VERSION",
+            "packages": [
+              {
+                "name": "@marcohefti/surfwright",
+                "attestationsUrl": "$CAN_ATTEST_URL",
+                "predicateType": "$CAN_PREDICATE"
+              },
+              {
+                "name": "surfwright",
+                "attestationsUrl": "$GUARD_ATTEST_URL",
+                "predicateType": "$GUARD_PREDICATE"
+              }
+            ]
+          }
+          JSON
+
       - name: Generate release notes artifact from changelog
         run: |
           node scripts/release/release-notes-from-changelog.mjs \
@@ -141,10 +216,11 @@ jobs:
           cat > artifacts/publish/release-metadata.json <<JSON
           {
             "version": "${{ steps.release.outputs.version }}",
-            "tag": "${GITHUB_REF_NAME}",
+            "releaseRef": "${{ steps.release.outputs.release_ref }}",
             "distTag": "${{ steps.release.outputs.dist_tag }}",
             "prerelease": ${{ steps.release.outputs.is_prerelease }},
             "packages": ["@marcohefti/surfwright", "surfwright"],
+            "event": "${{ github.event_name }}",
             "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           JSON

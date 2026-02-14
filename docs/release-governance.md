@@ -44,6 +44,42 @@ When adding new release-critical jobs, update this list and repository rulesets 
 - Every release must maintain a rollback path.
 - Rollback must cover both package names and dist-tags together.
 - Known-bad versions must be deprecatable without destructive unpublish flows.
+- Provenance attestations must exist for both package names on every successful publish.
+
+## Dual-Package Deprecation + Rollback Procedure
+
+1. Restore dist-tags for both packages together:
+   - `npm dist-tag add @marcohefti/surfwright@<good> <dist-tag>`
+   - `npm dist-tag add surfwright@<good> <dist-tag>`
+2. Deprecate known-bad versions for both package names together:
+   - `npm deprecate @marcohefti/surfwright@<bad> "<message>"`
+   - `npm deprecate surfwright@<bad> "<message>"`
+3. Smoke-check both names with contract output:
+   - `npx -y @marcohefti/surfwright@<good> --json contract`
+   - `npx -y surfwright@<good> --json contract`
+4. Capture rollback metadata artifact from workflow execution.
+
+## Deferred Distribution Backlog
+
+### Homebrew Core (Deferred)
+
+Keep SurfWright in `marcohefti/homebrew-tap` until all are true:
+
+- stable release cadence with low churn
+- enough external demand to justify Homebrew/core maintenance overhead
+- repeated successful auto-bump + install/test runs in tap CI
+
+### winget Enablement Checklist (Deferred)
+
+- define Windows artifact format (`zip` vs `msi`)
+- define Windows signing workflow and certificate ownership
+- generate winget manifests deterministically per release
+- automate PR creation to `microsoft/winget-pkgs`
+- monitor and reconcile moderation feedback
+
+### Chocolatey / apt (Deferred)
+
+Defer until measured demand justifies additional maintenance burden.
 
 ## Solo-Maintainer Mode
 

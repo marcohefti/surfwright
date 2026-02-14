@@ -1,0 +1,22 @@
+name: winget-scaffold
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Target version"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Scaffold placeholder
+        run: |
+          echo "winget flow is intentionally deferred"
+          echo "version=${{ inputs.version }}"
+          echo "Required before enablement: signed Windows artifact, manifest generator, submission automation."

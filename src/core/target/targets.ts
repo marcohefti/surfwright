@@ -22,6 +22,25 @@ const SNAPSHOT_MAX_LINKS = 12;
 const SNAPSHOT_MAX_TEXT_CAP = 20000;
 const SNAPSHOT_MAX_ITEMS_CAP = 200;
 
+// tsx/esbuild dev transpilation may inject __name(...) wrappers into callbacks
+// we pass to frame/page.evaluate. Browser contexts do not define __name, so
+// we install a minimal compatibility helper for active and future documents.
+const ESBUILD_NAME_COMPAT_SCRIPT = `
+if (typeof globalThis.__name !== "function") {
+  globalThis.__name = (fn) => fn;
+}
+`;
+
+const esbuildNameCompatInstalled = new WeakSet<Page>();
+
+async function ensureEvaluateNameCompat(page: Page): Promise<void> {
+  if (!esbuildNameCompatInstalled.has(page)) {
+    await page.context().addInitScript({ content: ESBUILD_NAME_COMPAT_SCRIPT });
+    esbuildNameCompatInstalled.add(page);
+  }
+  await Promise.all(page.frames().map(async (frame) => frame.evaluate(ESBUILD_NAME_COMPAT_SCRIPT).catch(() => undefined)));
+}
+
 function stableTargetId(url: string): string {
   let hash = 0x811c9dc5;
   for (const ch of url) {
@@ -230,6 +249,7 @@ export async function resolveTargetHandle(
   if (!target) {
     throw new CliError("E_TARGET_NOT_FOUND", `Target ${targetId} not found in session`);
   }
+  await ensureEvaluateNameCompat(target.page);
   return target;
 }
 

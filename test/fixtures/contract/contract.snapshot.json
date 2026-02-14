@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:3ce2dffd75c7d3087af51727b4b0b43b17148dcc182c1f0256eb4b73c635fd9e",
+  "contractFingerprint": "sha256:729fb361d27aa77f83ce2333f409d61c2b7bcf37012b49ae0f4d4a43ad965f28",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -344,6 +344,11 @@
       "id": "target.upload",
       "usage": "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "upload one or more files via input or file chooser fallback"
+    },
+    {
+      "id": "target.url-assert",
+      "usage": "surfwright target url-assert <targetId> [--host <host>] [--origin <origin>] [--path-prefix <prefix>] [--url-prefix <prefix>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "assert current target URL matches expected host/origin/path/url prefixes"
     },
     {
       "id": "target.wait",

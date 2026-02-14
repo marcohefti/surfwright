@@ -37,6 +37,7 @@ import {
   targetScreenshotCommandSpec,
 } from "./target-structured.js";
 import { targetWaitCommandSpec } from "./target-wait.js";
+import { targetUrlAssertCommandSpec } from "./url/target-url-assert.js";
 import type { TargetCommandSpec } from "./types.js";
 
 export const targetCommandSpecs: TargetCommandSpec[] = [
@@ -69,6 +70,7 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetReadCommandSpec,
   targetExtractCommandSpec,
   targetWaitCommandSpec,
+  targetUrlAssertCommandSpec,
   targetConsoleGetCommandSpec,
   targetConsoleTailCommandSpec,
   targetHealthCommandSpec,

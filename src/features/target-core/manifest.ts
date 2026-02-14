@@ -176,6 +176,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "wait for deterministic readiness condition on a target",
   },
   {
+    id: "target.url-assert",
+    usage:
+      "surfwright target url-assert <targetId> [--host <host>] [--origin <origin>] [--path-prefix <prefix>] [--url-prefix <prefix>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "assert current target URL matches expected host/origin/path/url prefixes",
+  },
+  {
     id: "target.prune",
     usage: "surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]",
     summary: "prune stale/orphan target metadata with age and size caps",

@@ -155,6 +155,7 @@ surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame
 surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target eval <targetId> (--expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target url-assert <targetId> [--host <host>] [--origin <origin>] [--path-prefix <prefix>] [--url-prefix <prefix>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--session <id>]
 surfwright target health <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target hud <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
@@ -192,6 +193,7 @@ surfwright --json target read <targetId> --selector main --frame-scope main --ch
 surfwright --json target extract <targetId> --kind blog --frame-scope all --limit 10
 surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
+surfwright --json target url-assert <targetId> --host example.com --path-prefix /
 surfwright target console-tail <targetId> --capture-ms 2000 --levels error,warn
 surfwright --json target health <targetId>
 surfwright --json target hud <targetId>
@@ -253,10 +255,10 @@ surfwright --json state reconcile
 - `target prune` removes orphaned/aged targets and caps retained targets per session.
 - `state reconcile` runs both in one pass (recommended after host/browser restarts).
 
-`open` intentionally returns a minimal success shape for agent loops:
+`open` intentionally returns a minimal success shape for agent loops (including redirect evidence fields):
 
 ```json
-{"ok":true,"sessionId":"s-1","sessionSource":"implicit-new","browserMode":"headless","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","status":200,"title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":231,"resolveSession":4,"connectCdp":33,"action":176,"persistState":18}}
+{"ok":true,"sessionId":"s-1","sessionSource":"implicit-new","browserMode":"headless","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2p8-1sz7jc","requestedUrl":"http://camelpay.localhost/","finalUrl":"http://camelpay.localhost/","wasRedirected":false,"redirectChain":null,"redirectChainTruncated":false,"url":"http://camelpay.localhost/","status":200,"title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":231,"resolveSession":4,"connectCdp":33,"action":176,"persistState":18}}
 ```
 
 `target snapshot` returns bounded page-read primitives for deterministic agent parsing:

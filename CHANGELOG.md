@@ -9,6 +9,8 @@ All notable changes to SurfWright are documented here.
 - [test] Added coverage for `scripts/release/release-notes-from-changelog.mjs` failure/success behavior.
 - [session] Added `--browser-mode <headless|headed>` to managed session flows (`session ensure/new/fresh`, `open`, `run`) for headed/headless control (defaults unchanged).
 - [contract] Added `browserMode` reporting to `open`/`session` JSON outputs (`unknown` for attached sessions).
+- [open] Added redirect evidence fields to `open` output: `requestedUrl`, `finalUrl`, `wasRedirected`, optional `redirectChain` + `redirectChainTruncated` (keeps `url` as final for back-compat).
+- [target] Added `target url-assert` for typed URL drift guards (`--host`, `--origin`, `--path-prefix`, `--url-prefix`).
 
 ### Changed
 - [release] Publish and release-draft workflows now use shared smoke script `scripts/release/smoke-contract.mjs`.

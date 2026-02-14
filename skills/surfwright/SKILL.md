@@ -54,6 +54,14 @@ surfwright --json session cookie-copy --from-session a-login --to-session s-chec
 
 `open` returns `sessionId`, `sessionSource`, and `targetId`; persist these handles in your run state. `target *` commands can infer the session from `targetId` when `--session` is omitted.
 
+## URL drift guard (Optional)
+
+After a navigation, assert you're still on the expected host/origin/path before taking stateful actions:
+
+```bash
+surfwright --json target url-assert <targetId> --host github.com --path-prefix /login
+```
+
 ## Human Login Handoff (Headed)
 
 Default managed sessions are `headless`. When you need a visible browser for a human to complete auth/2FA, launch a headed managed session and keep using its explicit `sessionId`:

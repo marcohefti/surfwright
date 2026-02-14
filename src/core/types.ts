@@ -47,6 +47,11 @@ export type OpenReport = {
   browserMode: BrowserMode;
   targetId: string;
   actionId: string;
+  requestedUrl: string;
+  finalUrl: string;
+  wasRedirected: boolean;
+  redirectChain: string[] | null;
+  redirectChainTruncated: boolean;
   url: string;
   status: number | null;
   title: string;
@@ -62,7 +67,6 @@ export type SessionReport = {
   created: boolean;
   restarted: boolean;
 };
-
 export type SessionListReport = {
   ok: true;
   activeSessionId: string | null;
@@ -74,7 +78,6 @@ export type SessionListReport = {
     lastSeenAt: string;
   }>;
 };
-
 export type SessionCookieCopyReport = {
   ok: true;
   fromSessionId: string;
@@ -84,7 +87,6 @@ export type SessionCookieCopyReport = {
   sample: { cookieNames: string[]; domains: string[]; truncated: boolean };
   timingMs: ActionTimingMs;
 };
-
 export type SessionPruneReport = {
   ok: true;
   activeSessionId: string | null;
@@ -98,7 +100,6 @@ export type SessionPruneReport = {
   removedManagedByFlag: number;
   repairedManagedPid: number;
 };
-
 export type TargetListReport = {
   ok: true;
   sessionId: string;
@@ -111,7 +112,6 @@ export type TargetListReport = {
   }>;
   timingMs: ActionTimingMs;
 };
-
 export type TargetSnapshotReport = {
   ok: true;
   sessionId: string;
@@ -141,7 +141,6 @@ export type TargetSnapshotReport = {
   hints?: string[];
   timingMs: ActionTimingMs;
 };
-
 export type TargetPruneReport = {
   ok: true;
   activeSessionId: string | null;
@@ -154,7 +153,6 @@ export type TargetPruneReport = {
   maxAgeHours: number;
   maxPerSession: number;
 };
-
 export type TargetFindReport = {
   ok: true;
   sessionId: string;
@@ -177,7 +175,6 @@ export type TargetFindReport = {
   truncated: boolean;
   timingMs: ActionTimingMs;
 };
-
 export type TargetClickReport = {
   ok: true;
   sessionId: string;
@@ -206,7 +203,6 @@ export type TargetClickReport = {
   } | null;
   timingMs: ActionTimingMs;
 };
-
 export type TargetReadReport = {
   ok: true;
   sessionId: string;
@@ -229,7 +225,6 @@ export type TargetReadReport = {
   hints?: string[];
   timingMs: ActionTimingMs;
 };
-
 export type TargetExtractReport = {
   ok: true;
   sessionId: string;
@@ -260,7 +255,6 @@ export type TargetExtractReport = {
   hints: string[];
   timingMs: ActionTimingMs;
 };
-
 export type TargetEvalReport = {
   ok: true;
   sessionId: string;
@@ -284,7 +278,6 @@ export type TargetEvalReport = {
   };
   timingMs: ActionTimingMs;
 };
-
 export type TargetWaitReport = {
   ok: true;
   sessionId: string;
@@ -296,7 +289,16 @@ export type TargetWaitReport = {
   value: string | null;
   timingMs: ActionTimingMs;
 };
-
+export type TargetUrlAssertReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  url: string;
+  title: string;
+  assert: { host: string | null; origin: string | null; pathPrefix: string | null; urlPrefix: string | null };
+  timingMs: ActionTimingMs;
+};
 export type TargetConsoleTailReport = {
   ok: true;
   sessionId: string;
@@ -310,7 +312,6 @@ export type TargetConsoleTailReport = {
   truncated: boolean;
   counts: { log: number; info: number; warn: number; error: number; debug: number; pageError: number; requestFailed: number };
 };
-
 export type TargetHealthReport = {
   ok: true;
   sessionId: string;
@@ -337,7 +338,6 @@ export type TargetHealthReport = {
   hints: string[];
   timingMs: { total: number; resolveSession: number; connectCdp: number; action: number };
 };
-
 export type TargetHudReport = {
   ok: true;
   sessionId: string;
@@ -373,7 +373,6 @@ export type {
   TargetNetworkWebSocketMessageReport,
   TargetNetworkWebSocketReport,
 } from "./network-types.js";
-
 export type StateReconcileReport = {
   ok: true;
   activeSessionId: string | null;
@@ -399,13 +398,11 @@ export type StateReconcileReport = {
     maxPerSession: number;
   };
 };
-
 export type CliFailure = {
   ok: false;
   code: string;
   message: string;
 };
-
 export type SessionState = {
   sessionId: string;
   kind: SessionKind;
@@ -423,7 +420,6 @@ export type SessionState = {
   createdAt: string;
   lastSeenAt: string;
 };
-
 export type TargetState = {
   targetId: string;
   sessionId: string;
@@ -435,7 +431,6 @@ export type TargetState = {
   lastActionKind?: string | null;
   updatedAt: string;
 };
-
 export type SurfwrightState = {
   version: number;
   activeSessionId: string | null;

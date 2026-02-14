@@ -128,16 +128,9 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.ok(openResult.stdout.trim().startsWith('{"ok":true,'));
   const openPayload = parseJson(openResult.stdout);
   assert.deepEqual(Object.keys(openPayload), [
-    "ok",
-    "sessionId",
-    "sessionSource",
-    "browserMode",
-    "targetId",
-    "actionId",
-    "url",
-    "status",
-    "title",
-    "timingMs",
+    "ok","sessionId","sessionSource","browserMode","targetId","actionId",
+    "requestedUrl","finalUrl","wasRedirected","redirectChain","redirectChainTruncated",
+    "url","status","title","timingMs",
   ]);
   assert.equal(openPayload.ok, true);
   assert.equal(openPayload.sessionId, ensurePayload.sessionId);
@@ -148,6 +141,11 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(typeof openPayload.actionId, "string");
   assert.equal(openPayload.actionId.length > 0, true);
   assert.equal(openPayload.url, dataUrl);
+  assert.equal(openPayload.requestedUrl, dataUrl);
+  assert.equal(openPayload.finalUrl, dataUrl);
+  assert.equal(openPayload.wasRedirected, false);
+  assert.equal(openPayload.redirectChain, null);
+  assert.equal(openPayload.redirectChainTruncated, false);
   assert.equal(openPayload.status, null);
   assert.equal(openPayload.title, "Contract Test Page");
   assert.equal(typeof openPayload.timingMs, "object");

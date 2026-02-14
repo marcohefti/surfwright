@@ -196,3 +196,57 @@ test("target spawn close and dialog return typed failures", { skip: !hasBrowser(
   assert.equal(closeMissing.status, 1);
   assert.equal(parseJson(closeMissing.stdout).code, "E_TARGET_SESSION_UNKNOWN");
 });
+
+test("target emulate and screenshot return deterministic artifacts", { skip: !hasBrowser() }, () => {
+  const open = runCli(["--json", "open", "data:text/html,%3Ctitle%3EEmulate%20Shot%3C%2Ftitle%3E%3Cmain%3Eok%3C%2Fmain%3E", "--timeout-ms", "5000"], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(open.status, 0);
+  const openPayload = parseJson(open.stdout);
+
+  const emulate = runCli([
+    "--json", "--session", openPayload.sessionId, "target", "emulate", openPayload.targetId,
+    "--width", "390", "--height", "844", "--color-scheme", "dark", "--touch", "--device-scale-factor", "2", "--timeout-ms", "5000",
+  ], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(emulate.status, 0);
+  const emulatePayload = parseJson(emulate.stdout);
+  assert.equal(emulatePayload.emulation.viewport.width, 390);
+  assert.equal(emulatePayload.emulation.viewport.height, 844);
+  assert.equal(emulatePayload.emulation.colorScheme, "dark");
+  assert.equal(emulatePayload.emulation.hasTouch, true);
+  assert.equal(emulatePayload.emulation.deviceScaleFactor, 2);
+
+  const outPath = path.join(TEST_TARGET_STATE_DIR, "artifacts", "page.png");
+  const screenshot = runCli([
+    "--json", "--session", openPayload.sessionId, "target", "screenshot", openPayload.targetId,
+    "--out", outPath, "--full-page", "--timeout-ms", "5000",
+  ], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(screenshot.status, 0);
+  const screenshotPayload = parseJson(screenshot.stdout);
+  assert.equal(screenshotPayload.path, outPath);
+  assert.equal(screenshotPayload.type, "png");
+  assert.equal(screenshotPayload.fullPage, true);
+  assert.equal(typeof screenshotPayload.bytes, "number");
+  assert.equal(screenshotPayload.bytes > 0, true);
+  assert.equal(typeof screenshotPayload.sha256, "string");
+  assert.equal(screenshotPayload.sha256.length, 64);
+  assert.equal(fs.existsSync(outPath), true);
+});
+
+test("target emulate and screenshot return typed validation failures", { skip: !hasBrowser() }, () => {
+  const open = runCli(["--json", "open", "data:text/html,%3Ctitle%3EEmulate%20Fail%3C%2Ftitle%3E", "--timeout-ms", "5000"], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(open.status, 0);
+  const openPayload = parseJson(open.stdout);
+
+  const emulateInvalid = runCli([
+    "--json", "--session", openPayload.sessionId, "target", "emulate", openPayload.targetId,
+    "--width", "10", "--timeout-ms", "5000",
+  ], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(emulateInvalid.status, 1);
+  assert.equal(parseJson(emulateInvalid.stdout).code, "E_QUERY_INVALID");
+
+  const screenshotInvalid = runCli([
+    "--json", "--session", openPayload.sessionId, "target", "screenshot", openPayload.targetId,
+    "--out", path.join(TEST_TARGET_STATE_DIR, "artifacts", "bad.png"), "--type", "png", "--quality", "80", "--timeout-ms", "5000",
+  ], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(screenshotInvalid.status, 1);
+  assert.equal(parseJson(screenshotInvalid.stdout).code, "E_QUERY_INVALID");
+});

@@ -24,6 +24,8 @@ surfwright --json target drag-drop <targetId> --from "#card-a" --to "#column-don
 surfwright --json target spawn <targetId> --selector "a[target=_blank]"
 surfwright --json target close <targetId>
 surfwright --json target dialog <targetId> --action accept --trigger-selector "#delete"
+surfwright --json target emulate <targetId> --width 390 --height 844 --color-scheme dark --touch --device-scale-factor 2
+surfwright --json target screenshot <targetId> --out ./artifacts/page.png --full-page
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
@@ -53,6 +55,8 @@ surfwright --json target network-check <targetId> --budget ./budgets/network.jso
 - `target spawn` returns a child `targetId` from a click that opens a new page/tab.
 - `target close` closes an explicit target handle and returns typed closure confirmation.
 - `target dialog` accepts/dismisses dialogs and can trigger the dialog source in one command.
+- `target emulate` applies bounded viewport/device/UA/media emulation on an existing target.
+- `target screenshot` captures deterministic artifact metadata (`path`, bytes, hash, dimensions).
 - `target read` returns deterministic chunks for long text extraction.
 - `target eval` executes bounded JavaScript in page context and returns typed result projection.
 - `target wait` blocks until text/selector/network-idle readiness is met.

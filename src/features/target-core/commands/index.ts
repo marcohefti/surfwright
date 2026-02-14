@@ -29,7 +29,12 @@ import { targetConsoleTailCommandSpec, targetHealthCommandSpec, targetHudCommand
 import { targetPruneCommandSpec } from "./target-prune.js";
 import { targetReadCommandSpec } from "./target-read.js";
 import { targetSnapshotCommandSpec } from "./target-snapshot.js";
-import { targetExtractCommandSpec, targetFormFillCommandSpec } from "./target-structured.js";
+import {
+  targetEmulateCommandSpec,
+  targetExtractCommandSpec,
+  targetFormFillCommandSpec,
+  targetScreenshotCommandSpec,
+} from "./target-structured.js";
 import { targetWaitCommandSpec } from "./target-wait.js";
 import type { TargetCommandSpec } from "./types.js";
 
@@ -46,6 +51,8 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetCloseCommandSpec,
   targetDialogCommandSpec,
   targetFormFillCommandSpec,
+  targetEmulateCommandSpec,
+  targetScreenshotCommandSpec,
   targetHoverCommandSpec,
   targetStickyCheckCommandSpec,
   targetMotionDetectCommandSpec,

@@ -175,6 +175,20 @@ function assertTargetSpawnFixture(fixture, filePath) {
   assert.equal(typeof observed.timingMs.total, "number", `${filePath}: timingMs.total must be a number`);
 }
 
+function assertTargetScreenshotFixture(fixture, filePath) {
+  const { observed, expect, command } = fixture;
+  assert.equal(command.id, "target.screenshot", `${filePath}: expected target.screenshot command`);
+  assert.equal(observed.ok, true, `${filePath}: observed.ok should be true`);
+  assert.equal(observed.type, expect.type, `${filePath}: type mismatch`);
+  assert.equal(observed.fullPage, expect.fullPage, `${filePath}: fullPage mismatch`);
+  assert.equal(typeof observed.path, "string", `${filePath}: path must be a string`);
+  assert.equal(typeof observed.bytes, "number", `${filePath}: bytes must be a number`);
+  assert.equal(typeof observed.sha256, "string", `${filePath}: sha256 must be a string`);
+  assert.equal(observed.sha256.length, 64, `${filePath}: sha256 must be 64 hex chars`);
+  assert.equal(typeof observed.timingMs, "object", `${filePath}: timingMs must be an object`);
+  assert.equal(typeof observed.timingMs.total, "number", `${filePath}: timingMs.total must be a number`);
+}
+
 function assertFixtureCasesPresent(fixturesByCaseId) {
   const required = [
     "target-find-invalid-selector",
@@ -187,6 +201,7 @@ function assertFixtureCasesPresent(fixturesByCaseId) {
     "target-fill-basic-selector",
     "target-drag-drop-basic-selector",
     "target-spawn-basic-selector",
+    "target-screenshot-basic-fullpage-png",
   ];
   for (const caseId of required) {
     assert.equal(fixturesByCaseId.has(caseId), true, `Missing required ingress fixture case: ${caseId}`);
@@ -235,6 +250,10 @@ test("ingress fixture replay cases are present and valid", () => {
     }
     if (fixture.command.id === "target.spawn") {
       assertTargetSpawnFixture(fixture, filePath);
+      continue;
+    }
+    if (fixture.command.id === "target.screenshot") {
+      assertTargetScreenshotFixture(fixture, filePath);
       continue;
     }
     assert.fail(`${filePath}: unsupported command id ${fixture.command.id}`);

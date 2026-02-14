@@ -74,6 +74,18 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "accept or dismiss the next dialog, optionally with trigger click",
   },
   {
+    id: "target.emulate",
+    usage:
+      "surfwright target emulate <targetId> [--width <n>] [--height <n>] [--user-agent <ua>] [--color-scheme <light|dark|no-preference>] [--touch | --no-touch] [--device-scale-factor <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "apply bounded viewport and environment emulation on a target",
+  },
+  {
+    id: "target.screenshot",
+    usage:
+      "surfwright target screenshot <targetId> --out <path> [--full-page] [--type <png|jpeg>] [--quality <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "capture deterministic screenshot artifact metadata for a target",
+  },
+  {
     id: "target.hover",
     usage:
       "surfwright target hover <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--properties <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",

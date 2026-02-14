@@ -5,7 +5,7 @@ import { CliError } from "../errors.js";
 import { nowIso } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { DEFAULT_TARGET_READ_CHUNK_SIZE } from "../types.js";
-import { frameScopeHints, framesForScope, parseFrameScope } from "./target-frame.js";
+import { frameScopeHints, framesForScope, parseFrameScope } from "./target-find.js";
 import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetReadReport } from "../types.js";
 

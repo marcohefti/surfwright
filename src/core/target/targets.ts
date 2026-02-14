@@ -5,7 +5,7 @@ import { withSessionHeartbeat } from "../session/index.js";
 import { allocateSessionId, defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId, updateState } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { extractScopedSnapshotSample } from "./snapshot-sample.js";
-import { frameScopeHints, framesForScope, parseFrameScope } from "./target-frame.js";
+import { frameScopeHints, framesForScope, parseFrameScope } from "./target-find.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
   type SessionSource,

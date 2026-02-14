@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "caseId": "target-screenshot-basic-fullpage-png",
+  "source": {
+    "capturedAt": "2026-02-14T11:00:00.000Z",
+    "surfaceVersion": "0.1.0",
+    "note": "Screenshot returns deterministic artifact metadata with bytes/hash envelope"
+  },
+  "command": {
+    "id": "target.screenshot",
+    "input": {
+      "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+      "out": "./artifacts/page.png",
+      "fullPage": true,
+      "type": "png"
+    }
+  },
+  "observed": {
+    "ok": true,
+    "sessionId": "s-default",
+    "targetId": "1749111EBFCD748C9CAB5ADAC1B145C8",
+    "path": "/tmp/surfwright/artifacts/page.png",
+    "fullPage": true,
+    "type": "png",
+    "width": 1280,
+    "height": 1824,
+    "bytes": 92418,
+    "sha256": "0e4fd2fe24477b8f8cabfba95fd51f199ee7d5a1666cca2e52a1dd8f04fbf2ac",
+    "timingMs": {
+      "total": 198,
+      "resolveSession": 4,
+      "connectCdp": 21,
+      "action": 147,
+      "persistState": 26
+    }
+  },
+  "expect": {
+    "ok": true,
+    "type": "png",
+    "fullPage": true
+  }
+}

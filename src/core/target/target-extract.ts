@@ -3,7 +3,7 @@ import { CliError } from "../errors.js";
 import { nowIso } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
 import { fetchAssistedExtractItems, normalizeExtractWhitespace, type ExtractItemDraft } from "./target-extract-assist.js";
-import { frameScopeHints, framesForScope, parseFrameScope } from "./target-frame.js";
+import { frameScopeHints, framesForScope, parseFrameScope } from "./target-find.js";
 import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetExtractReport } from "../types.js";
 

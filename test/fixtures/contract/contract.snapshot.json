@@ -109,6 +109,11 @@
       "summary": "perform deterministic drag and drop between selectors"
     },
     {
+      "id": "target.emulate",
+      "usage": "surfwright target emulate <targetId> [--width <n>] [--height <n>] [--user-agent <ua>] [--color-scheme <light|dark|no-preference>] [--touch | --no-touch] [--device-scale-factor <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "apply bounded viewport and environment emulation on a target"
+    },
+    {
       "id": "target.eval",
       "usage": "surfwright target eval <targetId> (--expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "execute bounded JavaScript in page context for a target"
@@ -222,6 +227,11 @@
       "id": "target.read",
       "usage": "surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "read target text in deterministic chunks"
+    },
+    {
+      "id": "target.screenshot",
+      "usage": "surfwright target screenshot <targetId> --out <path> [--full-page] [--type <png|jpeg>] [--quality <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "capture deterministic screenshot artifact metadata for a target"
     },
     {
       "id": "target.scroll-plan",

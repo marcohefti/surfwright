@@ -165,8 +165,8 @@ jobs:
         run: |
           mkdir -p artifacts/publish/smoke
           VERSION="${{ steps.release.outputs.version }}"
-          npx -y @marcohefti/surfwright@"$VERSION" --json contract > artifacts/publish/smoke/canonical-contract.json
-          npx -y surfwright@"$VERSION" --json contract > artifacts/publish/smoke/guard-contract.json
+          npx -y --package @marcohefti/surfwright@"$VERSION" surfwright --json contract > artifacts/publish/smoke/canonical-contract.json
+          npx -y --package surfwright@"$VERSION" surfwright --json contract > artifacts/publish/smoke/guard-contract.json
 
       - name: Verify npm provenance attestations for both packages
         run: |

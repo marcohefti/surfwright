@@ -10,4 +10,6 @@ export {
   targetNetworkExport,
   targetNetworkQuery,
   targetNetworkTail,
+  targetTraceExport,
+  targetTraceInsight,
 } from "../../../core/target/network/index.js";

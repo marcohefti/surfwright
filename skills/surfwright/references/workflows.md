@@ -26,6 +26,7 @@ surfwright --json target close <targetId>
 surfwright --json target dialog <targetId> --action accept --trigger-selector "#delete"
 surfwright --json target emulate <targetId> --width 390 --height 844 --color-scheme dark --touch --device-scale-factor 2
 surfwright --json target screenshot <targetId> --out ./artifacts/page.png --full-page
+surfwright --json target console-get <targetId> --contains "PARITY_CONSOLE_SENTINEL_20260214" --capture-ms 1200
 surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
@@ -34,6 +35,9 @@ surfwright target network-tail <targetId> --profile api --capture-ms 3000
 surfwright --json target network-query --capture-id <captureId> --preset slowest --limit 10
 surfwright --json target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
 surfwright --json target network-end <captureId> --view summary --status 5xx
+surfwright --json target trace begin <targetId> --profile perf --max-runtime-ms 300000
+surfwright --json target trace export --trace-id <traceId> --out ./artifacts/trace.json.gz --format json.gz
+surfwright --json target trace insight <targetId> --capture-ms 2000
 surfwright --json target network-export <targetId> --profile page --reload --capture-ms 3000 --out ./artifacts/capture.har
 surfwright --json target network-export-list --limit 20
 surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
@@ -57,6 +61,7 @@ surfwright --json target network-check <targetId> --budget ./budgets/network.jso
 - `target dialog` accepts/dismisses dialogs and can trigger the dialog source in one command.
 - `target emulate` applies bounded viewport/device/UA/media emulation on an existing target.
 - `target screenshot` captures deterministic artifact metadata (`path`, bytes, hash, dimensions).
+- `target console-get` retrieves one structured console/pageerror/requestfailed event for tight assertion loops.
 - `target read` returns deterministic chunks for long text extraction.
 - `target eval` executes bounded JavaScript in page context and returns typed result projection.
 - `target wait` blocks until text/selector/network-idle readiness is met.
@@ -64,6 +69,7 @@ surfwright --json target network-check <targetId> --budget ./budgets/network.jso
 - `target network-tail` streams NDJSON events for live request/socket observation.
 - `target network-query` answers common diagnostics directly from saved capture/HAR sources.
 - `target network-begin` / `target network-end` gives action-scoped handle capture around workflows.
+- `target trace begin` / `target trace export` / `target trace insight` provide discoverable trace-first perf flows.
 - `target network-export --out <path>` writes a compact HAR artifact for deep offline inspection.
 - `target network-export-list` / `target network-export-prune` manage indexed artifacts with retention policies.
 - `target network-check` compares runtime metrics against explicit budget files.

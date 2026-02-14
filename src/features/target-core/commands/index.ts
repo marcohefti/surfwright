@@ -25,7 +25,7 @@ import {
 import { targetEvalCommandSpec } from "./target-eval.js";
 import { targetFindCommandSpec } from "./target-find.js";
 import { targetListCommandSpec } from "./target-list.js";
-import { targetConsoleTailCommandSpec, targetHealthCommandSpec, targetHudCommandSpec } from "./target-observability.js";
+import { targetConsoleGetCommandSpec, targetConsoleTailCommandSpec, targetHealthCommandSpec, targetHudCommandSpec } from "./target-observability.js";
 import { targetPruneCommandSpec } from "./target-prune.js";
 import { targetReadCommandSpec } from "./target-read.js";
 import { targetSnapshotCommandSpec } from "./target-snapshot.js";
@@ -67,6 +67,7 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetReadCommandSpec,
   targetExtractCommandSpec,
   targetWaitCommandSpec,
+  targetConsoleGetCommandSpec,
   targetConsoleTailCommandSpec,
   targetHealthCommandSpec,
   targetHudCommandSpec,

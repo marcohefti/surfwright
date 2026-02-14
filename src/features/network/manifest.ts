@@ -49,6 +49,24 @@ export const networkCommandManifest: CliCommandContract[] = [
     summary: "stop background capture handle and return projected analysis report",
   },
   {
+    id: "target.trace.begin",
+    usage:
+      "surfwright target trace begin <targetId> [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+    summary: "start performance trace capture and return trace handle",
+  },
+  {
+    id: "target.trace.export",
+    usage:
+      "surfwright target trace export [targetId] --out <path> [--trace-id <id>] [--profile <preset>] [--capture-ms <ms>] [--format <json|json.gz>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+    summary: "export trace payload to json/json.gz from trace handle or live capture",
+  },
+  {
+    id: "target.trace.insight",
+    usage:
+      "surfwright target trace insight [targetId] [--trace-id <id>] [--artifact-id <id>] [--profile <preset>] [--capture-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+    summary: "return one bounded high-signal trace insight from capture/artifact/live source",
+  },
+  {
     id: "target.network-check",
     usage:
       "surfwright target network-check [targetId] --budget <path> [--capture-id <id>] [--artifact-id <id>] [--profile <preset>] [--capture-ms <ms>] [--fail-on-violation] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",

@@ -7,6 +7,7 @@ import { networkExportListCommandSpec } from "./network-export-list.js";
 import { networkExportPruneCommandSpec } from "./network-export-prune.js";
 import { networkQueryCommandSpec } from "./network-query.js";
 import { networkTailCommandSpec } from "./network-tail.js";
+import { traceBeginCommandSpec, traceExportCommandSpec, traceInsightCommandSpec } from "./network-trace.js";
 import { networkCommandSpec } from "./network.js";
 
 export const networkCommandSpecs: NetworkCommandSpec[] = [
@@ -18,5 +19,8 @@ export const networkCommandSpecs: NetworkCommandSpec[] = [
   networkExportPruneCommandSpec,
   networkBeginCommandSpec,
   networkEndCommandSpec,
+  traceBeginCommandSpec,
+  traceExportCommandSpec,
+  traceInsightCommandSpec,
   networkCheckCommandSpec,
 ];

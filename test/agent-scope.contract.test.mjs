@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import zlib from "node:zlib";
 import test from "node:test";
 
 const TEST_HOME_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-agent-home-"));
@@ -249,4 +250,76 @@ test("target emulate and screenshot return typed validation failures", { skip: !
   ], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
   assert.equal(screenshotInvalid.status, 1);
   assert.equal(parseJson(screenshotInvalid.stdout).code, "E_QUERY_INVALID");
+});
+
+test("target console-get returns one structured event", { skip: !hasBrowser() }, () => {
+  const sentinel = "PARITY_CONSOLE_SENTINEL_20260214";
+  const html = `<title>Console Get</title><script>console.error("${sentinel}")</script>`;
+  const open = runCli(["--json", "open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(open.status, 0);
+  const openPayload = parseJson(open.stdout);
+
+  const result = runCli([
+    "--json", "--session", openPayload.sessionId, "target", "console-get", openPayload.targetId,
+    "--contains", sentinel, "--reload", "--capture-ms", "800", "--timeout-ms", "5000",
+  ], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.targetId, openPayload.targetId);
+  assert.equal(typeof payload.event, "object");
+  assert.equal(payload.event.level, "error");
+  assert.equal(payload.event.text.includes(sentinel), true);
+  assert.equal(typeof payload.timingMs.total, "number");
+});
+
+test("target trace begin export and insight return deterministic shapes", { skip: !hasBrowser() }, () => {
+  const open = runCli(["--json", "open", "data:text/html,%3Ctitle%3ETrace%3C%2Ftitle%3E%3Cmain%3Eok%3C%2Fmain%3E", "--timeout-ms", "5000"], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(open.status, 0);
+  const openPayload = parseJson(open.stdout);
+
+  const begin = runCli([
+    "--json", "--session", openPayload.sessionId, "target", "trace", "begin", openPayload.targetId,
+    "--max-runtime-ms", "8000", "--timeout-ms", "5000",
+  ], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(begin.status, 0);
+  const beginPayload = parseJson(begin.stdout);
+  assert.equal(beginPayload.ok, true);
+  assert.equal(typeof beginPayload.traceId, "string");
+  assert.equal(beginPayload.status, "recording");
+
+  const outPath = path.join(TEST_TARGET_STATE_DIR, "artifacts", "trace.json.gz");
+  const exportResult = runCli([
+    "--json", "target", "trace", "export",
+    "--trace-id", beginPayload.traceId,
+    "--out", outPath,
+    "--format", "json.gz",
+    "--timeout-ms", "8000",
+  ], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(exportResult.status, 0);
+  const exportPayload = parseJson(exportResult.stdout);
+  assert.equal(exportPayload.ok, true);
+  assert.equal(exportPayload.traceId, beginPayload.traceId);
+  assert.equal(exportPayload.out, outPath);
+  assert.equal(exportPayload.format, "json");
+  assert.equal(exportPayload.gzip, true);
+  assert.equal(typeof exportPayload.bytes, "number");
+  assert.equal(exportPayload.bytes > 0, true);
+  assert.equal(fs.existsSync(outPath), true);
+  const traceRaw = zlib.gunzipSync(fs.readFileSync(outPath));
+  const tracePayload = JSON.parse(traceRaw.toString("utf8"));
+  assert.equal(tracePayload.traceId, beginPayload.traceId);
+  assert.equal(tracePayload.targetId, openPayload.targetId);
+
+  const insight = runCli([
+    "--json", "--session", openPayload.sessionId, "target", "trace", "insight", openPayload.targetId,
+    "--capture-ms", "200", "--timeout-ms", "5000",
+  ], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(insight.status, 0);
+  const insightPayload = parseJson(insight.stdout);
+  assert.equal(insightPayload.ok, true);
+  assert.equal(typeof insightPayload.insight.name, "string");
+  assert.equal(typeof insightPayload.insight.summary, "string");
+  assert.equal(typeof insightPayload.insight.severity, "string");
+  assert.equal(typeof insightPayload.insight.evidence, "object");
 });

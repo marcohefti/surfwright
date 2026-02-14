@@ -7,5 +7,8 @@
   { "id": "target.network-export-prune", "usageMustContain": "target network-export-prune" },
   { "id": "target.network-begin", "usageMustContain": "target network-begin <targetId>" },
   { "id": "target.network-end", "usageMustContain": "target network-end <captureId>" },
+  { "id": "target.trace.begin", "usageMustContain": "target trace begin <targetId>" },
+  { "id": "target.trace.export", "usageMustContain": "target trace export [targetId] --out <path>" },
+  { "id": "target.trace.insight", "usageMustContain": "target trace insight [targetId]" },
   { "id": "target.network-check", "usageMustContain": "target network-check [targetId] --budget <path>" }
 ]

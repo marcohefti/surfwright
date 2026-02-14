@@ -175,6 +175,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "prune stale/orphan target metadata with age and size caps",
   },
   {
+    id: "target.console-get",
+    usage:
+      "surfwright target console-get <targetId> [--capture-ms <ms>] [--levels <csv>] [--contains <text>] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+    summary: "return first structured console/pageerror/requestfailed event in a bounded capture window",
+  },
+  {
     id: "target.console-tail",
     usage:
       "surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--session <id>]",

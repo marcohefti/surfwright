@@ -2,7 +2,28 @@ import { chromium, type Request } from "playwright-core";
 import { CliError } from "../errors.js";
 import { readRecentTargetAction } from "../state-repos/target-repo.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
-import type { TargetConsoleTailReport, TargetHealthReport, TargetHudReport } from "../types.js";
+import type { SessionSource, TargetConsoleTailReport, TargetHealthReport, TargetHudReport } from "../types.js";
+
+type TargetConsoleGetEvent = {
+  type: "console" | "page-error" | "request-failed";
+  level: string;
+  text: string;
+  atMs: number;
+  actionId: string | null;
+};
+
+type TargetConsoleGetReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  event: TargetConsoleGetEvent | null;
+  captureMs: number;
+  seen: number;
+  timingMs: {
+    total: number;
+  };
+};
 
 const CONSOLE_TAIL_MAX_EVENTS = 500;
 const CONSOLE_TAIL_MAX_TEXT = 1200;
@@ -33,6 +54,27 @@ function maybeTruncate(text: string): string {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function toConsoleGetEvent(event: Record<string, unknown>): TargetConsoleGetReport["event"] {
+  const type = event.type;
+  if (type !== "console" && type !== "page-error" && type !== "request-failed") {
+    return null;
+  }
+  const text = event.text;
+  if (typeof text !== "string" || text.trim().length === 0) {
+    return null;
+  }
+  const level = typeof event.level === "string" && event.level.trim().length > 0 ? event.level : "error";
+  const atMs = typeof event.atMs === "number" && Number.isFinite(event.atMs) && event.atMs >= 0 ? event.atMs : 0;
+  const actionId = typeof event.actionId === "string" ? event.actionId : null;
+  return {
+    type,
+    level,
+    text,
+    atMs,
+    actionId,
+  };
 }
 
 export async function targetConsoleTail(opts: {
@@ -187,6 +229,54 @@ export async function targetConsoleTail(opts: {
   } finally {
     await browser.close();
   }
+}
+
+export async function targetConsoleGet(opts: {
+  targetId: string;
+  timeoutMs: number;
+  sessionId?: string;
+  captureMs?: number;
+  levels?: string;
+  contains?: string;
+  reload?: boolean;
+}): Promise<TargetConsoleGetReport> {
+  const startedAt = Date.now();
+  const contains = typeof opts.contains === "string" && opts.contains.trim().length > 0 ? opts.contains : null;
+  let event: TargetConsoleGetReport["event"] = null;
+  const capture = await targetConsoleTail({
+    targetId: opts.targetId,
+    timeoutMs: opts.timeoutMs,
+    sessionId: opts.sessionId,
+    captureMs: opts.captureMs,
+    levels: opts.levels,
+    reload: opts.reload,
+    maxEvents: CONSOLE_TAIL_MAX_EVENTS,
+    onEvent: (row) => {
+      if (event !== null) {
+        return;
+      }
+      const parsed = toConsoleGetEvent(row);
+      if (!parsed) {
+        return;
+      }
+      if (contains && !parsed.text.includes(contains)) {
+        return;
+      }
+      event = parsed;
+    },
+  });
+  return {
+    ok: true,
+    sessionId: capture.sessionId,
+    sessionSource: capture.sessionSource,
+    targetId: capture.targetId,
+    event,
+    captureMs: capture.captureMs,
+    seen: capture.seen,
+    timingMs: {
+      total: Math.max(0, Date.now() - startedAt),
+    },
+  };
 }
 
 export async function targetHealth(opts: {

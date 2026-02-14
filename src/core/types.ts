@@ -367,6 +367,8 @@ export type {
   TargetNetworkQueryReport,
   TargetNetworkReport,
   TargetNetworkRequestReport,
+  TargetTraceExportReport,
+  TargetTraceInsightReport,
   TargetNetworkTailReport,
   TargetNetworkWebSocketMessageReport,
   TargetNetworkWebSocketReport,

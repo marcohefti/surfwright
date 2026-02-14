@@ -29,6 +29,7 @@
   { "id": "target.transition-trace", "usageMustContain": "target transition-trace" },
   { "id": "target.wait", "usageMustContain": "target wait" },
   { "id": "target.extract", "usageMustContain": "target extract" },
+  { "id": "target.console-get", "usageMustContain": "target console-get" },
   { "id": "target.console-tail", "usageMustContain": "target console-tail" },
   { "id": "target.health", "usageMustContain": "target health" },
   { "id": "target.hud", "usageMustContain": "target hud" },

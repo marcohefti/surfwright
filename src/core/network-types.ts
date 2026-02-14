@@ -181,6 +181,37 @@ export type TargetNetworkExportReport = {
   };
 };
 
+export type TargetTraceExportReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  traceId: string | null;
+  out: string;
+  format: "json";
+  gzip: boolean;
+  bytes: number;
+  timingMs: {
+    total: number;
+    capture: number;
+    writeFile: number;
+  };
+};
+
+export type TargetTraceInsightReport = {
+  ok: true;
+  traceId: string | null;
+  source: {
+    kind: "capture" | "artifact" | "live";
+    id: string;
+  };
+  insight: {
+    name: string;
+    summary: string;
+    severity: "info" | "low" | "medium" | "high";
+    evidence: Record<string, string | number | boolean | null>;
+  };
+};
+
 export type TargetNetworkCaptureStatus = "recording" | "stopped" | "failed";
 
 export type TargetNetworkCaptureBeginReport = {

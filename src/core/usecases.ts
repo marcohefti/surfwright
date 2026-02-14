@@ -48,7 +48,7 @@ import { targetScrollPlan } from "./target/effects/target-scroll-plan.js";
 import { targetScrollSample } from "./target/effects/target-scroll-sample.js";
 import { targetScrollWatch } from "./target/effects/target-scroll-watch.js";
 import { targetTransitionTrace } from "./target/effects/target-transition-trace.js";
-import { targetConsoleTail, targetHealth, targetHud } from "./target/target-observability.js";
+import { targetConsoleGet, targetConsoleTail, targetHealth, targetHud } from "./target/target-observability.js";
 import { targetFormFill, targetRead } from "./target/target-read.js";
 import { targetDialog, targetKeypress, targetWait } from "./target/target-wait.js";
 import { readPageTargetId, resolveSessionForAction, targetList, targetSnapshot } from "./target/targets.js";
@@ -472,9 +472,9 @@ export async function runPipeline(opts: {
     },
   });
 }
-export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail } from "../features/network/usecases/index.js";
+export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail, targetTraceExport, targetTraceInsight } from "../features/network/usecases/index.js";
 export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
 export { targetFind, targetRead, targetWait, targetClick, targetFill, targetFormFill, targetUpload, targetKeypress, targetDragDrop, targetSpawn, targetClose, targetDialog, targetEmulate, targetScreenshot, targetEval, targetList, targetSnapshot, targetExtract };
-export { targetConsoleTail, targetHealth, targetHover, targetHud, targetMotionDetect, targetObserve, targetScrollPlan, targetScrollRevealScan, targetScrollSample, targetScrollWatch, targetStickyCheck, targetTransitionAssert, targetTransitionTrace };
+export { targetConsoleGet, targetConsoleTail, targetHealth, targetHover, targetHud, targetMotionDetect, targetObserve, targetScrollPlan, targetScrollRevealScan, targetScrollSample, targetScrollWatch, targetStickyCheck, targetTransitionAssert, targetTransitionTrace };
 export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
 export { sessionCookieCopy } from "./target/effects/session-cookie-copy.js";

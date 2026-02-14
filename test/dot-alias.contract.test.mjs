@@ -64,4 +64,10 @@ test("dot-command alias supports network subcommands", () => {
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_QUERY_INVALID");
+
+  const traceResult = runCli(["--json", "target.trace.insight"]);
+  assert.equal(traceResult.status, 1);
+  const tracePayload = parseJson(traceResult.stdout);
+  assert.equal(tracePayload.ok, false);
+  assert.equal(tracePayload.code, "E_QUERY_INVALID");
 });

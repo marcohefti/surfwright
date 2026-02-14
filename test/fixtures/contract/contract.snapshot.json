@@ -39,6 +39,11 @@
       "summary": "explicitly attach to an already running CDP endpoint"
     },
     {
+      "id": "session.cookie-copy",
+      "usage": "surfwright session cookie-copy --from-session <id> --to-session <id> --url <url> [--url <url> ...] [--timeout-ms <ms>] [--json] [--pretty]",
+      "summary": "copy scoped cookies from one reachable session to another"
+    },
+    {
       "id": "session.ensure",
       "usage": "surfwright session ensure [--timeout-ms <ms>] [--json] [--pretty]",
       "summary": "reuse active session if reachable; otherwise use managed default"

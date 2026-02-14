@@ -26,6 +26,7 @@ import {
 } from "../../core/types.js";
 import { getCliContractReport } from "../../core/cli-contract.js";
 import { runtimeCommandMeta } from "./manifest.js";
+import { registerSessionCookieCopyCommand } from "./commands/session-cookie-copy.js";
 
 type RuntimeOutputOpts = {
   json: boolean;
@@ -369,6 +370,13 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         ctx.handleFailure(error, output);
       }
     });
+  registerSessionCookieCopyCommand({
+    session,
+    parseTimeoutMs: ctx.parseTimeoutMs,
+    globalOutputOpts: ctx.globalOutputOpts,
+    handleFailure: ctx.handleFailure,
+    commandMeta: runtimeCommandMeta("session.cookie-copy"),
+  });
 
   ctx.program
     .command("state")

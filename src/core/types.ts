@@ -75,6 +75,16 @@ export type SessionListReport = {
   }>;
 };
 
+export type SessionCookieCopyReport = {
+  ok: true;
+  fromSessionId: string;
+  toSessionId: string;
+  urls: string[];
+  counts: { found: number; imported: number; uniqueDomains: number };
+  sample: { cookieNames: string[]; domains: string[]; truncated: boolean };
+  timingMs: ActionTimingMs;
+};
+
 export type SessionPruneReport = {
   ok: true;
   activeSessionId: string | null;

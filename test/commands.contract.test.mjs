@@ -448,7 +448,6 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(waitNetworkIdlePayload.value, null);
 });
 
-
 function loadFixture(relativePath) {
   const fixturePath = path.join(process.cwd(), relativePath);
   return JSON.parse(fs.readFileSync(fixturePath, "utf8"));

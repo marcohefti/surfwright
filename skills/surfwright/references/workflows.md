@@ -78,6 +78,15 @@ List known sessions:
 surfwright --json session list
 ```
 
+Copy scoped auth cookies from one explicit session to another:
+
+```bash
+surfwright --json session cookie-copy --from-session a-login --to-session s-checkout --url https://dashboard.stripe.com --url https://access.stripe.com
+```
+
+- `session cookie-copy` reads cookies visible for each provided `--url` from the source session, imports them into the destination session, and returns bounded metadata (counts + sampled names/domains only).
+- Use multiple `--url` flags for multi-domain auth flows (for example dashboard + access subdomains).
+
 ## 4) Output rules
 
 - Always parse JSON from stdout.

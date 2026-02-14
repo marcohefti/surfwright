@@ -50,6 +50,12 @@ export const runtimeCommandManifest: CliCommandContract[] = [
     summary: "prune unreachable sessions and repair stale managed pid metadata",
   },
   {
+    id: "session.cookie-copy",
+    usage:
+      "surfwright session cookie-copy --from-session <id> --to-session <id> --url <url> [--url <url> ...] [--timeout-ms <ms>] [--json] [--pretty]",
+    summary: "copy scoped cookies from one reachable session to another",
+  },
+  {
     id: "open",
     usage:
       "surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",

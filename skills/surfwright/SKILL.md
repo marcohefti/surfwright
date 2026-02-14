@@ -24,6 +24,7 @@ surfwright --json contract
 4. Use `--isolation shared` only when you intentionally want shared managed-session reuse.
 5. Treat every non-zero exit as a typed failure and branch on `code`.
 6. Keep loops small: open once, act once, verify, repeat.
+7. For authenticated carry-over, use `session cookie-copy` between explicit source/destination sessions with one or more scoped `--url` values.
 
 ## Canonical loop
 
@@ -48,6 +49,7 @@ surfwright --json target network-export <targetId> --profile page --reload --cap
 surfwright --json target network-export-list --limit 20
 surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
 surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
+surfwright --json session cookie-copy --from-session a-login --to-session s-checkout --url https://dashboard.stripe.com --url https://access.stripe.com
 ```
 
 `open` returns `sessionId`, `sessionSource`, and `targetId`; persist these handles in your run state. `target *` commands can infer the session from `targetId` when `--session` is omitted.

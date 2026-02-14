@@ -482,3 +482,4 @@ export {
   targetTransitionTrace,
 };
 export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
+export { sessionCookieCopy } from "./target/effects/session-cookie-copy.js";

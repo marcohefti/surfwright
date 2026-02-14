@@ -96,6 +96,7 @@ surfwright session attach --cdp <origin> [--session-id <id>] [--policy <policy>]
 surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session list [--json] [--pretty]
 surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--json] [--pretty]
+surfwright session cookie-copy --from-session <id> --to-session <id> --url <url> [--url <url> ...] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
@@ -276,6 +277,7 @@ Sessions are tracked in state with an explicit active pointer:
 - `open`/`run` without `--session` use new ephemeral sessions by default.
 - `target *` without `--session` infer from persisted `targetId`.
 - explicit `--session` always wins and is validated against `targetId` ownership.
+For authenticated workflows across sessions, use `session cookie-copy` with one or more `--url` scopes (for example `dashboard` + `access` domains) to transfer cookie state without dumping cookie values to stdout.
 Set `SURFWRIGHT_SESSION_LEASE_TTL_MS=<ms>` to tune session lease retention (default 72h).
 Use `session new --policy persistent` for long-lived sessions and `--policy ephemeral` for disposable runs.
 

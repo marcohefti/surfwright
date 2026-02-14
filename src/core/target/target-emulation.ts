@@ -45,6 +45,22 @@ type TargetScreenshotReport = {
   timingMs: ActionTimingMs;
 };
 
+type TargetClickAtReport = {
+  ok: true;
+  sessionId: string;
+  targetId: string;
+  actionId: string;
+  point: {
+    x: number;
+    y: number;
+  };
+  button: "left" | "middle" | "right";
+  clickCount: number;
+  url: string;
+  title: string;
+  timingMs: ActionTimingMs;
+};
+
 function parseOptionalInt(value: number | undefined, name: string, min: number, max: number): number | null {
   if (typeof value === "undefined") {
     return null;
@@ -93,6 +109,38 @@ function parseScreenshotOutPath(value: string | undefined): string {
     throw new CliError("E_QUERY_INVALID", "out path is required");
   }
   return path.resolve(out);
+}
+
+function parseClickCoordinate(value: number | undefined, name: string): number {
+  if (!Number.isFinite(value)) {
+    throw new CliError("E_QUERY_INVALID", `${name} is required`);
+  }
+  const resolved = Number(value);
+  if (resolved < 0 || resolved > 100000) {
+    throw new CliError("E_QUERY_INVALID", `${name} must be between 0 and 100000`);
+  }
+  return resolved;
+}
+
+function parseClickButton(value: string | undefined): "left" | "middle" | "right" {
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (normalized === "" || normalized === "left") {
+    return "left";
+  }
+  if (normalized === "middle" || normalized === "right") {
+    return normalized;
+  }
+  throw new CliError("E_QUERY_INVALID", "button must be one of: left, middle, right");
+}
+
+function parseClickCount(value: number | undefined): number {
+  if (typeof value === "undefined") {
+    return 1;
+  }
+  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1 || value > 5) {
+    throw new CliError("E_QUERY_INVALID", "click-count must be an integer between 1 and 5");
+  }
+  return value;
 }
 
 export async function targetEmulate(opts: {
@@ -192,6 +240,91 @@ export async function targetEmulate(opts: {
         lastActionId: report.actionId,
         lastActionAt: nowIso(),
         lastActionKind: "emulate",
+        updatedAt: nowIso(),
+      });
+    }
+    const persistedAt = Date.now();
+    report.timingMs.persistState = persistedAt - persistStartedAt;
+    report.timingMs.total = persistedAt - startedAt;
+    return report;
+  } finally {
+    await browser.close();
+  }
+}
+
+export async function targetClickAt(opts: {
+  targetId: string;
+  timeoutMs: number;
+  sessionId?: string;
+  persistState?: boolean;
+  x?: number;
+  y?: number;
+  button?: string;
+  clickCount?: number;
+}): Promise<TargetClickAtReport> {
+  const startedAt = Date.now();
+  const requestedTargetId = sanitizeTargetId(opts.targetId);
+  const x = parseClickCoordinate(opts.x, "x");
+  const y = parseClickCoordinate(opts.y, "y");
+  const button = parseClickButton(opts.button);
+  const clickCount = parseClickCount(opts.clickCount);
+
+  const { session } = await resolveSessionForAction({
+    sessionHint: opts.sessionId,
+    timeoutMs: opts.timeoutMs,
+    targetIdHint: requestedTargetId,
+  });
+  const resolvedSessionAt = Date.now();
+  const browser = await chromium.connectOverCDP(session.cdpOrigin, { timeout: opts.timeoutMs });
+  const connectedAt = Date.now();
+
+  try {
+    const target = await resolveTargetHandle(browser, requestedTargetId);
+    await target.page.mouse.click(x, y, {
+      button,
+      clickCount,
+    });
+
+    await target.page
+      .waitForLoadState("domcontentloaded", {
+        timeout: Math.max(200, Math.min(1000, opts.timeoutMs)),
+      })
+      .catch(() => {
+        // Not all coordinate clicks trigger navigation; this is best-effort only.
+      });
+
+    const actionCompletedAt = Date.now();
+    const title = await target.page.title();
+    const report: TargetClickAtReport = {
+      ok: true,
+      sessionId: session.sessionId,
+      targetId: requestedTargetId,
+      actionId: newActionId(),
+      point: { x, y },
+      button,
+      clickCount,
+      url: target.page.url(),
+      title,
+      timingMs: {
+        total: 0,
+        resolveSession: resolvedSessionAt - startedAt,
+        connectCdp: connectedAt - resolvedSessionAt,
+        action: actionCompletedAt - connectedAt,
+        persistState: 0,
+      },
+    };
+
+    const persistStartedAt = Date.now();
+    if (opts.persistState !== false) {
+      await saveTargetSnapshot({
+        targetId: report.targetId,
+        sessionId: report.sessionId,
+        url: report.url,
+        title: report.title,
+        status: null,
+        lastActionId: report.actionId,
+        lastActionAt: nowIso(),
+        lastActionKind: "click-at",
         updatedAt: nowIso(),
       });
     }

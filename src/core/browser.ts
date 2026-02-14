@@ -185,6 +185,17 @@ function launchDetachedBrowser(opts: { executablePath: string; debugPort: number
   }
 }
 
+function terminateBrowserProcess(browserPid: number | null): void {
+  if (typeof browserPid !== "number" || !Number.isFinite(browserPid) || browserPid <= 0) {
+    return;
+  }
+  try {
+    process.kill(browserPid, "SIGTERM");
+  } catch {
+    // Ignore already-exited process cleanup.
+  }
+}
+
 export async function startManagedSession(
   opts: {
     sessionId: string;
@@ -201,22 +212,33 @@ export async function startManagedSession(
   }
 
   fs.mkdirSync(opts.userDataDir, { recursive: true });
-
-  const browserPid = launchDetachedBrowser({
-    executablePath,
-    debugPort: opts.debugPort,
-    userDataDir: opts.userDataDir,
-  });
-
-  if (browserPid === null) {
-    throw new CliError("E_BROWSER_START_FAILED", "Failed to spawn Chrome/Chromium process");
-  }
-
-  const cdpOrigin = `http://127.0.0.1:${opts.debugPort}`;
   const startupWaitMs = Math.min(timeoutMs, CDP_STARTUP_MAX_WAIT_MS);
-  const isReady = await waitForCdpEndpoint(cdpOrigin, startupWaitMs);
-  if (!isReady) {
-    throw new CliError("E_BROWSER_START_TIMEOUT", "Browser launched but CDP endpoint did not become ready in time");
+  const attemptStart = async (debugPort: number): Promise<{ browserPid: number; debugPort: number; cdpOrigin: string }> => {
+    const browserPid = launchDetachedBrowser({
+      executablePath,
+      debugPort,
+      userDataDir: opts.userDataDir,
+    });
+    if (browserPid === null) {
+      throw new CliError("E_BROWSER_START_FAILED", "Failed to spawn Chrome/Chromium process");
+    }
+    const cdpOrigin = `http://127.0.0.1:${debugPort}`;
+    const isReady = await waitForCdpEndpoint(cdpOrigin, startupWaitMs);
+    if (!isReady) {
+      terminateBrowserProcess(browserPid);
+      throw new CliError("E_BROWSER_START_TIMEOUT", "Browser launched but CDP endpoint did not become ready in time");
+    }
+    return { browserPid, debugPort, cdpOrigin };
+  };
+
+  let started = await attemptStart(opts.debugPort).catch((error: unknown) => {
+    if (!(error instanceof CliError) || error.code !== "E_BROWSER_START_TIMEOUT") {
+      throw error;
+    }
+    return null;
+  });
+  if (started === null) {
+    started = await attemptStart(await allocateFreePort());
   }
 
   const createdAt = opts.createdAt ?? nowIso();
@@ -225,10 +247,10 @@ export async function startManagedSession(
       sessionId: opts.sessionId,
       kind: "managed",
       policy: normalizeSessionPolicy(opts.policy) ?? defaultSessionPolicyForKind("managed"),
-      cdpOrigin,
-      debugPort: opts.debugPort,
+      cdpOrigin: started.cdpOrigin,
+      debugPort: started.debugPort,
       userDataDir: opts.userDataDir,
-      browserPid,
+      browserPid: started.browserPid,
       ownerId: currentAgentId(),
       leaseExpiresAt: null,
       leaseTtlMs: null,

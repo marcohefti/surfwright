@@ -2,6 +2,7 @@ import {
   parseFieldsCsv,
   projectReportFields,
   targetClick,
+  targetClickAt,
   targetClose,
   targetDialog,
   targetDragDrop,
@@ -81,6 +82,47 @@ export const targetClickCommandSpec: TargetCommandSpec = {
           }
         },
       );
+  },
+};
+
+const clickAtMeta = targetCommandMeta("target.click-at");
+
+export const targetClickAtCommandSpec: TargetCommandSpec = {
+  id: clickAtMeta.id,
+  usage: clickAtMeta.usage,
+  summary: clickAtMeta.summary,
+  register: (ctx) => {
+    ctx.target
+      .command("click-at")
+      .description(clickAtMeta.summary)
+      .argument("<targetId>", "Target handle returned by open/target list")
+      .requiredOption("--x <n>", "Viewport x coordinate")
+      .requiredOption("--y <n>", "Viewport y coordinate")
+      .option("--button <button>", "Mouse button: left|middle|right", "left")
+      .option("--click-count <n>", "Number of clicks to send", "1")
+      .option("--timeout-ms <ms>", "Click timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--fields <csv>", "Return only selected top-level fields")
+      .action(async (targetId: string, options: { x: string; y: string; button?: string; clickCount?: string; timeoutMs: number; noPersist?: boolean; fields?: string }) => {
+        const output = ctx.globalOutputOpts();
+        const globalOpts = ctx.program.opts<{ session?: string }>();
+        const fields = parseFieldsCsv(options.fields);
+        try {
+          const report = await targetClickAt({
+            targetId,
+            timeoutMs: options.timeoutMs,
+            sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+            x: Number.parseFloat(options.x),
+            y: Number.parseFloat(options.y),
+            button: options.button,
+            clickCount: typeof options.clickCount === "string" ? Number.parseInt(options.clickCount, 10) : undefined,
+            persistState: !Boolean(options.noPersist),
+          });
+          ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
+        } catch (error) {
+          ctx.handleFailure(error, output);
+        }
+      });
   },
 };
 

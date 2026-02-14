@@ -15,6 +15,7 @@
   { "id": "target.snapshot", "usageMustContain": "target snapshot" },
   { "id": "target.find", "usageMustContain": "target find" },
   { "id": "target.click", "usageMustContain": "target click" },
+  { "id": "target.click-at", "usageMustContain": "target click-at" },
   { "id": "target.hover", "usageMustContain": "target hover" },
   { "id": "target.read", "usageMustContain": "target read" },
   { "id": "target.eval", "usageMustContain": "target eval" },

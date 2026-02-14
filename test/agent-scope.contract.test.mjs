@@ -383,8 +383,29 @@ test("extension lifecycle commands return deterministic fallback metadata", () =
   const uninstallPayload = parseJson(uninstallResult.stdout);
   assert.equal(uninstallPayload.ok, true);
   assert.equal(uninstallPayload.removed, true);
+  assert.equal(uninstallPayload.missing, false);
   assert.equal(uninstallPayload.extension.id, listed.id);
   assert.equal(uninstallPayload.extension.name, extensionName);
+
+  const uninstallMissingResult = runCli(["--json", "extension", "uninstall", listed.id], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(uninstallMissingResult.status, 0);
+  const uninstallMissingPayload = parseJson(uninstallMissingResult.stdout);
+  assert.equal(uninstallMissingPayload.ok, true);
+  assert.equal(uninstallMissingPayload.removed, false);
+  assert.equal(uninstallMissingPayload.missing, true);
+  assert.equal(uninstallMissingPayload.extension, null);
+
+  const reloadMissingResult = runCli(["--json", "extension", "reload", listed.id], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(reloadMissingResult.status, 0);
+  const reloadMissingPayload = parseJson(reloadMissingResult.stdout);
+  assert.equal(reloadMissingPayload.ok, true);
+  assert.equal(reloadMissingPayload.reloaded, false);
+  assert.equal(reloadMissingPayload.missing, true);
+  assert.equal(reloadMissingPayload.extension, null);
 
   const listAfterResult = runCli(["--json", "extension", "list"], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
@@ -394,15 +415,15 @@ test("extension lifecycle commands return deterministic fallback metadata", () =
   assert.equal(listAfterPayload.extensions.some((entry) => entry.id === listed.id), false);
 });
 
-test("extension lifecycle returns typed unknown-extension failure", () => {
-  const reloadResult = runCli(["--json", "extension", "reload", "missing-extension"], {
+test("extension lifecycle strict mode returns typed unknown-extension failure", () => {
+  const reloadResult = runCli(["--json", "extension", "reload", "missing-extension", "--fail-if-missing"], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(reloadResult.status, 1);
   const reloadPayload = parseJson(reloadResult.stdout);
   assert.equal(reloadPayload.code, "E_QUERY_INVALID");
 
-  const uninstallResult = runCli(["--json", "extension", "uninstall", "missing-extension"], {
+  const uninstallResult = runCli(["--json", "extension", "uninstall", "missing-extension", "--fail-if-missing"], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(uninstallResult.status, 1);

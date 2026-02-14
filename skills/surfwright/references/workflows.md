@@ -16,8 +16,9 @@ surfwright --json open https://example.com
 surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
 surfwright --json target click <targetId> --text "query" --visible-only
+surfwright --json target click-at <targetId> --x 120 --y 80
 surfwright --json target fill <targetId> --selector "#email" --value "agent@example.com"
-surfwright --json target form-fill <targetId> --fields-json '{"#email":"agent@example.com","#agree":true}'
+surfwright --json target form-fill <targetId> --field "#email=agent@example.com" --field "#agree=true"
 surfwright --json target upload <targetId> --selector "input[type=file]" --file ./assets/avatar.png
 surfwright --json target keypress <targetId> --key Enter --selector "input[name=search]"
 surfwright --json target drag-drop <targetId> --from "#card-a" --to "#column-done"
@@ -46,6 +47,7 @@ surfwright --json extension load ./tmp/parity-gap/assets/extensions/minimal-exte
 surfwright --json extension list
 surfwright --json extension reload "SurfWright Parity Minimal Extension"
 surfwright --json extension uninstall "SurfWright Parity Minimal Extension"
+surfwright --json extension uninstall "missing-extension" --fail-if-missing
 ```
 
 - `open` without `--session` creates a new isolated ephemeral session and returns `sessionId`, `sessionSource`, and `targetId`.
@@ -55,8 +57,9 @@ surfwright --json extension uninstall "SurfWright Parity Minimal Extension"
 - `target snapshot` returns bounded text/headings/buttons/links for one explicit target.
 - `target find` checks match counts and returns bounded match metadata for one explicit query.
 - `target click` executes one explicit click action from text/selector query semantics.
+- `target click-at` executes one explicit coordinate click (`--x`, `--y`) for canvas/overlay workflows.
 - `target fill` executes one explicit form-control fill from text/selector query semantics.
-- `target form-fill` applies multiple selector/value entries in one deterministic action.
+- `target form-fill` applies multiple selector/value entries in one deterministic action (`--fields-json`, `--fields-file`, or repeated `--field`).
 - `target upload` supports direct file-input upload with deterministic filechooser fallback.
 - `target keypress` sends one key input to page or a focused matched element.
 - `target drag-drop` executes one selector-to-selector drag operation.
@@ -77,6 +80,7 @@ surfwright --json extension uninstall "SurfWright Parity Minimal Extension"
 - `target network-export --out <path>` writes a compact HAR artifact for deep offline inspection.
 - `target network-export-list` / `target network-export-prune` manage indexed artifacts with retention policies.
 - `target network-check` compares runtime metrics against explicit budget files.
+- `extension reload/uninstall` are idempotent by default (`missing:true` when absent); use `--fail-if-missing` for strict failures.
 - `extension.*` commands provide deterministic extension lifecycle registry actions with typed capability/fallback metadata.
 
 ## 3) Explicit session lifecycle

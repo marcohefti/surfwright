@@ -1,6 +1,7 @@
 import {
   parseFieldsCsv,
   projectReportFields,
+  queryInvalid,
   targetEmulate,
   targetExtract,
   targetFormFill,
@@ -9,6 +10,28 @@ import {
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";
+
+function collectRepeatedString(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+function parseFieldAssignment(input: string): [string, string] {
+  const index = input.indexOf("=");
+  if (index <= 0) {
+    throw queryInvalid("field must be formatted as <selector>=<value>");
+  }
+  const selector = input.slice(0, index).trim();
+  if (selector.length === 0) {
+    throw queryInvalid("field selector must not be empty");
+  }
+  return [selector, input.slice(index + 1)];
+}
+
+function fieldsJsonFromAssignments(fields: string[]): string {
+  const entries = fields.map((item) => parseFieldAssignment(item));
+  entries.sort((a, b) => a[0].localeCompare(b[0]));
+  return JSON.stringify(Object.fromEntries(entries));
+}
 
 const extractMeta = targetCommandMeta("target.extract");
 
@@ -91,15 +114,26 @@ export const targetFormFillCommandSpec: TargetCommandSpec = {
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--fields-json <json>", "JSON object mapping selector -> value")
       .option("--fields-file <path>", "Read selector/value JSON from file")
+      .option("--field <selector=value>", "Repeatable selector/value shorthand for string input values", collectRepeatedString, [])
       .option("--timeout-ms <ms>", "Form fill timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state", false)
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright --json target form-fill <targetId> --field '#email=agent@example.com' --field '#password=s3cret'",
+          "  surfwright --json target form-fill <targetId> --fields-json '{\"#email\":\"agent@example.com\",\"#agree\":true}'",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,
           options: {
             fieldsJson?: string;
             fieldsFile?: string;
+            field?: string[];
             timeoutMs: number;
             noPersist?: boolean;
             fields?: string;
@@ -108,13 +142,20 @@ export const targetFormFillCommandSpec: TargetCommandSpec = {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
           const fields = parseFieldsCsv(options.fields);
-
           try {
+            const inline = typeof options.fieldsJson === "string" ? options.fieldsJson.trim() : "";
+            const file = typeof options.fieldsFile === "string" ? options.fieldsFile.trim() : "";
+            const assignments = Array.isArray(options.field) ? options.field : [];
+            const selected = Number(inline.length > 0) + Number(file.length > 0) + Number(assignments.length > 0);
+            if (selected !== 1) {
+              throw queryInvalid("Use exactly one form source: --fields-json, --fields-file, or --field");
+            }
+            const fieldsJson = assignments.length > 0 ? fieldsJsonFromAssignments(assignments) : options.fieldsJson;
             const report = await targetFormFill({
               targetId,
               timeoutMs: options.timeoutMs,
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
-              fieldsJson: options.fieldsJson,
+              fieldsJson,
               fieldsFile: options.fieldsFile,
               persistState: !Boolean(options.noPersist),
             });

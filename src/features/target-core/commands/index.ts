@@ -1,5 +1,6 @@
 import {
   targetClickCommandSpec,
+  targetClickAtCommandSpec,
   targetCloseCommandSpec,
   targetDialogCommandSpec,
   targetDragDropCommandSpec,
@@ -43,6 +44,7 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetSnapshotCommandSpec,
   targetFindCommandSpec,
   targetClickCommandSpec,
+  targetClickAtCommandSpec,
   targetFillCommandSpec,
   targetUploadCommandSpec,
   targetKeypressCommandSpec,

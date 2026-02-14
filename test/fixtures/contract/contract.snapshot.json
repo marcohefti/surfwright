@@ -35,13 +35,13 @@
     },
     {
       "id": "extension.reload",
-      "usage": "surfwright extension reload <extensionRef> [--json] [--pretty] [--session <id>]",
-      "summary": "mark a registered extension as reloaded and enabled"
+      "usage": "surfwright extension reload <extensionRef> [--fail-if-missing] [--json] [--pretty] [--session <id>]",
+      "summary": "mark a registered extension as reloaded and enabled (idempotent when missing)"
     },
     {
       "id": "extension.uninstall",
-      "usage": "surfwright extension uninstall <extensionRef> [--json] [--pretty] [--session <id>]",
-      "summary": "remove a registered extension entry"
+      "usage": "surfwright extension uninstall <extensionRef> [--fail-if-missing] [--json] [--pretty] [--session <id>]",
+      "summary": "remove a registered extension entry (idempotent when missing)"
     },
     {
       "id": "open",
@@ -109,6 +109,11 @@
       "summary": "click the first matching element in a target"
     },
     {
+      "id": "target.click-at",
+      "usage": "surfwright target click-at <targetId> --x <n> --y <n> [--button <left|middle|right>] [--click-count <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "summary": "click explicit viewport coordinates on a target"
+    },
+    {
       "id": "target.close",
       "usage": "surfwright target close <targetId> [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "close a target by handle with deterministic confirmation payload"
@@ -160,7 +165,7 @@
     },
     {
       "id": "target.form-fill",
-      "usage": "surfwright target form-fill <targetId> (--fields-json <json> | --fields-file <path>) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "usage": "surfwright target form-fill <targetId> (--fields-json <json> | --fields-file <path> | --field <selector=value>...) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "fill multiple form controls in one deterministic command"
     },
     {

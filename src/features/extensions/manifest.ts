@@ -13,13 +13,13 @@ export const extensionCommandManifest: CliCommandContract[] = [
   },
   {
     id: "extension.reload",
-    usage: "surfwright extension reload <extensionRef> [--json] [--pretty] [--session <id>]",
-    summary: "mark a registered extension as reloaded and enabled",
+    usage: "surfwright extension reload <extensionRef> [--fail-if-missing] [--json] [--pretty] [--session <id>]",
+    summary: "mark a registered extension as reloaded and enabled (idempotent when missing)",
   },
   {
     id: "extension.uninstall",
-    usage: "surfwright extension uninstall <extensionRef> [--json] [--pretty] [--session <id>]",
-    summary: "remove a registered extension entry",
+    usage: "surfwright extension uninstall <extensionRef> [--fail-if-missing] [--json] [--pretty] [--session <id>]",
+    summary: "remove a registered extension entry (idempotent when missing)",
   },
 ];
 

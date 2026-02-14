@@ -340,6 +340,7 @@ test("target fill and form-fill return deterministic compact shapes", { skip: !h
     agree: true,
     role: "editor",
   });
+
 });
 
 test("target fill and form-fill return typed validation failures", { skip: !hasBrowser() }, () => {
@@ -403,6 +404,7 @@ test("target fill and form-fill return typed validation failures", { skip: !hasB
   const arrayPayloadJson = parseJson(arrayPayload.stdout);
   assert.equal(arrayPayloadJson.ok, false);
   assert.equal(arrayPayloadJson.code, "E_QUERY_INVALID");
+
 });
 
 test("target upload keypress and drag-drop return deterministic shapes", { skip: !hasBrowser() }, () => {

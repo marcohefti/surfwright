@@ -26,6 +26,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "click the first matching element in a target",
   },
   {
+    id: "target.click-at",
+    usage:
+      "surfwright target click-at <targetId> --x <n> --y <n> [--button <left|middle|right>] [--click-count <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "click explicit viewport coordinates on a target",
+  },
+  {
     id: "target.fill",
     usage:
       "surfwright target fill <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] --value <text> [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
@@ -34,7 +40,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.form-fill",
     usage:
-      "surfwright target form-fill <targetId> (--fields-json <json> | --fields-file <path>) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "surfwright target form-fill <targetId> (--fields-json <json> | --fields-file <path> | --field <selector=value>...) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "fill multiple form controls in one deterministic command",
   },
   {

@@ -209,21 +209,23 @@ function toPublicExtension(record: ExtensionRecord) {
   };
 }
 
-function findRecordByRef(registry: ExtensionRegistry, ref: string): ExtensionRecord {
+function normalizeExtensionRef(ref: string): string {
   const value = ref.trim();
   if (!value) {
     throw new CliError("E_QUERY_INVALID", "extension ref must not be empty");
   }
+  return value;
+}
+
+function findRecordByRef(registry: ExtensionRegistry, ref: string): ExtensionRecord | null {
+  const value = normalizeExtensionRef(ref);
   const byId = registry.extensions[value];
   if (byId) {
     return byId;
   }
   const lowered = value.toLowerCase();
   const byName = Object.values(registry.extensions).find((record) => record.name.toLowerCase() === lowered);
-  if (byName) {
-    return byName;
-  }
-  throw new CliError("E_QUERY_INVALID", `Extension not found: ${ref}`);
+  return byName ?? null;
 }
 
 export function extensionLoad(opts: { extensionPath: string; sessionId?: string }) {
@@ -266,9 +268,25 @@ export function extensionList() {
   };
 }
 
-export function extensionReload(opts: { extensionRef: string; sessionId?: string }) {
+export function extensionReload(opts: { extensionRef: string; sessionId?: string; failIfMissing?: boolean }) {
   const registry = readRegistry();
-  const found = findRecordByRef(registry, opts.extensionRef);
+  const extensionRef = normalizeExtensionRef(opts.extensionRef);
+  const found = findRecordByRef(registry, extensionRef);
+  if (!found) {
+    if (opts.failIfMissing) {
+      throw new CliError("E_QUERY_INVALID", `Extension not found: ${extensionRef}`);
+    }
+    return {
+      ok: true,
+      sessionId: opts.sessionId ?? null,
+      extensionRef,
+      extension: null,
+      reloaded: false,
+      missing: true,
+      capability: capability(),
+      fallback: fallback("Extension not registered; no reload action applied"),
+    };
+  }
   const now = nowIso();
   registry.extensions[found.extensionId] = {
     ...found,
@@ -281,14 +299,31 @@ export function extensionReload(opts: { extensionRef: string; sessionId?: string
     sessionId: opts.sessionId ?? null,
     extension: toPublicExtension(registry.extensions[found.extensionId]),
     reloaded: true,
+    missing: false,
     capability: capability(),
     fallback: fallback(),
   };
 }
 
-export function extensionUninstall(opts: { extensionRef: string; sessionId?: string }) {
+export function extensionUninstall(opts: { extensionRef: string; sessionId?: string; failIfMissing?: boolean }) {
   const registry = readRegistry();
-  const found = findRecordByRef(registry, opts.extensionRef);
+  const extensionRef = normalizeExtensionRef(opts.extensionRef);
+  const found = findRecordByRef(registry, extensionRef);
+  if (!found) {
+    if (opts.failIfMissing) {
+      throw new CliError("E_QUERY_INVALID", `Extension not found: ${extensionRef}`);
+    }
+    return {
+      ok: true,
+      sessionId: opts.sessionId ?? null,
+      extensionRef,
+      extension: null,
+      removed: false,
+      missing: true,
+      capability: capability(),
+      fallback: fallback("Extension not registered; no uninstall action applied"),
+    };
+  }
   delete registry.extensions[found.extensionId];
   writeRegistry(registry);
   return {
@@ -300,6 +335,7 @@ export function extensionUninstall(opts: { extensionRef: string; sessionId?: str
       path: found.path,
     },
     removed: true,
+    missing: false,
     capability: capability(),
     fallback: fallback(),
   };

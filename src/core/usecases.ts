@@ -34,7 +34,7 @@ import { listSessionsSnapshot } from "./state-repos/session-repo.js";
 import { saveTargetSnapshot } from "./state-repos/target-repo.js";
 import { targetClick, targetFill, targetSpawn } from "./target/target-click.js";
 import { targetClose, targetEval } from "./target/target-eval.js";
-import { targetEmulate, targetScreenshot } from "./target/target-emulation.js";
+import { targetClickAt, targetEmulate, targetScreenshot } from "./target/target-emulation.js";
 import { targetExtract } from "./target/target-extract.js";
 import { targetDragDrop, targetFind, targetUpload } from "./target/target-find.js";
 import { targetObserve } from "./target/effects/target-observe.js";
@@ -85,6 +85,10 @@ export function getDoctorReport(): DoctorReport {
   };
 }
 export { getCliContractReport } from "./cli-contract.js";
+
+export function queryInvalid(message: string): CliError {
+  return new CliError("E_QUERY_INVALID", message);
+}
 
 export async function openUrl(opts: {
   inputUrl: string;
@@ -474,7 +478,7 @@ export async function runPipeline(opts: {
 }
 export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail, targetTraceExport, targetTraceInsight } from "../features/network/usecases/index.js";
 export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
-export { targetFind, targetRead, targetWait, targetClick, targetFill, targetFormFill, targetUpload, targetKeypress, targetDragDrop, targetSpawn, targetClose, targetDialog, targetEmulate, targetScreenshot, targetEval, targetList, targetSnapshot, targetExtract };
+export { targetFind, targetRead, targetWait, targetClick, targetClickAt, targetFill, targetFormFill, targetUpload, targetKeypress, targetDragDrop, targetSpawn, targetClose, targetDialog, targetEmulate, targetScreenshot, targetEval, targetList, targetSnapshot, targetExtract };
 export { targetConsoleGet, targetConsoleTail, targetHealth, targetHover, targetHud, targetMotionDetect, targetObserve, targetScrollPlan, targetScrollRevealScan, targetScrollSample, targetScrollWatch, targetStickyCheck, targetTransitionAssert, targetTransitionTrace };
 export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
 export { sessionCookieCopy } from "./target/effects/session-cookie-copy.js";

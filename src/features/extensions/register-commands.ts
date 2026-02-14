@@ -66,7 +66,8 @@ export function registerExtensionCommands(opts: RegisterExtensionCommandsOptions
     .command("reload")
     .description(reloadMeta.summary)
     .argument("<extensionRef>", "Extension id or exact extension name")
-    .action((extensionRef: string) => {
+    .option("--fail-if-missing", "Return typed failure when extensionRef is not registered")
+    .action((extensionRef: string, commandOptions: { failIfMissing?: boolean }) => {
       const output = opts.globalOutputOpts();
       const globalOpts = opts.program.opts<{ session?: string }>();
       try {
@@ -74,6 +75,7 @@ export function registerExtensionCommands(opts: RegisterExtensionCommandsOptions
           extensionReload({
             extensionRef,
             sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+            failIfMissing: Boolean(commandOptions.failIfMissing),
           }),
           output,
         );
@@ -87,7 +89,8 @@ export function registerExtensionCommands(opts: RegisterExtensionCommandsOptions
     .command("uninstall")
     .description(uninstallMeta.summary)
     .argument("<extensionRef>", "Extension id or exact extension name")
-    .action((extensionRef: string) => {
+    .option("--fail-if-missing", "Return typed failure when extensionRef is not registered")
+    .action((extensionRef: string, commandOptions: { failIfMissing?: boolean }) => {
       const output = opts.globalOutputOpts();
       const globalOpts = opts.program.opts<{ session?: string }>();
       try {
@@ -95,6 +98,7 @@ export function registerExtensionCommands(opts: RegisterExtensionCommandsOptions
           extensionUninstall({
             extensionRef,
             sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+            failIfMissing: Boolean(commandOptions.failIfMissing),
           }),
           output,
         );

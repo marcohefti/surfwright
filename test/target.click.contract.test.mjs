@@ -131,6 +131,8 @@ test("target click returns deterministic shape for selector/text modes", { skip:
     "contains",
     "visibleOnly",
     "query",
+    "matchCount",
+    "pickedIndex",
     "clicked",
     "url",
     "title",

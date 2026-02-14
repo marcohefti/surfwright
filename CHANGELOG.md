@@ -13,6 +13,8 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target url-assert` for typed URL drift guards (`--host`, `--origin`, `--path-prefix`, `--url-prefix`).
 - [target] Added `target frames` for bounded frame enumeration with stable `frameId` handles.
 - [target] Added `target eval --expr <js>` (value-expression mode), `--frame-id <id>`, and compact `context` metadata in eval output.
+- [target] Added `target click --index <n>` (0-based) and selection evidence (`matchCount`, `pickedIndex`) for deterministic multi-match actions.
+- [target] Added `target click --explain` for bounded match selection/rejection diagnostics without clicking.
 
 ### Changed
 - [release] Publish and release-draft workflows now use shared smoke script `scripts/release/smoke-contract.mjs`.

@@ -64,6 +64,20 @@ surfwright --json target frames <targetId> --limit 50
 surfwright --json target eval <targetId> --frame-id f-1 --expr "document.title"
 ```
 
+## Multi-Match Click (Nth Match)
+
+Use `--index <n>` (0-based) when your query matches multiple elements and you need a deterministic choice without selector hacks:
+
+```bash
+surfwright --json target click <targetId> --text "Delete" --visible-only --index 1
+```
+
+If a click fails due to visibility/filtering, rerun with `--explain` to get bounded rejection reasons (no click performed):
+
+```bash
+surfwright --json target click <targetId> --text "Delete" --visible-only --explain
+```
+
 ## URL drift guard (Optional)
 
 After a navigation, assert you're still on the expected host/origin/path before taking stateful actions:

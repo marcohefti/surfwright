@@ -207,6 +207,8 @@ export type TargetClickReport = {
   contains: string | null;
   visibleOnly: boolean;
   query: string;
+  matchCount: number;
+  pickedIndex: number;
   clicked: {
     index: number;
     text: string;
@@ -222,6 +224,38 @@ export type TargetClickReport = {
   snapshot: {
     textPreview: string;
   } | null;
+  timingMs: ActionTimingMs;
+};
+export type TargetClickExplainReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  mode: "text" | "selector";
+  selector: string | null;
+  contains: string | null;
+  visibleOnly: boolean;
+  query: string;
+  matchCount: number;
+  requestedIndex: number | null;
+  pickedIndex: number | null;
+  picked: {
+    index: number;
+    text: string;
+    visible: boolean;
+    selectorHint: string | null;
+  } | null;
+  rejected: Array<{
+    index: number;
+    reason: "not_visible";
+    visible: boolean;
+    text: string;
+    selectorHint: string | null;
+  }>;
+  rejectedTruncated: boolean;
+  reason: "no_match" | "no_visible_match" | "index_out_of_range" | null;
+  url: string;
+  title: string;
   timingMs: ActionTimingMs;
 };
 export type TargetReadReport = {

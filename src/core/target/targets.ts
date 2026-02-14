@@ -8,6 +8,7 @@ import { extractScopedSnapshotSample } from "./snapshot-sample.js";
 import { frameScopeHints, framesForScope, parseFrameScope } from "./target-find.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
+  type ManagedBrowserMode,
   type SessionSource,
   type SessionState,
   type TargetListReport,
@@ -98,7 +99,7 @@ export async function ensureValidSelector(page: Page, selectorQuery: string): Pr
   }
 }
 
-async function createImplicitManagedSession(timeoutMs: number): Promise<SessionState> {
+async function createImplicitManagedSession(timeoutMs: number, browserMode: ManagedBrowserMode | undefined): Promise<SessionState> {
   return await updateState(async (state) => {
     const sessionId = allocateSessionId(state, "s");
     const debugPort = await allocateFreePort();
@@ -108,6 +109,7 @@ async function createImplicitManagedSession(timeoutMs: number): Promise<SessionS
         debugPort,
         userDataDir: defaultSessionUserDataDir(sessionId),
         policy: "ephemeral",
+        browserMode: browserMode ?? "headless",
         createdAt: nowIso(),
       },
       timeoutMs,
@@ -131,6 +133,7 @@ export async function resolveSessionForAction(opts: {
   timeoutMs: number;
   targetIdHint?: string;
   allowImplicitNewSession?: boolean;
+  browserMode?: ManagedBrowserMode;
 }): Promise<{
   session: SessionState;
   sessionSource: SessionSource;
@@ -155,7 +158,11 @@ export async function resolveSessionForAction(opts: {
         throw new CliError("E_TARGET_SESSION_MISMATCH", `Target ${targetIdHint} belongs to session ${targetRecord.sessionId}`);
       }
     }
-    const ensured = await ensureSessionReachable(existing, opts.timeoutMs);
+    const ensured = await ensureSessionReachable(
+      existing,
+      opts.timeoutMs,
+      opts.browserMode ? { browserMode: opts.browserMode } : undefined,
+    );
     await updateState(async (state) => {
       if (!state.sessions[sessionId]) {
         throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
@@ -188,7 +195,7 @@ export async function resolveSessionForAction(opts: {
   }
 
   if (opts.allowImplicitNewSession) {
-    const session = await createImplicitManagedSession(opts.timeoutMs);
+    const session = await createImplicitManagedSession(opts.timeoutMs, opts.browserMode);
     return {
       session,
       sessionSource: "implicit-new",

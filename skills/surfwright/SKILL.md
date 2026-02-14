@@ -54,6 +54,20 @@ surfwright --json session cookie-copy --from-session a-login --to-session s-chec
 
 `open` returns `sessionId`, `sessionSource`, and `targetId`; persist these handles in your run state. `target *` commands can infer the session from `targetId` when `--session` is omitted.
 
+## Human Login Handoff (Headed)
+
+Default managed sessions are `headless`. When you need a visible browser for a human to complete auth/2FA, launch a headed managed session and keep using its explicit `sessionId`:
+
+```bash
+surfwright --json session new --session-id s-login --browser-mode headed
+surfwright --json --session s-login open https://github.com/login
+
+# Human: finish login in the headed browser window, then continue.
+surfwright --json target snapshot <targetId>
+```
+
+`browserMode` is returned in `session` and `open` JSON outputs. Attached sessions report `browserMode: "unknown"`.
+
 If local state may be stale (machine restart, browser crash), run:
 
 ```bash

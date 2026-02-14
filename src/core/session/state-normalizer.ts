@@ -8,7 +8,7 @@ import {
   sessionDefaultLeaseTtlMs,
 } from "./hygiene.js";
 import { asNonNegativeInteger, asPositiveInteger } from "../shared/index.js";
-import type { SessionKind, SessionState } from "../types.js";
+import type { BrowserMode, SessionKind, SessionState } from "../types.js";
 
 export function normalizeSessionState(opts: {
   sessionId: string;
@@ -23,6 +23,7 @@ export function normalizeSessionState(opts: {
   const value = opts.raw as {
     kind?: unknown;
     policy?: unknown;
+    browserMode?: unknown;
     cdpOrigin?: unknown;
     debugPort?: unknown;
     userDataDir?: unknown;
@@ -41,6 +42,8 @@ export function normalizeSessionState(opts: {
 
   const kind: SessionKind = value.kind === "attached" ? "attached" : "managed";
   const policy = normalizeSessionPolicy(value.policy) ?? defaultSessionPolicyForKind(kind);
+  const browserMode: BrowserMode =
+    kind === "attached" ? "unknown" : value.browserMode === "headed" ? "headed" : "headless";
   const debugPort = asPositiveInteger(value.debugPort) ?? opts.inferDebugPortFromCdpOrigin(value.cdpOrigin);
   const userDataDir =
     kind === "managed"
@@ -58,6 +61,7 @@ export function normalizeSessionState(opts: {
     sessionId: opts.sessionId,
     kind,
     policy,
+    browserMode,
     cdpOrigin: value.cdpOrigin,
     debugPort,
     userDataDir,

@@ -16,7 +16,6 @@ export const DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS = 24;
 export const DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES = 120;
 export const DEFAULT_TARGET_NETWORK_MAX_RUNTIME_MS = 600000;
 export const STATE_VERSION = 3;
-
 export type ActionTimingMs = {
   total: number;
   resolveSession: number;
@@ -24,7 +23,6 @@ export type ActionTimingMs = {
   action: number;
   persistState: number;
 };
-
 export type DoctorReport = {
   ok: boolean;
   node: {
@@ -37,15 +35,16 @@ export type DoctorReport = {
     candidates: string[];
   };
 };
-
 export type SessionKind = "managed" | "attached";
 export type SessionPolicy = "ephemeral" | "persistent";
 export type SessionSource = "explicit" | "target-inferred" | "implicit-new";
-
+export type BrowserMode = "headless" | "headed" | "unknown";
+export type ManagedBrowserMode = Exclude<BrowserMode, "unknown">;
 export type OpenReport = {
   ok: true;
   sessionId: string;
   sessionSource: SessionSource;
+  browserMode: BrowserMode;
   targetId: string;
   actionId: string;
   url: string;
@@ -53,12 +52,12 @@ export type OpenReport = {
   title: string;
   timingMs: ActionTimingMs;
 };
-
 export type SessionReport = {
   ok: true;
   sessionId: string;
   kind: SessionKind;
   cdpOrigin: string;
+  browserMode: BrowserMode;
   active: boolean;
   created: boolean;
   restarted: boolean;
@@ -71,6 +70,7 @@ export type SessionListReport = {
     sessionId: string;
     kind: SessionKind;
     cdpOrigin: string;
+    browserMode: BrowserMode;
     lastSeenAt: string;
   }>;
 };
@@ -410,6 +410,7 @@ export type SessionState = {
   sessionId: string;
   kind: SessionKind;
   policy: SessionPolicy;
+  browserMode: BrowserMode;
   cdpOrigin: string;
   debugPort: number | null;
   userDataDir: string | null;

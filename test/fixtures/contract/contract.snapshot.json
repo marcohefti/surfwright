@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:f855fa0224bf20fe5061547850cb4ce476a91b7c0de1d3b1e78cfb83c47632a0",
+  "contractFingerprint": "sha256:3ce2dffd75c7d3087af51727b4b0b43b17148dcc182c1f0256eb4b73c635fd9e",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -47,12 +47,12 @@
     },
     {
       "id": "open",
-      "usage": "surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "usage": "surfwright open <url> [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "open URL and return minimal page report with target handle"
     },
     {
       "id": "run",
-      "usage": "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "usage": "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
       "summary": "execute, lint, record, or replay deterministic multi-step browser plans"
     },
     {
@@ -72,12 +72,12 @@
     },
     {
       "id": "session.ensure",
-      "usage": "surfwright session ensure [--timeout-ms <ms>] [--json] [--pretty]",
+      "usage": "surfwright session ensure [--browser-mode <headless|headed>] [--timeout-ms <ms>] [--json] [--pretty]",
       "summary": "reuse active session if reachable; otherwise use managed default"
     },
     {
       "id": "session.fresh",
-      "usage": "surfwright session fresh [--session-id <id>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
+      "usage": "surfwright session fresh [--session-id <id>] [--browser-mode <headless|headed>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
       "summary": "create a fresh ephemeral managed session and mark it active"
     },
     {
@@ -87,7 +87,7 @@
     },
     {
       "id": "session.new",
-      "usage": "surfwright session new [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
+      "usage": "surfwright session new [--session-id <id>] [--browser-mode <headless|headed>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
       "summary": "create a managed browser session and mark it active"
     },
     {

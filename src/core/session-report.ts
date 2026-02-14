@@ -13,6 +13,7 @@ export function buildSessionReport(
     sessionId: session.sessionId,
     kind: session.kind,
     cdpOrigin: session.cdpOrigin,
+    browserMode: session.browserMode,
     active: meta.active,
     created: meta.created,
     restarted: meta.restarted,

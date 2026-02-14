@@ -118,6 +118,21 @@ test("session attach requires explicit valid CDP origin", () => {
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_CDP_INVALID");
 });
+test("browser-mode rejects invalid values (typed)", () => {
+  const ensureResult = runCli(["--json", "session", "ensure", "--browser-mode", "bogus"]);
+  assert.equal(ensureResult.status, 1);
+  const ensurePayload = parseJson(ensureResult.stdout);
+  assert.equal(ensurePayload.ok, false);
+  assert.equal(ensurePayload.code, "E_QUERY_INVALID");
+  assert.equal(ensurePayload.message, "browser-mode must be one of: headless, headed");
+
+  const openResult = runCli(["--json", "open", "https://example.com", "--browser-mode", "bogus"]);
+  assert.equal(openResult.status, 1);
+  const openPayload = parseJson(openResult.stdout);
+  assert.equal(openPayload.ok, false);
+  assert.equal(openPayload.code, "E_QUERY_INVALID");
+  assert.equal(openPayload.message, "browser-mode must be one of: headless, headed");
+});
 
 test("open without --session creates isolated implicit session", { skip: !hasBrowser() }, () => {
   const existingState = JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
@@ -413,15 +428,7 @@ test("target eval returns deterministic shape and typed runtime failures", { ski
 
 test("session fresh creates ephemeral managed session", { skip: !hasBrowser() }, () => {
   const sessionId = `s-fresh-${Date.now()}`;
-  const freshResult = runCli([
-    "--json",
-    "session",
-    "fresh",
-    "--session-id",
-    sessionId,
-    "--timeout-ms",
-    "6000",
-  ]);
+  const freshResult = runCli(["--json", "session", "fresh", "--session-id", sessionId, "--timeout-ms", "6000"]);
   assert.equal(freshResult.status, 0);
   const freshPayload = parseJson(freshResult.stdout);
   assert.equal(freshPayload.ok, true);
@@ -450,15 +457,7 @@ test("open supports shared isolation mode", { skip: !hasBrowser() }, () => {
 
 test("session new and session use switch active pointer", { skip: !hasBrowser() }, () => {
   const sessionId = `s-contract-${Date.now()}`;
-  const createResult = runCli([
-    "--json",
-    "session",
-    "new",
-    "--session-id",
-    sessionId,
-    "--timeout-ms",
-    "6000",
-  ]);
+  const createResult = runCli(["--json", "session", "new", "--session-id", sessionId, "--timeout-ms", "6000"]);
   assert.equal(createResult.status, 0);
   const createPayload = parseJson(createResult.stdout);
   assert.equal(createPayload.ok, true);

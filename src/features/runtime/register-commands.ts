@@ -17,12 +17,6 @@ import {
 import {
   DEFAULT_OPEN_TIMEOUT_MS,
   DEFAULT_SESSION_TIMEOUT_MS,
-  type CliContractReport,
-  type DoctorReport,
-  type SessionListReport,
-  type SessionPruneReport,
-  type SessionReport,
-  type StateReconcileReport,
 } from "../../core/types.js";
 import { getCliContractReport } from "../../core/cli-contract.js";
 import { runtimeCommandMeta } from "./manifest.js";
@@ -30,11 +24,15 @@ import { registerSkillLifecycleCommands } from "./commands/skill-lifecycle.js";
 import { registerSessionCookieCopyCommand } from "./commands/session-cookie-copy.js";
 import { registerSessionClearCommand } from "./commands/session-clear.js";
 import { registerUpdateLifecycleCommands } from "./commands/update-lifecycle.js";
-
-type RuntimeOutputOpts = {
-  json: boolean;
-  pretty: boolean;
-};
+import {
+  printContractReport,
+  printDoctorReport,
+  printOpenSuccess,
+  printRunSuccess,
+  printSessionSuccess,
+  printStateReconcileSuccess,
+  type RuntimeOutputOpts,
+} from "./printers.js";
 
 type RuntimeCommandContext = {
   program: Command;
@@ -50,139 +48,6 @@ function parseLeaseTtlMs(input: string): number {
     throw new Error("lease-ttl-ms must be a positive integer");
   }
   return value;
-}
-
-function writeJson(value: unknown, opts: { pretty: boolean }) {
-  process.stdout.write(`${JSON.stringify(value, null, opts.pretty ? 2 : 0)}\n`);
-}
-
-function printDoctorReport(report: DoctorReport, opts: RuntimeOutputOpts) {
-  if (opts.json) {
-    writeJson(report, { pretty: opts.pretty });
-    return;
-  }
-
-  const lines = [
-    "surfwright doctor",
-    "",
-    `node: ${report.node.version} (${report.node.platform}/${report.node.arch})`,
-    `chrome: ${report.chrome.found ? "found" : "missing"}`,
-    ...(report.chrome.found
-      ? []
-      : [
-          "",
-          "Looked for:",
-          ...report.chrome.candidates.map((candidatePath) => `- ${candidatePath}`),
-        ]),
-  ];
-  process.stdout.write(`${lines.join("\n")}\n`);
-}
-
-function printContractReport(report: CliContractReport, opts: RuntimeOutputOpts) {
-  if (opts.json) {
-    writeJson(report, { pretty: opts.pretty });
-    return;
-  }
-  const lines = [
-    `${report.name} contract v${report.version}`,
-    `schema: ${report.contractSchemaVersion}`,
-    `fingerprint: ${report.contractFingerprint}`,
-    "",
-    "commands:",
-    ...report.commands.map((command) => `- ${command.id}: ${command.usage}`),
-    "",
-    "typed errors:",
-    ...report.errors.map((error) => `- ${error.code} (retryable=${error.retryable ? "true" : "false"})`),
-  ];
-  process.stdout.write(`${lines.join("\n")}\n`);
-}
-
-function printOpenSuccess(report: Record<string, unknown>, opts: RuntimeOutputOpts) {
-  if (opts.json) {
-    writeJson(report, { pretty: opts.pretty });
-    return;
-  }
-  const sessionId = typeof report.sessionId === "string" ? report.sessionId : "unknown";
-  const targetId = typeof report.targetId === "string" ? report.targetId : "unknown";
-  const actionId = typeof report.actionId === "string" ? report.actionId : "unknown";
-  const status = typeof report.status === "number" ? String(report.status) : "null";
-  const url = typeof report.url === "string" ? report.url : "unknown";
-  process.stdout.write(
-    [
-      "ok",
-      `sessionId=${sessionId}`,
-      `targetId=${targetId}`,
-      `actionId=${actionId}`,
-      `status=${status}`,
-      `url=${url}`,
-    ].join(" ") + "\n",
-  );
-}
-
-function printSessionSuccess(report: SessionReport | SessionListReport | SessionPruneReport, opts: RuntimeOutputOpts) {
-  if (opts.json) {
-    writeJson(report, { pretty: opts.pretty });
-    return;
-  }
-  if ("removedAttachedUnreachable" in report) {
-    process.stdout.write(
-      [
-        "ok",
-        `activeSessionId=${report.activeSessionId ?? "none"}`,
-        `scanned=${report.scanned}`,
-        `kept=${report.kept}`,
-        `removed=${report.removed}`,
-      ].join(" ") + "\n",
-    );
-    return;
-  }
-  if ("sessions" in report) {
-    process.stdout.write(`ok activeSessionId=${report.activeSessionId ?? "none"} sessions=${report.sessions.length}\n`);
-    return;
-  }
-  process.stdout.write(
-    [
-      "ok",
-      `sessionId=${report.sessionId}`,
-      `kind=${report.kind}`,
-      `active=${report.active ? "true" : "false"}`,
-      `created=${report.created ? "true" : "false"}`,
-      `restarted=${report.restarted ? "true" : "false"}`,
-    ].join(" ") + "\n",
-  );
-}
-
-function printStateReconcileSuccess(report: StateReconcileReport, opts: RuntimeOutputOpts) {
-  if (opts.json) {
-    writeJson(report, { pretty: opts.pretty });
-    return;
-  }
-  process.stdout.write(
-    [
-      "ok",
-      `activeSessionId=${report.activeSessionId ?? "none"}`,
-      `sessionsRemoved=${report.sessions.removed}`,
-      `targetsRemoved=${report.targets.removed}`,
-    ].join(" ") + "\n",
-  );
-}
-
-function printRunSuccess(report: Record<string, unknown>, opts: RuntimeOutputOpts) {
-  if (opts.json) {
-    writeJson(report, { pretty: opts.pretty });
-    return;
-  }
-  if (report.mode === "doctor") {
-    const valid = report.valid === true;
-    const issues = Array.isArray(report.issues) ? report.issues.length : 0;
-    process.stdout.write(["ok", "mode=doctor", `valid=${valid ? "true" : "false"}`, `issues=${issues}`].join(" ") + "\n");
-    return;
-  }
-  const steps = Array.isArray(report.steps) ? report.steps.length : 0;
-  const sessionId = typeof report.sessionId === "string" ? report.sessionId : "none";
-  const targetId = typeof report.targetId === "string" ? report.targetId : "none";
-  const totalMs = typeof report.totalMs === "number" ? report.totalMs : 0;
-  process.stdout.write(["ok", `steps=${steps}`, `sessionId=${sessionId}`, `targetId=${targetId}`, `totalMs=${totalMs}`].join(" ") + "\n");
 }
 
 export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
@@ -221,10 +86,15 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .description(openMeta.summary)
     .argument("<url>", "Absolute URL to open")
     .option("--reuse-url", "Reuse existing tab for same URL if present", false)
+    .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Navigation timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
     .option("--fields <csv>", "Return only selected top-level fields")
-    .action(async (url: string, options: { timeoutMs: number; reuseUrl?: boolean; isolation?: string; fields?: string }) => {
+    .action(
+      async (
+        url: string,
+        options: { timeoutMs: number; reuseUrl?: boolean; browserMode?: string; isolation?: string; fields?: string },
+      ) => {
       const output = ctx.globalOutputOpts();
       const globalOpts = ctx.program.opts<{ session?: string }>();
       try {
@@ -233,6 +103,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           inputUrl: url,
           timeoutMs: options.timeoutMs,
           reuseUrl: Boolean(options.reuseUrl),
+          browserModeInput: options.browserMode,
           isolation: options.isolation,
           sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
         });
@@ -240,19 +111,22 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
       } catch (error) {
         ctx.handleFailure(error, output);
       }
-    });
+      },
+    );
 
   const session = ctx.program.command("session").description("Manage reusable browser sessions");
 
   session
     .command("ensure")
     .description(runtimeCommandMeta("session.ensure").summary)
+    .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--timeout-ms <ms>", "Session readiness timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_SESSION_TIMEOUT_MS)
-    .action(async (options: { timeoutMs: number }) => {
+    .action(async (options: { timeoutMs: number; browserMode?: string }) => {
       const output = ctx.globalOutputOpts();
       try {
         const report = await sessionEnsure({
           timeoutMs: options.timeoutMs,
+          browserModeInput: options.browserMode,
         });
         printSessionSuccess(report, output);
       } catch (error) {
@@ -264,15 +138,18 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .command("new")
     .description(runtimeCommandMeta("session.new").summary)
     .option("--session-id <sessionId>", "Session id to assign (optional)")
+    .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--policy <policy>", "Session retention policy: ephemeral | persistent")
     .option("--lease-ttl-ms <ms>", "Session lease TTL in milliseconds", parseLeaseTtlMs)
     .option("--timeout-ms <ms>", "Session readiness timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_SESSION_TIMEOUT_MS)
-    .action(async (options: { sessionId?: string; policy?: string; leaseTtlMs?: number; timeoutMs: number }) => {
+    .action(
+      async (options: { sessionId?: string; browserMode?: string; policy?: string; leaseTtlMs?: number; timeoutMs: number }) => {
       const output = ctx.globalOutputOpts();
       try {
         const report = await sessionNew({
           timeoutMs: options.timeoutMs,
           requestedSessionId: options.sessionId,
+          browserModeInput: options.browserMode,
           policyInput: options.policy,
           leaseTtlMs: options.leaseTtlMs,
         });
@@ -280,20 +157,23 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
       } catch (error) {
         ctx.handleFailure(error, output);
       }
-    });
+      },
+    );
 
   session
     .command("fresh")
     .description(runtimeCommandMeta("session.fresh").summary)
     .option("--session-id <sessionId>", "Session id to assign (optional)")
+    .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--lease-ttl-ms <ms>", "Session lease TTL in milliseconds", parseLeaseTtlMs)
     .option("--timeout-ms <ms>", "Session readiness timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_SESSION_TIMEOUT_MS)
-    .action(async (options: { sessionId?: string; leaseTtlMs?: number; timeoutMs: number }) => {
+    .action(async (options: { sessionId?: string; browserMode?: string; leaseTtlMs?: number; timeoutMs: number }) => {
       const output = ctx.globalOutputOpts();
       try {
         const report = await sessionNew({
           timeoutMs: options.timeoutMs,
           requestedSessionId: options.sessionId,
+          browserModeInput: options.browserMode,
           policyInput: "ephemeral",
           leaseTtlMs: options.leaseTtlMs,
         });
@@ -434,6 +314,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .option("--record", "Write run artifact with timeline and replay payload", false)
     .option("--record-path <path>", "Explicit output path for recorded artifact")
     .option("--record-label <label>", "Label to include in recorded artifact metadata")
+    .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Default step timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
     .addHelpText(
@@ -455,6 +336,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         record?: boolean;
         recordPath?: string;
         recordLabel?: string;
+        browserMode?: string;
         isolation?: string;
         timeoutMs: number;
       }) => {
@@ -468,6 +350,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           stdinPlan,
           replayPath: options.replay,
           timeoutMs: options.timeoutMs,
+          browserModeInput: options.browserMode,
           isolation: options.isolation,
           doctor: Boolean(options.doctor),
           record: Boolean(options.record),

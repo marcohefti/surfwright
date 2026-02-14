@@ -98,9 +98,19 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
-  assert.deepEqual(Object.keys(ensurePayload), ["ok", "sessionId", "kind", "cdpOrigin", "active", "created", "restarted"]);
+  assert.deepEqual(Object.keys(ensurePayload), [
+    "ok",
+    "sessionId",
+    "kind",
+    "cdpOrigin",
+    "browserMode",
+    "active",
+    "created",
+    "restarted",
+  ]);
   assert.equal(ensurePayload.ok, true);
   assert.equal(ensurePayload.kind, "managed");
+  assert.equal(ensurePayload.browserMode, "headless");
   assert.equal(ensurePayload.active, true);
   const longText = "chunk ".repeat(320);
   const html = `<title>Contract Test Page</title><main><h1>ok heading</h1><p>${longText}</p><p style=\"display:none\">secret hidden</p></main>`;
@@ -121,6 +131,7 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
     "ok",
     "sessionId",
     "sessionSource",
+    "browserMode",
     "targetId",
     "actionId",
     "url",
@@ -131,6 +142,7 @@ test("session ensure + open success returns contract shape", { skip: !hasBrowser
   assert.equal(openPayload.ok, true);
   assert.equal(openPayload.sessionId, ensurePayload.sessionId);
   assert.equal(openPayload.sessionSource, "explicit");
+  assert.equal(openPayload.browserMode, ensurePayload.browserMode);
   assert.equal(typeof openPayload.targetId, "string");
   assert.equal(openPayload.targetId.length > 0, true);
   assert.equal(typeof openPayload.actionId, "string");

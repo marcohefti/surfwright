@@ -1,0 +1,108 @@
+name: publish-dry-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without v prefix (e.g. 0.1.1 or 0.2.0-next.1)"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-dry-run-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve release context
+        id: release
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ "$VERSION" == *-* ]]; then
+            DIST_TAG="next"
+            IS_PRERELEASE="true"
+          else
+            DIST_TAG="latest"
+            IS_PRERELEASE="false"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare package artifacts
+        run: |
+          node scripts/prepare-package-artifacts.mjs --package canonical
+          node scripts/prepare-package-artifacts.mjs --package guard
+
+      - name: Guard package version parity and release version alignment
+        run: |
+          CAN_VERSION=$(node -e "console.log(require('./packages/canonical/package.json').version)")
+          GUARD_VERSION=$(node -e "console.log(require('./packages/guard/package.json').version)")
+          RELEASE_VERSION="${{ steps.release.outputs.version }}"
+          if [[ "$CAN_VERSION" != "$GUARD_VERSION" ]]; then
+            echo "Version mismatch: canonical=$CAN_VERSION guard=$GUARD_VERSION" >&2
+            exit 1
+          fi
+          if [[ "$CAN_VERSION" != "$RELEASE_VERSION" ]]; then
+            echo "Release version mismatch: release=$RELEASE_VERSION package=$CAN_VERSION" >&2
+            exit 1
+          fi
+
+      - name: Release readiness checks
+        run: |
+          pnpm -s release-check
+          pnpm -s dual-package-parity-check
+
+      - name: Local post-publish smoke (dry-run)
+        run: |
+          node scripts/release/smoke-contract.mjs \
+            --mode local \
+            --out artifacts/publish-dry-run/smoke-report.json
+
+      - name: Generate release notes artifact from changelog
+        run: |
+          node scripts/release/release-notes-from-changelog.mjs \
+            --version "${{ steps.release.outputs.version }}" \
+            --out artifacts/publish-dry-run/release-notes.md
+
+      - name: Write dry-run metadata artifact
+        run: |
+          mkdir -p artifacts/publish-dry-run
+          cat > artifacts/publish-dry-run/release-metadata.json <<JSON
+          {
+            "version": "${{ steps.release.outputs.version }}",
+            "distTag": "${{ steps.release.outputs.dist_tag }}",
+            "prerelease": ${{ steps.release.outputs.is_prerelease }},
+            "dryRun": true,
+            "packages": ["@marcohefti/surfwright", "surfwright"],
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+      - name: Upload dry-run artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: publish-dry-run-artifacts
+          path: artifacts/publish-dry-run

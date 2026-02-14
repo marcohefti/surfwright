@@ -33,7 +33,8 @@
     "test:fixtures": "node --test test/ingress.fixture-replay.test.mjs",
     "test:skill-lifecycle": "pnpm -s build && node --test test/lifecycle/skill.lifecycle.contract.test.mjs",
     "test:update-lifecycle": "pnpm -s build && node --test test/lifecycle/update.lifecycle.contract.test.mjs",
-    "test": "pnpm -s test:contract && pnpm -s test:fixtures && pnpm -s test:skill-lifecycle && pnpm -s test:update-lifecycle"
+    "test:release-scripts": "node --test test/release/release-notes-from-changelog.test.mjs",
+    "test": "pnpm -s test:contract && pnpm -s test:fixtures && pnpm -s test:skill-lifecycle && pnpm -s test:update-lifecycle && pnpm -s test:release-scripts"
   },
   "dependencies": {
     "commander": "^14.0.0",

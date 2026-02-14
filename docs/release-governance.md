@@ -32,6 +32,11 @@ Current required release-critical checks:
 
 When adding new release-critical jobs, update this list and repository rulesets in the same change set.
 
+## Pre-Tag Dry-Run Policy
+
+Before cutting a new `v*` tag, run `publish-dry-run.yml` with the target version.
+This workflow must pass release-check, parity checks, local dual-package smoke checks, and versioned changelog release-notes generation.
+
 ## Update/Skill Governance
 
 - `surfwright update *` and `surfwright skill *` are authoritative runtime interfaces.

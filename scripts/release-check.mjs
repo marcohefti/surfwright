@@ -45,7 +45,23 @@ const report = {
   ok: true,
   checkedAt: new Date().toISOString(),
   packages: [],
+  changelog: {
+    hasVersionSection: false,
+    version: null,
+  },
 };
+
+const canonicalManifestPath = path.join(root, "packages", "canonical", "package.json");
+const canonicalManifest = JSON.parse(fs.readFileSync(canonicalManifestPath, "utf8"));
+const releaseVersion = canonicalManifest.version;
+const changelogPath = path.join(root, "CHANGELOG.md");
+const changelogText = fs.readFileSync(changelogPath, "utf8");
+const versionHeading = `## [${releaseVersion}]`;
+report.changelog.version = releaseVersion;
+report.changelog.hasVersionSection = changelogText.includes(versionHeading);
+if (!report.changelog.hasVersionSection) {
+  report.ok = false;
+}
 
 for (const pkg of packageDirs) {
   const manifestPath = path.join(pkg.dir, "package.json");

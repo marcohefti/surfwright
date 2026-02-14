@@ -73,6 +73,12 @@ jobs:
           cp test/fixtures/contract/contract.snapshot.json artifacts/release/
           sha256sum artifacts/release/* > artifacts/release/checksums.txt
 
+      - name: Post-build dual-package smoke checks
+        run: |
+          node scripts/release/smoke-contract.mjs \
+            --mode local \
+            --out artifacts/release/smoke-report.json
+
       - name: Generate release notes from changelog
         run: |
           node scripts/release/release-notes-from-changelog.mjs \

@@ -5,13 +5,16 @@ All notable changes to SurfWright are documented here.
 ## [Unreleased]
 
 ### Added
-- [docs] None.
+- [release] Added `publish-dry-run.yml` to exercise publish-path checks before tag-based release.
+- [test] Added coverage for `scripts/release/release-notes-from-changelog.mjs` failure/success behavior.
 
 ### Changed
-- [docs] None.
+- [release] Publish and release-draft workflows now use shared smoke script `scripts/release/smoke-contract.mjs`.
+- [release] `release-check` now fails when `CHANGELOG.md` is missing the current package version section.
+- [docs] `docs-check` now enforces full `Unreleased` skeleton buckets with list items.
 
 ### Fixed
-- [docs] None.
+- [release] Removed drift-prone duplicate smoke command logic across release workflows.
 
 ### Deprecated
 - [docs] None.

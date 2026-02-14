@@ -163,24 +163,10 @@ jobs:
 
       - name: Post-publish smoke checks
         run: |
-          mkdir -p artifacts/publish/smoke
-          VERSION="${{ steps.release.outputs.version }}"
-
-          fetch_and_contract() {
-            local package_name="$1"
-            local key="$2"
-            local work_dir
-            work_dir="$(mktemp -d)"
-            (
-              cd "$work_dir"
-              npm init -y >/dev/null 2>&1
-              npm install --silent --no-audit --no-fund "${package_name}@${VERSION}"
-              ./node_modules/.bin/surfwright --json contract > "${GITHUB_WORKSPACE}/artifacts/publish/smoke/${key}-contract.json"
-            )
-          }
-
-          fetch_and_contract "@marcohefti/surfwright" "canonical"
-          fetch_and_contract "surfwright" "guard"
+          node scripts/release/smoke-contract.mjs \
+            --mode registry \
+            --version "${{ steps.release.outputs.version }}" \
+            --out artifacts/publish/smoke-report.json
 
       - name: Verify npm provenance attestations for both packages
         run: |

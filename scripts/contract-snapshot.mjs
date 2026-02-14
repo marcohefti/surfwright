@@ -88,6 +88,14 @@ function normalizeContract(contract) {
 
   return {
     name: typeof contract.name === "string" ? contract.name : "surfwright",
+    contractSchemaVersion:
+      typeof contract.contractSchemaVersion === "number" && Number.isFinite(contract.contractSchemaVersion)
+        ? contract.contractSchemaVersion
+        : 1,
+    contractFingerprint:
+      typeof contract.contractFingerprint === "string" && contract.contractFingerprint.length > 0
+        ? contract.contractFingerprint
+        : "",
     guarantees: Array.isArray(contract.guarantees) ? contract.guarantees : [],
     commands,
     errors,

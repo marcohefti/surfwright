@@ -476,23 +476,22 @@ export type SurfwrightState = {
     }
   >;
 };
-
 export type CliCommandContract = {
   id: string;
   usage: string;
   summary: string;
 };
-
 export type CliErrorContract = {
   code: string;
   message: string;
   retryable: boolean;
 };
-
 export type CliContractReport = {
   ok: true;
   name: string;
   version: string;
+  contractSchemaVersion: number;
+  contractFingerprint: string;
   guarantees: string[];
   commands: CliCommandContract[];
   errors: CliErrorContract[];

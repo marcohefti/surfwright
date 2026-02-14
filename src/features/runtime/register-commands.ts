@@ -26,8 +26,10 @@ import {
 } from "../../core/types.js";
 import { getCliContractReport } from "../../core/cli-contract.js";
 import { runtimeCommandMeta } from "./manifest.js";
+import { registerSkillLifecycleCommands } from "./commands/skill-lifecycle.js";
 import { registerSessionCookieCopyCommand } from "./commands/session-cookie-copy.js";
 import { registerSessionClearCommand } from "./commands/session-clear.js";
+import { registerUpdateLifecycleCommands } from "./commands/update-lifecycle.js";
 
 type RuntimeOutputOpts = {
   json: boolean;
@@ -83,6 +85,8 @@ function printContractReport(report: CliContractReport, opts: RuntimeOutputOpts)
   }
   const lines = [
     `${report.name} contract v${report.version}`,
+    `schema: ${report.contractSchemaVersion}`,
+    `fingerprint: ${report.contractFingerprint}`,
     "",
     "commands:",
     ...report.commands.map((command) => `- ${command.id}: ${command.usage}`),
@@ -480,4 +484,17 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
       }
       },
     );
+  registerUpdateLifecycleCommands({
+    program: ctx.program,
+    globalOutputOpts: ctx.globalOutputOpts,
+    handleFailure: ctx.handleFailure,
+    readPackageVersion: ctx.readPackageVersion,
+  });
+
+  registerSkillLifecycleCommands({
+    program: ctx.program,
+    globalOutputOpts: ctx.globalOutputOpts,
+    handleFailure: ctx.handleFailure,
+    readPackageVersion: ctx.readPackageVersion,
+  });
 }

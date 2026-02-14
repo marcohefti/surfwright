@@ -21,8 +21,10 @@
         "allowCoreImports": [
           "src/core/cli-contract",
           "src/core/network-types",
+          "src/core/skills/manager",
           "src/core/target/network/index",
           "src/core/types",
+          "src/core/update/manager",
           "src/core/usecases"
         ]
       }

@@ -1,0 +1,102 @@
+name: release-draft
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without v prefix (e.g. 0.2.0 or 0.2.0-next.1)"
+        required: true
+      target_sha:
+        description: "Commit SHA to release from"
+        required: true
+      prerelease:
+        description: "Mark draft as prerelease"
+        required: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-draft-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout target SHA
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ inputs.target_sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify release candidate
+        run: |
+          pnpm validate
+          pnpm test
+          pnpm skill:validate
+          pnpm -s release-check
+          pnpm -s dual-package-parity-check
+
+      - name: Guard missing or existing release tag
+        run: |
+          TAG="v${{ inputs.version }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release already exists: $TAG" >&2
+            exit 1
+          fi
+
+      - name: Build release assets + checksums
+        run: |
+          mkdir -p artifacts/release
+          node scripts/prepare-package-artifacts.mjs --package canonical
+          node scripts/prepare-package-artifacts.mjs --package guard
+          (cd packages/canonical && npm pack --silent)
+          (cd packages/guard && npm pack --silent)
+          cp packages/canonical/*.tgz artifacts/release/
+          cp packages/guard/*.tgz artifacts/release/
+          cp dist/cli.js artifacts/release/
+          cp dist/cli.d.ts artifacts/release/
+          cp test/fixtures/contract/contract.snapshot.json artifacts/release/
+          sha256sum artifacts/release/* > artifacts/release/checksums.txt
+
+      - name: Generate release notes from changelog
+        run: |
+          node scripts/release/release-notes-from-changelog.mjs \
+            --version "${{ inputs.version }}" \
+            --out artifacts/release/release-notes.md
+
+      - name: Create GitHub draft release
+        run: |
+          TAG="v${{ inputs.version }}"
+          EXTRA=""
+          if [[ "${{ inputs.prerelease }}" == "true" ]]; then
+            EXTRA="--prerelease"
+          fi
+          gh release create "$TAG" \
+            --target "${{ inputs.target_sha }}" \
+            --draft \
+            $EXTRA \
+            --title "SurfWright $TAG" \
+            --notes-file artifacts/release/release-notes.md \
+            artifacts/release/*
+
+      - name: Upload draft artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-draft-artifacts
+          path: artifacts/release

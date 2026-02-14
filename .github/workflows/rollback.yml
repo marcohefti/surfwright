@@ -1,0 +1,84 @@
+name: rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      good_version:
+        description: "Version to restore (without package name)"
+        required: true
+      bad_version:
+        description: "Known-bad version to deprecate"
+        required: true
+      dist_tag:
+        description: "Dist-tag to restore"
+        required: true
+        default: "latest"
+      deprecate_message:
+        description: "Deprecation message"
+        required: true
+        default: "Known-bad release; upgrade to a newer version."
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rollback-${{ inputs.dist_tag }}
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Rollback dist-tags for both packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          DIST_TAG="${{ inputs.dist_tag }}"
+          GOOD="${{ inputs.good_version }}"
+          npm dist-tag add @marcohefti/surfwright@"$GOOD" "$DIST_TAG"
+          npm dist-tag add surfwright@"$GOOD" "$DIST_TAG"
+
+      - name: Deprecate known-bad versions
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          BAD="${{ inputs.bad_version }}"
+          MSG="${{ inputs.deprecate_message }}"
+          npm deprecate @marcohefti/surfwright@"$BAD" "$MSG"
+          npm deprecate surfwright@"$BAD" "$MSG"
+
+      - name: Rollback smoke checks
+        run: |
+          GOOD="${{ inputs.good_version }}"
+          npx -y @marcohefti/surfwright@"$GOOD" --json contract > /tmp/canonical-rollback-contract.json
+          npx -y surfwright@"$GOOD" --json contract > /tmp/guard-rollback-contract.json
+
+      - name: Write rollback metadata
+        run: |
+          mkdir -p artifacts/rollback
+          cat > artifacts/rollback/rollback-metadata.json <<JSON
+          {
+            "distTag": "${{ inputs.dist_tag }}",
+            "goodVersion": "${{ inputs.good_version }}",
+            "badVersion": "${{ inputs.bad_version }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+      - name: Upload rollback artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rollback-artifacts
+          path: artifacts/rollback

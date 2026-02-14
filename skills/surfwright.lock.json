@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "name": "surfwright",
+  "skillVersion": "0.1.0",
+  "channel": "stable",
+  "digest": "sha256:25727d025d039000f290fbc0446e999544a5b9c8c354afc594cddca564a71ef2",
+  "requires": {
+    "surfwrightVersion": ">=0.1.0 <0.2.0",
+    "contractSchemaVersion": "^1",
+    "contractFingerprint": "sha256:f855fa0224bf20fe5061547850cb4ce476a91b7c0de1d3b1e78cfb83c47632a0"
+  },
+  "updatedAt": "2026-02-14T13:38:08.376Z"
+}

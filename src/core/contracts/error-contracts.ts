@@ -31,5 +31,28 @@ export const errorContracts: CliErrorContract[] = [
   { code: "E_BROWSER_START_TIMEOUT", message: "CDP endpoint did not become ready in time", retryable: true },
   { code: "E_STATE_LOCK_TIMEOUT", message: "Timed out waiting for state lock", retryable: true },
   { code: "E_STATE_LOCK_IO", message: "State lock file I/O failed", retryable: true },
+  { code: "E_UPDATE_METADATA", message: "Unable to fetch update metadata from package registry", retryable: true },
+  { code: "E_UPDATE_PRECONDITION", message: "Update preconditions failed (dirty tree/branch/state)", retryable: false },
+  { code: "E_UPDATE_APPLY_FAILED", message: "Update apply command failed", retryable: true },
+  {
+    code: "E_UPDATE_HEALTHCHECK_FAILED",
+    message: "Updated runtime failed health verification and rollback could not recover",
+    retryable: true,
+  },
+  { code: "E_UPDATE_ROLLBACK_NOT_AVAILABLE", message: "No rollback target found in update history", retryable: false },
+  { code: "E_SKILL_MANIFEST_INVALID", message: "Skill manifest is missing required compatibility metadata", retryable: false },
+  { code: "E_SKILL_SOURCE_NOT_FOUND", message: "Skill source directory was not found", retryable: false },
+  { code: "E_SKILL_COMPAT_VERSION_MISMATCH", message: "Skill requires a different surfwright version range", retryable: false },
+  {
+    code: "E_SKILL_COMPAT_CONTRACT_SCHEMA_MISMATCH",
+    message: "Skill requires a different contract schema version",
+    retryable: false,
+  },
+  {
+    code: "E_SKILL_COMPAT_CONTRACT_MISMATCH",
+    message: "Skill requires a different contract fingerprint",
+    retryable: false,
+  },
+  { code: "E_SKILL_INSTALL_ATOMIC_SWAP_FAILED", message: "Skill install/update atomic swap failed", retryable: true },
   { code: "E_INTERNAL", message: "Unexpected runtime failure", retryable: true },
 ];

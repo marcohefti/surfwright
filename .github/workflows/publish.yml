@@ -17,19 +17,141 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     environment: release
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
+          cache: pnpm
           registry-url: https://registry.npmjs.org
 
-      - name: Trusted Publishing Preflight
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve release context
+        id: release
         run: |
-          echo "Trusted-publisher workflow is configured."
-          echo "Publish logic will run once dual-package layout is wired."
-          echo "ref=${GITHUB_REF}"
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ -z "$VERSION" || "$VERSION" == "$GITHUB_REF_NAME" ]]; then
+            echo "Tag must match vX.Y.Z format" >&2
+            exit 1
+          fi
+          if [[ "$VERSION" == *-* ]]; then
+            DIST_TAG="next"
+            IS_PRERELEASE="true"
+          else
+            DIST_TAG="latest"
+            IS_PRERELEASE="false"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare package artifacts
+        run: |
+          node scripts/prepare-package-artifacts.mjs --package canonical
+          node scripts/prepare-package-artifacts.mjs --package guard
+
+      - name: Guard package version parity and tag alignment
+        run: |
+          CAN_VERSION=$(node -e "console.log(require('./packages/canonical/package.json').version)")
+          GUARD_VERSION=$(node -e "console.log(require('./packages/guard/package.json').version)")
+          TAG_VERSION="${{ steps.release.outputs.version }}"
+          if [[ "$CAN_VERSION" != "$GUARD_VERSION" ]]; then
+            echo "Version mismatch: canonical=$CAN_VERSION guard=$GUARD_VERSION" >&2
+            exit 1
+          fi
+          if [[ "$CAN_VERSION" != "$TAG_VERSION" ]]; then
+            echo "Tag version mismatch: tag=$TAG_VERSION package=$CAN_VERSION" >&2
+            exit 1
+          fi
+
+      - name: Release readiness checks
+        run: |
+          pnpm -s release-check
+          pnpm -s dual-package-parity-check
+
+      - name: Publish both packages (guarded)
+        id: publish_guarded
+        run: |
+          mkdir -p artifacts/publish
+          DIST_TAG="${{ steps.release.outputs.dist_tag }}"
+          VERSION="${{ steps.release.outputs.version }}"
+
+          set +e
+          (cd packages/canonical && npm publish --provenance --access public --tag "$DIST_TAG")
+          CAN_STATUS=$?
+          (cd packages/guard && npm publish --provenance --access public --tag "$DIST_TAG")
+          GUARD_STATUS=$?
+          set -e
+
+          cat > artifacts/publish/publish-status.json <<JSON
+          {
+            "version": "$VERSION",
+            "distTag": "$DIST_TAG",
+            "canonicalStatus": $CAN_STATUS,
+            "guardStatus": $GUARD_STATUS
+          }
+          JSON
+
+          if [[ "$CAN_STATUS" -ne 0 || "$GUARD_STATUS" -ne 0 ]]; then
+            echo "Dual publish failed (canonical=$CAN_STATUS guard=$GUARD_STATUS)" >&2
+            exit 1
+          fi
+
+      - name: Verify dist-tag versions
+        run: |
+          VERSION="${{ steps.release.outputs.version }}"
+          DIST_TAG="${{ steps.release.outputs.dist_tag }}"
+          CAN_TAG_VERSION=$(npm view @marcohefti/surfwright@"$DIST_TAG" version)
+          GUARD_TAG_VERSION=$(npm view surfwright@"$DIST_TAG" version)
+          if [[ "$CAN_TAG_VERSION" != "$VERSION" ]]; then
+            echo "Canonical dist-tag mismatch: expected=$VERSION actual=$CAN_TAG_VERSION" >&2
+            exit 1
+          fi
+          if [[ "$GUARD_TAG_VERSION" != "$VERSION" ]]; then
+            echo "Guard dist-tag mismatch: expected=$VERSION actual=$GUARD_TAG_VERSION" >&2
+            exit 1
+          fi
+
+      - name: Post-publish smoke checks
+        run: |
+          mkdir -p artifacts/publish/smoke
+          VERSION="${{ steps.release.outputs.version }}"
+          npx -y @marcohefti/surfwright@"$VERSION" --json contract > artifacts/publish/smoke/canonical-contract.json
+          npx -y surfwright@"$VERSION" --json contract > artifacts/publish/smoke/guard-contract.json
+
+      - name: Generate release notes artifact from changelog
+        run: |
+          node scripts/release/release-notes-from-changelog.mjs \
+            --version "${{ steps.release.outputs.version }}" \
+            --out artifacts/publish/release-notes.md
+
+      - name: Write release metadata artifact
+        run: |
+          mkdir -p artifacts/publish
+          cat > artifacts/publish/release-metadata.json <<JSON
+          {
+            "version": "${{ steps.release.outputs.version }}",
+            "tag": "${GITHUB_REF_NAME}",
+            "distTag": "${{ steps.release.outputs.dist_tag }}",
+            "prerelease": ${{ steps.release.outputs.is_prerelease }},
+            "packages": ["@marcohefti/surfwright", "surfwright"],
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+      - name: Upload publish artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: publish-artifacts
+          path: artifacts/publish

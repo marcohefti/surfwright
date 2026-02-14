@@ -9,3 +9,8 @@ yarn-error.log*
 *.tsbuildinfo
 .zerocontext-lab/
 tmp/
+artifacts/
+packages/*/dist/
+packages/*/*.tgz
+packages/*/README.md
+packages/*/LICENSE

@@ -70,6 +70,25 @@ SurfWright is a new agent-native browser harness:
 - a local daemon path enabled by default for fast, stateful command loops
 - using Chrome/Chromium via CDP, with Playwright as the control engine
 
+## Availability
+
+`channel: pre-alpha` `compatibility: unstable` `support: best-effort` `last-verified: 2026-02-14`
+
+| Surface | Availability | Notes |
+|---|---|---|
+| `session.*` | stable | Core reusable session lifecycle for deterministic agent loops. |
+| `open` + `target.*` core flow | stable | Primary browser-control surface. |
+| `target.network*` | beta | Shape may expand; avoid strict parsing of optional insight fields. |
+| `run` plan workflow | beta | Plan ergonomics still evolving. |
+| `exp effects` | experimental | Subject to fast iteration and breaking changes. |
+
+### Availability Legend
+
+- `stable`: no breaking change in patch releases; deprecation path required.
+- `beta`: mostly reliable; minor-version breaking changes allowed with changelog callout.
+- `experimental`: breaking changes can happen in any release.
+- `deprecated`: still available with explicit removal target in changelog.
+
 ## Quick Start
 
 ```bash
@@ -84,6 +103,18 @@ Install/update the local SurfWright skill into Codex:
 ```bash
 pnpm skill:install
 ```
+
+## Install Matrix
+
+| Channel | Command |
+|---|---|
+| npm canonical | `npm i -g @marcohefti/surfwright` |
+| npm guard/discoverability | `npm i -g surfwright` |
+| one-off canonical | `npx -y @marcohefti/surfwright@latest --json contract` |
+| one-off guard | `npx -y surfwright@latest --json contract` |
+| pnpm dlx canonical | `pnpm dlx @marcohefti/surfwright@latest --json contract` |
+| pnpm dlx guard | `pnpm dlx surfwright@latest --json contract` |
+| Homebrew tap (planned) | `brew tap marcohefti/surfwright && brew install surfwright` |
 
 ## Commands (Current)
 
@@ -101,6 +132,12 @@ surfwright session clear [--keep-processes] [--timeout-ms <ms>] [--json] [--pret
 surfwright session cookie-copy --from-session <id> --to-session <id> --url <url> [--url <url> ...] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright update check [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--json] [--pretty]
+surfwright update run [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--dry-run] [--json] [--pretty]
+surfwright update rollback [--package <name>] [--dry-run] [--json] [--pretty]
+surfwright skill install [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]
+surfwright skill doctor [--dest <path>] [--lock <path>] [--json] [--pretty]
+surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]
 surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
@@ -291,10 +328,52 @@ If the endpoint is slow to answer `/json/version`, increase attach reachability 
 
 Contract ids are executable aliases. Example: `surfwright --json target.find <targetId> --text Checkout`.
 
+## Update Behavior
+
+Runtime update interface is policy-first and JSON-first:
+
+- `surfwright update check`
+- `surfwright update run`
+
+Channels:
+
+- `stable` -> npm dist-tag `latest`
+- `beta` -> npm dist-tag `next`
+- `dev` -> reserved, disabled until explicitly enabled
+
+Policy defaults:
+
+- local/operator default: `manual`
+- CI/production-agent default: `pinned`
+
+Update flows must support rollback and must never apply silent background updates by default.
+
+## Skills Compatibility
+
+Skill lifecycle compatibility is contract-gated:
+
+- `requires.surfwrightVersion`
+- `contractSchemaVersion`
+- `contractFingerprint`
+
+Skill runtime interface:
+
+- `surfwright skill install`
+- `surfwright skill update`
+- `surfwright skill doctor`
+
+Lock file:
+
+- `skills/surfwright.lock.json` records pinned install metadata for deterministic CI/agent runs.
+
 ## Agent Guidance In Repo
 
 - Architecture and source-of-truth map: `docs/agent-guidance-architecture.md`
 - Maintenance checklist: `docs/maintaining-agent-surface.md`
+- Release/update policy source of truth: `docs/release-governance.md`
+- Contributor release/doc routing: `docs/contributor-release-routing.md`
+- Update lifecycle details: `docs/update-lifecycle.md`
+- Skill lifecycle details: `docs/skills-lifecycle.md`
 - Zero-context evaluation harness: `docs/zerocontext-lab.md`
 - Installable runtime skill: `skills/surfwright/SKILL.md`
 

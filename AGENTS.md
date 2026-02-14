@@ -19,6 +19,8 @@ This repo exists for one thing: a stable browser control surface that agents can
 5. `docs/fixture-ingress-workflow.md` for adding regression fixtures when new edge cases appear.
 6. `docs/zerocontext-lab.md` for unbiased cold-start subagent evaluation workflow.
 7. `docs/zerocontext-gap-workflow.md` for one-agent-per-mission capability-gap discovery and evaluation.
+8. `docs/release-governance.md` for locked release/update policy and required checks.
+9. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
 
 ## Runtime Source of Truth
 
@@ -38,6 +40,12 @@ surfwright --json contract
   update `skills/surfwright/SKILL.md` or `skills/surfwright/references/*`.
 - Adding automation:
   use `docs/agent-dev-flow.md` script gate to decide `scripts/` vs `skills/surfwright/scripts/`.
+- Changing release/publish/update policy:
+  update `docs/release-governance.md` and route contributor instructions via `docs/contributor-release-routing.md`.
+- Changing update command behavior:
+  update `docs/update-lifecycle.md` plus `README.md` update section.
+- Changing skill compatibility/update flow:
+  update `docs/skills-lifecycle.md`, `skills/surfwright/skill.json`, and `skills/surfwright.lock.json`.
 
 ## Validation Baseline
 
@@ -78,3 +86,13 @@ When the user asks to "spawn agents", "zero context test", or evaluate fresh-age
 - Always use Conventional Commits with an explicit scope.
 - Format: `<type>(<scope>): <summary>`
 - Example: `chore(docs): adding guidelines for maintenance`
+
+## Documentation + Changelog Routing (Mandatory)
+
+- User-facing behavior changes must update docs and changelog in the same change set.
+- Routing baseline:
+  - `README.md` for install/availability/command UX.
+  - `CHANGELOG.md` (`[Unreleased]`) for every user-visible delta.
+  - `docs/release-governance.md` for release/update/policy changes.
+  - `docs/contributor-release-routing.md` for maintenance routing/process changes.
+- If docs and behavior diverge, treat it as a blocking defect and fix immediately.

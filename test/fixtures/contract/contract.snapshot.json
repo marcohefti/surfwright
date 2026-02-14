@@ -1,5 +1,7 @@
 {
   "name": "surfwright",
+  "contractSchemaVersion": 1,
+  "contractFingerprint": "sha256:f855fa0224bf20fe5061547850cb4ce476a91b7c0de1d3b1e78cfb83c47632a0",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -97,6 +99,21 @@
       "id": "session.use",
       "usage": "surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]",
       "summary": "switch active session after reachability check"
+    },
+    {
+      "id": "skill.doctor",
+      "usage": "surfwright skill doctor [--dest <path>] [--lock <path>] [--json] [--pretty]",
+      "summary": "report installed skill health, compatibility, and lock drift"
+    },
+    {
+      "id": "skill.install",
+      "usage": "surfwright skill install [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]",
+      "summary": "install skill atomically with contract compatibility gates"
+    },
+    {
+      "id": "skill.update",
+      "usage": "surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]",
+      "summary": "update skill atomically with compatibility checks and rollback safety"
     },
     {
       "id": "state.reconcile",
@@ -332,6 +349,21 @@
       "id": "target.wait",
       "usage": "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "wait for deterministic readiness condition on a target"
+    },
+    {
+      "id": "update.check",
+      "usage": "surfwright update check [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--json] [--pretty]",
+      "summary": "check available CLI updates with channel/policy-aware preflight"
+    },
+    {
+      "id": "update.rollback",
+      "usage": "surfwright update rollback [--package <name>] [--dry-run] [--json] [--pretty]",
+      "summary": "rollback CLI to previous known-good version from update history"
+    },
+    {
+      "id": "update.run",
+      "usage": "surfwright update run [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--dry-run] [--json] [--pretty]",
+      "summary": "apply CLI update via authoritative update pipeline with doctor verification"
     }
   ],
   "errors": [
@@ -412,6 +444,30 @@
       "retryable": true
     },
     {
+      "code": "E_SKILL_COMPAT_CONTRACT_MISMATCH",
+      "retryable": false
+    },
+    {
+      "code": "E_SKILL_COMPAT_CONTRACT_SCHEMA_MISMATCH",
+      "retryable": false
+    },
+    {
+      "code": "E_SKILL_COMPAT_VERSION_MISMATCH",
+      "retryable": false
+    },
+    {
+      "code": "E_SKILL_INSTALL_ATOMIC_SWAP_FAILED",
+      "retryable": true
+    },
+    {
+      "code": "E_SKILL_MANIFEST_INVALID",
+      "retryable": false
+    },
+    {
+      "code": "E_SKILL_SOURCE_NOT_FOUND",
+      "retryable": false
+    },
+    {
       "code": "E_STATE_LOCK_IO",
       "retryable": true
     },
@@ -433,6 +489,26 @@
     },
     {
       "code": "E_TARGET_SESSION_UNKNOWN",
+      "retryable": false
+    },
+    {
+      "code": "E_UPDATE_APPLY_FAILED",
+      "retryable": true
+    },
+    {
+      "code": "E_UPDATE_HEALTHCHECK_FAILED",
+      "retryable": true
+    },
+    {
+      "code": "E_UPDATE_METADATA",
+      "retryable": true
+    },
+    {
+      "code": "E_UPDATE_PRECONDITION",
+      "retryable": false
+    },
+    {
+      "code": "E_UPDATE_ROLLBACK_NOT_AVAILABLE",
       "retryable": false
     },
     {

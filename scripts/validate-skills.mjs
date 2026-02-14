@@ -100,6 +100,49 @@ function validateSkillDir(skillDirPath) {
       }
     }
   }
+
+  const manifestPath = path.join(skillDirPath, "skill.json");
+  const manifestRaw = readIfExists(manifestPath);
+  if (!manifestRaw) {
+    fail(`${skillDirPath}: missing skill.json`);
+    return;
+  }
+  let manifest;
+  try {
+    manifest = JSON.parse(manifestRaw);
+  } catch {
+    fail(`${manifestPath}: invalid JSON`);
+    return;
+  }
+  if (manifest?.schemaVersion !== 1) {
+    fail(`${manifestPath}: schemaVersion must be 1`);
+  }
+  if (manifest?.name !== frontmatter.name) {
+    fail(`${manifestPath}: name must match SKILL frontmatter (${frontmatter.name})`);
+  }
+  if (typeof manifest?.skillVersion !== "string" || manifest.skillVersion.length === 0) {
+    fail(`${manifestPath}: skillVersion is required`);
+  }
+  if (manifest?.channel !== "stable" && manifest?.channel !== "beta" && manifest?.channel !== "dev") {
+    fail(`${manifestPath}: channel must be stable|beta|dev`);
+  }
+  if (typeof manifest?.requires?.surfwrightVersion !== "string" || manifest.requires.surfwrightVersion.length === 0) {
+    fail(`${manifestPath}: requires.surfwrightVersion is required`);
+  }
+  if (
+    typeof manifest?.requires?.contractSchemaVersion !== "string" ||
+    manifest.requires.contractSchemaVersion.length === 0
+  ) {
+    fail(`${manifestPath}: requires.contractSchemaVersion is required`);
+  }
+  if (
+    typeof manifest?.requires?.contractFingerprint !== "string" ||
+    manifest.requires.contractFingerprint.length === 0
+  ) {
+    fail(`${manifestPath}: requires.contractFingerprint is required`);
+  } else if (manifest.requires.contractFingerprint.includes("pending")) {
+    fail(`${manifestPath}: requires.contractFingerprint cannot be pending`);
+  }
 }
 
 if (!fs.existsSync(skillsRoot)) {
@@ -119,6 +162,21 @@ if (skillDirs.length === 0) {
 
 for (const skillDir of skillDirs) {
   validateSkillDir(skillDir);
+}
+
+const lockPath = path.join(skillsRoot, "surfwright.lock.json");
+if (!fs.existsSync(lockPath)) {
+  fail(`${lockPath}: missing skill lock file`);
+} else {
+  const lockRaw = readIfExists(lockPath);
+  try {
+    const lock = JSON.parse(lockRaw ?? "");
+    if (typeof lock?.digest !== "string" || !lock.digest.startsWith("sha256:")) {
+      fail(`${lockPath}: digest must be sha256:*`);
+    }
+  } catch {
+    fail(`${lockPath}: invalid JSON`);
+  }
 }
 
 if (process.exitCode && process.exitCode !== 0) {

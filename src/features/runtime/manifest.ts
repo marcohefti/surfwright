@@ -78,6 +78,40 @@ export const runtimeCommandManifest: CliCommandContract[] = [
       "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
     summary: "execute, lint, record, or replay deterministic multi-step browser plans",
   },
+  {
+    id: "update.check",
+    usage:
+      "surfwright update check [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--json] [--pretty]",
+    summary: "check available CLI updates with channel/policy-aware preflight",
+  },
+  {
+    id: "update.run",
+    usage:
+      "surfwright update run [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--dry-run] [--json] [--pretty]",
+    summary: "apply CLI update via authoritative update pipeline with doctor verification",
+  },
+  {
+    id: "update.rollback",
+    usage: "surfwright update rollback [--package <name>] [--dry-run] [--json] [--pretty]",
+    summary: "rollback CLI to previous known-good version from update history",
+  },
+  {
+    id: "skill.install",
+    usage:
+      "surfwright skill install [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]",
+    summary: "install skill atomically with contract compatibility gates",
+  },
+  {
+    id: "skill.doctor",
+    usage: "surfwright skill doctor [--dest <path>] [--lock <path>] [--json] [--pretty]",
+    summary: "report installed skill health, compatibility, and lock drift",
+  },
+  {
+    id: "skill.update",
+    usage:
+      "surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]",
+    summary: "update skill atomically with compatibility checks and rollback safety",
+  },
 ];
 
 export function runtimeCommandMeta(id: string): CliCommandContract {

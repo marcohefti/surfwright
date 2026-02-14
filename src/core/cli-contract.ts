@@ -1,6 +1,9 @@
+import crypto from "node:crypto";
 import { allCommandManifest } from "../features/registry.js";
 import { errorContracts } from "./contracts/error-contracts.js";
 import type { CliContractReport } from "./types.js";
+
+export const CONTRACT_SCHEMA_VERSION = 1;
 
 const guarantees = [
   "deterministic output shape",
@@ -10,11 +13,32 @@ const guarantees = [
   "bounded runtime via explicit timeouts",
 ];
 
+function contractFingerprintInput(): string {
+  const normalized = {
+    contractSchemaVersion: CONTRACT_SCHEMA_VERSION,
+    guarantees,
+    commands: [...allCommandManifest]
+      .map((entry) => ({ id: entry.id, usage: entry.usage, summary: entry.summary }))
+      .sort((a, b) => a.id.localeCompare(b.id)),
+    errors: [...errorContracts]
+      .map((entry) => ({ code: entry.code, retryable: entry.retryable }))
+      .sort((a, b) => a.code.localeCompare(b.code)),
+  };
+  return JSON.stringify(normalized);
+}
+
+export function computeContractFingerprint(): string {
+  const digest = crypto.createHash("sha256").update(contractFingerprintInput()).digest("hex");
+  return `sha256:${digest}`;
+}
+
 export function getCliContractReport(version: string): CliContractReport {
   return {
     ok: true,
     name: "surfwright",
     version,
+    contractSchemaVersion: CONTRACT_SCHEMA_VERSION,
+    contractFingerprint: computeContractFingerprint(),
     guarantees,
     commands: allCommandManifest,
     errors: errorContracts,

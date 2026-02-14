@@ -40,5 +40,11 @@
   { "id": "extension.reload", "usageMustContain": "extension reload <extensionRef>" },
   { "id": "extension.uninstall", "usageMustContain": "extension uninstall <extensionRef>" },
   { "id": "state.reconcile", "usageMustContain": "state reconcile" },
-  { "id": "run", "usageMustContain": "run [--plan <path>|--plan-json <json>|--replay <path>]" }
+  { "id": "run", "usageMustContain": "run [--plan <path>|--plan-json <json>|--replay <path>]" },
+  { "id": "update.check", "usageMustContain": "update check" },
+  { "id": "update.run", "usageMustContain": "update run" },
+  { "id": "update.rollback", "usageMustContain": "update rollback" },
+  { "id": "skill.install", "usageMustContain": "skill install" },
+  { "id": "skill.doctor", "usageMustContain": "skill doctor" },
+  { "id": "skill.update", "usageMustContain": "skill update" }
 ]

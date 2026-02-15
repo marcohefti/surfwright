@@ -187,7 +187,7 @@ export async function targetWait(opts: {
           timeout: opts.timeoutMs,
         });
       } catch (error) {
-        if (error instanceof Error && error.message.includes("Timeout")) {
+        if (error instanceof Error && /timeout/i.test(error.message)) {
           throwWaitTimeout();
         }
         throw error;
@@ -201,7 +201,7 @@ export async function targetWait(opts: {
           timeout: opts.timeoutMs,
         });
       } catch (error) {
-        if (error instanceof Error && error.message.includes("Timeout")) {
+        if (error instanceof Error && /timeout/i.test(error.message)) {
           throwWaitTimeout();
         }
         throw error;
@@ -212,7 +212,7 @@ export async function targetWait(opts: {
           timeout: opts.timeoutMs,
         });
       } catch (error) {
-        if (error instanceof Error && error.message.includes("Timeout")) {
+        if (error instanceof Error && /timeout/i.test(error.message)) {
           throwWaitTimeout();
         }
         throw error;

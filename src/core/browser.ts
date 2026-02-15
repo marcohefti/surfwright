@@ -9,7 +9,13 @@ import {
   withSessionHeartbeat,
 } from "./session/hygiene.js";
 import { defaultSessionUserDataDir, nowIso } from "./state.js";
-import { DEFAULT_SESSION_ID, type SessionPolicy, type SessionState, type SurfwrightState } from "./types.js";
+import {
+  DEFAULT_SESSION_ID,
+  type ManagedBrowserMode,
+  type SessionPolicy,
+  type SessionState,
+  type SurfwrightState,
+} from "./types.js";
 
 export const CDP_HEALTHCHECK_TIMEOUT_MS = 600;
 const CDP_HEALTHCHECK_FALLBACK_MAX_TIMEOUT_MS = 3000;
@@ -163,11 +169,16 @@ export async function allocateFreePort(): Promise<number> {
   });
 }
 
-function launchDetachedBrowser(opts: { executablePath: string; debugPort: number; userDataDir: string }): number | null {
+function launchDetachedBrowser(opts: {
+  executablePath: string;
+  debugPort: number;
+  userDataDir: string;
+  browserMode: ManagedBrowserMode;
+}): number | null {
   const args = [
     `--remote-debugging-port=${opts.debugPort}`,
     `--user-data-dir=${opts.userDataDir}`,
-    "--headless=new",
+    ...(opts.browserMode === "headless" ? ["--headless=new"] : []),
     "--no-first-run",
     "--no-default-browser-check",
     "about:blank",
@@ -201,6 +212,7 @@ export async function startManagedSession(
     sessionId: string;
     debugPort: number;
     userDataDir: string;
+    browserMode?: ManagedBrowserMode;
     policy?: SessionPolicy;
     createdAt?: string;
   },
@@ -213,11 +225,13 @@ export async function startManagedSession(
 
   fs.mkdirSync(opts.userDataDir, { recursive: true });
   const startupWaitMs = Math.min(timeoutMs, CDP_STARTUP_MAX_WAIT_MS);
+  const browserMode: ManagedBrowserMode = opts.browserMode ?? "headless";
   const attemptStart = async (debugPort: number): Promise<{ browserPid: number; debugPort: number; cdpOrigin: string }> => {
     const browserPid = launchDetachedBrowser({
       executablePath,
       debugPort,
       userDataDir: opts.userDataDir,
+      browserMode,
     });
     if (browserPid === null) {
       throw new CliError("E_BROWSER_START_FAILED", "Failed to spawn Chrome/Chromium process");
@@ -247,6 +261,7 @@ export async function startManagedSession(
       sessionId: opts.sessionId,
       kind: "managed",
       policy: normalizeSessionPolicy(opts.policy) ?? defaultSessionPolicyForKind("managed"),
+      browserMode,
       cdpOrigin: started.cdpOrigin,
       debugPort: started.debugPort,
       userDataDir: opts.userDataDir,
@@ -266,10 +281,34 @@ export async function startManagedSession(
 export async function ensureSessionReachable(
   session: SessionState,
   timeoutMs: number,
+  opts?: {
+    browserMode?: ManagedBrowserMode;
+  },
 ): Promise<{
   session: SessionState;
   restarted: boolean;
 }> {
+  const desiredMode = opts?.browserMode;
+  if (session.kind === "managed" && desiredMode && session.browserMode !== desiredMode) {
+    terminateBrowserProcess(session.browserPid);
+    const debugPort = session.debugPort ?? (await allocateFreePort());
+    const userDataDir = session.userDataDir ?? defaultSessionUserDataDir(session.sessionId);
+    return {
+      session: await startManagedSession(
+        {
+          sessionId: session.sessionId,
+          debugPort,
+          userDataDir,
+          browserMode: desiredMode,
+          policy: session.policy,
+          createdAt: session.createdAt,
+        },
+        timeoutMs,
+      ),
+      restarted: true,
+    };
+  }
+
   if (await isCdpEndpointReachable(session.cdpOrigin, timeoutMs)) {
     return {
       session: withSessionHeartbeat(session),
@@ -293,6 +332,7 @@ export async function ensureSessionReachable(
         sessionId: session.sessionId,
         debugPort,
         userDataDir,
+        browserMode: session.kind === "managed" && session.browserMode !== "unknown" ? session.browserMode : undefined,
         policy: session.policy,
         createdAt: session.createdAt,
       },
@@ -305,6 +345,9 @@ export async function ensureSessionReachable(
 export async function ensureDefaultManagedSession(
   state: SurfwrightState,
   timeoutMs: number,
+  opts?: {
+    browserMode?: ManagedBrowserMode;
+  },
 ): Promise<{
   session: SessionState;
   created: boolean;
@@ -317,7 +360,7 @@ export async function ensureDefaultManagedSession(
       throw new CliError("E_SESSION_CONFLICT", `Reserved session ${DEFAULT_SESSION_ID} is not managed`);
     }
 
-    const ensured = await ensureSessionReachable(existing, timeoutMs);
+    const ensured = await ensureSessionReachable(existing, timeoutMs, opts);
     state.sessions[DEFAULT_SESSION_ID] = ensured.session;
     return {
       session: ensured.session,
@@ -333,6 +376,7 @@ export async function ensureDefaultManagedSession(
       sessionId: DEFAULT_SESSION_ID,
       debugPort,
       userDataDir,
+      browserMode: opts?.browserMode,
       policy: "persistent",
       createdAt: nowIso(),
     },

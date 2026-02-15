@@ -14,13 +14,16 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
       .command("snapshot")
       .description(meta.summary)
       .argument("<targetId>", "Target handle returned by open/target list")
+      .option("--mode <mode>", "Snapshot mode: snapshot|orient", "snapshot")
       .option("--selector <query>", "Scope snapshot to a selector")
       .option("--visible-only", "Only include visible content")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
-      .option("--max-chars <n>", "Maximum text preview chars to return")
-      .option("--max-headings <n>", "Maximum heading rows to return")
-      .option("--max-buttons <n>", "Maximum button rows to return")
-      .option("--max-links <n>", "Maximum link rows to return")
+      .option("--cursor <token>", "Paging cursor token returned by a previous snapshot call")
+      .option("--include-selector-hints", "Include selectorHint rows for headings/buttons/links (bounded)", false)
+      .option("--max-chars <n>", "Maximum text preview chars to return (0 to omit)")
+      .option("--max-headings <n>", "Maximum heading rows to return (0 to omit)")
+      .option("--max-buttons <n>", "Maximum button rows to return (0 to omit)")
+      .option("--max-links <n>", "Maximum link rows to return (0 to omit)")
       .option("--timeout-ms <ms>", "Snapshot timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state", false)
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -28,9 +31,12 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
         async (
           targetId: string,
           options: {
+            mode?: string;
             selector?: string;
             visibleOnly?: boolean;
             frameScope?: string;
+            cursor?: string;
+            includeSelectorHints?: boolean;
             maxChars?: string;
             maxHeadings?: string;
             maxButtons?: string;
@@ -55,9 +61,12 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
               targetId,
               timeoutMs: options.timeoutMs,
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+              mode: options.mode,
               selectorQuery: options.selector,
               visibleOnly: Boolean(options.visibleOnly),
               frameScope: options.frameScope,
+              cursor: options.cursor,
+              includeSelectorHints: Boolean(options.includeSelectorHints),
               maxChars,
               maxHeadings,
               maxButtons,

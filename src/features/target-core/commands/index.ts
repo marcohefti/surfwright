@@ -25,6 +25,7 @@ import {
 } from "./effects/target-effect-assertions.js";
 import { targetEvalCommandSpec } from "./target-eval.js";
 import { targetFindCommandSpec } from "./target-find.js";
+import { targetFramesCommandSpec } from "./frames/target-frames.js";
 import { targetListCommandSpec } from "./target-list.js";
 import { targetConsoleGetCommandSpec, targetConsoleTailCommandSpec, targetHealthCommandSpec, targetHudCommandSpec } from "./target-observability.js";
 import { targetPruneCommandSpec } from "./target-prune.js";
@@ -37,10 +38,12 @@ import {
   targetScreenshotCommandSpec,
 } from "./target-structured.js";
 import { targetWaitCommandSpec } from "./target-wait.js";
+import { targetUrlAssertCommandSpec } from "./url/target-url-assert.js";
 import type { TargetCommandSpec } from "./types.js";
 
 export const targetCommandSpecs: TargetCommandSpec[] = [
   targetListCommandSpec,
+  targetFramesCommandSpec,
   targetSnapshotCommandSpec,
   targetFindCommandSpec,
   targetClickCommandSpec,
@@ -69,6 +72,7 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetReadCommandSpec,
   targetExtractCommandSpec,
   targetWaitCommandSpec,
+  targetUrlAssertCommandSpec,
   targetConsoleGetCommandSpec,
   targetConsoleTailCommandSpec,
   targetHealthCommandSpec,

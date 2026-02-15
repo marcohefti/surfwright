@@ -130,17 +130,17 @@ Deferred distribution channels and enablement checklists are tracked in `docs/re
 ```bash
 surfwright doctor [--json] [--pretty]
 surfwright contract [--json] [--pretty]
-surfwright session ensure [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session new [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session fresh [--session-id <id>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
+surfwright session ensure [--browser-mode <headless|headed>] [--timeout-ms <ms>] [--json] [--pretty]
+surfwright session new [--session-id <id>] [--browser-mode <headless|headed>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
+surfwright session fresh [--session-id <id>] [--browser-mode <headless|headed>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session attach --cdp <origin> [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session list [--json] [--pretty]
 surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session clear [--keep-processes] [--timeout-ms <ms>] [--json] [--pretty]
 surfwright session cookie-copy --from-session <id> --to-session <id> --url <url> [--url <url> ...] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
+surfwright open <url> [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
 surfwright update check [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--json] [--pretty]
 surfwright update run [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--dry-run] [--json] [--pretty]
 surfwright update rollback [--package <name>] [--dry-run] [--json] [--pretty]
@@ -148,13 +148,15 @@ surfwright skill install [--source <path>] [--dest <path>] [--lock <path>] [--js
 surfwright skill doctor [--dest <path>] [--lock <path>] [--json] [--pretty]
 surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]
 surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target frames <targetId> [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target snapshot <targetId> [--mode <snapshot|orient>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target eval <targetId> (--expression <js> | --js <js> | --script <js>) [--arg-json <json>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target url-assert <targetId> [--host <host>] [--origin <origin>] [--path-prefix <prefix>] [--url-prefix <prefix>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--session <id>]
 surfwright target health <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target hud <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
@@ -185,13 +187,15 @@ Default workflow for agent loops:
 
 ```bash
 surfwright --json open https://example.com
+surfwright --json target frames <targetId>
 surfwright --json target snapshot <targetId>
 surfwright --json target find <targetId> --selector a --contains "Checkout" --first --visible-only
 surfwright --json target click <targetId> --text "Blog" --visible-only
 surfwright --json target read <targetId> --selector main --frame-scope main --chunk-size 1200 --chunk 1
 surfwright --json target extract <targetId> --kind blog --frame-scope all --limit 10
-surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
+surfwright --json target eval <targetId> --expr "console.log('hello from agent'), document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
+surfwright --json target url-assert <targetId> --host example.com --path-prefix /
 surfwright target console-tail <targetId> --capture-ms 2000 --levels error,warn
 surfwright --json target health <targetId>
 surfwright --json target hud <targetId>
@@ -223,6 +227,22 @@ Session selection defaults:
 - `target list` requires `--session` when no `targetId` is available to infer session.
 - set `--isolation shared` on `open`/`run` to reuse the managed shared-session path instead.
 
+Headless vs headed (managed sessions):
+
+- Defaults remain `headless`.
+- Use `--browser-mode headed` on `session ensure/new/fresh`, `open`, or `run` when you need a visible browser window.
+- SurfWright reports `browserMode` in `session` and `open` JSON outputs (attached sessions report `unknown`).
+
+Human login handoff (GitHub example):
+
+```bash
+surfwright --json session new --session-id s-login --browser-mode headed
+surfwright --json --session s-login open https://github.com/login
+
+# Human: finish login in the headed browser window, then continue the agent loop.
+surfwright --json target snapshot <targetId>
+```
+
 State hygiene workflow for stale local metadata:
 
 ```bash
@@ -237,17 +257,21 @@ surfwright --json state reconcile
 - `target prune` removes orphaned/aged targets and caps retained targets per session.
 - `state reconcile` runs both in one pass (recommended after host/browser restarts).
 
-`open` intentionally returns a minimal success shape for agent loops:
+`open` intentionally returns a minimal success shape for agent loops (including redirect evidence fields):
 
 ```json
-{"ok":true,"sessionId":"s-1","sessionSource":"implicit-new","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","status":200,"title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":231,"resolveSession":4,"connectCdp":33,"action":176,"persistState":18}}
+{"ok":true,"sessionId":"s-1","sessionSource":"implicit-new","browserMode":"headless","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2p8-1sz7jc","requestedUrl":"http://camelpay.localhost/","finalUrl":"http://camelpay.localhost/","wasRedirected":false,"redirectChain":null,"redirectChainTruncated":false,"url":"http://camelpay.localhost/","status":200,"title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":231,"resolveSession":4,"connectCdp":33,"action":176,"persistState":18}}
 ```
 
 `target snapshot` returns bounded page-read primitives for deterministic agent parsing:
 
 ```json
-{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","textPreview":"CamelPay is in early access ...","headings":["Cross-chain crypto checkout, made simple"],"buttons":["Start Checkout"],"links":[{"text":"Read the docs","href":"http://localhost:3002/developers/quickstart"}],"truncated":{"text":false,"headings":false,"buttons":false,"links":false},"timingMs":{"total":147,"resolveSession":4,"connectCdp":26,"action":104,"persistState":13}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","mode":"snapshot","cursor":null,"nextCursor":null,"url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","scope":{"selector":null,"matched":true,"visibleOnly":false,"frameScope":"main"},"textPreview":"CamelPay is in early access ...","headings":["Cross-chain crypto checkout, made simple"],"buttons":["Start Checkout"],"links":[{"text":"Read the docs","href":"http://localhost:3002/developers/quickstart"}],"truncated":{"text":false,"headings":false,"buttons":false,"links":false},"hints":[],"timingMs":{"total":147,"resolveSession":4,"connectCdp":26,"action":104,"persistState":13}}
 ```
+
+Use `--max-... 0` to omit a category. If `nextCursor` is non-null, pass it back via `--cursor` to page through large inventories with stable ordering.
+
+Use `--include-selector-hints` to include bounded `items.*.selectorHint` rows. Use `--mode orient` for a quiet first-load payload (returns `h1` and limits `links` to header/nav links; defaults `--max-buttons 0`).
 
 `target find` returns bounded match records for text/selector queries:
 
@@ -258,8 +282,12 @@ surfwright --json state reconcile
 `target click` executes one click and returns action metadata:
 
 ```json
-{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pc-9kd2rj","mode":"selector","selector":"#start-checkout","contains":null,"visibleOnly":true,"query":"#start-checkout","clicked":{"index":0,"text":"Start Checkout","visible":true,"selectorHint":"a#start-checkout.inline-flex.h-9"},"url":"http://camelpay.localhost/#checkout","title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":128,"resolveSession":4,"connectCdp":25,"action":84,"persistState":15}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pc-9kd2rj","mode":"selector","selector":"#start-checkout","contains":null,"visibleOnly":true,"query":"#start-checkout","matchCount":1,"pickedIndex":0,"clicked":{"index":0,"text":"Start Checkout","visible":true,"selectorHint":"a#start-checkout.inline-flex.h-9"},"url":"http://camelpay.localhost/#checkout","title":"CamelPay — Cross-chain crypto checkout","wait":null,"snapshot":null,"timingMs":{"total":128,"resolveSession":4,"connectCdp":25,"action":84,"persistState":15}}
 ```
+
+Use `--index <n>` (0-based) to click the Nth match. Use `--explain` to return bounded match-selection evidence and rejection reasons without performing the click.
+
+Use `--delta` to include a bounded, evidence-based before/after payload (no semantic UI claims). v0 includes URL/title, focus evidence, and role-count deltas for `dialog|alert|status|menu|listbox`, plus a fixed list of ARIA attribute values captured on the clicked element.
 
 `target read` returns deterministic text chunks for long pages:
 
@@ -270,8 +298,10 @@ surfwright --json state reconcile
 `target eval` executes bounded page-context JavaScript for one explicit target:
 
 ```json
-{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pk-1xk9","expression":"console.log('hello from agent'); return document.title","result":{"type":"string","value":"CamelPay — Cross-chain crypto checkout","truncated":false},"console":{"captured":true,"count":1,"truncated":false,"entries":[{"level":"log","text":"hello from agent"}]},"timingMs":{"total":126,"resolveSession":4,"connectCdp":25,"action":84,"persistState":13}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pk-1xk9","expression":"console.log('hello from agent'), document.title","context":{"frameCount":1,"evaluatedFrameId":"f-0","evaluatedFrameUrl":"http://camelpay.localhost/","sameOrigin":true,"world":"main"},"result":{"type":"string","value":"CamelPay — Cross-chain crypto checkout","truncated":false},"console":{"captured":true,"count":1,"truncated":false,"entries":[{"level":"log","text":"hello from agent"}]},"timingMs":{"total":126,"resolveSession":4,"connectCdp":25,"action":84,"persistState":13}}
 ```
+
+Use `--expr` when you want the value of an expression without writing an explicit `return`. Use `target frames` to enumerate `frameId` handles and pass `--frame-id` when evaluating inside an iframe; `target eval` reports compact `context` metadata to clarify what was actually evaluated.
 
 `target network` returns bounded request/websocket diagnostics plus performance summary, correlation ids, hints, and insights:
 

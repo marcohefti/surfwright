@@ -14,13 +14,10 @@ import {
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";
-
 function collectRepeatedString(value: string, previous: string[]): string[] {
   return [...previous, value];
 }
-
 const meta = targetCommandMeta("target.click");
-
 export const targetClickCommandSpec: TargetCommandSpec = {
   id: meta.id,
   usage: meta.usage,
@@ -34,10 +31,13 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--selector <query>", "CSS/Playwright selector query")
       .option("--contains <text>", "Text filter to apply with --selector")
       .option("--visible-only", "Only match visible elements")
+      .option("--index <n>", "Pick the Nth match (0-based) instead of first match")
+      .option("--explain", "Explain match selection/rejection without clicking", false)
       .option("--wait-for-text <text>", "After click, wait until text becomes visible")
       .option("--wait-for-selector <query>", "After click, wait until selector becomes visible")
       .option("--wait-network-idle", "After click, wait for network idle")
       .option("--snapshot", "Include compact post-click text preview")
+      .option("--delta", "Include bounded evidence-based delta after click", false)
       .option("--timeout-ms <ms>", "Click timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state", false)
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -49,10 +49,13 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             selector?: string;
             contains?: string;
             visibleOnly?: boolean;
+            index?: string;
+            explain?: boolean;
             waitForText?: string;
             waitForSelector?: string;
             waitNetworkIdle?: boolean;
             snapshot?: boolean;
+            delta?: boolean;
             timeoutMs: number;
             noPersist?: boolean;
             fields?: string;
@@ -61,6 +64,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
           const fields = parseFieldsCsv(options.fields);
+          const index = typeof options.index === "string" ? Number.parseInt(options.index, 10) : undefined;
           try {
             const report = await targetClick({
               targetId,
@@ -70,10 +74,13 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               selectorQuery: options.selector,
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
+              index,
+              explain: Boolean(options.explain),
               waitForText: options.waitForText,
               waitForSelector: options.waitForSelector,
               waitNetworkIdle: Boolean(options.waitNetworkIdle),
               snapshot: Boolean(options.snapshot),
+              delta: Boolean(options.delta),
               persistState: !Boolean(options.noPersist),
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -84,9 +91,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       );
   },
 };
-
 const clickAtMeta = targetCommandMeta("target.click-at");
-
 export const targetClickAtCommandSpec: TargetCommandSpec = {
   id: clickAtMeta.id,
   usage: clickAtMeta.usage,
@@ -125,9 +130,7 @@ export const targetClickAtCommandSpec: TargetCommandSpec = {
       });
   },
 };
-
 const fillMeta = targetCommandMeta("target.fill");
-
 export const targetFillCommandSpec: TargetCommandSpec = {
   id: fillMeta.id,
   usage: fillMeta.usage,

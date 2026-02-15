@@ -27,6 +27,36 @@ function parseJson(stdout) {
   return JSON.parse(text);
 }
 
+const RETRYABLE_INFRA_CODES = new Set([
+  "E_CDP_UNREACHABLE",
+  "E_BROWSER_START_TIMEOUT",
+  "E_STATE_LOCK_TIMEOUT",
+  "E_INTERNAL",
+  "E_WAIT_TIMEOUT",
+]);
+
+function openTarget(url, { timeoutMs = 5000 } = {}) {
+  const args = ["--json", "open", url, "--timeout-ms", String(timeoutMs)];
+  let result = runCli(args);
+  if (result.status !== 0) {
+    try {
+      const payload = parseJson(result.stdout);
+      if (payload?.ok === false && typeof payload.code === "string" && RETRYABLE_INFRA_CODES.has(payload.code)) {
+        // One retry for flaky infra startup races (keeps timeouts tight).
+        result = runCli(args);
+      }
+    } catch {
+      // ignore non-JSON errors; assertion below will surface stdout/stderr
+    }
+  }
+  assert.equal(
+    result.status,
+    0,
+    result.stdout.trim().length > 0 ? result.stdout : result.stderr.trim().length > 0 ? result.stderr : "open failed",
+  );
+  return parseJson(result.stdout);
+}
+
 let hasBrowserCache;
 function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
@@ -167,9 +197,7 @@ test("target scroll-watch validates properties before session resolution", () =>
 test("target scroll-plan returns deterministic shape", { skip: !hasBrowser() }, () => {
   const html = `<title>Scroll Plan</title><main style="height:4000px"><h1>scroll-page</h1></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
-  assert.equal(openResult.status, 0);
-  const openPayload = parseJson(openResult.stdout);
+  const openPayload = openTarget(dataUrl);
 
   const planResult = runCli([
     "--json",
@@ -210,9 +238,7 @@ test("target transition-trace captures transition events after click", { skip: !
   <button id="btn" onclick="document.body.classList.toggle('faded')">Toggle</button>
   </body></html>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
-  assert.equal(openResult.status, 0);
-  const openPayload = parseJson(openResult.stdout);
+  const openPayload = openTarget(dataUrl);
 
   const traceResult = runCli([
     "--json",
@@ -260,9 +286,7 @@ test("target observe captures sampled property changes", { skip: !hasBrowser() }
   </script>
   </body></html>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
-  assert.equal(openResult.status, 0);
-  const openPayload = parseJson(openResult.stdout);
+  const openPayload = openTarget(dataUrl);
 
   const observeResult = runCli([
     "--json",
@@ -311,9 +335,7 @@ test("target scroll-sample returns sampled values across steps", { skip: !hasBro
   </script>
   </body></html>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
-  assert.equal(openResult.status, 0);
-  const openPayload = parseJson(openResult.stdout);
+  const openPayload = openTarget(dataUrl);
 
   const sampleResult = runCli([
     "--json",
@@ -366,9 +388,7 @@ test("target scroll-watch returns class/style deltas and transition events", { s
   </script>
   </body></html>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
-  assert.equal(openResult.status, 0);
-  const openPayload = parseJson(openResult.stdout);
+  const openPayload = openTarget(dataUrl);
 
   const watchResult = runCli([
     "--json",

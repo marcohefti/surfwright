@@ -9,7 +9,7 @@ import { stateRootDir } from "../state.js";
 
 const DAEMON_META_VERSION = 1;
 const DAEMON_HOST = "127.0.0.1";
-const DAEMON_STARTUP_TIMEOUT_MS = 2200;
+const DAEMON_STARTUP_TIMEOUT_MS = 4500;
 const DAEMON_REQUEST_TIMEOUT_MS = 120000;
 const DAEMON_PING_TIMEOUT_MS = 250;
 const DAEMON_RETRY_DELAY_MS = 60;

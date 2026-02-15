@@ -8,9 +8,15 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "list current page targets with explicit target handles",
   },
   {
+    id: "target.frames",
+    usage:
+      "surfwright target frames <targetId> [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "list frames for a target with stable frame handles",
+  },
+  {
     id: "target.snapshot",
     usage:
-      "surfwright target snapshot <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "surfwright target snapshot <targetId> [--mode <snapshot|orient>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "read bounded text and UI primitives for a target",
   },
   {
@@ -22,7 +28,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.click",
     usage:
-      "surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "click the first matching element in a target",
   },
   {
@@ -112,7 +118,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.eval",
     usage:
-      "surfwright target eval <targetId> (--expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "execute bounded JavaScript in page context for a target",
   },
   {
@@ -174,6 +180,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     usage:
       "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "wait for deterministic readiness condition on a target",
+  },
+  {
+    id: "target.url-assert",
+    usage:
+      "surfwright target url-assert <targetId> [--host <host>] [--origin <origin>] [--path-prefix <prefix>] [--url-prefix <prefix>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+    summary: "assert current target URL matches expected host/origin/path/url prefixes",
   },
   {
     id: "target.prune",

@@ -4,9 +4,9 @@ import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
 import { nowIso } from "../state.js";
 import { saveTargetSnapshot } from "../state-repos/target-repo.js";
+import { resolveFrameById } from "./frames/frames.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetEvalReport } from "../types.js";
-
 type TargetCloseReport = {
   ok: true;
   sessionId: string;
@@ -20,7 +20,6 @@ type TargetCloseReport = {
     persistState: number;
   };
 };
-
 // Inline expressions are argv-bound and should stay small/deterministic.
 const EVAL_MAX_INLINE_EXPRESSION_CHARS = 4096;
 // File-based scripts avoid shell argv constraints but still need bounded input.
@@ -31,15 +30,26 @@ const EVAL_MAX_CONSOLE_TEXT_CHARS = 4000;
 const EVAL_MAX_RESULT_STRING_CHARS = 4000;
 const EVAL_MAX_RESULT_ITEMS = 200;
 const EVAL_MAX_RESULT_DEPTH = 6;
-
-function parseExpression(opts: { expression?: string; scriptFile?: string }): string {
+function parseExpression(opts: { expression?: string; expr?: string; scriptFile?: string }): { expression: string; evaluatorBody: string } {
   const expression = typeof opts.expression === "string" ? opts.expression : "";
+  const expr = typeof opts.expr === "string" ? opts.expr : "";
   const scriptFile = typeof opts.scriptFile === "string" ? opts.scriptFile.trim() : "";
-
-  if (expression.trim().length > 0 && scriptFile.length > 0) {
-    throw new CliError("E_QUERY_INVALID", "choose either expression/js/script or script-file");
+  const hasExpression = expression.trim().length > 0;
+  const hasExpr = expr.trim().length > 0;
+  const hasScriptFile = scriptFile.length > 0;
+  const selectedCount = Number(hasExpression) + Number(hasExpr) + Number(hasScriptFile);
+  if (selectedCount === 0) {
+    throw new CliError("E_QUERY_INVALID", "expr, expression, or script-file is required");
   }
-
+  if (selectedCount > 1) {
+    if (hasExpression && hasScriptFile) {
+      throw new CliError("E_QUERY_INVALID", "choose either expression/js/script or script-file");
+    }
+    if (hasExpr && hasScriptFile) {
+      throw new CliError("E_QUERY_INVALID", "choose either expr or script-file");
+    }
+    throw new CliError("E_QUERY_INVALID", "choose either expr or expression/js/script");
+  }
   if (scriptFile.length > 0) {
     let stat: fs.Stats;
     try {
@@ -65,11 +75,19 @@ function parseExpression(opts: { expression?: string; scriptFile?: string }): st
     if (scriptText.trim().length === 0) {
       throw new CliError("E_QUERY_INVALID", "script-file is empty");
     }
-    return scriptText;
+    return { expression: scriptText, evaluatorBody: scriptText };
   }
-
-  if (expression.trim().length === 0) {
-    throw new CliError("E_QUERY_INVALID", "expression or script-file is required");
+  if (hasExpr) {
+    if (expr.length > EVAL_MAX_INLINE_EXPRESSION_CHARS) {
+      throw new CliError(
+        "E_EVAL_SCRIPT_TOO_LARGE",
+        `expr must be at most ${EVAL_MAX_INLINE_EXPRESSION_CHARS} characters`,
+      );
+    }
+    return {
+      expression: expr,
+      evaluatorBody: `return (${expr});`,
+    };
   }
   if (expression.length > EVAL_MAX_INLINE_EXPRESSION_CHARS) {
     throw new CliError(
@@ -77,9 +95,8 @@ function parseExpression(opts: { expression?: string; scriptFile?: string }): st
       `expression must be at most ${EVAL_MAX_INLINE_EXPRESSION_CHARS} characters`,
     );
   }
-  return expression;
+  return { expression, evaluatorBody: expression };
 }
-
 function parseArgJson(input: string | undefined): unknown {
   if (typeof input !== "string") {
     return null;
@@ -141,15 +158,18 @@ export async function targetEval(opts: {
   sessionId?: string;
   persistState?: boolean;
   expression?: string;
+  expr?: string;
   scriptFile?: string;
   argJson?: string;
   captureConsole?: boolean;
   maxConsole?: number;
+  frameId?: string;
 }): Promise<TargetEvalReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
-  const expression = parseExpression({
+  const parsed = parseExpression({
     expression: opts.expression,
+    expr: opts.expr,
     scriptFile: opts.scriptFile,
   });
   const arg = parseArgJson(opts.argJson);
@@ -169,6 +189,8 @@ export async function targetEval(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    const frameSelection = resolveFrameById(target.page, typeof opts.frameId === "string" && opts.frameId.trim().length > 0 ? opts.frameId : "f-0");
+    const evalFrame = frameSelection.frame;
     const consoleEntries: TargetEvalReport["console"]["entries"] = [];
     let consoleCount = 0;
     let consoleTruncated = false;
@@ -200,7 +222,7 @@ export async function targetEval(opts: {
     };
     try {
       evaluationPayload = await runWithTimeout(
-        target.page.evaluate(
+        evalFrame.evaluate(
           async ({
             expression,
             arg,
@@ -337,7 +359,7 @@ export async function targetEval(opts: {
             }
           },
           {
-            expression,
+            expression: parsed.evaluatorBody,
             arg,
             maxStringChars: EVAL_MAX_RESULT_STRING_CHARS,
             maxItems: EVAL_MAX_RESULT_ITEMS,
@@ -369,7 +391,14 @@ export async function targetEval(opts: {
       sessionSource,
       targetId: requestedTargetId,
       actionId: newActionId(),
-      expression,
+      expression: parsed.expression,
+      context: {
+        frameCount: frameSelection.frameCount,
+        evaluatedFrameId: frameSelection.entry.frameId,
+        evaluatedFrameUrl: frameSelection.entry.url,
+        sameOrigin: frameSelection.entry.sameOrigin,
+        world: "main",
+      },
       result: evaluationPayload.result ?? {
         type: "undefined",
         value: null,

@@ -13,19 +13,19 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   },
   {
     id: "session.ensure",
-    usage: "surfwright session ensure [--timeout-ms <ms>] [--json] [--pretty]",
+    usage: "surfwright session ensure [--browser-mode <headless|headed>] [--timeout-ms <ms>] [--json] [--pretty]",
     summary: "reuse active session if reachable; otherwise use managed default",
   },
   {
     id: "session.new",
     usage:
-      "surfwright session new [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
+      "surfwright session new [--session-id <id>] [--browser-mode <headless|headed>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
     summary: "create a managed browser session and mark it active",
   },
   {
     id: "session.fresh",
     usage:
-      "surfwright session fresh [--session-id <id>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
+      "surfwright session fresh [--session-id <id>] [--browser-mode <headless|headed>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]",
     summary: "create a fresh ephemeral managed session and mark it active",
   },
   {
@@ -63,7 +63,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   {
     id: "open",
     usage:
-      "surfwright open <url> [--reuse-url] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "surfwright open <url> [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "open URL and return minimal page report with target handle",
   },
   {
@@ -75,7 +75,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   {
     id: "run",
     usage:
-      "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
     summary: "execute, lint, record, or replay deterministic multi-step browser plans",
   },
   {

@@ -5,7 +5,7 @@ import { nowIso } from "../../state.js";
 import { saveTargetSnapshot } from "../../state-repos/target-repo.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
-import type { TargetClickExplainReport, TargetClickReport } from "../../types.js";
+import type { TargetClickDeltaEvidence, TargetClickExplainReport, TargetClickReport } from "../../types.js";
 import {
   explainSelection,
   parseMatchIndex,
@@ -15,6 +15,153 @@ import {
   resolveMatchByIndex,
   waitAfterClick,
 } from "./click-utils.js";
+
+const CLICK_DELTA_FOCUS_TEXT_MAX_CHARS = 120;
+const CLICK_DELTA_ROLES = ["dialog", "alert", "status", "menu", "listbox"] as const;
+const CLICK_DELTA_ARIA_ATTRIBUTES = [
+  "aria-expanded",
+  "aria-controls",
+  "aria-hidden",
+  "aria-modal",
+  "aria-pressed",
+  "aria-selected",
+  "aria-checked",
+  "aria-disabled",
+] as const;
+
+type ClickDeltaFocus = {
+  selectorHint: string | null;
+  text: string | null;
+  textTruncated: boolean;
+};
+
+type ClickDeltaRole = (typeof CLICK_DELTA_ROLES)[number];
+type ClickDeltaRoleCounts = Record<ClickDeltaRole, number>;
+
+async function captureDeltaProbe(page: {
+  evaluate<T, Arg>(fn: (arg: Arg) => T, arg: Arg): Promise<T>;
+}): Promise<{
+  focus: ClickDeltaFocus;
+  roleCounts: ClickDeltaRoleCounts;
+}> {
+  return await page.evaluate(
+    ({
+      focusTextMaxChars,
+      roles,
+    }: {
+      focusTextMaxChars: number;
+      roles: ClickDeltaRole[];
+    }): { focus: ClickDeltaFocus; roleCounts: ClickDeltaRoleCounts } => {
+      const runtime = globalThis as unknown as { document?: any };
+      const doc = runtime.document;
+      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+
+      const selectorHintFor = (node: any): string | null => {
+        const el = node;
+        const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";
+        const classSuffix =
+          classListRaw.length > 0
+            ? classListRaw
+                .split(" ")
+                .filter((entry) => entry.length > 0)
+                .slice(0, 2)
+                .map((entry) => `.${entry}`)
+                .join("")
+            : "";
+        const tag = typeof el?.tagName === "string" ? el.tagName.toLowerCase() : "";
+        const id = typeof el?.id === "string" && el.id.length > 0 ? `#${el.id}` : "";
+        return tag.length > 0 ? `${tag}${id}${classSuffix}` : null;
+      };
+
+      const active = doc?.activeElement ?? null;
+      const tag = typeof active?.tagName === "string" ? active.tagName.toLowerCase() : "";
+      let focusTextRaw = "";
+      if (tag === "input" || tag === "textarea" || tag === "select") {
+        focusTextRaw =
+          active?.getAttribute?.("aria-label") ??
+          active?.getAttribute?.("placeholder") ??
+          active?.getAttribute?.("name") ??
+          active?.id ??
+          "";
+      } else if (tag === "html" || tag === "body") {
+        focusTextRaw = "";
+      } else {
+        focusTextRaw = active?.innerText ?? active?.textContent ?? active?.getAttribute?.("aria-label") ?? "";
+      }
+      const focusTextNormalized = normalize(String(focusTextRaw ?? ""));
+      const focusText = focusTextNormalized.slice(0, focusTextMaxChars);
+
+      const roleCounts: Partial<Record<ClickDeltaRole, number>> = {};
+      for (const role of roles) {
+        roleCounts[role] = doc?.querySelectorAll?.(`[role="${role}"]`)?.length ?? 0;
+      }
+
+      return {
+        focus: {
+          selectorHint: selectorHintFor(active),
+          text: focusText.length > 0 ? focusText : null,
+          textTruncated: focusTextNormalized.length > focusTextMaxChars,
+        },
+        roleCounts: {
+          dialog: roleCounts.dialog ?? 0,
+          alert: roleCounts.alert ?? 0,
+          status: roleCounts.status ?? 0,
+          menu: roleCounts.menu ?? 0,
+          listbox: roleCounts.listbox ?? 0,
+        },
+      };
+    },
+    {
+      focusTextMaxChars: CLICK_DELTA_FOCUS_TEXT_MAX_CHARS,
+      roles: [...CLICK_DELTA_ROLES],
+    },
+  );
+}
+
+async function captureDeltaState(page: {
+  url(): string;
+  title(): Promise<string>;
+  evaluate<T, Arg>(fn: (arg: Arg) => T, arg: Arg): Promise<T>;
+}): Promise<{
+  url: string;
+  title: string;
+  focus: ClickDeltaFocus;
+  roleCounts: ClickDeltaRoleCounts;
+}> {
+  const url = page.url();
+  const [title, probe] = await Promise.all([page.title(), captureDeltaProbe(page)]);
+  return {
+    url,
+    title,
+    focus: probe.focus,
+    roleCounts: probe.roleCounts,
+  };
+}
+
+async function captureLocatorAriaAttributes(locator: {
+  evaluate<T, Arg>(fn: (element: any, arg: Arg) => T, arg: Arg): Promise<T>;
+}): Promise<{
+  detached: boolean;
+  values: Record<string, string | null>;
+}> {
+  const attrNames = [...CLICK_DELTA_ARIA_ATTRIBUTES];
+  try {
+    const values = (await locator.evaluate((el: any, names: string[]) => {
+      const out: Record<string, string | null> = {};
+      for (const name of names) {
+        out[name] = el?.getAttribute?.(name) ?? null;
+      }
+      return out;
+    }, attrNames)) as Record<string, string | null>;
+    return { detached: false, values };
+  } catch {
+    const values: Record<string, string | null> = {};
+    for (const name of attrNames) {
+      values[name] = null;
+    }
+    return { detached: true, values };
+  }
+}
 
 export async function targetClick(opts: {
   targetId: string;
@@ -31,6 +178,7 @@ export async function targetClick(opts: {
   waitForSelector?: string;
   waitNetworkIdle?: boolean;
   snapshot?: boolean;
+  delta?: boolean;
 }): Promise<TargetClickReport | TargetClickExplainReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -42,6 +190,7 @@ export async function targetClick(opts: {
   });
   const requestedIndex = parseMatchIndex(opts.index);
   const explain = Boolean(opts.explain);
+  const includeDelta = Boolean(opts.delta);
   const waitAfter = parseWaitAfterClick({
     waitForText: opts.waitForText,
     waitForSelector: opts.waitForSelector,
@@ -49,9 +198,9 @@ export async function targetClick(opts: {
   });
 
   if (explain) {
-    const hasPostClickEvidence = Boolean(opts.snapshot) || waitAfter !== null;
+    const hasPostClickEvidence = Boolean(opts.snapshot) || includeDelta || waitAfter !== null;
     if (hasPostClickEvidence) {
-      throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with post-click wait options or --snapshot");
+      throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with post-click wait options, --snapshot, or --delta");
     }
   }
 
@@ -144,6 +293,9 @@ export async function targetClick(opts: {
 
     const preview = await extractTargetQueryPreview(selected.locator);
 
+    const deltaBefore = includeDelta ? await captureDeltaState(target.page as any) : null;
+    const clickedAriaBefore = includeDelta ? await captureLocatorAriaAttributes(selected.locator as any) : null;
+
     await selected.locator.click({
       timeout: opts.timeoutMs,
     });
@@ -163,7 +315,25 @@ export async function targetClick(opts: {
     });
 
     const postSnapshot = opts.snapshot ? await readPostSnapshot(target.page as any) : null;
+    const deltaAfter = includeDelta ? await captureDeltaState(target.page as any) : null;
+    const clickedAriaAfter = includeDelta ? await captureLocatorAriaAttributes(selected.locator as any) : null;
     const actionCompletedAt = Date.now();
+
+    let delta: TargetClickDeltaEvidence | null = null;
+    if (includeDelta && deltaBefore && deltaAfter && clickedAriaBefore && clickedAriaAfter) {
+      delta = {
+        before: deltaBefore,
+        after: deltaAfter,
+        clickedAria: {
+          detachedAfter: clickedAriaAfter.detached,
+          attributes: [...CLICK_DELTA_ARIA_ATTRIBUTES].map((name) => ({
+            name,
+            before: clickedAriaBefore.values[name] ?? null,
+            after: clickedAriaAfter.values[name] ?? null,
+          })),
+        },
+      };
+    }
 
     const report: TargetClickReport = {
       ok: true,
@@ -188,6 +358,7 @@ export async function targetClick(opts: {
       title: await target.page.title(),
       wait: waited,
       snapshot: postSnapshot,
+      ...(delta ? { delta } : {}),
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,
@@ -220,4 +391,3 @@ export async function targetClick(opts: {
     await browser.close();
   }
 }
-

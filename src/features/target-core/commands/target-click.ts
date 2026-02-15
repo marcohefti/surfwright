@@ -14,7 +14,6 @@ import {
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";
-
 function collectRepeatedString(value: string, previous: string[]): string[] {
   return [...previous, value];
 }
@@ -38,6 +37,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--wait-for-selector <query>", "After click, wait until selector becomes visible")
       .option("--wait-network-idle", "After click, wait for network idle")
       .option("--snapshot", "Include compact post-click text preview")
+      .option("--delta", "Include bounded evidence-based delta after click", false)
       .option("--timeout-ms <ms>", "Click timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state", false)
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -55,6 +55,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             waitForSelector?: string;
             waitNetworkIdle?: boolean;
             snapshot?: boolean;
+            delta?: boolean;
             timeoutMs: number;
             noPersist?: boolean;
             fields?: string;
@@ -79,6 +80,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               waitForSelector: options.waitForSelector,
               waitNetworkIdle: Boolean(options.waitNetworkIdle),
               snapshot: Boolean(options.snapshot),
+              delta: Boolean(options.delta),
               persistState: !Boolean(options.noPersist),
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -90,7 +92,6 @@ export const targetClickCommandSpec: TargetCommandSpec = {
   },
 };
 const clickAtMeta = targetCommandMeta("target.click-at");
-
 export const targetClickAtCommandSpec: TargetCommandSpec = {
   id: clickAtMeta.id,
   usage: clickAtMeta.usage,
@@ -129,9 +130,7 @@ export const targetClickAtCommandSpec: TargetCommandSpec = {
       });
   },
 };
-
 const fillMeta = targetCommandMeta("target.fill");
-
 export const targetFillCommandSpec: TargetCommandSpec = {
   id: fillMeta.id,
   usage: fillMeta.usage,

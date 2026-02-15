@@ -6,7 +6,7 @@
   "requires": {
     "surfwrightVersion": ">=0.1.0 <0.2.0",
     "contractSchemaVersion": "^1",
-    "contractFingerprint": "sha256:3315ecaf9d28b9244dcce67554612ad9ee0b979cddd6b24cd4abc1cf4d0df537"
+    "contractFingerprint": "sha256:9eb51c88f25c73b30bf4630bf9395e423908f757a5802f20a6e77b898f4d0d1b"
   },
   "artifacts": {
     "entry": "SKILL.md",

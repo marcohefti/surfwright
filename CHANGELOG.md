@@ -15,6 +15,7 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target eval --expr <js>` (value-expression mode), `--frame-id <id>`, and compact `context` metadata in eval output.
 - [target] Added `target click --index <n>` (0-based) and selection evidence (`matchCount`, `pickedIndex`) for deterministic multi-match actions.
 - [target] Added `target click --explain` for bounded match selection/rejection diagnostics without clicking.
+- [target] Added `target click --delta` for bounded evidence-based before/after change capture (URL/title, focus evidence, role counts, and clicked-element ARIA attribute values; no semantic UI claims).
 - [target] Added `target snapshot --mode <snapshot|orient>` for quiet first-load orientation payloads (`orient` returns `h1` and scopes `links` to header/nav links).
 - [target] Added `target snapshot` paging via `--cursor <token>` and `nextCursor` in the report.
 - [target] Added `target snapshot --include-selector-hints` returning bounded `items` rows with `selectorHint`.

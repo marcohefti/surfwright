@@ -140,7 +140,37 @@ export type TargetClickReport = {
   snapshot: {
     textPreview: string;
   } | null;
+  delta?: TargetClickDeltaEvidence;
   timingMs: ActionTimingMs;
+};
+
+export type TargetClickDeltaRole = "dialog" | "alert" | "status" | "menu" | "listbox";
+
+export type TargetClickDeltaEvidence = {
+  before: {
+    url: string;
+    title: string;
+    focus: {
+      selectorHint: string | null;
+      text: string | null;
+      textTruncated: boolean;
+    };
+    roleCounts: Record<TargetClickDeltaRole, number>;
+  };
+  after: {
+    url: string;
+    title: string;
+    focus: {
+      selectorHint: string | null;
+      text: string | null;
+      textTruncated: boolean;
+    };
+    roleCounts: Record<TargetClickDeltaRole, number>;
+  };
+  clickedAria: {
+    detachedAfter: boolean;
+    attributes: Array<{ name: string; before: string | null; after: string | null }>;
+  };
 };
 
 export type TargetClickExplainReport = {
@@ -340,4 +370,3 @@ export type TargetHudReport = {
   };
   timingMs: TargetHealthReport["timingMs"];
 };
-

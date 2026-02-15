@@ -151,7 +151,7 @@ surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--js
 surfwright target frames <targetId> [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target snapshot <targetId> [--mode <snapshot|orient>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
+surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
 surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
@@ -282,10 +282,12 @@ Use `--include-selector-hints` to include bounded `items.*.selectorHint` rows. U
 `target click` executes one click and returns action metadata:
 
 ```json
-{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pc-9kd2rj","mode":"selector","selector":"#start-checkout","contains":null,"visibleOnly":true,"query":"#start-checkout","matchCount":1,"pickedIndex":0,"clicked":{"index":0,"text":"Start Checkout","visible":true,"selectorHint":"a#start-checkout.inline-flex.h-9"},"url":"http://camelpay.localhost/#checkout","title":"CamelPay — Cross-chain crypto checkout","timingMs":{"total":128,"resolveSession":4,"connectCdp":25,"action":84,"persistState":15}}
+{"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","actionId":"a-m6m2pc-9kd2rj","mode":"selector","selector":"#start-checkout","contains":null,"visibleOnly":true,"query":"#start-checkout","matchCount":1,"pickedIndex":0,"clicked":{"index":0,"text":"Start Checkout","visible":true,"selectorHint":"a#start-checkout.inline-flex.h-9"},"url":"http://camelpay.localhost/#checkout","title":"CamelPay — Cross-chain crypto checkout","wait":null,"snapshot":null,"timingMs":{"total":128,"resolveSession":4,"connectCdp":25,"action":84,"persistState":15}}
 ```
 
 Use `--index <n>` (0-based) to click the Nth match. Use `--explain` to return bounded match-selection evidence and rejection reasons without performing the click.
+
+Use `--delta` to include a bounded, evidence-based before/after payload (no semantic UI claims). v0 includes URL/title, focus evidence, and role-count deltas for `dialog|alert|status|menu|listbox`, plus a fixed list of ARIA attribute values captured on the clicked element.
 
 `target read` returns deterministic text chunks for long pages:
 

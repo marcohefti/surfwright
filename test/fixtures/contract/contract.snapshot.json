@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:3315ecaf9d28b9244dcce67554612ad9ee0b979cddd6b24cd4abc1cf4d0df537",
+  "contractFingerprint": "sha256:9eb51c88f25c73b30bf4630bf9395e423908f757a5802f20a6e77b898f4d0d1b",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -122,7 +122,7 @@
     },
     {
       "id": "target.click",
-      "usage": "surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "usage": "surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "click the first matching element in a target"
     },
     {

@@ -104,6 +104,21 @@ If a click fails due to visibility/filtering, rerun with `--explain` to get boun
 surfwright --json target click <targetId> --text "Delete" --visible-only --explain
 ```
 
+## Evidence-Based Click Delta (What Changed?)
+
+Use `target click --delta` when you need a bounded "what changed after the click?" payload without extra probing commands:
+
+```bash
+surfwright --json target click <targetId> --text "Launch demo modal" --visible-only --wait-for-selector "[aria-modal=\"true\"]" --delta
+```
+
+The `delta` payload is evidence-only (no semantic UI narratives) and includes:
+
+- URL/title before/after
+- focus before/after (`selectorHint` + small text preview)
+- role counts before/after for `dialog|alert|status|menu|listbox`
+- a fixed list of ARIA attribute values captured on the clicked element
+
 ## URL drift guard (Optional)
 
 After a navigation, assert you're still on the expected host/origin/path before taking stateful actions:

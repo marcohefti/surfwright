@@ -33,15 +33,6 @@ async function ensureEvaluateNameCompat(page: Page): Promise<void> {
   await Promise.all(page.frames().map(async (frame) => frame.evaluate(ESBUILD_NAME_COMPAT_SCRIPT).catch(() => undefined)));
 }
 
-function stableTargetId(url: string): string {
-  let hash = 0x811c9dc5;
-  for (const ch of url) {
-    hash ^= ch.charCodeAt(0);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return `t${(hash >>> 0).toString(16).padStart(8, "0")}`;
-}
-
 export function sanitizeTargetId(input: string): string {
   const value = input.trim();
   if (!TARGET_ID_PATTERN.test(value)) {
@@ -187,9 +178,13 @@ export async function readPageTargetId(context: BrowserContext, page: Page): Pro
     const targetInfo = (await cdpSession.send("Target.getTargetInfo")) as {
       targetInfo?: { targetId?: string };
     };
-    return targetInfo.targetInfo?.targetId ?? stableTargetId(page.url());
+    const targetId = targetInfo.targetInfo?.targetId;
+    if (typeof targetId !== "string" || targetId.trim().length === 0) {
+      throw new CliError("E_INTERNAL", "CDP did not return a targetId for page");
+    }
+    return targetId;
   } catch {
-    return stableTargetId(page.url());
+    throw new CliError("E_INTERNAL", "Unable to resolve targetId handle from CDP");
   }
 }
 
@@ -208,10 +203,14 @@ export async function listPageTargetHandles(
 
   for (const context of browser.contexts()) {
     for (const page of context.pages()) {
-      handles.push({
-        page,
-        targetId: await readPageTargetId(context, page),
-      });
+      try {
+        handles.push({
+          page,
+          targetId: await readPageTargetId(context, page),
+        });
+      } catch {
+        // Prefer dropping unidentified pages over generating ambiguous fallback handles.
+      }
     }
   }
 

@@ -25,7 +25,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
       .option("--max-buttons <n>", "Maximum button rows to return (0 to omit)")
       .option("--max-links <n>", "Maximum link rows to return (0 to omit)")
       .option("--timeout-ms <ms>", "Snapshot timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -42,7 +42,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
             maxButtons?: string;
             maxLinks?: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -71,7 +71,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
               maxHeadings,
               maxButtons,
               maxLinks,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {

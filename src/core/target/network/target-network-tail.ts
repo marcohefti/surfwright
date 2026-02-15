@@ -1,9 +1,12 @@
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
 import { sanitizeActionId } from "../../action-id.js";
+import { CliError } from "../../errors.js";
 import { readRecentTargetAction } from "../../state-repos/target-repo.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { parseNetworkInput, wsFramePreview } from "./target-network-utils.js";
 import type { TargetNetworkTailReport } from "../../types.js";
+
+const TAIL_MAX_EVENTS_CAP = 20000;
 
 function resolveTailActionId(opts: {
   actionId?: string;
@@ -23,6 +26,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function parseMaxEvents(value: number | undefined): number | null {
+  if (typeof value === "undefined") {
+    return null;
+  }
+  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0 || value > TAIL_MAX_EVENTS_CAP) {
+    throw new CliError("E_QUERY_INVALID", `max-events must be an integer between 0 and ${TAIL_MAX_EVENTS_CAP}`);
+  }
+  return value;
+}
+
 export async function targetNetworkTail(opts: {
   targetId: string;
   timeoutMs: number;
@@ -30,6 +43,7 @@ export async function targetNetworkTail(opts: {
   actionId?: string;
   profile?: string;
   captureMs?: number;
+  maxEvents?: number;
   maxWsMessages?: number;
   reload?: boolean;
   includeWsMessages?: boolean;
@@ -68,6 +82,8 @@ export async function targetNetworkTail(opts: {
   });
   const startedEpochMs = Date.now();
   let eventCount = 0;
+  let maxEventsReached = false;
+  const maxEvents = parseMaxEvents(opts.maxEvents);
   const counts = {
     requests: 0,
     responses: 0,
@@ -77,6 +93,10 @@ export async function targetNetworkTail(opts: {
   };
 
   const emit = (event: Record<string, unknown>) => {
+    if (maxEvents !== null && eventCount >= maxEvents) {
+      maxEventsReached = true;
+      return;
+    }
     eventCount += 1;
     opts.onEvent(event);
   };
@@ -116,6 +136,9 @@ export async function targetNetworkTail(opts: {
       requestMap.set(request, requestInfo);
       counts.requests += 1;
       if (!requestPassesStaticFilters(requestInfo)) {
+        return;
+      }
+      if (parsed.failedOnly) {
         return;
       }
       emit({
@@ -271,7 +294,7 @@ export async function targetNetworkTail(opts: {
         });
       }
       const deadline = Date.now() + parsed.captureMs;
-      while (Date.now() < deadline) {
+      while (Date.now() < deadline && !maxEventsReached) {
         await sleep(50);
       }
     } finally {
@@ -291,7 +314,7 @@ export async function targetNetworkTail(opts: {
       eventCount,
       counts,
     };
-    emit({
+    opts.onEvent({
       type: "capture",
       phase: "end",
       ...report,

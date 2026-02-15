@@ -74,3 +74,24 @@ test("release notes generator fails when changelog version section is missing", 
   assert.notEqual(result.status, 0);
   assert.equal(result.stderr.includes("Missing changelog section for 9.9.9"), true);
 });
+
+test("release notes generator does not match version strings outside headings", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-release-notes-false-positive-"));
+  const changelogPath = path.join(tempRoot, "CHANGELOG.md");
+  const outPath = path.join(tempRoot, "release-notes.md");
+  fs.writeFileSync(
+    changelogPath,
+    `# Changelog
+
+## [Unreleased]
+
+### Added
+- [docs] Mentioned string that looks like a heading: ## [1.2.3] - 2026-02-14
+`,
+    "utf8",
+  );
+
+  const result = runScript(["--version", "1.2.3", "--changelog", changelogPath, "--out", outPath]);
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stderr.includes("Missing changelog section for 1.2.3"), true);
+});

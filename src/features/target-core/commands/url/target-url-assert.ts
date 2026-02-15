@@ -19,7 +19,7 @@ export const targetUrlAssertCommandSpec: TargetCommandSpec = {
       .option("--path-prefix <prefix>", "Assert URL path prefix matches (e.g. /docs)")
       .option("--url-prefix <prefix>", "Assert full URL string starts with prefix (e.g. https://example.com/)")
       .option("--timeout-ms <ms>", "Assert timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -30,7 +30,7 @@ export const targetUrlAssertCommandSpec: TargetCommandSpec = {
             pathPrefix?: string;
             urlPrefix?: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -46,7 +46,7 @@ export const targetUrlAssertCommandSpec: TargetCommandSpec = {
               origin: options.origin,
               pathPrefix: options.pathPrefix,
               urlPrefix: options.urlPrefix,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -56,4 +56,3 @@ export const targetUrlAssertCommandSpec: TargetCommandSpec = {
       );
   },
 };
-

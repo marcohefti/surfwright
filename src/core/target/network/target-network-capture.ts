@@ -26,7 +26,6 @@ import type {
   TargetNetworkReport,
 } from "../../types.js";
 
-const CAPTURE_DONE_TIMEOUT_MS = 20000;
 const CAPTURE_MAX_RUNTIME_MIN_MS = 1000;
 const CAPTURE_MAX_RUNTIME_CAP_MS = 60 * 60 * 1000;
 
@@ -241,7 +240,7 @@ async function waitForCaptureDone(donePath: string, timeoutMs: number): Promise<
     }
     await new Promise((resolve) => setTimeout(resolve, 120));
   }
-  throw new CliError("E_INTERNAL", "Timed out waiting for capture worker to stop");
+  throw new CliError("E_WAIT_TIMEOUT", "Timed out waiting for capture worker to stop");
 }
 
 function applyCapturedView(raw: TargetNetworkReport, parsed: ReturnType<typeof parseNetworkInput>): TargetNetworkReport {
@@ -307,37 +306,72 @@ export async function targetNetworkCaptureEnd(opts: {
     throw new CliError("E_INTERNAL", "Failed to signal capture stop");
   }
 
-  const done = await waitForCaptureDone(capture.donePath, Math.max(opts.timeoutMs, CAPTURE_DONE_TIMEOUT_MS));
-  const raw = JSON.parse(fs.readFileSync(capture.resultPath, "utf8")) as TargetNetworkReport;
-  const parsed = parseNetworkInput({
-    profile: opts.profile ?? capture.profile,
-    view: opts.view,
-    fields: opts.fields,
-    urlContains: opts.urlContains,
-    method: opts.method,
-    resourceType: opts.resourceType,
-    status: opts.status,
-    failedOnly: opts.failedOnly,
-    maxRequests: raw.limits.maxRequests,
-    maxWebSockets: raw.limits.maxWebSockets,
-    maxWsMessages: raw.limits.maxWsMessages,
-    captureMs: raw.capture.captureMs,
-    includeHeaders: true,
-    includePostData: true,
-    includeWsMessages: true,
-  });
-  const projected = applyCapturedView(raw, parsed);
+  const done = await waitForCaptureDone(capture.donePath, opts.timeoutMs);
 
-  await finalizeNetworkCapture({
-    captureId,
-    status: done.status,
-    endedAt: done.endedAt,
-  });
+  let primaryError: unknown = null;
+  let report: TargetNetworkCaptureEndReport | null = null;
 
-  return {
-    ...projected,
-    status: done.status,
-  };
+  try {
+    if (done.status === "failed") {
+      throw new CliError(
+        "E_INTERNAL",
+        done.message ? `Capture worker failed: ${done.message}` : "Capture worker failed",
+      );
+    }
+
+    let raw: TargetNetworkReport;
+    try {
+      raw = JSON.parse(fs.readFileSync(capture.resultPath, "utf8")) as TargetNetworkReport;
+    } catch {
+      throw new CliError("E_INTERNAL", "Failed to read capture result");
+    }
+
+    const parsed = parseNetworkInput({
+      profile: opts.profile ?? capture.profile,
+      view: opts.view,
+      fields: opts.fields,
+      urlContains: opts.urlContains,
+      method: opts.method,
+      resourceType: opts.resourceType,
+      status: opts.status,
+      failedOnly: opts.failedOnly,
+      maxRequests: raw.limits.maxRequests,
+      maxWebSockets: raw.limits.maxWebSockets,
+      maxWsMessages: raw.limits.maxWsMessages,
+      captureMs: raw.capture.captureMs,
+      includeHeaders: true,
+      includePostData: true,
+      includeWsMessages: true,
+    });
+    const projected = applyCapturedView(raw, parsed);
+
+    report = {
+      ...projected,
+      status: done.status,
+    };
+  } catch (error) {
+    primaryError = error;
+  } finally {
+    try {
+      await finalizeNetworkCapture({
+        captureId,
+        status: done.status,
+        endedAt: done.endedAt,
+      });
+    } catch (error) {
+      if (!primaryError) {
+        primaryError = error;
+      }
+    }
+  }
+
+  if (primaryError) {
+    throw primaryError;
+  }
+  if (!report) {
+    throw new CliError("E_INTERNAL", "Failed to build capture report");
+  }
+  return report;
 }
 
 export async function runTargetNetworkWorker(opts: {

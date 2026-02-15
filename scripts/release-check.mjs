@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { extractChangelogVersionSection } from "./release/changelog-sections.mjs";
 
 const root = process.cwd();
 const outDir = path.join(root, "artifacts", "release-check");
@@ -56,9 +57,8 @@ const canonicalManifest = JSON.parse(fs.readFileSync(canonicalManifestPath, "utf
 const releaseVersion = canonicalManifest.version;
 const changelogPath = path.join(root, "CHANGELOG.md");
 const changelogText = fs.readFileSync(changelogPath, "utf8");
-const versionHeading = `## [${releaseVersion}]`;
 report.changelog.version = releaseVersion;
-report.changelog.hasVersionSection = changelogText.includes(versionHeading);
+report.changelog.hasVersionSection = Boolean(extractChangelogVersionSection(changelogText, releaseVersion));
 if (!report.changelog.hasVersionSection) {
   report.ok = false;
 }

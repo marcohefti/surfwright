@@ -230,6 +230,14 @@ test("target emulate and screenshot return deterministic artifacts", { skip: !ha
   assert.equal(emulatePayload.emulation.hasTouch, true);
   assert.equal(emulatePayload.emulation.deviceScaleFactor, 2);
 
+  const emulateNoTouch = runCli([
+    "--json", "--session", openPayload.sessionId, "target", "emulate", openPayload.targetId,
+    "--no-touch", "--timeout-ms", "5000",
+  ], { SURFWRIGHT_STATE_DIR: TEST_TARGET_STATE_DIR });
+  assert.equal(emulateNoTouch.status, 0);
+  const emulateNoTouchPayload = parseJson(emulateNoTouch.stdout);
+  assert.equal(emulateNoTouchPayload.emulation.hasTouch, false);
+
   const outPath = path.join(TEST_TARGET_STATE_DIR, "artifacts", "page.png");
   const screenshot = runCli([
     "--json", "--session", openPayload.sessionId, "target", "screenshot", openPayload.targetId,

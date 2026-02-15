@@ -22,6 +22,7 @@ export const networkTailCommandSpec: NetworkCommandSpec = {
       .option("--action-id <id>", "Correlation action id to stamp on emitted events")
       .option("--profile <preset>", "Preset capture profile: custom|api|page|ws|perf")
       .option("--capture-ms <ms>", "Capture duration in milliseconds", String(DEFAULT_TARGET_NETWORK_CAPTURE_MS))
+      .option("--max-events <n>", "Maximum NDJSON events to emit before ending capture")
       .option("--max-ws-messages <n>", "Maximum websocket frame events to emit", String(DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES))
       .option("--url-contains <text>", "Only emit URLs containing text")
       .option("--method <verb>", "Only emit requests with this HTTP verb")
@@ -37,6 +38,7 @@ export const networkTailCommandSpec: NetworkCommandSpec = {
             actionId?: string;
             profile?: string;
             captureMs: string;
+            maxEvents?: string;
             maxWsMessages: string;
             urlContains?: string;
             method?: string;
@@ -57,6 +59,7 @@ export const networkTailCommandSpec: NetworkCommandSpec = {
               actionId: options.actionId,
               profile: options.profile,
               captureMs: Number.parseInt(options.captureMs, 10),
+              maxEvents: typeof options.maxEvents === "string" ? Number.parseInt(options.maxEvents, 10) : undefined,
               maxWsMessages: Number.parseInt(options.maxWsMessages, 10),
               urlContains: options.urlContains,
               method: options.method,

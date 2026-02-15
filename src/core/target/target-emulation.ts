@@ -201,7 +201,7 @@ export async function targetEmulate(opts: {
         if (hasTouch !== null) {
           await cdp.send("Emulation.setTouchEmulationEnabled", {
             enabled: hasTouch,
-            maxTouchPoints: hasTouch ? 5 : 0,
+            maxTouchPoints: hasTouch ? 5 : 1,
           });
         }
       }

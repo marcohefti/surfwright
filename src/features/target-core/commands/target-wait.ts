@@ -18,7 +18,7 @@ export const targetWaitCommandSpec: TargetCommandSpec = {
       .option("--for-selector <query>", "Wait until selector becomes visible")
       .option("--network-idle", "Wait for network idle state")
       .option("--timeout-ms <ms>", "Wait timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -28,7 +28,7 @@ export const targetWaitCommandSpec: TargetCommandSpec = {
             forSelector?: string;
             networkIdle?: boolean;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -43,7 +43,7 @@ export const targetWaitCommandSpec: TargetCommandSpec = {
               forText: options.forText,
               forSelector: options.forSelector,
               networkIdle: Boolean(options.networkIdle),
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {

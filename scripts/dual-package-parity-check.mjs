@@ -29,6 +29,26 @@ const guardDir = path.join(root, "packages", "guard");
 const canonicalManifest = JSON.parse(fs.readFileSync(path.join(canonicalDir, "package.json"), "utf8"));
 const guardManifest = JSON.parse(fs.readFileSync(path.join(guardDir, "package.json"), "utf8"));
 
+function expectedLifecycleScripts(pkgKey) {
+  return {
+    prepack: `node ../../scripts/prepare-package-artifacts.mjs --package ${pkgKey}`,
+    prepublishOnly: `node ../../scripts/release/prepublish-package.mjs --package ${pkgKey}`,
+  };
+}
+
+function lifecycleScriptsOk(manifest, pkgKey) {
+  const scripts = manifest?.scripts ?? {};
+  const expected = expectedLifecycleScripts(pkgKey);
+  return {
+    ok: scripts.prepack === expected.prepack && scripts.prepublishOnly === expected.prepublishOnly,
+    expected,
+    actual: {
+      prepack: typeof scripts.prepack === "string" ? scripts.prepack : null,
+      prepublishOnly: typeof scripts.prepublishOnly === "string" ? scripts.prepublishOnly : null,
+    },
+  };
+}
+
 const parity = {
   ok: true,
   checkedAt: new Date().toISOString(),
@@ -39,9 +59,18 @@ const parity = {
     dependenciesEqual: JSON.stringify(canonicalManifest.dependencies) === JSON.stringify(guardManifest.dependencies),
     filesEqual: JSON.stringify(canonicalManifest.files) === JSON.stringify(guardManifest.files),
     publishConfigEqual: JSON.stringify(canonicalManifest.publishConfig) === JSON.stringify(guardManifest.publishConfig),
+    lifecycleScriptsOk: false,
     distCliEqual: false,
     contractEqual: false,
   },
+};
+
+const scriptsCanonical = lifecycleScriptsOk(canonicalManifest, "canonical");
+const scriptsGuard = lifecycleScriptsOk(guardManifest, "guard");
+parity.checks.lifecycleScriptsOk = scriptsCanonical.ok && scriptsGuard.ok;
+parity.scripts = {
+  canonical: scriptsCanonical,
+  guard: scriptsGuard,
 };
 
 const canonicalDist = fs.readFileSync(path.join(canonicalDir, "dist", "cli.js"));

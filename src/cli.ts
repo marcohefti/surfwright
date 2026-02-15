@@ -53,11 +53,15 @@ function printFailure(failure: CliFailure, opts: OutputOpts) {
     writeJson(failure, { pretty: opts.pretty });
     return;
   }
-  process.stdout.write(`error ${failure.code}: ${failure.message}\n`);
+  process.stderr.write(`error ${failure.code}: ${failure.message}\n`);
 }
 
 function parseTimeoutMs(input: string): number {
-  const value = Number.parseInt(input, 10);
+  const raw = input.trim();
+  if (!/^\d+$/.test(raw)) {
+    throw new Error("timeout-ms must be a positive integer");
+  }
+  const value = Number.parseInt(raw, 10);
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error("timeout-ms must be a positive integer");
   }

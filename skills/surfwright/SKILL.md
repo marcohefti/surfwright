@@ -38,11 +38,11 @@ surfwright --json target read <targetId> --selector main --frame-scope main --ch
 surfwright --json target extract <targetId> --kind blog --frame-scope all --limit 10
 surfwright --json target eval <targetId> --expr "console.log('hello from agent'), document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
-surfwright target console-tail <targetId> --capture-ms 2000 --levels error,warn
+surfwright --json target console-tail <targetId> --capture-ms 2000 --levels error,warn
 surfwright --json target health <targetId>
 surfwright --json target hud <targetId>
 surfwright --json target network <targetId> --profile perf --view summary
-surfwright target network-tail <targetId> --profile api --capture-ms 3000
+surfwright --json target network-tail <targetId> --profile api --capture-ms 3000 --max-events 200
 surfwright --json target network-query --capture-id <captureId> --preset slowest --limit 10
 surfwright --json target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
 surfwright --json target network-end <captureId> --view summary --status 5xx
@@ -155,11 +155,15 @@ surfwright --json session clear
 
 ## Error discipline
 
-- Retry only retryable infrastructure failures (`E_CDP_UNREACHABLE`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_TIMEOUT`, `E_INTERNAL`, `E_WAIT_TIMEOUT`).
-- Do not retry input/config failures (`E_URL_INVALID`, `E_CDP_INVALID`, `E_SESSION_ID_INVALID`, `E_SESSION_EXISTS`, `E_SESSION_REQUIRED`).
-- Do not retry target/query failures (`E_TARGET_ID_INVALID`, `E_TARGET_NOT_FOUND`, `E_TARGET_SESSION_UNKNOWN`, `E_TARGET_SESSION_MISMATCH`, `E_QUERY_INVALID`, `E_ASSERT_FAILED`, `E_SELECTOR_INVALID`, `E_EVAL_SCRIPT_TOO_LARGE`, `E_EVAL_RUNTIME`, `E_EVAL_RESULT_UNSERIALIZABLE`) until command inputs change.
-- Treat `E_EVAL_TIMEOUT` as retryable infrastructure timeout only when eval payload is unchanged and idempotent.
-- If `E_SESSION_UNREACHABLE` occurs on an attached session, re-attach explicitly.
+Use `references/error-handling.md` as the canonical retry taxonomy (branch on `code`, not `message`).
+
+## Streaming commands (NDJSON)
+
+`target console-tail` and `target network-tail` stream one JSON object per line (NDJSON) to stdout.
+
+- Always run streaming tails with `--json` to suppress the trailing human summary line (otherwise stdout is NDJSON lines plus a final `ok ...` line).
+- Stop reading when you see the final capture event: `{"type":"capture","phase":"end",...}`.
+- Use `--max-events <n>` on `target network-tail` to cap event volume (the final `capture end` line is still emitted).
 
 ## Reference map
 

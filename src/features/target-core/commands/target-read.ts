@@ -20,7 +20,7 @@ export const targetReadCommandSpec: TargetCommandSpec = {
       .option("--chunk-size <n>", "Chunk size in characters", String(DEFAULT_TARGET_READ_CHUNK_SIZE))
       .option("--chunk <n>", "Chunk index to read (1-based)", "1")
       .option("--timeout-ms <ms>", "Read timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -32,7 +32,7 @@ export const targetReadCommandSpec: TargetCommandSpec = {
             chunkSize: string;
             chunk: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -52,7 +52,7 @@ export const targetReadCommandSpec: TargetCommandSpec = {
               frameScope: options.frameScope,
               chunkSize,
               chunkIndex,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {

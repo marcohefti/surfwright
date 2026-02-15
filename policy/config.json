@@ -63,6 +63,14 @@
       }
     },
     {
+      "name": "cli-commander-options",
+      "enabled": true,
+      "options": {
+        "include": ["src/features/**/commands/**/*.ts"],
+        "exclude": []
+      }
+    },
+    {
       "name": "max-files-per-directory",
       "enabled": true,
       "options": {

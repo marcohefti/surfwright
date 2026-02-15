@@ -91,12 +91,20 @@ const result = spawnSync(REAL[0], [...REAL.slice(1), ...args], {
   env: process.env,
   cwd: process.cwd(),
 });
-if (typeof result.stdout === "string" && result.stdout.length > 0) {
-  process.stdout.write(result.stdout);
+function writeAll(stream, text) {
+  if (typeof text !== "string" || text.length === 0) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    try {
+      stream.write(text, resolve);
+    } catch {
+      resolve();
+    }
+  });
 }
-if (typeof result.stderr === "string" && result.stderr.length > 0) {
-  process.stderr.write(result.stderr);
-}
+await writeAll(process.stdout, result.stdout);
+await writeAll(process.stderr, result.stderr);
 const event = {
   ts: new Date(startedAt).toISOString(),
   bin: BIN_NAME,
@@ -114,12 +122,9 @@ try {
   // best-effort tracing
 }
 if (result.error) {
-  process.stderr.write(String(result.error.message || result.error) + "\\n");
+  await writeAll(process.stderr, String(result.error.message || result.error) + "\\n");
 }
-if (typeof result.status === "number") {
-  process.exit(result.status);
-}
-process.exit(1);
+process.exitCode = typeof result.status === "number" ? result.status : 1;
 `;
 }
 

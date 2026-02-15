@@ -1,9 +1,9 @@
 import { targetNetworkCaptureEnd } from "../../../core/usecases.js";
-import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { networkCommandMeta } from "../manifest.js";
 import type { NetworkCommandSpec } from "./types.js";
 
 const meta = networkCommandMeta("target.network-end");
+const DEFAULT_NETWORK_END_TIMEOUT_MS = 20000;
 
 export const networkEndCommandSpec: NetworkCommandSpec = {
   id: meta.id,
@@ -22,7 +22,7 @@ export const networkEndCommandSpec: NetworkCommandSpec = {
       .option("--resource-type <type>", "Filter requests by resource type")
       .option("--status <codeOrClass>", "Filter requests by status code/class")
       .option("--failed-only", "Only return failed requests")
-      .option("--timeout-ms <ms>", "Stop wait timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--timeout-ms <ms>", "Stop wait timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_NETWORK_END_TIMEOUT_MS)
       .action(
         async (
           captureId: string,

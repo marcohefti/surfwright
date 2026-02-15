@@ -24,7 +24,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
       .option("--capture-console", "Capture console output during evaluation", false)
       .option("--max-console <n>", "Maximum captured console entries", String(DEFAULT_TARGET_EVAL_MAX_CONSOLE))
       .option("--timeout-ms <ms>", "Evaluation timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -40,7 +40,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
             captureConsole?: boolean;
             maxConsole: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -64,7 +64,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
               frameId: options.frameId,
               captureConsole: Boolean(options.captureConsole),
               maxConsole,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {

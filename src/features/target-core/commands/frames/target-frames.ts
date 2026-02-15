@@ -16,7 +16,7 @@ export const targetFramesCommandSpec: TargetCommandSpec = {
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--limit <n>", "Maximum returned frames (capped)", String(50))
       .option("--timeout-ms <ms>", "Frame listing timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -24,7 +24,7 @@ export const targetFramesCommandSpec: TargetCommandSpec = {
           options: {
             limit: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -38,7 +38,7 @@ export const targetFramesCommandSpec: TargetCommandSpec = {
               timeoutMs: options.timeoutMs,
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               limit,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -48,4 +48,3 @@ export const targetFramesCommandSpec: TargetCommandSpec = {
       );
   },
 };
-

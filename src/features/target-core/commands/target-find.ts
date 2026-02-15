@@ -21,7 +21,7 @@ export const targetFindCommandSpec: TargetCommandSpec = {
       .option("--first", "Return at most the first actionable match")
       .option("--limit <n>", "Maximum matches to return", String(DEFAULT_TARGET_FIND_LIMIT))
       .option("--timeout-ms <ms>", "Find timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -34,7 +34,7 @@ export const targetFindCommandSpec: TargetCommandSpec = {
             first?: boolean;
             limit: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -54,7 +54,7 @@ export const targetFindCommandSpec: TargetCommandSpec = {
               visibleOnly: Boolean(options.visibleOnly),
               first: Boolean(options.first),
               limit,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {

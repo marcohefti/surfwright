@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { extractChangelogVersionSection } from "./changelog-sections.mjs";
 
 function parseArgs(argv) {
   const out = {
@@ -36,26 +37,13 @@ function parseArgs(argv) {
   return out;
 }
 
-function sectionBody(changelog, heading) {
-  const headingIndex = changelog.indexOf(heading);
-  if (headingIndex === -1) {
-    return null;
-  }
-  const afterHeading = changelog.slice(headingIndex + heading.length);
-  const nextHeadingIndex = afterHeading.search(/\n##\s+\[/);
-  if (nextHeadingIndex === -1) {
-    return afterHeading.trim();
-  }
-  return afterHeading.slice(0, nextHeadingIndex).trim();
-}
-
 const args = parseArgs(process.argv.slice(2));
 const changelogPath = path.resolve(args.changelog);
 const outPath = path.resolve(args.out);
 const changelog = fs.readFileSync(changelogPath, "utf8");
 
-const versionHeading = `## [${args.version}]`;
-const body = sectionBody(changelog, versionHeading);
+const section = extractChangelogVersionSection(changelog, args.version);
+const body = section?.body ?? null;
 if (!body || body.length === 0) {
   throw new Error(
     `Missing changelog section for ${args.version}. Add '## [${args.version}] - YYYY-MM-DD' before release/publish.`,

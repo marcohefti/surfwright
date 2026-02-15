@@ -34,7 +34,7 @@ export const targetObserveCommandSpec: TargetCommandSpec = {
       .option("--duration-ms <ms>", "Total capture window in milliseconds", "3000")
       .option("--max-samples <n>", "Maximum samples to return", "120")
       .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -48,7 +48,7 @@ export const targetObserveCommandSpec: TargetCommandSpec = {
             durationMs: string;
             maxSamples: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -67,7 +67,7 @@ export const targetObserveCommandSpec: TargetCommandSpec = {
               intervalMs: Number.parseInt(options.intervalMs, 10),
               durationMs: Number.parseInt(options.durationMs, 10),
               maxSamples: Number.parseInt(options.maxSamples, 10),
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -90,9 +90,9 @@ export const targetScrollPlanCommandSpec: TargetCommandSpec = {
       .option("--steps <csv>", "Comma-separated requested scrollY positions", "0,300,600,900")
       .option("--settle-ms <ms>", "Settle delay after each scroll step in milliseconds", "300")
       .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
-      .action(async (targetId: string, options: { steps: string; settleMs: string; timeoutMs: number; noPersist?: boolean; fields?: string }) => {
+      .action(async (targetId: string, options: { steps: string; settleMs: string; timeoutMs: number; persist?: boolean; fields?: string }) => {
         const output = ctx.globalOutputOpts();
         const globalOpts = ctx.program.opts<{ session?: string }>();
         const fields = parseFieldsCsv(options.fields);
@@ -103,7 +103,7 @@ export const targetScrollPlanCommandSpec: TargetCommandSpec = {
             sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
             stepsCsv: options.steps,
             settleMs: Number.parseInt(options.settleMs, 10),
-            persistState: !Boolean(options.noPersist),
+            persistState: options.persist !== false,
           });
           ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
         } catch (error) {
@@ -129,7 +129,7 @@ export const targetScrollSampleCommandSpec: TargetCommandSpec = {
       .option("--steps <csv>", "Comma-separated requested scrollY positions", "0,300,600,900")
       .option("--settle-ms <ms>", "Settle delay after each scroll step in milliseconds", "300")
       .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -142,7 +142,7 @@ export const targetScrollSampleCommandSpec: TargetCommandSpec = {
             steps: string;
             settleMs: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -160,7 +160,7 @@ export const targetScrollSampleCommandSpec: TargetCommandSpec = {
               property: options.property,
               stepsCsv: options.steps,
               settleMs: Number.parseInt(options.settleMs, 10),
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -188,7 +188,7 @@ export const targetScrollWatchCommandSpec: TargetCommandSpec = {
       .option("--settle-ms <ms>", "Settle delay after each scroll step in milliseconds", "300")
       .option("--max-events <n>", "Maximum transition/animation events to return", "240")
       .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -202,7 +202,7 @@ export const targetScrollWatchCommandSpec: TargetCommandSpec = {
             settleMs: string;
             maxEvents: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -221,7 +221,7 @@ export const targetScrollWatchCommandSpec: TargetCommandSpec = {
               stepsCsv: options.steps,
               settleMs: Number.parseInt(options.settleMs, 10),
               maxEvents: Number.parseInt(options.maxEvents, 10),
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -248,7 +248,7 @@ export const targetTransitionTraceCommandSpec: TargetCommandSpec = {
       .option("--contains <text>", "Optional contains filter when using --click-selector")
       .option("--visible-only", "Require click target to be visible", false)
       .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -261,7 +261,7 @@ export const targetTransitionTraceCommandSpec: TargetCommandSpec = {
             contains?: string;
             visibleOnly?: boolean;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -279,7 +279,7 @@ export const targetTransitionTraceCommandSpec: TargetCommandSpec = {
               clickSelector: options.clickSelector,
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {

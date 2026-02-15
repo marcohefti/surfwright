@@ -32,7 +32,7 @@ surfwright --json target read <targetId> --selector main --chunk-size 1200 --chu
 surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
 surfwright --json target wait <targetId> --for-selector "h1"
 surfwright --json target network <targetId> --profile perf --view summary
-surfwright target network-tail <targetId> --profile api --capture-ms 3000
+surfwright --json target network-tail <targetId> --profile api --capture-ms 3000 --max-events 200
 surfwright --json target network-query --capture-id <captureId> --preset slowest --limit 10
 surfwright --json target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
 surfwright --json target network-end <captureId> --view summary --status 5xx
@@ -127,6 +127,7 @@ surfwright --json session cookie-copy --from-session a-login --to-session s-chec
 - Always parse JSON from stdout.
 - Avoid `--pretty` in automated loops.
 - Treat non-zero process exit as failure and decode `code` from JSON.
+- Streaming tails (`target network-tail`, `target console-tail`) emit NDJSON lines to stdout; use `--json` to suppress the trailing human summary line.
 - Prefer `targetId` from `open` when taking snapshots; use `target list --session <id>` only when recovering from lost handles.
 - Contract ids are executable aliases: `target.find`, `target.click`, `session.ensure`, `state.reconcile`, etc.
 

@@ -7,6 +7,7 @@ import { stateRootDir } from "../state.js";
 const DAEMON_META_VERSION = 1;
 const DAEMON_HOST = "127.0.0.1";
 const DAEMON_IDLE_TIMEOUT_MS = 15000;
+const MAX_FRAME_BYTES = 1024 * 1024 * 4;
 
 export type DaemonRunResult = {
   code: number;
@@ -74,6 +75,13 @@ function parsePositiveInt(value: unknown): number | null {
 
 function readDaemonMeta(): DaemonMeta | null {
   try {
+    if (process.platform !== "win32") {
+      const stat = fs.statSync(daemonMetaPath());
+      if ((stat.mode & 0o077) !== 0) {
+        removeDaemonMeta();
+        return null;
+      }
+    }
     const raw = fs.readFileSync(daemonMetaPath(), "utf8");
     const parsed = JSON.parse(raw) as Partial<DaemonMeta>;
     if (
@@ -200,14 +208,23 @@ export async function runDaemonWorker(opts: {
     scheduleIdleShutdown();
     socket.setEncoding("utf8");
     let buffer = "";
+    let bufferBytes = 0;
 
     socket.on("data", (chunk: string) => {
       buffer += chunk;
+      bufferBytes += Buffer.byteLength(chunk, "utf8");
       const newlineIndex = buffer.indexOf("\n");
       if (newlineIndex === -1) {
+        if (bufferBytes > MAX_FRAME_BYTES) {
+          socket.destroy();
+        }
         return;
       }
       const rawLine = buffer.slice(0, newlineIndex).trim();
+      if (Buffer.byteLength(rawLine, "utf8") > MAX_FRAME_BYTES) {
+        socket.destroy();
+        return;
+      }
       if (rawLine.length === 0) {
         writeResponse(
           socket,
@@ -220,6 +237,9 @@ export async function runDaemonWorker(opts: {
         );
         return;
       }
+      // Only one request per connection; ignore any extra bytes.
+      buffer = "";
+      bufferBytes = 0;
 
       queue = queue
         .then(async () => {

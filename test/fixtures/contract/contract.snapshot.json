@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:9eb51c88f25c73b30bf4630bf9395e423908f757a5802f20a6e77b898f4d0d1b",
+  "contractFingerprint": "sha256:3f192ade0ab13cfe480815c421b5a5bfb3d93c341888ebd8144476bca6ced7fd",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -262,7 +262,7 @@
     },
     {
       "id": "target.network-tail",
-      "usage": "surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--session <id>]",
+      "usage": "surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-events <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--session <id>]",
       "summary": "stream live network/websocket events as NDJSON for short capture windows"
     },
     {

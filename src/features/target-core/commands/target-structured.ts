@@ -50,7 +50,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--limit <n>", "Maximum extracted items to return")
       .option("--timeout-ms <ms>", "Extraction timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .addHelpText(
         "after",
@@ -72,7 +72,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
             frameScope?: string;
             limit?: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -90,7 +90,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
               visibleOnly: Boolean(options.visibleOnly),
               frameScope: options.frameScope,
               limit,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -116,7 +116,7 @@ export const targetFormFillCommandSpec: TargetCommandSpec = {
       .option("--fields-file <path>", "Read selector/value JSON from file")
       .option("--field <selector=value>", "Repeatable selector/value shorthand for string input values", collectRepeatedString, [])
       .option("--timeout-ms <ms>", "Form fill timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .addHelpText(
         "after",
@@ -135,7 +135,7 @@ export const targetFormFillCommandSpec: TargetCommandSpec = {
             fieldsFile?: string;
             field?: string[];
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -157,7 +157,7 @@ export const targetFormFillCommandSpec: TargetCommandSpec = {
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               fieldsJson,
               fieldsFile: options.fieldsFile,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -187,7 +187,7 @@ export const targetEmulateCommandSpec: TargetCommandSpec = {
       .option("--no-touch", "Disable touch emulation")
       .option("--device-scale-factor <n>", "Device scale factor")
       .option("--timeout-ms <ms>", "Emulation timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -198,17 +198,16 @@ export const targetEmulateCommandSpec: TargetCommandSpec = {
             userAgent?: string;
             colorScheme?: string;
             touch?: boolean;
-            noTouch?: boolean;
             deviceScaleFactor?: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
           const fields = parseFieldsCsv(options.fields);
-          const hasTouch = options.touch === true ? true : options.noTouch === true ? false : undefined;
+          const hasTouch = typeof options.touch === "boolean" ? options.touch : undefined;
           try {
             const report = await targetEmulate({
               targetId,
@@ -223,7 +222,7 @@ export const targetEmulateCommandSpec: TargetCommandSpec = {
                 typeof options.deviceScaleFactor === "string"
                   ? Number.parseFloat(options.deviceScaleFactor)
                   : undefined,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -250,7 +249,7 @@ export const targetScreenshotCommandSpec: TargetCommandSpec = {
       .option("--type <type>", "png|jpeg", "png")
       .option("--quality <n>", "JPEG quality (0-100)")
       .option("--timeout-ms <ms>", "Screenshot timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -261,7 +260,7 @@ export const targetScreenshotCommandSpec: TargetCommandSpec = {
             type?: string;
             quality?: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -277,7 +276,7 @@ export const targetScreenshotCommandSpec: TargetCommandSpec = {
               fullPage: Boolean(options.fullPage),
               type: options.type,
               quality: typeof options.quality === "string" ? Number.parseInt(options.quality, 10) : undefined,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {

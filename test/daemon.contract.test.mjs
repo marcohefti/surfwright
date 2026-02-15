@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import test from "node:test";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-contract-"));
+const MAX_FRAME_BYTES = 1024 * 1024 * 4;
 
 function runCli(args, env = {}) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
@@ -127,4 +129,48 @@ test("daemon idle timeout exits worker and clears metadata", async () => {
     await new Promise((resolve) => setTimeout(resolve, 40));
   }
   assert.equal(fs.existsSync(daemonMetaPath()), false);
+});
+
+test("daemon rejects oversized request frames without wedging", async () => {
+  await stopDaemonIfRunning();
+
+  const first = runCli(["--json", "contract"]);
+  assert.equal(first.status, 0);
+
+  const meta = readDaemonMeta();
+  assert.notEqual(meta, null);
+  assert.equal(typeof meta.pid, "number");
+  assert.equal(typeof meta.port, "number");
+  assert.equal(isProcessAlive(meta.pid), true);
+
+  await new Promise((resolve, reject) => {
+    const socket = net.createConnection({ host: "127.0.0.1", port: meta.port });
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(new Error("raw daemon socket did not close after oversized frame"));
+    }, 2000);
+
+    socket.on("error", () => {
+      // server may drop connection abruptly; that's expected
+    });
+
+    socket.on("connect", () => {
+      socket.write(Buffer.alloc(MAX_FRAME_BYTES + 1024, 0x61));
+    });
+
+    socket.on("close", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+
+  assert.equal(isProcessAlive(meta.pid), true);
+
+  const second = runCli(["--json", "contract"]);
+  assert.equal(second.status, 0);
+
+  const secondMeta = readDaemonMeta();
+  assert.notEqual(secondMeta, null);
+  assert.equal(secondMeta.pid, meta.pid);
+  assert.equal(isProcessAlive(secondMeta.pid), true);
 });

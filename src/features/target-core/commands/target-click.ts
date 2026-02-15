@@ -39,7 +39,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--snapshot", "Include compact post-click text preview")
       .option("--delta", "Include bounded evidence-based delta after click", false)
       .option("--timeout-ms <ms>", "Click timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -57,7 +57,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             snapshot?: boolean;
             delta?: boolean;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -81,7 +81,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               waitNetworkIdle: Boolean(options.waitNetworkIdle),
               snapshot: Boolean(options.snapshot),
               delta: Boolean(options.delta),
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -106,9 +106,9 @@ export const targetClickAtCommandSpec: TargetCommandSpec = {
       .option("--button <button>", "Mouse button: left|middle|right", "left")
       .option("--click-count <n>", "Number of clicks to send", "1")
       .option("--timeout-ms <ms>", "Click timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
-      .action(async (targetId: string, options: { x: string; y: string; button?: string; clickCount?: string; timeoutMs: number; noPersist?: boolean; fields?: string }) => {
+      .action(async (targetId: string, options: { x: string; y: string; button?: string; clickCount?: string; timeoutMs: number; persist?: boolean; fields?: string }) => {
         const output = ctx.globalOutputOpts();
         const globalOpts = ctx.program.opts<{ session?: string }>();
         const fields = parseFieldsCsv(options.fields);
@@ -121,7 +121,7 @@ export const targetClickAtCommandSpec: TargetCommandSpec = {
             y: Number.parseFloat(options.y),
             button: options.button,
             clickCount: typeof options.clickCount === "string" ? Number.parseInt(options.clickCount, 10) : undefined,
-            persistState: !Boolean(options.noPersist),
+            persistState: options.persist !== false,
           });
           ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
         } catch (error) {
@@ -146,7 +146,7 @@ export const targetFillCommandSpec: TargetCommandSpec = {
       .option("--visible-only", "Only match visible elements")
       .requiredOption("--value <text>", "Value to fill into the matched control")
       .option("--timeout-ms <ms>", "Fill timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -158,7 +158,7 @@ export const targetFillCommandSpec: TargetCommandSpec = {
             visibleOnly?: boolean;
             value: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -175,7 +175,7 @@ export const targetFillCommandSpec: TargetCommandSpec = {
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
               value: options.value,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -200,7 +200,7 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
       .requiredOption("--selector <query>", "CSS selector for file input/chooser trigger")
       .requiredOption("--file <path>", "File path to upload (repeat for multiple files)", collectRepeatedString, [])
       .option("--timeout-ms <ms>", "Upload timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -209,7 +209,7 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
             selector: string;
             file: string[];
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -224,7 +224,7 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               selectorQuery: options.selector,
               files: options.file,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -252,7 +252,7 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
       .option("--contains <text>", "Text filter to apply with --selector")
       .option("--visible-only", "Only match visible elements")
       .option("--timeout-ms <ms>", "Keypress timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -264,7 +264,7 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
             contains?: string;
             visibleOnly?: boolean;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -282,7 +282,7 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
               selectorQuery: options.selector,
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -307,7 +307,7 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
       .requiredOption("--from <selector>", "Source selector for drag start")
       .requiredOption("--to <selector>", "Destination selector for drag end")
       .option("--timeout-ms <ms>", "Drag/drop timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -316,7 +316,7 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
             from: string;
             to: string;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -331,7 +331,7 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               fromSelector: options.from,
               toSelector: options.to,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -358,7 +358,7 @@ export const targetSpawnCommandSpec: TargetCommandSpec = {
       .option("--contains <text>", "Text filter to apply with --selector")
       .option("--visible-only", "Only match visible elements")
       .option("--timeout-ms <ms>", "Spawn timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -369,7 +369,7 @@ export const targetSpawnCommandSpec: TargetCommandSpec = {
             contains?: string;
             visibleOnly?: boolean;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -385,7 +385,7 @@ export const targetSpawnCommandSpec: TargetCommandSpec = {
               selectorQuery: options.selector,
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -408,14 +408,14 @@ export const targetCloseCommandSpec: TargetCommandSpec = {
       .description(closeMeta.summary)
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--timeout-ms <ms>", "Close timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
           targetId: string,
           options: {
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -427,7 +427,7 @@ export const targetCloseCommandSpec: TargetCommandSpec = {
               targetId,
               timeoutMs: options.timeoutMs,
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
@@ -456,7 +456,7 @@ export const targetDialogCommandSpec: TargetCommandSpec = {
       .option("--contains <text>", "Text filter to apply with --trigger-selector")
       .option("--visible-only", "Only match visible trigger elements")
       .option("--timeout-ms <ms>", "Dialog timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state", false)
+      .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
         async (
@@ -469,7 +469,7 @@ export const targetDialogCommandSpec: TargetCommandSpec = {
             contains?: string;
             visibleOnly?: boolean;
             timeoutMs: number;
-            noPersist?: boolean;
+            persist?: boolean;
             fields?: string;
           },
         ) => {
@@ -487,7 +487,7 @@ export const targetDialogCommandSpec: TargetCommandSpec = {
               triggerSelector: options.triggerSelector,
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
-              persistState: !Boolean(options.noPersist),
+              persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
           } catch (error) {

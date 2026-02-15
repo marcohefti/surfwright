@@ -13,6 +13,7 @@ const DAEMON_STARTUP_TIMEOUT_MS = 4500;
 const DAEMON_REQUEST_TIMEOUT_MS = 120000;
 const DAEMON_PING_TIMEOUT_MS = 250;
 const DAEMON_RETRY_DELAY_MS = 60;
+const MAX_FRAME_BYTES = 1024 * 1024 * 4;
 
 export type DaemonRunResult = {
   code: number;
@@ -80,6 +81,13 @@ function parsePositiveInt(value: unknown): number | null {
 
 function readDaemonMeta(): DaemonMeta | null {
   try {
+    if (process.platform !== "win32") {
+      const stat = fs.statSync(daemonMetaPath());
+      if ((stat.mode & 0o077) !== 0) {
+        removeDaemonMeta();
+        return null;
+      }
+    }
     const raw = fs.readFileSync(daemonMetaPath(), "utf8");
     const parsed = JSON.parse(raw) as Partial<DaemonMeta>;
     if (
@@ -111,7 +119,18 @@ function readDaemonMeta(): DaemonMeta | null {
 function writeDaemonMeta(meta: DaemonMeta): void {
   const root = stateRootDir();
   fs.mkdirSync(root, { recursive: true });
-  fs.writeFileSync(daemonMetaPath(), `${JSON.stringify(meta)}\n`, "utf8");
+  const metaPath = daemonMetaPath();
+  fs.writeFileSync(metaPath, `${JSON.stringify(meta)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  if (process.platform !== "win32") {
+    try {
+      fs.chmodSync(metaPath, 0o600);
+    } catch {
+      // best-effort: chmod may fail on some filesystems
+    }
+  }
 }
 
 function removeDaemonMeta(): void {
@@ -193,9 +212,10 @@ function parseDaemonResponse(value: unknown): DaemonResponse | null {
 
 async function sendDaemonRequest(meta: DaemonMeta, request: DaemonRequest, timeoutMs: number): Promise<DaemonResponse> {
   return await new Promise<DaemonResponse>((resolve, reject) => {
-    const socket = net.createConnection({ host: meta.host, port: meta.port });
+    const socket = net.createConnection({ host: DAEMON_HOST, port: meta.port });
     let settled = false;
     let buffer = "";
+    let bufferBytes = 0;
 
     const timer = setTimeout(() => {
       if (settled) {
@@ -235,11 +255,19 @@ async function sendDaemonRequest(meta: DaemonMeta, request: DaemonRequest, timeo
 
     socket.on("data", (chunk: string) => {
       buffer += chunk;
+      bufferBytes += Buffer.byteLength(chunk, "utf8");
       const newlineIndex = buffer.indexOf("\n");
       if (newlineIndex === -1) {
+        if (bufferBytes > MAX_FRAME_BYTES) {
+          finish(new Error("daemon returned oversized response frame"));
+        }
         return;
       }
       const rawLine = buffer.slice(0, newlineIndex).trim();
+      if (Buffer.byteLength(rawLine, "utf8") > MAX_FRAME_BYTES) {
+        finish(new Error("daemon returned oversized response frame"));
+        return;
+      }
       if (rawLine.length === 0) {
         finish(new Error("daemon returned blank response"));
         return;

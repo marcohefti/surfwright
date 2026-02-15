@@ -46,7 +46,7 @@ function hasBrowser() {
     return hasBrowserCache;
   }
 
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]);
+  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   hasBrowserCache = ensureResult.status === 0;
   return hasBrowserCache;
 }
@@ -279,7 +279,7 @@ test("target network begin/end returns capture handle and projected report", { s
     "--view",
     "summary",
     "--timeout-ms",
-    "8000",
+    "20000",
   ]);
   assert.equal(endResult.status, 0);
   const endPayload = parseJson(endResult.stdout);
@@ -287,6 +287,57 @@ test("target network begin/end returns capture handle and projected report", { s
   assert.equal(endPayload.captureId, beginPayload.captureId);
   assert.equal(typeof endPayload.status, "string");
   assert.equal(endPayload.view, "summary");
+});
+
+test("target network-end finalizes state and returns typed failure when done status is failed and result is missing", () => {
+  cleanupManagedBrowsers();
+
+  const captureId = "c-1";
+  const donePath = path.join(TEST_STATE_DIR, "captures", `${captureId}.done.json`);
+  const stopPath = path.join(TEST_STATE_DIR, "captures", `${captureId}.stop`);
+  const resultPath = path.join(TEST_STATE_DIR, "captures", `${captureId}.result.json`);
+  fs.mkdirSync(path.dirname(donePath), { recursive: true });
+  fs.writeFileSync(donePath, `${JSON.stringify({ status: "failed", endedAt: "2026-02-15T00:00:00.000Z", message: "boom" })}\n`, "utf8");
+
+  writeState({
+    version: 2,
+    activeSessionId: null,
+    nextSessionOrdinal: 1,
+    nextCaptureOrdinal: 2,
+    nextArtifactOrdinal: 1,
+    sessions: {},
+    targets: {},
+    networkCaptures: {
+      [captureId]: {
+        captureId,
+        sessionId: "s-1",
+        targetId: "t-1",
+        startedAt: "2026-02-15T00:00:00.000Z",
+        status: "recording",
+        profile: "custom",
+        maxRuntimeMs: 10000,
+        workerPid: 12345,
+        stopSignalPath: stopPath,
+        donePath,
+        resultPath,
+        endedAt: null,
+        actionId: "a-1",
+      },
+    },
+    networkArtifacts: {},
+  });
+
+  const endResult = runCli(["--json", "target", "network-end", captureId, "--timeout-ms", "500"]);
+  assert.equal(endResult.status, 1);
+  const failure = parseJson(endResult.stdout);
+  assert.equal(failure.ok, false);
+  assert.equal(failure.code, "E_INTERNAL");
+
+  const state = JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  assert.equal(state.networkCaptures[captureId].status, "failed");
+  assert.equal(typeof state.networkCaptures[captureId].endedAt, "string");
+  assert.equal(state.networkCaptures[captureId].endedAt.length > 0, true);
+  assert.equal(state.networkCaptures[captureId].workerPid, null);
 });
 
 test("target network-export-list returns indexed artifacts", () => {

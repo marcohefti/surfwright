@@ -1,5 +1,13 @@
 # Agent Guidance Architecture
 
+Start here:
+
+- Architecture map: `ARCHITECTURE.md`
+- Deep dive index: `docs/architecture.md`
+
+This document is a compatibility shim and boundary rule sheet for agents/operators working inside the repo.
+It intentionally stays short and points outward to the deep dives rather than duplicating them.
+
 This repository serves two distinct consumers:
 
 1. Development agents/operators working inside the repo.
@@ -9,6 +17,8 @@ To keep both fast and maintainable, we separate guidance into explicit layers wi
 
 ## Source-of-truth map
 
+- Architecture map (human): `ARCHITECTURE.md`
+- Deep dives (human): `docs/architecture.md`
 - Runtime contract (machine): `surfwright --json contract`
 - Runtime behavior (verification): `test/*.contract.test.mjs` (core + feature suites)
 - Product/developer narrative (human): `README.md`, `AGENTS.md`, `docs/*.md`

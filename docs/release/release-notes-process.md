@@ -4,7 +4,7 @@
 
 - `CHANGELOG.md` (`## [Unreleased]`)
 - Contract snapshot (`test/fixtures/contract/contract.snapshot.json`)
-- CI evidence (`validate`, `test`, `docs-check`, `release-check`, `dual-package-parity-check`)
+- CI evidence (`validate`, `test`, `changelog-check`, `release-check`, `dual-package-parity-check`)
 - Release metadata artifact (publish/release workflows)
 
 ## Release Cut Checklist

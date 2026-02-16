@@ -12,15 +12,17 @@ This repo exists for one thing: a stable browser control surface that agents can
 
 ## Start Here (First Open)
 
-1. `docs/agent-guidance-architecture.md` for source-of-truth boundaries.
-2. `docs/agent-dev-flow.md` for change routing and update decisions.
-3. `docs/maintaining-agent-surface.md` for pre-merge and release checklist.
-4. `docs/policy-harness.md` for structural rule framework and plug-in rules.
-5. `docs/fixture-ingress-workflow.md` for adding regression fixtures when new edge cases appear.
-6. `docs/zerocontext-lab.md` for unbiased cold-start subagent evaluation workflow.
-7. `docs/zerocontext-gap-workflow.md` for one-agent-per-mission capability-gap discovery and evaluation.
-8. `docs/release-governance.md` for locked release/update policy and required checks.
-9. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
+1. `ARCHITECTURE.md` for the one-screen architecture map.
+2. `docs/architecture.md` for the deep dive index (subsystem notes with file pointers).
+3. `docs/agent-guidance-architecture.md` for boundary rules (compat shim; stay short).
+4. `docs/agent-dev-flow.md` for change routing and update decisions.
+5. `docs/maintaining-agent-surface.md` for pre-merge and release checklist.
+6. `docs/policy-harness.md` for structural rule framework and plug-in rules.
+7. `docs/fixture-ingress-workflow.md` for adding regression fixtures when new edge cases appear.
+8. `docs/zerocontext-lab.md` for unbiased cold-start subagent evaluation workflow.
+9. `docs/zerocontext-gap-workflow.md` for one-agent-per-mission capability-gap discovery and evaluation.
+10. `docs/release-governance.md` for locked release/update policy and required checks.
+11. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
 
 ## Runtime Source of Truth
 

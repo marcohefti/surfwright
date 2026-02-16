@@ -407,7 +407,9 @@ Lock file:
 
 ## Agent Guidance In Repo
 
-- Architecture and source-of-truth map: `docs/agent-guidance-architecture.md`
+- Architecture map (short): `ARCHITECTURE.md`
+- Architecture deep dives (index): `docs/architecture.md`
+- Agent boundary rules (compat shim): `docs/agent-guidance-architecture.md`
 - Maintenance checklist: `docs/maintaining-agent-surface.md`
 - Release/update policy source of truth: `docs/release-governance.md`
 - Contributor release/doc routing: `docs/contributor-release-routing.md`

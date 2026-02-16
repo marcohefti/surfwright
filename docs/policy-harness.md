@@ -86,6 +86,9 @@ Policy rules are intentionally simple and file-system based. The names below map
 - `ARC009 core-root-freeze`: adding new `src/core/*.ts` modules requires an explicit decision (freeze core-root growth).
 - `ARC010 feature-layer-purity`: feature `domain/**` and `usecases/**` must not import Node built-ins or Playwright (keeps feature layers pure and testable).
 - `ARC011 core-root-state-imports`: code outside the state domain must not import a core-root state facade (use `src/core/state/index` for core internals and `src/core/state/public` for feature access).
+- `BUDG001 core-layer-structure-budget`: budget for how many bounded core domains are still missing `app/domain/infra` structure (ratchet to 0).
+- `BUDG002 core-node-imports-budget`: budget for `node:` imports outside `infra/**` and `providers/**` (ratchet to 0).
+- `BUDG003 core-process-env-budget`: budget for `process.env` usage outside `providers/**` and explicit boundaries (ratchet to 0).
 - `DIR001 max-files-per-directory`: keeps directories small for review and navigation.
 - `LOC001 max-loc`: prevents single-file mega-modules.
 

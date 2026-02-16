@@ -5,6 +5,9 @@ import { rule as featureLayerPurityRule } from "./architecture/feature-layer-pur
 import { rule as coreRootStateImportsRule } from "./architecture/core-root-state-imports.mjs";
 import { rule as maxFilesPerDirectoryRule } from "./max-files-per-directory.mjs";
 import { rule as maxLocRule } from "./budgets/max-loc.mjs";
+import { rule as coreLayerStructureBudgetRule } from "./budgets/core-layer-structure-budget.mjs";
+import { rule as coreNodeImportsBudgetRule } from "./budgets/core-node-imports-budget.mjs";
+import { rule as coreProcessEnvBudgetRule } from "./budgets/core-process-env-budget.mjs";
 import { rule as stateBoundariesRule } from "./state-boundaries.mjs";
 import { rule as cliCommanderOptionsRule } from "./cli-commander-options.mjs";
 import { rule as surfaceCommandPurityRule } from "./surface-command-purity.mjs";
@@ -28,4 +31,7 @@ export const ruleRegistry = new Map([
   [coreRootFreezeRule.name, coreRootFreezeRule],
   [maxFilesPerDirectoryRule.name, maxFilesPerDirectoryRule],
   [maxLocRule.name, maxLocRule],
+  [coreLayerStructureBudgetRule.name, coreLayerStructureBudgetRule],
+  [coreNodeImportsBudgetRule.name, coreNodeImportsBudgetRule],
+  [coreProcessEnvBudgetRule.name, coreProcessEnvBudgetRule],
 ]);

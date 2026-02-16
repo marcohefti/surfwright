@@ -1,8 +1,8 @@
-import fs from "node:fs";
 import { CliError } from "../../errors.js";
 import { resolveNetworkReportSource } from "./target-network-source.js";
 import { targetNetwork } from "./target-network.js";
 import type { TargetNetworkCheckBudget, TargetNetworkCheckReport } from "../../types.js";
+import { providers } from "../../providers/index.js";
 
 function parseBudget(path: string): TargetNetworkCheckBudget {
   const value = path.trim();
@@ -11,7 +11,7 @@ function parseBudget(path: string): TargetNetworkCheckBudget {
   }
   let raw: unknown;
   try {
-    raw = JSON.parse(fs.readFileSync(value, "utf8")) as unknown;
+    raw = JSON.parse(providers().fs.readFileSync(value, "utf8")) as unknown;
   } catch {
     throw new CliError("E_QUERY_INVALID", `Failed to read budget file: ${value}`);
   }

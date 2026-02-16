@@ -1,8 +1,8 @@
-import fs from "node:fs";
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
 import { sanitizeActionId } from "../../action-id.js";
 import { nowIso } from "../../state/index.js";
 import { readRecentTargetAction, saveTargetSnapshot } from "../../state/index.js";
+import { providers } from "../../providers/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {
@@ -400,7 +400,7 @@ async function waitForCaptureEnd(captureMs: number, stopSignalPath?: string): Pr
   }
   const deadline = Date.now() + captureMs;
   while (Date.now() < deadline) {
-    if (fs.existsSync(stopSignalPath)) {
+    if (providers().fs.existsSync(stopSignalPath)) {
       return;
     }
     await sleep(150);

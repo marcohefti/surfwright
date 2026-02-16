@@ -1,8 +1,5 @@
-import fs from "node:fs";
-import net from "node:net";
-import path from "node:path";
-import process from "node:process";
 import { stateRootDir } from "../state/index.js";
+import { providers } from "../providers/index.js";
 
 const DAEMON_META_VERSION = 1;
 const DAEMON_HOST = "127.0.0.1";
@@ -62,7 +59,7 @@ type DaemonMeta = {
 };
 
 function daemonMetaPath(): string {
-  return path.join(stateRootDir(), "daemon.json");
+  return providers().path.join(stateRootDir(), "daemon.json");
 }
 
 function parsePositiveInt(value: unknown): number | null {
@@ -75,7 +72,8 @@ function parsePositiveInt(value: unknown): number | null {
 
 function readDaemonMeta(): DaemonMeta | null {
   try {
-    if (process.platform !== "win32") {
+    const { fs, runtime } = providers();
+    if (runtime.platform !== "win32") {
       const stat = fs.statSync(daemonMetaPath());
       if ((stat.mode & 0o077) !== 0) {
         removeDaemonMeta();
@@ -110,14 +108,14 @@ function readDaemonMeta(): DaemonMeta | null {
 
 function removeDaemonMeta(): void {
   try {
-    fs.unlinkSync(daemonMetaPath());
+    providers().fs.unlinkSync(daemonMetaPath());
   } catch {
     // ignore missing metadata
   }
 }
 
 export function daemonIdleTimeoutMs(): number {
-  const raw = process.env.SURFWRIGHT_DAEMON_IDLE_MS;
+  const raw = providers().env.get("SURFWRIGHT_DAEMON_IDLE_MS");
   if (typeof raw !== "string" || raw.trim().length === 0) {
     return DAEMON_IDLE_TIMEOUT_MS;
   }
@@ -133,7 +131,7 @@ export function cleanupOwnedDaemonMeta(token: string): void {
   if (!meta) {
     return;
   }
-  if (meta.pid !== process.pid || meta.token !== token) {
+  if (meta.pid !== providers().runtime.pid || meta.token !== token) {
     return;
   }
   removeDaemonMeta();
@@ -183,6 +181,7 @@ export async function runDaemonWorker(opts: {
   onRun: (argv: string[]) => Promise<DaemonRunResult>;
 }): Promise<void> {
   const idleMs = daemonIdleTimeoutMs();
+  const { net } = providers();
   const server = net.createServer();
   let queue = Promise.resolve();
   let idleTimer: NodeJS.Timeout | null = null;
@@ -196,7 +195,7 @@ export async function runDaemonWorker(opts: {
     }, idleMs);
   };
 
-  const writeResponse = (socket: net.Socket, response: DaemonResponse, shutdownAfterWrite: boolean) => {
+  const writeResponse = (socket: any, response: DaemonResponse, shutdownAfterWrite: boolean) => {
     socket.end(`${JSON.stringify(response)}\n`, () => {
       if (shutdownAfterWrite) {
         server.close();

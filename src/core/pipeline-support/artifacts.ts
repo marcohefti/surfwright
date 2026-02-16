@@ -1,11 +1,11 @@
-import fs from "node:fs";
-import path from "node:path";
 import { nowIso, stateRootDir } from "../state/index.js";
 import type { LoadedPlan, PipelineStepInput } from "./plan.js";
+import { providers } from "../providers/index.js";
 
 const RUN_ARTIFACT_LABEL_MAX = 64;
 
 function resolveRunArtifactPath(label: string | undefined): string {
+  const { fs, path } = providers();
   const runsDir = path.join(stateRootDir(), "runs");
   fs.mkdirSync(runsDir, { recursive: true });
   const safeLabel = (label ?? "run")
@@ -27,6 +27,7 @@ export function writeRunArtifact(opts: {
   plan: { steps: PipelineStepInput[] };
   report: Record<string, unknown>;
 }) {
+  const { fs, path } = providers();
   const outPath = opts.outPath && opts.outPath.trim().length > 0 ? opts.outPath : resolveRunArtifactPath(opts.label);
   const payload = {
     kind: "run-artifact",

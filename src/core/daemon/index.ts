@@ -1,11 +1,6 @@
-import { spawn } from "node:child_process";
-import crypto from "node:crypto";
-import fs from "node:fs";
-import net from "node:net";
-import path from "node:path";
-import process from "node:process";
 import { allocateFreePort } from "../browser.js";
 import { stateRootDir } from "../state/index.js";
+import { providers } from "../providers/index.js";
 
 const DAEMON_META_VERSION = 1;
 const DAEMON_HOST = "127.0.0.1";
@@ -68,7 +63,7 @@ type DaemonResponse =
     };
 
 function daemonMetaPath(): string {
-  return path.join(stateRootDir(), "daemon.json");
+  return providers().path.join(stateRootDir(), "daemon.json");
 }
 
 function parsePositiveInt(value: unknown): number | null {
@@ -81,7 +76,8 @@ function parsePositiveInt(value: unknown): number | null {
 
 function readDaemonMeta(): DaemonMeta | null {
   try {
-    if (process.platform !== "win32") {
+    const { fs, runtime } = providers();
+    if (runtime.platform !== "win32") {
       const stat = fs.statSync(daemonMetaPath());
       if ((stat.mode & 0o077) !== 0) {
         removeDaemonMeta();
@@ -117,6 +113,7 @@ function readDaemonMeta(): DaemonMeta | null {
 }
 
 function writeDaemonMeta(meta: DaemonMeta): void {
+  const { fs, runtime } = providers();
   const root = stateRootDir();
   fs.mkdirSync(root, { recursive: true });
   const metaPath = daemonMetaPath();
@@ -124,7 +121,7 @@ function writeDaemonMeta(meta: DaemonMeta): void {
     encoding: "utf8",
     mode: 0o600,
   });
-  if (process.platform !== "win32") {
+  if (runtime.platform !== "win32") {
     try {
       fs.chmodSync(metaPath, 0o600);
     } catch {
@@ -135,7 +132,7 @@ function writeDaemonMeta(meta: DaemonMeta): void {
 
 function removeDaemonMeta(): void {
   try {
-    fs.unlinkSync(daemonMetaPath());
+    providers().fs.unlinkSync(daemonMetaPath());
   } catch {
     // ignore missing metadata
   }
@@ -146,7 +143,7 @@ function isProcessAlive(pid: number): boolean {
     return false;
   }
   try {
-    process.kill(pid, 0);
+    providers().runtime.kill(pid, 0);
     return true;
   } catch {
     return false;
@@ -212,7 +209,7 @@ function parseDaemonResponse(value: unknown): DaemonResponse | null {
 
 async function sendDaemonRequest(meta: DaemonMeta, request: DaemonRequest, timeoutMs: number): Promise<DaemonResponse> {
   return await new Promise<DaemonResponse>((resolve, reject) => {
-    const socket = net.createConnection({ host: DAEMON_HOST, port: meta.port });
+    const socket = providers().net.createConnection({ host: DAEMON_HOST, port: meta.port });
     let settled = false;
     let buffer = "";
     let bufferBytes = 0;
@@ -328,16 +325,17 @@ async function startDaemon(entryScriptPath: string): Promise<boolean> {
     return true;
   }
 
+  const { childProcess, crypto, env, runtime } = providers();
   const port = await allocateFreePort();
   const token = crypto.randomBytes(18).toString("hex");
-  const child = spawn(
-    process.execPath,
+  const child = childProcess.spawn(
+    runtime.execPath,
     [entryScriptPath, "__daemon-worker", "--port", String(port), "--token", token],
     {
       detached: true,
       stdio: "ignore",
       env: {
-        ...process.env,
+        ...env.snapshot(),
         SURFWRIGHT_DAEMON_CHILD: "1",
       },
     },
@@ -361,7 +359,7 @@ async function startDaemon(entryScriptPath: string): Promise<boolean> {
   const ready = await waitForDaemonReady(meta, DAEMON_STARTUP_TIMEOUT_MS);
   if (!ready) {
     try {
-      process.kill(child.pid, "SIGTERM");
+      runtime.kill(child.pid, "SIGTERM");
     } catch {
       // ignore
     }
@@ -372,7 +370,7 @@ async function startDaemon(entryScriptPath: string): Promise<boolean> {
 }
 
 export function daemonProxyEnabled(): boolean {
-  const fromEnv = process.env.SURFWRIGHT_DAEMON;
+  const fromEnv = providers().env.get("SURFWRIGHT_DAEMON");
   if (typeof fromEnv !== "string") {
     return true;
   }
@@ -446,7 +444,7 @@ export async function stopDaemonIfRunning(): Promise<boolean> {
   } catch {
     // Fall back to process kill if daemon cannot be reached.
     try {
-      process.kill(meta.pid, "SIGTERM");
+      providers().runtime.kill(meta.pid, "SIGTERM");
     } catch {
       // ignore
     }

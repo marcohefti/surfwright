@@ -1,8 +1,6 @@
-import { createHash } from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 import { CliError } from "../errors.js";
 import { nowIso, stateRootDir } from "../state/index.js";
+import { providers } from "../providers/index.js";
 
 const EXTENSION_REGISTRY_VERSION = 1;
 
@@ -35,7 +33,7 @@ type ExtensionFallback = {
 };
 
 function extensionRegistryPath(): string {
-  return path.join(stateRootDir(), "extensions.json");
+  return providers().path.join(stateRootDir(), "extensions.json");
 }
 
 function emptyRegistry(): ExtensionRegistry {
@@ -91,6 +89,7 @@ function normalizeRecord(raw: unknown): ExtensionRecord | null {
 }
 
 function readRegistry(): ExtensionRegistry {
+  const { fs } = providers();
   const registryPath = extensionRegistryPath();
   if (!fs.existsSync(registryPath)) {
     return emptyRegistry();
@@ -122,12 +121,14 @@ function readRegistry(): ExtensionRegistry {
 }
 
 function writeRegistry(registry: ExtensionRegistry): void {
+  const { fs, path } = providers();
   const registryPath = extensionRegistryPath();
   fs.mkdirSync(path.dirname(registryPath), { recursive: true });
   fs.writeFileSync(registryPath, `${JSON.stringify(registry, null, 2)}\n`, "utf8");
 }
 
 function parseExtensionPath(input: string): string {
+  const { fs, path } = providers();
   const value = input.trim();
   if (!value) {
     throw new CliError("E_QUERY_INVALID", "path must not be empty");
@@ -143,6 +144,7 @@ function parseExtensionPath(input: string): string {
 }
 
 function parseManifest(extensionPath: string): { name: string; version: string; manifestVersion: number | null } {
+  const { fs, path } = providers();
   const manifestPath = path.join(extensionPath, "manifest.json");
   if (!fs.existsSync(manifestPath)) {
     throw new CliError("E_QUERY_INVALID", `manifest.json not found under ${extensionPath}`);
@@ -178,7 +180,8 @@ function parseManifest(extensionPath: string): { name: string; version: string; 
 }
 
 function computeExtensionId(extensionPath: string): string {
-  const digest = createHash("sha256").update(extensionPath).digest("hex");
+  const { crypto } = providers();
+  const digest = crypto.createHash("sha256").update(extensionPath).digest("hex");
   return `ext-${digest.slice(0, 12)}`;
 }
 

@@ -1,7 +1,7 @@
-import fs from "node:fs";
 import { CliError } from "../../errors.js";
 import { allocateArtifactId, readState, updateState } from "../infra/state-store.js";
 import type { SurfwrightState, TargetNetworkArtifactPruneReport, TargetNetworkExportReport } from "../../types.js";
+import { providers } from "../../providers/index.js";
 
 type NetworkArtifactState = SurfwrightState["networkArtifacts"][string];
 
@@ -94,6 +94,7 @@ export async function pruneNetworkArtifacts(opts: {
   const deleteFiles = opts.deleteFiles !== false;
 
   const result = await updateState((state) => {
+    const { fs } = providers();
     const entries = Object.values(state.networkArtifacts).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const cutoffMs = maxAgeHours === null ? null : Date.now() - maxAgeHours * 60 * 60 * 1000;
     const removeIds = new Set<string>();
@@ -164,6 +165,7 @@ export async function pruneNetworkArtifacts(opts: {
   });
 
   if (deleteFiles) {
+    const { fs } = providers();
     for (const artifactPath of result.removedPaths) {
       try {
         fs.rmSync(artifactPath, { force: true });

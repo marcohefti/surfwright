@@ -1,9 +1,9 @@
-import fs from "node:fs";
 import { chromium } from "playwright-core";
 import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
 import { nowIso } from "../state/index.js";
 import { saveTargetSnapshot } from "../state/index.js";
+import { providers } from "../providers/index.js";
 import { resolveFrameById } from "./frames/frames.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetEvalReport } from "../types.js";
@@ -51,7 +51,8 @@ function parseExpression(opts: { expression?: string; expr?: string; scriptFile?
     throw new CliError("E_QUERY_INVALID", "choose either expr or expression/js/script");
   }
   if (scriptFile.length > 0) {
-    let stat: fs.Stats;
+    const { fs } = providers();
+    let stat: { isFile(): boolean; size: number };
     try {
       stat = fs.statSync(scriptFile);
     } catch {

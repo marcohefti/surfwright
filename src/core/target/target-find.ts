@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import { chromium, type Frame, type Locator, type Page } from "playwright-core";
 import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
@@ -7,6 +5,7 @@ import { nowIso } from "../state/index.js";
 import { saveTargetSnapshot } from "../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "./target-query.js";
 import { DEFAULT_TARGET_FIND_LIMIT } from "../types.js";
+import { providers } from "../providers/index.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetFindReport } from "../types.js";
 
@@ -127,7 +126,7 @@ function parseRequiredSelector(input: string | undefined, optionName: string): s
 }
 
 function mimeFromName(name: string): string {
-  const ext = path.extname(name).toLowerCase();
+  const ext = providers().path.extname(name).toLowerCase();
   if (ext === ".png") {
     return "image/png";
   }
@@ -156,6 +155,7 @@ function mimeFromName(name: string): string {
 }
 
 function parseUploadFiles(input: string | string[] | undefined): Array<{ absolutePath: string; name: string; size: number; type: string }> {
+  const { fs, path } = providers();
   const raw = Array.isArray(input)
     ? input
     : typeof input === "string"
@@ -168,7 +168,7 @@ function parseUploadFiles(input: string | string[] | undefined): Array<{ absolut
 
   return files.map((filePath) => {
     const absolutePath = path.resolve(filePath);
-    let stat: fs.Stats;
+    let stat: { isFile(): boolean; size: number };
     try {
       stat = fs.statSync(absolutePath);
     } catch {

@@ -1,6 +1,5 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import type { TargetNetworkHarReport, TargetNetworkRequestReport } from "../../types.js";
+import { providers } from "../../providers/index.js";
 
 type HarHeader = {
   name: string;
@@ -141,6 +140,7 @@ export async function writeHarFile(opts: {
   targetId: string;
   requests: TargetNetworkRequestReport[];
 }): Promise<TargetNetworkHarReport> {
+  const { fsPromises, path } = providers();
   const outputPath = path.resolve(opts.outputPath);
 
   const pageRef = `page-${opts.targetId}`;
@@ -180,8 +180,8 @@ export async function writeHarFile(opts: {
   };
 
   const serialized = JSON.stringify(payload);
-  await fs.mkdir(path.dirname(outputPath), { recursive: true });
-  await fs.writeFile(outputPath, serialized, "utf8");
+  await fsPromises.mkdir(path.dirname(outputPath), { recursive: true });
+  await fsPromises.writeFile(outputPath, serialized, "utf8");
 
   return {
     path: outputPath,

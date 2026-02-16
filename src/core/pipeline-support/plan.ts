@@ -1,5 +1,5 @@
-import fs from "node:fs";
 import { CliError } from "../errors.js";
+import { providers } from "../providers/index.js";
 
 const TEMPLATE_EXACT_RE = /^\{\{\s*([^{}]+?)\s*\}\}$/;
 const TEMPLATE_EMBEDDED_RE = /\{\{\s*([^{}]+?)\s*\}\}/g;
@@ -349,7 +349,10 @@ export function resolvePlanSource(opts: {
     return { source: "inline-json", replay: null, plan: parsePlanObject(parseJsonWithContext(opts.planJson, "plan-json"), "plan-json") };
   }
   if (typeof opts.planPath === "string" && opts.planPath.length > 0) {
-    const raw = opts.planPath === "-" ? (typeof opts.stdinPlan === "string" ? opts.stdinPlan : "") : fs.readFileSync(opts.planPath, "utf8");
+    const raw =
+      opts.planPath === "-"
+        ? (typeof opts.stdinPlan === "string" ? opts.stdinPlan : "")
+        : providers().fs.readFileSync(opts.planPath, "utf8");
     if (opts.planPath === "-" && raw.trim().length === 0) {
       throw new CliError("E_QUERY_INVALID", "stdin plan is empty");
     }
@@ -357,7 +360,7 @@ export function resolvePlanSource(opts: {
     return { source: opts.planPath === "-" ? "stdin" : opts.planPath, replay: null, plan: parsePlanObject(parsed, "plan file") };
   }
   const replayPath = opts.replayPath as string;
-  const replayParsed = parseJsonWithContext(fs.readFileSync(replayPath, "utf8"), `replay artifact ${replayPath}`);
+  const replayParsed = parseJsonWithContext(providers().fs.readFileSync(replayPath, "utf8"), `replay artifact ${replayPath}`);
   if (typeof replayParsed !== "object" || replayParsed === null) {
     throw new CliError("E_QUERY_INVALID", "replay artifact must be an object");
   }

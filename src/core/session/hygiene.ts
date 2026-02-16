@@ -1,4 +1,3 @@
-import process from "node:process";
 import {
   DEFAULT_EPHEMERAL_SESSION_LEASE_TTL_MS,
   DEFAULT_SESSION_LEASE_TTL_MS,
@@ -7,6 +6,7 @@ import {
   type SessionPolicy,
   type SessionState,
 } from "../types.js";
+import { providers } from "../providers/index.js";
 
 const AGENT_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 
@@ -33,7 +33,7 @@ export function normalizeAgentId(input: string): string | null {
 }
 
 export function currentAgentId(): string | null {
-  const fromEnv = process.env.SURFWRIGHT_AGENT_ID;
+  const fromEnv = providers().env.get("SURFWRIGHT_AGENT_ID");
   if (typeof fromEnv !== "string") {
     return null;
   }
@@ -66,7 +66,7 @@ export function defaultSessionPolicyForKind(kind: SessionState["kind"]): Session
 }
 
 export function sessionLeaseTtlMs(): number {
-  const fromEnv = process.env.SURFWRIGHT_SESSION_LEASE_TTL_MS;
+  const fromEnv = providers().env.get("SURFWRIGHT_SESSION_LEASE_TTL_MS");
   if (typeof fromEnv !== "string" || fromEnv.trim().length === 0) {
     return DEFAULT_SESSION_LEASE_TTL_MS;
   }

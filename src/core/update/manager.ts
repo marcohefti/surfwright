@@ -1,10 +1,8 @@
-import fs from "node:fs";
-import path from "node:path";
-import { spawnSync } from "node:child_process";
 import { CliError } from "../errors.js";
 import { readRuntimeConfig, type UpdateChannel, type UpdatePolicy } from "./config.js";
 import { compareSemver, isSamePatchLine } from "../shared/index.js";
 import { stateRootDir } from "../state/index.js";
+import { providers } from "../providers/index.js";
 
 export const UPDATE_DIST_TAG_BY_CHANNEL: Record<UpdateChannel, string> = {
   stable: "latest",
@@ -91,9 +89,10 @@ function parseDistTags(raw: string): Record<string, string> {
 }
 
 function loadDistTagVersion(packageName: string, distTag: string): string | null {
-  const result = spawnSync("npm", ["view", packageName, "dist-tags", "--json"], {
+  const { childProcess, env } = providers();
+  const result = childProcess.spawnSync("npm", ["view", packageName, "dist-tags", "--json"], {
     encoding: "utf8",
-    env: process.env,
+    env: env.snapshot(),
   });
   if (result.status !== 0) {
     throw new CliError("E_UPDATE_METADATA", `Unable to fetch dist-tags for ${packageName}`);
@@ -125,18 +124,20 @@ function policyBlocksUpdate(opts: { policy: UpdatePolicy; currentVersion: string
 }
 
 function hasGitRepo(cwd: string): boolean {
+  const { fs, path } = providers();
   return fs.existsSync(path.join(cwd, ".git"));
 }
 
 function ensureSourceInstallPreconditions(cwd: string): void {
+  const { childProcess, env } = providers();
   if (!hasGitRepo(cwd)) {
     return;
   }
 
-  const status = spawnSync("git", ["status", "--porcelain"], {
+  const status = childProcess.spawnSync("git", ["status", "--porcelain"], {
     cwd,
     encoding: "utf8",
-    env: process.env,
+    env: env.snapshot(),
   });
   if (status.status !== 0) {
     throw new CliError("E_UPDATE_PRECONDITION", "Unable to verify git worktree status");
@@ -145,10 +146,10 @@ function ensureSourceInstallPreconditions(cwd: string): void {
     throw new CliError("E_UPDATE_PRECONDITION", "Refusing update on dirty worktree");
   }
 
-  const branch = spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+  const branch = childProcess.spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
     cwd,
     encoding: "utf8",
-    env: process.env,
+    env: env.snapshot(),
   });
   if (branch.status !== 0) {
     throw new CliError("E_UPDATE_PRECONDITION", "Unable to verify current git branch");
@@ -159,7 +160,7 @@ function ensureSourceInstallPreconditions(cwd: string): void {
 }
 
 function updateHistoryPath(): string {
-  return path.join(stateRootDir(), "updates", "history.json");
+  return providers().path.join(stateRootDir(), "updates", "history.json");
 }
 
 type UpdateHistoryEntry = {
@@ -174,7 +175,7 @@ type UpdateHistoryEntry = {
 
 function readHistory(): UpdateHistoryEntry[] {
   try {
-    const raw = fs.readFileSync(updateHistoryPath(), "utf8");
+    const raw = providers().fs.readFileSync(updateHistoryPath(), "utf8");
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as UpdateHistoryEntry[]) : [];
   } catch {
@@ -183,6 +184,7 @@ function readHistory(): UpdateHistoryEntry[] {
 }
 
 function appendHistory(entry: UpdateHistoryEntry): void {
+  const { fs, path } = providers();
   const history = readHistory();
   history.push(entry);
   const outPath = updateHistoryPath();
@@ -191,9 +193,10 @@ function appendHistory(entry: UpdateHistoryEntry): void {
 }
 
 function runNpmInstallGlobal(packageSpec: string): void {
-  const result = spawnSync("npm", ["install", "-g", packageSpec], {
+  const { childProcess, env } = providers();
+  const result = childProcess.spawnSync("npm", ["install", "-g", packageSpec], {
     stdio: "inherit",
-    env: process.env,
+    env: env.snapshot(),
   });
   if (result.status !== 0) {
     throw new CliError("E_UPDATE_APPLY_FAILED", `npm install failed for ${packageSpec}`);
@@ -201,9 +204,10 @@ function runNpmInstallGlobal(packageSpec: string): void {
 }
 
 function runDoctorSelfCheck(cliPath: string): boolean {
-  const result = spawnSync(process.execPath, [cliPath, "--json", "doctor"], {
+  const { childProcess, env, runtime } = providers();
+  const result = childProcess.spawnSync(runtime.execPath, [cliPath, "--json", "doctor"], {
     encoding: "utf8",
-    env: process.env,
+    env: env.snapshot(),
   });
   return result.status === 0;
 }
@@ -327,7 +331,7 @@ export async function updateRun(opts: {
     };
   }
 
-  ensureSourceInstallPreconditions(process.cwd());
+  ensureSourceInstallPreconditions(providers().runtime.cwd());
 
   if (opts.dryRun) {
     return {

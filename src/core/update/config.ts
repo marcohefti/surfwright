@@ -1,6 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
 import { stateRootDir } from "../state/index.js";
+import { providers } from "../providers/index.js";
 
 export type UpdateChannel = "stable" | "beta" | "dev";
 export type UpdatePolicy = "manual" | "pinned" | "safe-patch";
@@ -24,7 +23,7 @@ const DEFAULT_CONFIG: RuntimeConfig = {
 };
 
 export function runtimeConfigPath(): string {
-  return path.join(stateRootDir(), "config.json");
+  return providers().path.join(stateRootDir(), "config.json");
 }
 
 function normalizeConfig(raw: unknown): RuntimeConfig {
@@ -57,6 +56,7 @@ function normalizeConfig(raw: unknown): RuntimeConfig {
 
 export function readRuntimeConfig(): RuntimeConfig {
   try {
+    const { fs } = providers();
     const configPath = runtimeConfigPath();
     const raw = fs.readFileSync(configPath, "utf8");
     return normalizeConfig(JSON.parse(raw));
@@ -66,6 +66,7 @@ export function readRuntimeConfig(): RuntimeConfig {
 }
 
 export function writeRuntimeConfig(config: RuntimeConfig): void {
+  const { fs, path } = providers();
   const normalized = normalizeConfig(config);
   const configPath = runtimeConfigPath();
   fs.mkdirSync(path.dirname(configPath), { recursive: true });

@@ -1,12 +1,10 @@
-import fs from "node:fs";
-import path from "node:path";
-import zlib from "node:zlib";
 import { CliError } from "../../errors.js";
 import { recordNetworkArtifact } from "./target-network-artifacts.js";
 import { targetNetworkCaptureEnd } from "./target-network-capture.js";
 import { targetNetwork } from "./target-network.js";
 import { writeHarFile } from "./target-network-har.js";
 import { resolveNetworkReportSource } from "./target-network-source.js";
+import { providers } from "../../providers/index.js";
 import type {
   TargetNetworkExportReport,
   TargetNetworkReport,
@@ -19,7 +17,7 @@ function parseOutPath(input: string): string {
   if (!value) {
     throw new CliError("E_QUERY_INVALID", "out must not be empty");
   }
-  return path.resolve(value);
+  return providers().path.resolve(value);
 }
 
 function parseFormat(input: string | undefined): "har" {
@@ -258,6 +256,7 @@ export async function targetTraceExport(opts: {
   const captureCompletedAt = Date.now();
 
   const tracePayload = JSON.stringify(buildTracePayload(capture, traceId));
+  const { fs, path, zlib } = providers();
   const body = parsedFormat.gzip
     ? zlib.gzipSync(Buffer.from(tracePayload, "utf8"))
     : Buffer.from(`${tracePayload}\n`, "utf8");

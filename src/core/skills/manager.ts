@@ -1,9 +1,6 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import crypto from "node:crypto";
 import { CliError } from "../errors.js";
 import { satisfiesRange } from "../shared/index.js";
+import { providers } from "../providers/index.js";
 
 export type SkillManifest = {
   schemaVersion: number;
@@ -50,21 +47,24 @@ type ContractMeta = {
 };
 
 function defaultSkillDestination(): string {
-  const codexHome = typeof process.env.CODEX_HOME === "string" && process.env.CODEX_HOME.trim().length > 0
-    ? process.env.CODEX_HOME.trim()
-    : path.join(os.homedir(), ".codex");
+  const { env, os, path } = providers();
+  const fromEnv = env.get("CODEX_HOME");
+  const codexHome = typeof fromEnv === "string" && fromEnv.trim().length > 0 ? fromEnv.trim() : path.join(os.homedir(), ".codex");
   return path.join(codexHome, "skills", "surfwright");
 }
 
 function defaultSourcePath(): string {
-  return path.resolve(process.cwd(), "skills", "surfwright");
+  const { path, runtime } = providers();
+  return path.resolve(runtime.cwd(), "skills", "surfwright");
 }
 
 function defaultLockPath(): string {
-  return path.resolve(process.cwd(), "skills", "surfwright.lock.json");
+  const { path, runtime } = providers();
+  return path.resolve(runtime.cwd(), "skills", "surfwright.lock.json");
 }
 
 function readManifest(manifestPath: string): SkillManifest {
+  const { fs } = providers();
   let raw: unknown;
   try {
     raw = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -134,6 +134,7 @@ function checkCompatibility(manifest: SkillManifest, contract: ContractMeta): vo
 }
 
 function listFilesRecursive(rootDir: string): string[] {
+  const { fs, path } = providers();
   const out: string[] = [];
   const stack = [rootDir];
   while (stack.length > 0) {
@@ -163,6 +164,7 @@ function listFilesRecursive(rootDir: string): string[] {
 }
 
 function computeDigest(rootDir: string): string {
+  const { crypto, fs, path } = providers();
   const hash = crypto.createHash("sha256");
   const files = listFilesRecursive(rootDir);
   for (const file of files) {
@@ -175,6 +177,7 @@ function computeDigest(rootDir: string): string {
 }
 
 function writeLock(lockPath: string, manifest: SkillManifest, digest: string): void {
+  const { fs, path } = providers();
   const payload = {
     schemaVersion: 1,
     name: manifest.name,
@@ -189,6 +192,7 @@ function writeLock(lockPath: string, manifest: SkillManifest, digest: string): v
 }
 
 function readLock(lockPath: string): { skillVersion?: unknown; digest?: unknown } | null {
+  const { fs } = providers();
   try {
     const raw = fs.readFileSync(lockPath, "utf8");
     const parsed = JSON.parse(raw);
@@ -202,6 +206,7 @@ function readLock(lockPath: string): { skillVersion?: unknown; digest?: unknown 
 }
 
 function resolveSource(source?: string): string {
+  const { fs, path } = providers();
   const resolved = path.resolve(typeof source === "string" && source.length > 0 ? source : defaultSourcePath());
   if (!fs.existsSync(resolved)) {
     throw new CliError("E_SKILL_SOURCE_NOT_FOUND", `Skill source not found: ${resolved}`);
@@ -213,11 +218,12 @@ function atomicInstall(opts: {
   sourceDir: string;
   destination: string;
 }): string {
+  const { fs, path, runtime } = providers();
   const { sourceDir, destination } = opts;
   const parentDir = path.dirname(destination);
   fs.mkdirSync(parentDir, { recursive: true });
 
-  const staged = `${destination}.tmp.${process.pid}.${Date.now()}`;
+  const staged = `${destination}.tmp.${runtime.pid}.${Date.now()}`;
   const backup = `${destination}.prev.${Date.now()}`;
 
   fs.rmSync(staged, { recursive: true, force: true });
@@ -247,6 +253,7 @@ function atomicInstall(opts: {
 }
 
 function writeInstallMeta(destination: string, manifest: SkillManifest, sourceDir: string, digest: string): void {
+  const { fs, path } = providers();
   const payload = {
     installedAt: new Date().toISOString(),
     sourceDir,
@@ -264,6 +271,7 @@ export async function skillInstall(opts: {
   mode?: "install" | "update";
   contract: ContractMeta;
 }): Promise<SkillInstallReport> {
+  const { path } = providers();
   const sourceDir = resolveSource(opts.source);
   const manifest = readManifest(path.join(sourceDir, "skill.json"));
   checkCompatibility(manifest, opts.contract);
@@ -293,6 +301,7 @@ export async function skillDoctor(opts: {
   lockPath?: string;
   contract: ContractMeta;
 }): Promise<SkillDoctorReport> {
+  const { fs, path } = providers();
   const destination = path.resolve(opts.destination ?? defaultSkillDestination());
   const manifestPath = path.join(destination, "skill.json");
   const lockPath = typeof opts.lockPath === "string" && opts.lockPath.length > 0 ? path.resolve(opts.lockPath) : defaultLockPath();

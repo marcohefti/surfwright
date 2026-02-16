@@ -1,7 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-import process from "node:process";
-import { spawn } from "node:child_process";
 import { chromium } from "playwright-core";
 import { newActionId, sanitizeActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
@@ -20,6 +16,7 @@ import {
   parseNetworkInput,
 } from "./target-network-utils.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
+import { providers } from "../../providers/index.js";
 import type {
   TargetNetworkCaptureBeginReport,
   TargetNetworkCaptureEndReport,
@@ -30,7 +27,7 @@ const CAPTURE_MAX_RUNTIME_MIN_MS = 1000;
 const CAPTURE_MAX_RUNTIME_CAP_MS = 60 * 60 * 1000;
 
 function captureDirPath(): string {
-  return path.join(stateRootDir(), "captures");
+  return providers().path.join(stateRootDir(), "captures");
 }
 
 function parseCaptureId(input: string): string {
@@ -96,6 +93,7 @@ export async function targetNetworkCaptureBegin(opts: {
   includePostData?: boolean;
   includeWsMessages?: boolean;
 }): Promise<TargetNetworkCaptureBeginReport> {
+  const { childProcess, env, fs, path, runtime } = providers();
   const targetId = sanitizeTargetId(opts.targetId);
   const actionId =
     typeof opts.actionId === "string" && opts.actionId.trim().length > 0 ? sanitizeActionId(opts.actionId) : newActionId();
@@ -140,13 +138,13 @@ export async function targetNetworkCaptureBegin(opts: {
     }
   }
 
-  const cliScript = process.argv[1];
+  const cliScript = runtime.argv[1];
   if (!cliScript) {
     throw new CliError("E_INTERNAL", "Unable to resolve CLI script path for recorder worker");
   }
 
-  const child = spawn(
-    process.execPath,
+  const child = childProcess.spawn(
+    runtime.execPath,
     [
       cliScript,
       "__network-worker",
@@ -185,7 +183,7 @@ export async function targetNetworkCaptureBegin(opts: {
       detached: true,
       stdio: "ignore",
       env: {
-        ...process.env,
+        ...env.snapshot(),
         SURFWRIGHT_STATE_DIR: stateRootDir(),
       },
     },
@@ -216,6 +214,7 @@ async function waitForCaptureDone(donePath: string, timeoutMs: number): Promise<
   endedAt: string;
   message: string | null;
 }> {
+  const { fs } = providers();
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (fs.existsSync(donePath)) {
@@ -293,6 +292,7 @@ export async function targetNetworkCaptureEnd(opts: {
   status?: string;
   failedOnly?: boolean;
 }): Promise<TargetNetworkCaptureEndReport> {
+  const { fs, path } = providers();
   const captureId = parseCaptureId(opts.captureId);
   const capture = await readNetworkCapture(captureId);
   if (!capture) {
@@ -391,6 +391,7 @@ export async function runTargetNetworkWorker(opts: {
   includePostData: boolean;
   includeWsMessages: boolean;
 }): Promise<void> {
+  const { fs, path } = providers();
   try {
     const report = await targetNetwork({
       targetId: opts.targetId,

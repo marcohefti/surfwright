@@ -1,14 +1,13 @@
-import fs from "node:fs";
 import { chromium, type Locator } from "playwright-core";
 import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
 import { nowIso } from "../state/index.js";
 import { saveTargetSnapshot } from "../state/index.js";
 import { DEFAULT_TARGET_READ_CHUNK_SIZE } from "../types.js";
+import { providers } from "../providers/index.js";
 import { frameScopeHints, framesForScope, parseFrameScope } from "./target-find.js";
 import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetReadReport } from "../types.js";
-
 const READ_MAX_CHUNK_SIZE = 10000;
 const READ_MAX_CHUNK_INDEX = 100000;
 const FORM_FILL_MAX_FIELDS = 80;
@@ -115,7 +114,8 @@ function parseFormFields(opts: { fieldsJson?: string; fieldsFile?: string }): Re
     return parseFormJsonText(inline);
   }
 
-  let stat: fs.Stats;
+  const { fs } = providers();
+  let stat: { isFile(): boolean; size: number };
   try {
     stat = fs.statSync(file);
   } catch {

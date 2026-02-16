@@ -1,8 +1,8 @@
-import fs from "node:fs";
 import { CliError } from "../../errors.js";
 import { readState } from "../../state/index.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints } from "./target-network-analysis.js";
 import type { TargetNetworkReport, TargetNetworkRequestReport } from "../../types.js";
+import { providers } from "../../providers/index.js";
 
 const CAPTURE_ID_PATTERN = /^c-[0-9]+$/;
 const ARTIFACT_ID_PATTERN = /^na-[0-9]+$/;
@@ -25,7 +25,7 @@ function parseArtifactId(input: string): string {
 
 function readJsonFile(path: string): unknown {
   try {
-    return JSON.parse(fs.readFileSync(path, "utf8")) as unknown;
+    return JSON.parse(providers().fs.readFileSync(path, "utf8")) as unknown;
   } catch {
     throw new CliError("E_QUERY_INVALID", `Failed to read JSON source: ${path}`);
   }
@@ -268,7 +268,7 @@ export function resolveNetworkReportSource(opts: {
   }
 
   const captures = Object.values(state.networkCaptures)
-    .filter((capture) => fs.existsSync(capture.resultPath))
+    .filter((capture) => providers().fs.existsSync(capture.resultPath))
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   if (captures.length > 0) {
     const capture = captures[0];
@@ -283,7 +283,7 @@ export function resolveNetworkReportSource(opts: {
   }
 
   const artifacts = Object.values(state.networkArtifacts)
-    .filter((artifact) => fs.existsSync(artifact.path))
+    .filter((artifact) => providers().fs.existsSync(artifact.path))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   if (artifacts.length > 0) {
     const artifact = artifacts[0];

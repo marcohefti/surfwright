@@ -1,12 +1,10 @@
-import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 import { chromium } from "playwright-core";
 import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
 import { nowIso } from "../state/index.js";
 import { saveTargetSnapshot } from "../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { providers } from "../providers/index.js";
 
 type ActionTimingMs = {
   total: number;
@@ -108,7 +106,7 @@ function parseScreenshotOutPath(value: string | undefined): string {
   if (out.length === 0) {
     throw new CliError("E_QUERY_INVALID", "out path is required");
   }
-  return path.resolve(out);
+  return providers().path.resolve(out);
 }
 
 function parseClickCoordinate(value: number | undefined, name: string): number {
@@ -368,6 +366,7 @@ export async function targetScreenshot(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    const { fs, path } = providers();
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     const viewport = target.page.viewportSize() ?? { width: 1280, height: 720 };
     const pageHeight = await target.page.evaluate(() => {
@@ -393,7 +392,7 @@ export async function targetScreenshot(opts: {
       timeout: opts.timeoutMs,
     });
     const actionCompletedAt = Date.now();
-    const sha256 = crypto.createHash("sha256").update(screenshot).digest("hex");
+    const sha256 = providers().crypto.createHash("sha256").update(screenshot).digest("hex");
 
     const report: TargetScreenshotReport = {
       ok: true,

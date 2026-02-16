@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import process from "node:process";
 import {
   allocateFreePort,
   chromeCandidatesForPlatform,
@@ -33,8 +31,10 @@ import { buildSessionReport } from "../session-report.js";
 import type { DoctorReport, OpenReport, SessionListReport, SessionReport, SessionState } from "../types.js";
 import { parseManagedBrowserMode } from "./browser-mode.js";
 import { openUrl as openUrlInternal } from "./open.js";
+import { providers } from "../providers/index.js";
 
 export function getDoctorReport(): DoctorReport {
+  const { fs, runtime } = providers();
   const candidates = chromeCandidatesForPlatform();
   const found = candidates.some((candidatePath) => {
     try {
@@ -46,9 +46,9 @@ export function getDoctorReport(): DoctorReport {
   return {
     ok: found,
     node: {
-      version: process.version,
-      platform: process.platform,
-      arch: process.arch,
+      version: runtime.version,
+      platform: runtime.platform,
+      arch: runtime.arch,
     },
     chrome: {
       found,

@@ -3,7 +3,7 @@ import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
-import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
+import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { parseSettleMs, parseStepsCsv } from "./parse.js";
 import { targetScrollWatch } from "./target-scroll-watch.js";
 import { targetTransitionTrace } from "./target-transition-trace.js";

@@ -1,4 +1,4 @@
-export * from "./network-artifact-repo.js";
+export { appendNetworkArtifact, listNetworkArtifacts } from "./network-artifact-repo.js";
 export * from "./network-capture-repo.js";
 export * from "./mutations.js";
 export * from "./session-repo.js";

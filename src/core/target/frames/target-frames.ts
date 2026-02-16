@@ -2,7 +2,7 @@ import { chromium } from "playwright-core";
 import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
-import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
+import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { listFrameEntries } from "./frames.js";
 import type { TargetFramesReport } from "../../types.js";
 

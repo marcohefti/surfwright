@@ -1,7 +1,7 @@
 import type { Locator } from "playwright-core";
 import { CliError } from "../../errors.js";
-import { extractTargetQueryPreview } from "../target-query.js";
-import { ensureValidSelector } from "../targets.js";
+import { extractTargetQueryPreview } from "../infra/target-query.js";
+import { ensureValidSelector } from "../infra/targets.js";
 import type { TargetClickExplainReport } from "../../types.js";
 
 export const CLICK_EXPLAIN_MAX_REJECTED = 10;
@@ -321,4 +321,3 @@ export async function explainSelection(opts: {
     reason: "no_visible_match",
   };
 }
-

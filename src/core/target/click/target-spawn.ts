@@ -3,8 +3,8 @@ import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
-import { parseTargetQueryInput, resolveTargetQueryLocator } from "../target-query.js";
-import { readPageTargetId, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
+import { parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
+import { readPageTargetId, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 
 type TargetSpawnReport = {
   ok: true;

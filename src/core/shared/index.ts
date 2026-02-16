@@ -1,2 +1,2 @@
-export * from "./numeric.js";
-export * from "./semver.js";
+export * from "./domain/numeric.js";
+export * from "./domain/semver.js";

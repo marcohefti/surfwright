@@ -6,17 +6,17 @@ export function queryInvalid(message: string): CliError {
 
 export { parseFieldsCsv, projectReportFields } from "../report-fields.js";
 
-export { targetClick, targetFill, targetSpawn } from "./target-click.js";
-export { targetClose, targetEval } from "./target-eval.js";
-export { targetClickAt, targetEmulate, targetScreenshot } from "./target-emulation.js";
-export { targetExtract } from "./target-extract.js";
-export { targetDragDrop, targetFind, targetUpload } from "./target-find.js";
-export { targetConsoleGet, targetConsoleTail, targetHealth, targetHud } from "./target-observability.js";
-export { targetFormFill, targetRead } from "./target-read.js";
-export { targetDialog, targetKeypress, targetWait } from "./target-wait.js";
-export { targetList } from "./targets.js";
+export { targetClick, targetFill, targetSpawn } from "./infra/target-click.js";
+export { targetClose, targetEval } from "./infra/target-eval.js";
+export { targetClickAt, targetEmulate, targetScreenshot } from "./infra/target-emulation.js";
+export { targetExtract } from "./infra/target-extract.js";
+export { targetDragDrop, targetFind, targetUpload } from "./infra/target-find.js";
+export { targetConsoleGet, targetConsoleTail, targetHealth, targetHud } from "./infra/target-observability.js";
+export { targetFormFill, targetRead } from "./infra/target-read.js";
+export { targetDialog, targetKeypress, targetWait } from "./infra/target-wait.js";
+export { targetList } from "./infra/targets.js";
 export { targetSnapshot } from "./snapshot/target-snapshot.js";
-export { readPageTargetId, resolveSessionForAction } from "./targets.js";
+export { readPageTargetId, resolveSessionForAction } from "./infra/targets.js";
 export { targetFrames } from "./frames/target-frames.js";
 export { targetUrlAssert } from "./url/url-assert.js";
 
@@ -46,4 +46,4 @@ export {
   targetTraceExport,
   targetTraceInsight,
   writeHarFile,
-} from "./network/index.js";
+} from "./infra/network/index.js";

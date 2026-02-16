@@ -2,7 +2,7 @@ import { chromium } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
-import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
+import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { parseSettleMs, parseStepsCsv } from "./parse.js";
 import type { TargetScrollPlanReport } from "./types.js";
 

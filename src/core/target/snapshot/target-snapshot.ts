@@ -3,8 +3,8 @@ import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import type { TargetSnapshotReport } from "../../types.js";
-import { frameScopeHints, framesForScope, parseFrameScope } from "../target-find.js";
-import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
+import { frameScopeHints, framesForScope, parseFrameScope } from "../infra/target-find.js";
+import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { extractScopedSnapshotSample } from "./snapshot-sample.js";
 
 type SnapshotMode = "snapshot" | "orient";

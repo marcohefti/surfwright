@@ -14,3 +14,5 @@ export {
 } from "./infra/state-store.js";
 
 export { assertSessionDoesNotExist } from "./infra/state-store.js";
+
+export { pruneNetworkArtifacts } from "./infra/network-artifact-service.js";

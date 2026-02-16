@@ -1,7 +1,6 @@
 import { CliError } from "../../errors.js";
 import { allocateArtifactId, readState, updateState } from "../infra/state-store.js";
 import type { SurfwrightState, TargetNetworkArtifactPruneReport, TargetNetworkExportReport } from "../../types.js";
-import { providers } from "../../providers/index.js";
 
 type NetworkArtifactState = SurfwrightState["networkArtifacts"][string];
 
@@ -67,12 +66,13 @@ export function listNetworkArtifacts(opts: { limit?: number }): {
   };
 }
 
-export async function pruneNetworkArtifacts(opts: {
+export async function pruneNetworkArtifactsInState(opts: {
   maxAgeHours?: number;
   maxCount?: number;
   maxTotalBytes?: number;
-  deleteFiles?: boolean;
-}): Promise<TargetNetworkArtifactPruneReport> {
+  deleteFiles: boolean;
+  missingPaths: string[];
+}): Promise<{ report: TargetNetworkArtifactPruneReport; removedPaths: string[] }> {
   const maxAgeHours = parseOptionalRange({
     value: opts.maxAgeHours,
     name: "max-age-hours",
@@ -91,20 +91,20 @@ export async function pruneNetworkArtifacts(opts: {
     min: 1,
     max: 100_000_000_000,
   });
-  const deleteFiles = opts.deleteFiles !== false;
+  const deleteFiles = opts.deleteFiles;
 
   const result = await updateState((state) => {
-    const { fs } = providers();
     const entries = Object.values(state.networkArtifacts).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const cutoffMs = maxAgeHours === null ? null : Date.now() - maxAgeHours * 60 * 60 * 1000;
     const removeIds = new Set<string>();
+    const missingPaths = new Set(opts.missingPaths);
     let removedMissingFiles = 0;
     let removedByAge = 0;
     let removedByCount = 0;
     let removedBySize = 0;
 
     for (const artifact of entries) {
-      if (!fs.existsSync(artifact.path)) {
+      if (missingPaths.has(artifact.path)) {
         removeIds.add(artifact.artifactId);
         removedMissingFiles += 1;
       }
@@ -164,29 +164,21 @@ export async function pruneNetworkArtifacts(opts: {
     };
   });
 
-  if (deleteFiles) {
-    const { fs } = providers();
-    for (const artifactPath of result.removedPaths) {
-      try {
-        fs.rmSync(artifactPath, { force: true });
-      } catch {
-        // best effort; state pruning is authoritative
-      }
-    }
-  }
-
   return {
-    ok: true,
-    totalBefore: result.totalBefore,
-    totalAfter: result.totalAfter,
-    removed: result.totalBefore - result.totalAfter,
-    removedMissingFiles: result.removedMissingFiles,
-    removedByAge: result.removedByAge,
-    removedByCount: result.removedByCount,
-    removedBySize: result.removedBySize,
-    maxAgeHours,
-    maxCount,
-    maxTotalBytes,
-    deleteFiles,
+    report: {
+      ok: true,
+      totalBefore: result.totalBefore,
+      totalAfter: result.totalAfter,
+      removed: result.totalBefore - result.totalAfter,
+      removedMissingFiles: result.removedMissingFiles,
+      removedByAge: result.removedByAge,
+      removedByCount: result.removedByCount,
+      removedBySize: result.removedBySize,
+      maxAgeHours,
+      maxCount,
+      maxTotalBytes,
+      deleteFiles,
+    },
+    removedPaths: result.removedPaths,
   };
 }

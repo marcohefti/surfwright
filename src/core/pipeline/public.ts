@@ -1,4 +1,4 @@
-import { runPipeline as runPipelineInternal } from "./run.js";
+import { runPipeline as runPipelineInternal } from "./app/run.js";
 import { sessionEnsure } from "../session/public.js";
 
 export async function runPipeline(opts: {

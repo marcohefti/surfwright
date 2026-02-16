@@ -7,7 +7,7 @@ import {
   defaultSessionPolicyForKind,
   normalizeSessionPolicy,
   withSessionHeartbeat,
-} from "./session/hygiene.js";
+} from "./session/index.js";
 import { defaultSessionUserDataDir, nowIso } from "./state/index.js";
 import {
   DEFAULT_SESSION_ID,

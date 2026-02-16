@@ -87,7 +87,8 @@ function defaultProviders(): Providers {
     },
     env: {
       get: (name) => (typeof process.env[name] === "string" ? process.env[name] : undefined),
-      snapshot: () => process.env,
+      // Return a shallow clone so callers can't mutate the live process.env object.
+      snapshot: () => ({ ...process.env }),
     },
     runtime: {
       platform: process.platform,

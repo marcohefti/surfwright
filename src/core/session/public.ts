@@ -1,6 +1,5 @@
 import {
   allocateFreePort,
-  chromeCandidatesForPlatform,
   ensureDefaultManagedSession,
   ensureSessionReachable,
   isCdpEndpointReachable,
@@ -26,35 +25,15 @@ import {
   normalizeSessionLeaseTtlMs,
   normalizeSessionPolicy,
   withSessionHeartbeat,
-} from "./hygiene.js";
+} from "./app/hygiene.js";
 import { buildSessionReport } from "../session-report.js";
 import type { DoctorReport, OpenReport, SessionListReport, SessionReport, SessionState } from "../types.js";
-import { parseManagedBrowserMode } from "./browser-mode.js";
-import { openUrl as openUrlInternal } from "./open.js";
-import { providers } from "../providers/index.js";
+import { parseManagedBrowserMode } from "./app/browser-mode.js";
+import { openUrl as openUrlInternal } from "./infra/open.js";
+import { getDoctorReport as getDoctorReportInternal } from "./infra/doctor.js";
 
 export function getDoctorReport(): DoctorReport {
-  const { fs, runtime } = providers();
-  const candidates = chromeCandidatesForPlatform();
-  const found = candidates.some((candidatePath) => {
-    try {
-      return fs.existsSync(candidatePath);
-    } catch {
-      return false;
-    }
-  });
-  return {
-    ok: found,
-    node: {
-      version: runtime.version,
-      platform: runtime.platform,
-      arch: runtime.arch,
-    },
-    chrome: {
-      found,
-      candidates,
-    },
-  };
+  return getDoctorReportInternal();
 }
 
 export async function openUrl(opts: {

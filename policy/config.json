@@ -100,19 +100,19 @@
         "exclude": [],
         "allowlist": [
           "src/cli.ts",
-          "src/core/daemon/index.ts",
-          "src/core/daemon/worker.ts",
-          "src/core/extensions/index.ts",
-          "src/core/pipeline-support/plan.ts",
-          "src/core/skills/manager.ts",
+          "src/core/daemon/infra/daemon.ts",
+          "src/core/daemon/infra/worker.ts",
+          "src/core/extensions/infra/registry.ts",
+          "src/core/pipeline-support/infra/plan.ts",
+          "src/core/skills/infra/manager.ts",
           "src/core/state/infra/state-store.ts",
-          "src/core/target/target-eval.ts",
-          "src/core/target/target-read.ts",
-          "src/core/target/network/target-network-capture.ts",
-          "src/core/target/network/target-network-check.ts",
-          "src/core/target/network/target-network-source.ts",
-          "src/core/update/config.ts",
-          "src/core/update/manager.ts"
+          "src/core/target/infra/target-eval.ts",
+          "src/core/target/infra/target-read.ts",
+          "src/core/target/infra/network/target-network-capture.ts",
+          "src/core/target/infra/network/target-network-check.ts",
+          "src/core/target/infra/network/target-network-source.ts",
+          "src/core/update/infra/config.ts",
+          "src/core/update/infra/manager.ts"
         ]
       }
     },
@@ -142,6 +142,37 @@
           "src/core/session-report.ts",
           "src/core/types.ts"
         ]
+      }
+    },
+    {
+      "name": "core-domain-root-freeze",
+      "enabled": true,
+      "options": {
+        "boundedDomains": [
+          "session",
+          "state",
+          "shared",
+          "target",
+          "daemon",
+          "extensions",
+          "network",
+          "pipeline",
+          "pipeline-support",
+          "providers",
+          "skills",
+          "update"
+        ],
+        "excludeDomains": [],
+        "allowedRootFiles": ["index.ts", "public.ts"]
+      }
+    },
+    {
+      "name": "core-providers-imports",
+      "enabled": true,
+      "options": {
+        "include": ["src/core/**/*.ts"],
+        "exclude": [],
+        "allowPatterns": ["src/core/**/infra/**/*.ts", "src/core/providers/**/*.ts"]
       }
     },
     {

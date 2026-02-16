@@ -15,6 +15,8 @@ import { rule as domainNoCrossDomainRule } from "./domain-no-cross-domain.mjs";
 import { rule as boundaryJsonParseRule } from "./boundary-json-parse.mjs";
 import { rule as coreLayerPurityRule } from "./core-layer-purity.mjs";
 import { rule as coreRootFreezeRule } from "./core-root-freeze.mjs";
+import { rule as coreDomainRootFreezeRule } from "./architecture/core-domain-root-freeze.mjs";
+import { rule as coreProvidersImportsRule } from "./architecture/core-providers-imports.mjs";
 
 export const ruleRegistry = new Map([
   [featureBoundariesRule.name, featureBoundariesRule],
@@ -29,6 +31,8 @@ export const ruleRegistry = new Map([
   [boundaryJsonParseRule.name, boundaryJsonParseRule],
   [coreLayerPurityRule.name, coreLayerPurityRule],
   [coreRootFreezeRule.name, coreRootFreezeRule],
+  [coreDomainRootFreezeRule.name, coreDomainRootFreezeRule],
+  [coreProvidersImportsRule.name, coreProvidersImportsRule],
   [maxFilesPerDirectoryRule.name, maxFilesPerDirectoryRule],
   [maxLocRule.name, maxLocRule],
   [coreLayerStructureBudgetRule.name, coreLayerStructureBudgetRule],

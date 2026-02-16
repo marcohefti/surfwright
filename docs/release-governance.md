@@ -32,6 +32,16 @@ Current required release-critical checks:
 
 When adding new release-critical jobs, update this list and repository rulesets in the same change set.
 
+## Branch Protection (Non-Optional)
+
+Release governance assumes `main` cannot advance without the required checks passing.
+
+Repository rulesets must enforce:
+
+- required status checks on `main` (the list above)
+- no direct pushes to `main` (PR-only)
+- no bypassing required checks (including admins)
+
 ## Pre-Tag Dry-Run Policy
 
 Before cutting a new `v*` tag, run `publish-dry-run.yml` with the target version.

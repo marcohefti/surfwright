@@ -1,4 +1,4 @@
-import { targetNetwork } from "../../../core/usecases.js";
+import { targetNetwork } from "../../../core/network/public.js";
 import {
   DEFAULT_TARGET_NETWORK_CAPTURE_MS,
   DEFAULT_TARGET_NETWORK_MAX_REQUESTS,

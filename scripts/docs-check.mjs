@@ -4,7 +4,13 @@ import path from "node:path";
 
 const root = process.cwd();
 const requiredDocs = [
+  "AGENTS.md",
+  "README.md",
   "CHANGELOG.md",
+  "docs/agent-guidance-architecture.md",
+  "docs/agent-dev-flow.md",
+  "docs/policy-harness.md",
+  "docs/maintaining-agent-surface.md",
   "docs/release-notes-process.md",
   "docs/release-governance.md",
   "docs/contributor-release-routing.md",
@@ -69,11 +75,19 @@ if (exists("CHANGELOG.md")) {
 
 if (exists("AGENTS.md")) {
   const agents = readText("AGENTS.md");
-  if (!agents.includes("docs/release-governance.md")) {
-    failures.push("AGENTS.md must reference docs/release-governance.md");
-  }
-  if (!agents.includes("docs/contributor-release-routing.md")) {
-    failures.push("AGENTS.md must reference docs/contributor-release-routing.md");
+  const requiredRefs = [
+    "README.md",
+    "docs/agent-guidance-architecture.md",
+    "docs/agent-dev-flow.md",
+    "docs/policy-harness.md",
+    "docs/maintaining-agent-surface.md",
+    "docs/release-governance.md",
+    "docs/contributor-release-routing.md",
+  ];
+  for (const ref of requiredRefs) {
+    if (!agents.includes(ref)) {
+      failures.push(`AGENTS.md must reference ${ref}`);
+    }
   }
 }
 

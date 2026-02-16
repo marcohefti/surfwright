@@ -1,6 +1,6 @@
 import { chromium, type Request } from "playwright-core";
 import { CliError } from "../errors.js";
-import { readRecentTargetAction } from "../state-repos/target-repo.js";
+import { readRecentTargetAction } from "../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { SessionSource, TargetConsoleTailReport, TargetHealthReport, TargetHudReport } from "../types.js";
 

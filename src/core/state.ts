@@ -6,7 +6,7 @@ import { CliError } from "./errors.js";
 import { asPositiveInteger } from "./shared/numeric.js";
 import { currentAgentId, withSessionHeartbeat } from "./session/hygiene.js";
 import { normalizeSessionState } from "./session/state-normalizer.js";
-import { migrateStatePayload } from "./state/migrations.js";
+import { migrateStatePayload } from "./state/domain/migrations.js";
 import { STATE_VERSION, type SessionState, type SurfwrightState, type TargetState } from "./types.js";
 const SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 const STATE_LOCK_FILENAME = "state.lock";

@@ -24,6 +24,11 @@ pnpm skill:validate
 pnpm contract:snapshot:check
 ```
 
+Notes:
+
+- `pnpm validate` is the main gate. It runs policy, docs, perf budgets, contract snapshot checks, and knowledge-store drift checks.
+- If `surfwright --json contract` changes intentionally, update the snapshot (`pnpm contract:snapshot:update`) and keep skill pins aligned (`skills/surfwright/skill.json` and `skills/surfwright.lock.json`).
+
 ## 3) Install/update local skill
 
 ```bash

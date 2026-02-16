@@ -12,7 +12,7 @@ import {
   finalizeNetworkCapture,
   readNetworkCapture,
   setNetworkCaptureWorkerPid,
-} from "../../state-repos/network-capture-repo.js";
+} from "../../state/index.js";
 import { targetNetwork } from "./target-network.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {

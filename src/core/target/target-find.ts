@@ -4,7 +4,7 @@ import { chromium, type Frame, type Locator, type Page } from "playwright-core";
 import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
 import { nowIso } from "../state.js";
-import { saveTargetSnapshot } from "../state-repos/target-repo.js";
+import { saveTargetSnapshot } from "../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "./target-query.js";
 import { DEFAULT_TARGET_FIND_LIMIT } from "../types.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";

@@ -1,4 +1,4 @@
-import { parseFieldsCsv, projectReportFields, targetWait } from "../../../core/usecases.js";
+import { parseFieldsCsv, projectReportFields, targetWait } from "../../../core/target/public.js";
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";

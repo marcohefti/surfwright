@@ -1,4 +1,4 @@
-import { DEFAULT_EPHEMERAL_SESSION_LEASE_TTL_MS, DEFAULT_SESSION_LEASE_TTL_MS, STATE_VERSION } from "../types.js";
+import { DEFAULT_EPHEMERAL_SESSION_LEASE_TTL_MS, DEFAULT_SESSION_LEASE_TTL_MS, STATE_VERSION } from "../../types.js";
 
 type StateEnvelope = Record<string, unknown>;
 type Migration = (state: StateEnvelope) => StateEnvelope;

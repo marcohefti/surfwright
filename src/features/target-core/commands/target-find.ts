@@ -1,4 +1,4 @@
-import { parseFieldsCsv, projectReportFields, targetFind } from "../../../core/usecases.js";
+import { parseFieldsCsv, projectReportFields, targetFind } from "../../../core/target/public.js";
 import { DEFAULT_TARGET_FIND_LIMIT, DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";

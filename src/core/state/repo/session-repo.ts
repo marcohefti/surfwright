@@ -1,5 +1,5 @@
-import { readState } from "../state.js";
-import type { SessionState } from "../types.js";
+import { readState } from "../../state.js";
+import type { SessionState } from "../../types.js";
 
 export function listSessionsSnapshot(): {
   activeSessionId: string | null;

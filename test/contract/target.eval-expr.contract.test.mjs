@@ -29,6 +29,9 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
+  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
+    return false;
+  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -129,4 +132,3 @@ test("target eval supports --expr to return expression values without explicit r
   assert.equal(exprPayload.result.value, "Eval Expr");
   assert.equal(exprPayload.context.evaluatedFrameId, "f-0");
 });
-

@@ -12,4 +12,5 @@ export {
   targetNetworkTail,
   targetTraceExport,
   targetTraceInsight,
-} from "../../../core/target/network/index.js";
+  writeHarFile,
+} from "../../../core/network/public.js";

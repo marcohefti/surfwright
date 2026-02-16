@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { getCliContractReport } from "../../../core/cli-contract.js";
-import { skillDoctor, skillInstall, skillUpdate } from "../../../core/skills/manager.js";
+import { skillDoctor, skillInstall, skillUpdate } from "../../../core/skills/public.js";
 import { runtimeCommandMeta } from "../manifest.js";
 
 type RuntimeOutputOpts = {

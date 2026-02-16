@@ -3,7 +3,7 @@ import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
 import { resolveOpenSessionHint } from "../session-isolation.js";
 import { nowIso } from "../state.js";
-import { saveTargetSnapshot } from "../state-repos/target-repo.js";
+import { saveTargetSnapshot } from "../state/index.js";
 import { readPageTargetId, resolveSessionForAction } from "../target/targets.js";
 import type { OpenReport, SessionReport } from "../types.js";
 import { parseManagedBrowserMode } from "./browser-mode.js";

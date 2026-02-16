@@ -37,6 +37,12 @@ jobs:
           mkdir -p artifacts/validate
           pnpm -s validate | tee artifacts/validate/validate.log
 
+      - name: Capture contract JSON
+        run: node dist/cli.js --json contract > artifacts/validate/contract.json
+
+      - name: Capture policy-check JSON
+        run: pnpm -s policy:check --json > artifacts/validate/policy-check.json
+
       - name: Upload validate artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -44,6 +50,8 @@ jobs:
           name: ci-validate-artifacts
           path: |
             artifacts/validate/validate.log
+            artifacts/validate/contract.json
+            artifacts/validate/policy-check.json
             dist
             test/fixtures/contract/contract.snapshot.json
 

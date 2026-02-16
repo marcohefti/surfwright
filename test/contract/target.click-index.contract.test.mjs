@@ -29,6 +29,9 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
+  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
+    return false;
+  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -168,4 +171,3 @@ test("target click supports --index for deterministic multi-match selection", { 
   assert.equal(outPayload.ok, false);
   assert.equal(outPayload.code, "E_QUERY_INVALID");
 });
-

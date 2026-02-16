@@ -2,8 +2,8 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { allocateFreePort, ensureSessionReachable, startManagedSession } from "../browser.js";
 import { CliError } from "../errors.js";
 import { withSessionHeartbeat } from "../session/index.js";
-import { allocateSessionId, defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId, updateState } from "../state.js";
-import { saveTargetSnapshot } from "../state-repos/target-repo.js";
+import { defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId } from "../state.js";
+import { allocateSessionIdForState, mutateState, saveTargetSnapshot } from "../state/index.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
   type ManagedBrowserMode,
@@ -64,8 +64,8 @@ export async function ensureValidSelector(page: Page, selectorQuery: string): Pr
 }
 
 async function createImplicitManagedSession(timeoutMs: number, browserMode: ManagedBrowserMode | undefined): Promise<SessionState> {
-  return await updateState(async (state) => {
-    const sessionId = allocateSessionId(state, "s");
+  return await mutateState(async (state) => {
+    const sessionId = allocateSessionIdForState(state, "s");
     const debugPort = await allocateFreePort();
     const created = await startManagedSession(
       {
@@ -127,7 +127,7 @@ export async function resolveSessionForAction(opts: {
       opts.timeoutMs,
       opts.browserMode ? { browserMode: opts.browserMode } : undefined,
     );
-    await updateState(async (state) => {
+    await mutateState(async (state) => {
       if (!state.sessions[sessionId]) {
         throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
       }

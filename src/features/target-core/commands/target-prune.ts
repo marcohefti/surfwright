@@ -1,4 +1,4 @@
-import { targetPrune } from "../../../core/usecases.js";
+import { targetPrune } from "../../../core/target/public.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";
 

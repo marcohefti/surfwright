@@ -1,11 +1,11 @@
 import process from "node:process";
 import { chromium } from "playwright-core";
-import { CDP_HEALTHCHECK_TIMEOUT_MS, isCdpEndpointAlive } from "../browser.js";
-import { CliError } from "../errors.js";
-import { hasSessionLeaseExpired, withSessionHeartbeat } from "../session/index.js";
-import { nowIso, updateState } from "../state.js";
-import type { SessionState } from "../types.js";
-import type { SessionPruneReport, StateReconcileReport, TargetPruneReport } from "../types.js";
+import { CDP_HEALTHCHECK_TIMEOUT_MS, isCdpEndpointAlive } from "../../browser.js";
+import { CliError } from "../../errors.js";
+import { hasSessionLeaseExpired, withSessionHeartbeat } from "../../session/index.js";
+import { nowIso } from "../../state.js";
+import { mutateState } from "../repo/mutations.js";
+import type { SessionPruneReport, SessionState, StateReconcileReport, TargetPruneReport } from "../../types.js";
 
 const DEFAULT_TARGET_MAX_AGE_HOURS = 168;
 const DEFAULT_TARGET_MAX_PER_SESSION = 200;
@@ -166,7 +166,7 @@ async function sessionPruneInternal(opts: {
     CDP_HEALTHCHECK_TIMEOUT_MS,
     Math.min(opts.timeoutMs, SESSION_PRUNE_REACHABILITY_TIMEOUT_CAP_MS),
   );
-  return await updateState(async (state) => {
+  return await mutateState(async (state) => {
     const sessionIds = Object.keys(state.sessions).sort((a, b) => a.localeCompare(b));
 
     let removedByLeaseExpired = 0;
@@ -289,7 +289,7 @@ function parseTargetPruneConfig(opts: {
 async function targetPruneInternal(opts: { maxAgeHours: number; maxPerSession: number }): Promise<TargetPruneReport> {
   const cutoffMs = Date.now() - opts.maxAgeHours * 60 * 60 * 1000;
 
-  return await updateState(async (state) => {
+  return await mutateState(async (state) => {
     const entries = Object.entries(state.targets);
     const scanned = entries.length;
 
@@ -387,7 +387,7 @@ export async function sessionClear(opts: {
   );
   const keepProcesses = Boolean(opts.keepProcesses);
 
-  return await updateState(async (state) => {
+  return await mutateState(async (state) => {
     const sessions = Object.values(state.sessions).sort((a, b) => a.sessionId.localeCompare(b.sessionId));
     const scanned = sessions.length;
     let clearedManaged = 0;

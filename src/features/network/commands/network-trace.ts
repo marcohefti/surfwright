@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { targetNetworkCaptureBegin, targetTraceExport, targetTraceInsight } from "../../../core/usecases.js";
+import { targetNetworkCaptureBegin, targetTraceExport, targetTraceInsight } from "../../../core/network/public.js";
 import {
   DEFAULT_TARGET_NETWORK_CAPTURE_MS,
   DEFAULT_TARGET_NETWORK_MAX_RUNTIME_MS,

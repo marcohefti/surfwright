@@ -20,13 +20,27 @@
         "exclude": [],
         "allowCoreImports": [
           "src/core/cli-contract",
+          "src/core/daemon/public",
+          "src/core/extensions/public",
+          "src/core/network/public",
           "src/core/network-types",
-          "src/core/skills/manager",
-          "src/core/target/network/index",
+          "src/core/pipeline/public",
+          "src/core/skills/public",
+          "src/core/session/public",
+          "src/core/state/public",
+          "src/core/target/public",
           "src/core/types",
-          "src/core/update/manager",
-          "src/core/usecases"
+          "src/core/update/public",
+          "src/core/*/public"
         ]
+      }
+    },
+    {
+      "name": "surface-command-purity",
+      "enabled": true,
+      "options": {
+        "include": ["src/features/**/*.ts"],
+        "exclude": []
       }
     },
     {
@@ -35,8 +49,83 @@
       "options": {
         "include": ["src/core/**/*.ts"],
         "exclude": [],
-        "boundedDomains": ["session", "state", "shared", "target", "daemon"],
-        "allowCrossDomainInternal": ["src/core/session/index", "src/core/shared/index"]
+        "boundedDomains": [
+          "session",
+          "state",
+          "shared",
+          "target",
+          "daemon",
+          "extensions",
+          "network",
+          "pipeline",
+          "pipeline-support",
+          "providers",
+          "skills",
+          "update"
+        ],
+        "allowCrossDomainInternal": ["src/core/*/public", "src/core/*/index"]
+      }
+    },
+    {
+      "name": "domain-no-cross-domain",
+      "enabled": true,
+      "options": {
+        "include": ["src/core/**/domain/**/*.ts"],
+        "exclude": [],
+        "allowImportPrefixes": ["src/core/types", "src/core/shared", "src/core/contracts"]
+      }
+    },
+    {
+      "name": "boundary-json-parse",
+      "enabled": true,
+      "options": {
+        "include": ["src/**/*.ts"],
+        "exclude": [],
+        "allowlist": [
+          "src/cli.ts",
+          "src/core/daemon/index.ts",
+          "src/core/daemon/worker.ts",
+          "src/core/extensions/index.ts",
+          "src/core/pipeline-support/plan.ts",
+          "src/core/skills/manager.ts",
+          "src/core/state.ts",
+          "src/core/target/target-eval.ts",
+          "src/core/target/target-read.ts",
+          "src/core/target/network/target-network-capture.ts",
+          "src/core/target/network/target-network-check.ts",
+          "src/core/target/network/target-network-source.ts",
+          "src/core/update/config.ts",
+          "src/core/update/manager.ts"
+        ]
+      }
+    },
+    {
+      "name": "core-layer-purity",
+      "enabled": true,
+      "options": {
+        "include": ["src/core/**/domain/**/*.ts", "src/core/**/app/**/*.ts"],
+        "exclude": []
+      }
+    },
+    {
+      "name": "core-root-freeze",
+      "enabled": true,
+      "options": {
+        "include": ["src/core/*.ts"],
+        "exclude": [],
+        "allowlist": [
+          "src/core/action-id.ts",
+          "src/core/browser.ts",
+          "src/core/cli-contract.ts",
+          "src/core/errors.ts",
+          "src/core/network-types.ts",
+          "src/core/pipeline.ts",
+          "src/core/report-fields.ts",
+          "src/core/session-isolation.ts",
+          "src/core/session-report.ts",
+          "src/core/state.ts",
+          "src/core/types.ts"
+        ]
       }
     },
     {
@@ -54,11 +143,7 @@
           "writeState"
         ],
         "allowMutationImportFromState": [
-          "src/core/state-repos/**/*.ts",
-          "src/core/state/**/*.ts",
-          "src/core/state.ts",
-          "src/core/target/targets.ts",
-          "src/core/usecases.ts"
+          "src/core/state/repo/**/*.ts"
         ]
       }
     },

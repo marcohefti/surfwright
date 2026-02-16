@@ -327,8 +327,8 @@ function parseJsonWithContext(raw: string, source: string): unknown {
   try {
     return JSON.parse(raw);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : "invalid JSON";
-    throw new CliError("E_QUERY_INVALID", `${source} is not valid JSON: ${reason}`);
+    // Keep parse failures stable across Node versions; do not leak engine-specific error strings.
+    throw new CliError("E_QUERY_INVALID", `${source} is not valid JSON`);
   }
 }
 

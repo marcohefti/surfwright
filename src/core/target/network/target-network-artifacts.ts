@@ -2,7 +2,7 @@ import {
   appendNetworkArtifact,
   listNetworkArtifacts,
   pruneNetworkArtifacts,
-} from "../../state-repos/network-artifact-repo.js";
+} from "../../state/index.js";
 import type {
   TargetNetworkArtifactListReport,
   TargetNetworkArtifactPruneReport,

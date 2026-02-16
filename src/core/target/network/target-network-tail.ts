@@ -1,7 +1,7 @@
 import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
 import { sanitizeActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { readRecentTargetAction } from "../../state-repos/target-repo.js";
+import { readRecentTargetAction } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { parseNetworkInput, wsFramePreview } from "./target-network-utils.js";
 import type { TargetNetworkTailReport } from "../../types.js";

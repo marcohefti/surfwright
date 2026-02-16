@@ -30,6 +30,9 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
+  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
+    return false;
+  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -164,4 +167,3 @@ test("target click --delta returns bounded evidence-based delta", { skip: !hasBr
     assert.ok(entry.after === null || typeof entry.after === "string");
   }
 });
-

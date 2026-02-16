@@ -1,4 +1,4 @@
-import { targetNetworkArtifactPrune } from "../../../core/usecases.js";
+import { targetNetworkArtifactPrune } from "../../../core/network/public.js";
 import { networkCommandMeta } from "../manifest.js";
 import type { NetworkCommandSpec } from "./types.js";
 

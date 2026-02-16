@@ -1,7 +1,7 @@
 import { chromium } from "playwright-core";
 import { CliError } from "../errors.js";
 import { nowIso } from "../state.js";
-import { saveTargetSnapshot } from "../state-repos/target-repo.js";
+import { saveTargetSnapshot } from "../state/index.js";
 import { fetchAssistedExtractItems, normalizeExtractWhitespace, type ExtractItemDraft } from "./target-extract-assist.js";
 import { frameScopeHints, framesForScope, parseFrameScope } from "./target-find.js";
 import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";

@@ -1,4 +1,4 @@
-import { targetNetworkCaptureBegin } from "../../../core/usecases.js";
+import { targetNetworkCaptureBegin } from "../../../core/network/public.js";
 import {
   DEFAULT_TARGET_NETWORK_MAX_REQUESTS,
   DEFAULT_TARGET_NETWORK_MAX_RUNTIME_MS,

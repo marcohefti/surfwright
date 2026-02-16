@@ -41,6 +41,9 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
+  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
+    return false;
+  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -170,4 +173,34 @@ test("run doctor accepts stdin plan source", () => {
   assert.equal(payload.ok, true);
   assert.equal(payload.mode, "doctor");
   assert.equal(payload.valid, true);
+});
+
+test("run doctor rejects invalid plan-json JSON with typed failure", () => {
+  const result = runCli(["--json", "run", "--doctor", "--plan-json", "{"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+  assert.equal(payload.message, "plan-json is not valid JSON");
+});
+
+test("run doctor rejects invalid plan file JSON with typed failure", () => {
+  const planPath = path.join(TEST_STATE_DIR, "invalid-plan.json");
+  fs.writeFileSync(planPath, "{", "utf8");
+  const result = runCli(["--json", "run", "--doctor", "--plan", planPath]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+  assert.equal(payload.message, `plan file ${planPath} is not valid JSON`);
+});
+
+test("run rejects invalid step shapes before session resolution", () => {
+  const invalidShape = { steps: [null] };
+  const result = runCli(["--json", "run", "--plan-json", JSON.stringify(invalidShape)]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+  assert.equal(payload.message, "plan lint failed: steps[0] step must be an object");
 });

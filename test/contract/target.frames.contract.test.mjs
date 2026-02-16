@@ -29,6 +29,9 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
+  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
+    return false;
+  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -187,4 +190,3 @@ test("target eval can target a specific frame via --frame-id", { skip: !hasBrows
   assert.equal(frameReadPayload.result.type, "string");
   assert.equal(frameReadPayload.result.value, "ok");
 });
-

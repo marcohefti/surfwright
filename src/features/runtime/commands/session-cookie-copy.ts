@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { sessionCookieCopy } from "../../../core/usecases.js";
+import { sessionCookieCopy } from "../../../core/session/public.js";
 import { DEFAULT_SESSION_TIMEOUT_MS, type CliCommandContract, type SessionCookieCopyReport } from "../../../core/types.js";
 
 type OutputOpts = {

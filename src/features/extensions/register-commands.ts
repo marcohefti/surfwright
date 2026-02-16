@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { extensionList, extensionLoad, extensionReload, extensionUninstall } from "../../core/usecases.js";
+import { extensionList, extensionLoad, extensionReload, extensionUninstall } from "../../core/extensions/public.js";
 import { extensionCommandMeta } from "./manifest.js";
 
 type RegisterExtensionCommandsOptions = {

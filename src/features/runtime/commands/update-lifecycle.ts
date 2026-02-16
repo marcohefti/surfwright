@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { updateCheck, updateRollback, updateRun } from "../../../core/update/manager.js";
+import { updateCheck, updateRollback, updateRun } from "../../../core/update/public.js";
 import { runtimeCommandMeta } from "../manifest.js";
 
 type RuntimeOutputOpts = {

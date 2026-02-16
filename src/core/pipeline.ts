@@ -11,11 +11,25 @@ import {
   parseStepTimeoutMs,
   resolvePlanSource,
   resolveTemplateInValue,
+  type LoadedPlan,
+  type PipelineLintIssue,
   type PipelineOps,
   type PipelineStepInput,
 } from "./pipeline-support/plan.js";
 
 export type { PipelineOps, PipelineStepInput } from "./pipeline-support/plan.js";
+
+export function loadPipelinePlan(input: {
+  planPath?: string;
+  planJson?: string;
+  stdinPlan?: string;
+  replayPath?: string;
+}): { loaded: LoadedPlan; issues: PipelineLintIssue[]; lintErrors: PipelineLintIssue[] } {
+  const loaded = resolvePlanSource(input);
+  const issues = lintPlan(loaded.plan);
+  const lintErrors = issues.filter((entry) => entry.level === "error");
+  return { loaded, issues, lintErrors };
+}
 
 export async function executePipelinePlan(opts: {
   planPath?: string;
@@ -29,14 +43,18 @@ export async function executePipelinePlan(opts: {
   recordPath?: string;
   recordLabel?: string;
   ops: PipelineOps;
+  loaded?: LoadedPlan;
+  lintIssues?: PipelineLintIssue[];
 }): Promise<Record<string, unknown>> {
-  const loaded = resolvePlanSource({
-    planPath: opts.planPath,
-    planJson: opts.planJson,
-    stdinPlan: opts.stdinPlan,
-    replayPath: opts.replayPath,
-  });
-  const lintIssues = lintPlan(loaded.plan);
+  const loaded =
+    opts.loaded ??
+    resolvePlanSource({
+      planPath: opts.planPath,
+      planJson: opts.planJson,
+      stdinPlan: opts.stdinPlan,
+      replayPath: opts.replayPath,
+    });
+  const lintIssues = opts.lintIssues ?? lintPlan(loaded.plan);
   const lintErrors = lintIssues.filter((entry) => entry.level === "error");
   if (opts.doctor) {
     return {

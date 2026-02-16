@@ -12,11 +12,7 @@ const DEFAULT_OPTIONS = {
     "writeState",
   ],
   allowMutationImportFromState: [
-    "src/core/state-repos/**/*.ts",
-    "src/core/state/**/*.ts",
-    "src/core/state.ts",
-    "src/core/target/targets.ts",
-    "src/core/usecases.ts",
+    "src/core/state/repo/**/*.ts",
   ],
 };
 
@@ -133,7 +129,7 @@ export const rule = {
             importedMutations.length > 0
               ? `direct state mutation import(s) from state module are restricted: ${importedMutations.join(", ")}`
               : "default/namespace import from state module is restricted outside approved mutation boundaries",
-          suggestion: "Move state writes behind src/core/state-repos/* and import repo functions instead",
+          suggestion: "Move state writes behind src/core/state/repo/* and import repo functions instead",
         });
       }
     }

@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { sessionClearAll } from "../../../core/usecases.js";
+import { sessionClearAll } from "../../../core/session/public.js";
 import { DEFAULT_SESSION_TIMEOUT_MS, type CliCommandContract } from "../../../core/types.js";
 type SessionClearReport = Awaited<ReturnType<typeof sessionClearAll>>;
 

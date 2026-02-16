@@ -1,7 +1,7 @@
 import { chromium } from "playwright-core";
 import { CliError } from "../../errors.js";
 import { nowIso } from "../../state.js";
-import { saveTargetSnapshot } from "../../state-repos/target-repo.js";
+import { saveTargetSnapshot } from "../../state/index.js";
 import type { TargetSnapshotReport } from "../../types.js";
 import { frameScopeHints, framesForScope, parseFrameScope } from "../target-find.js";
 import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";

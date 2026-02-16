@@ -1,4 +1,4 @@
-import { targetNetworkTail } from "../../../core/usecases.js";
+import { targetNetworkTail } from "../../../core/network/public.js";
 import {
   DEFAULT_TARGET_NETWORK_CAPTURE_MS,
   DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES,

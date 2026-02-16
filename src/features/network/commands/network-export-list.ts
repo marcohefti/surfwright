@@ -1,4 +1,4 @@
-import { targetNetworkArtifactList } from "../../../core/usecases.js";
+import { targetNetworkArtifactList } from "../../../core/network/public.js";
 import { networkCommandMeta } from "../manifest.js";
 import type { NetworkCommandSpec } from "./types.js";
 

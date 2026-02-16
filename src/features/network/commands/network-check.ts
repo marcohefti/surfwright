@@ -1,4 +1,4 @@
-import { targetNetworkCheck } from "../../../core/usecases.js";
+import { targetNetworkCheck } from "../../../core/network/public.js";
 import { DEFAULT_TARGET_NETWORK_CAPTURE_MS, DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { networkCommandMeta } from "../manifest.js";
 import type { NetworkCommandSpec } from "./types.js";

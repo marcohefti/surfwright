@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import process from "node:process";
 import {
   allocateFreePort,
   chromeCandidatesForPlatform,
@@ -7,38 +8,28 @@ import {
   isCdpEndpointReachable,
   normalizeCdpOrigin,
   startManagedSession,
-} from "./browser.js";
-import { CliError } from "./errors.js";
+} from "../browser.js";
+import { CliError } from "../errors.js";
 import {
-  allocateSessionId,
   assertSessionDoesNotExist,
   defaultSessionUserDataDir,
   inferDebugPortFromCdpOrigin,
   nowIso,
   readState,
   sanitizeSessionId,
-  updateState,
-} from "./state.js";
+} from "../state.js";
 import {
   defaultSessionPolicyForKind,
-  normalizeSessionPolicy,
   normalizeSessionLeaseTtlMs,
+  normalizeSessionPolicy,
   withSessionHeartbeat,
-} from "./session/hygiene.js";
-import { buildSessionReport } from "./session-report.js";
-import { listSessionsSnapshot } from "./state-repos/session-repo.js";
-import { sessionClear, sessionPrune } from "./state/maintenance.js";
-import type { SessionClearReport } from "./state/maintenance.js";
-import type {
-  DoctorReport,
-  OpenReport,
-  SessionListReport,
-  SessionReport,
-  SessionState,
-} from "./types.js";
-import { parseManagedBrowserMode } from "./usecases/browser-mode.js";
-import { openUrl as openUrlInternal } from "./usecases/open.js";
-import { runPipeline as runPipelineInternal } from "./usecases/pipeline.js";
+} from "./hygiene.js";
+import { buildSessionReport } from "../session-report.js";
+import { allocateSessionIdForState, listSessionsSnapshot, mutateState, sessionClear, sessionPrune } from "../state/index.js";
+import type { DoctorReport, OpenReport, SessionListReport, SessionReport, SessionState } from "../types.js";
+import { parseManagedBrowserMode } from "../usecases/browser-mode.js";
+import { openUrl as openUrlInternal } from "../usecases/open.js";
+
 export function getDoctorReport(): DoctorReport {
   const candidates = chromeCandidatesForPlatform();
   const found = candidates.some((candidatePath) => {
@@ -61,11 +52,6 @@ export function getDoctorReport(): DoctorReport {
     },
   };
 }
-export { getCliContractReport } from "./cli-contract.js";
-
-export function queryInvalid(message: string): CliError {
-  return new CliError("E_QUERY_INVALID", message);
-}
 
 export async function openUrl(opts: {
   inputUrl: string;
@@ -84,6 +70,7 @@ export async function openUrl(opts: {
       }),
   });
 }
+
 export async function sessionEnsure(opts: { timeoutMs: number; browserModeInput?: string }): Promise<SessionReport> {
   const desiredBrowserMode = parseManagedBrowserMode(opts.browserModeInput);
   await sessionPrune({
@@ -101,7 +88,7 @@ export async function sessionEnsure(opts: { timeoutMs: number; browserModeInput?
         opts.timeoutMs,
         desiredBrowserMode ? { browserMode: desiredBrowserMode } : undefined,
       );
-      return await updateState(async (state) => {
+      return await mutateState(async (state) => {
         const current = state.sessions[activeId];
         if (!current) {
           throw new CliError("E_SESSION_NOT_FOUND", `Session ${activeId} not found`);
@@ -123,7 +110,7 @@ export async function sessionEnsure(opts: { timeoutMs: number; browserModeInput?
     }
   }
 
-  return await updateState(async (state) => {
+  return await mutateState(async (state) => {
     const ensuredDefault = await ensureDefaultManagedSession(
       state,
       opts.timeoutMs,
@@ -137,6 +124,7 @@ export async function sessionEnsure(opts: { timeoutMs: number; browserModeInput?
     });
   });
 }
+
 export async function sessionNew(opts: {
   timeoutMs: number;
   requestedSessionId?: string;
@@ -153,8 +141,10 @@ export async function sessionNew(opts: {
     throw new CliError("E_QUERY_INVALID", "lease-ttl-ms must be a positive integer within supported bounds");
   }
 
-  return await updateState(async (state) => {
-    const sessionId = opts.requestedSessionId ? sanitizeSessionId(opts.requestedSessionId) : allocateSessionId(state, "s");
+  return await mutateState(async (state) => {
+    const sessionId = opts.requestedSessionId
+      ? sanitizeSessionId(opts.requestedSessionId)
+      : allocateSessionIdForState(state, "s");
     assertSessionDoesNotExist(state, sessionId);
     const debugPort = await allocateFreePort();
     const browserMode = parseManagedBrowserMode(opts.browserModeInput) ?? "headless";
@@ -187,6 +177,7 @@ export async function sessionNew(opts: {
     });
   });
 }
+
 export async function sessionAttach(opts: {
   requestedSessionId?: string;
   cdpOriginInput: string;
@@ -209,8 +200,8 @@ export async function sessionAttach(opts: {
     throw new CliError("E_QUERY_INVALID", "lease-ttl-ms must be a positive integer within supported bounds");
   }
 
-  return await updateState(async (state) => {
-    const sessionId = requestedSessionId ?? allocateSessionId(state, "a");
+  return await mutateState(async (state) => {
+    const sessionId = requestedSessionId ?? allocateSessionIdForState(state, "a");
     assertSessionDoesNotExist(state, sessionId);
     const attachedAt = nowIso();
     const session: SessionState = {
@@ -240,6 +231,7 @@ export async function sessionAttach(opts: {
     });
   });
 }
+
 export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: string }): Promise<SessionReport> {
   const sessionId = sanitizeSessionId(opts.sessionIdInput);
   const snapshot = readState();
@@ -249,7 +241,7 @@ export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: stri
   }
   const ensured = await ensureSessionReachable(existing, opts.timeoutMs);
 
-  return await updateState(async (state) => {
+  return await mutateState(async (state) => {
     const current = state.sessions[sessionId];
     if (!current) {
       throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
@@ -263,6 +255,7 @@ export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: stri
     });
   });
 }
+
 export function sessionList(): SessionListReport {
   const state = listSessionsSnapshot();
   const sessions = state.sessions.map((session) => ({
@@ -279,57 +272,12 @@ export function sessionList(): SessionListReport {
   };
 }
 
-export async function sessionClearAll(opts: { timeoutMs: number; keepProcesses?: boolean }): Promise<SessionClearReport> {
+export async function sessionClearAll(opts: { timeoutMs: number; keepProcesses?: boolean }) {
   return await sessionClear({
     timeoutMs: opts.timeoutMs,
     keepProcesses: Boolean(opts.keepProcesses),
   });
 }
 
-export async function runPipeline(opts: {
-  planPath?: string;
-  planJson?: string;
-  stdinPlan?: string;
-  replayPath?: string;
-  timeoutMs: number;
-  sessionId?: string;
-  browserModeInput?: string;
-  isolation?: string;
-  doctor?: boolean;
-  record?: boolean;
-  recordPath?: string;
-  recordLabel?: string;
-}): Promise<Record<string, unknown>> {
-  return await runPipelineInternal({
-    ...opts,
-    ensureSharedSession: async ({ timeoutMs }) =>
-      await sessionEnsure({
-        timeoutMs,
-        browserModeInput: opts.browserModeInput,
-      }),
-  });
-}
-export { targetNetwork, targetNetworkArtifactList, targetNetworkArtifactPrune, targetNetworkCaptureBegin, targetNetworkCaptureEnd, targetNetworkCheck, targetNetworkExport, targetNetworkQuery, targetNetworkTail, targetTraceExport, targetTraceInsight } from "../features/network/usecases/index.js";
-export { parseFieldsCsv, projectReportFields } from "./report-fields.js";
-export { targetClick, targetFill, targetSpawn } from "./target/target-click.js";
-export { targetClose, targetEval } from "./target/target-eval.js";
-export { targetClickAt, targetEmulate, targetScreenshot } from "./target/target-emulation.js";
-export { targetExtract } from "./target/target-extract.js";
-export { targetDragDrop, targetFind, targetUpload } from "./target/target-find.js";
-export { targetConsoleGet, targetConsoleTail, targetHealth, targetHud } from "./target/target-observability.js";
-export { targetFormFill, targetRead } from "./target/target-read.js";
-export { targetDialog, targetKeypress, targetWait } from "./target/target-wait.js";
-export { targetList } from "./target/targets.js";
-export { targetSnapshot } from "./target/snapshot/target-snapshot.js";
-export { targetFrames } from "./target/frames/target-frames.js";
-export { targetUrlAssert } from "./target/url/url-assert.js";
-export { targetObserve } from "./target/effects/target-observe.js";
-export { targetHover, targetMotionDetect, targetStickyCheck } from "./target/effects/target-effect-assertions.js";
-export { targetScrollRevealScan, targetTransitionAssert } from "./target/effects/target-effect-assertions-advanced.js";
-export { targetScrollPlan } from "./target/effects/target-scroll-plan.js";
-export { targetScrollSample } from "./target/effects/target-scroll-sample.js";
-export { targetScrollWatch } from "./target/effects/target-scroll-watch.js";
-export { targetTransitionTrace } from "./target/effects/target-transition-trace.js";
-export { sessionPrune, stateReconcile, targetPrune } from "./state/maintenance.js";
-export { sessionCookieCopy } from "./target/effects/session-cookie-copy.js";
-export { extensionList, extensionLoad, extensionReload, extensionUninstall } from "./extensions/index.js";
+export { sessionPrune } from "../state/index.js";
+export { sessionCookieCopy } from "../target/public.js";

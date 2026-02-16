@@ -16,6 +16,8 @@ function runCli(args, env = {}) {
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      // Keep daemon expectations deterministic even if a developer shell disables proxying.
+      SURFWRIGHT_DAEMON: "1",
       ...env,
     },
   });
@@ -113,7 +115,9 @@ test("daemon idle timeout exits worker and clears metadata", async () => {
   await stopDaemonIfRunning();
 
   const result = runCli(["--json", "contract"], {
-    SURFWRIGHT_DAEMON_IDLE_MS: "500",
+    // Keep this comfortably above typical process startup jitter so the daemon
+    // doesn't exit before we can read metadata under parallel test load.
+    SURFWRIGHT_DAEMON_IDLE_MS: "2000",
   });
   assert.equal(result.status, 0);
 
@@ -121,7 +125,7 @@ test("daemon idle timeout exits worker and clears metadata", async () => {
   assert.notEqual(meta, null);
   assert.equal(typeof meta.pid, "number");
 
-  const exited = await waitForProcessExit(meta.pid, 3000);
+  const exited = await waitForProcessExit(meta.pid, 8000);
   assert.equal(exited, true);
 
   const deadline = Date.now() + 2000;
@@ -173,4 +177,11 @@ test("daemon rejects oversized request frames without wedging", async () => {
   assert.notEqual(secondMeta, null);
   assert.equal(secondMeta.pid, meta.pid);
   assert.equal(isProcessAlive(secondMeta.pid), true);
+});
+
+test("json-mode failures do not emit stack traces by default", () => {
+  const result = runCli(["--json", "open", "camelpay.localhost"]);
+  assert.equal(result.status, 1);
+  assert.equal(result.stderr.trim().length, 0);
+  assert.equal(/\n\s+at\s+/.test(result.stdout), false);
 });

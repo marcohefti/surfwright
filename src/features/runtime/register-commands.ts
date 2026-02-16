@@ -3,17 +3,16 @@ import { type Command } from "commander";
 import {
   getDoctorReport,
   openUrl,
-  parseFieldsCsv,
-  projectReportFields,
-  runPipeline,
   sessionAttach,
   sessionEnsure,
   sessionList,
   sessionNew,
   sessionPrune,
   sessionUse,
-  stateReconcile,
-} from "../../core/usecases.js";
+} from "../../core/session/public.js";
+import { runPipeline } from "../../core/pipeline/public.js";
+import { stateReconcile } from "../../core/state/public.js";
+import { parseFieldsCsv, projectReportFields } from "../../core/target/public.js";
 import {
   DEFAULT_OPEN_TIMEOUT_MS,
   DEFAULT_SESSION_TIMEOUT_MS,

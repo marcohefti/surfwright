@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { CliError } from "../errors.js";
-import { satisfiesRange } from "../shared/semver.js";
+import { satisfiesRange } from "../shared/index.js";
 
 export type SkillManifest = {
   schemaVersion: number;

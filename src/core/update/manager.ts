@@ -3,7 +3,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { CliError } from "../errors.js";
 import { readRuntimeConfig, type UpdateChannel, type UpdatePolicy } from "./config.js";
-import { compareSemver, isSamePatchLine } from "../shared/semver.js";
+import { compareSemver, isSamePatchLine } from "../shared/index.js";
 import { stateRootDir } from "../state.js";
 
 export const UPDATE_DIST_TAG_BY_CHANNEL: Record<UpdateChannel, string> = {

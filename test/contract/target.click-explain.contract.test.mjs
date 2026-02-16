@@ -29,6 +29,9 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
+  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
+    return false;
+  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -112,4 +115,3 @@ test("target click --explain returns bounded rejection reasons without clicking"
   assert.equal(payload.rejected[0].reason, "not_visible");
   assert.equal(typeof payload.rejectedTruncated, "boolean");
 });
-

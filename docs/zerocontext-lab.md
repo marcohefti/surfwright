@@ -172,7 +172,7 @@ For comparability across sessions, capture at minimum:
 
 - mission id
 - prompt file/version
-- model/runtime identity
+- model/runtime identity (SurfWright baseline: `gpt-5.3-codex-spark`, locked as of 2026-02-16 unless explicitly overridden)
 - git SHA (or commit ref)
 - timeout policy (`hard` or `soft`)
 - timeout threshold

@@ -10,6 +10,8 @@
   },
   "scripts": {
     "dev": "node --import tsx src/cli.ts",
+    "dev:local-install": "bash scripts/dev-local-install.sh",
+    "dev:install-git-hooks": "bash scripts/dev-install-git-hooks.sh",
     "build": "node scripts/build-cli.mjs",
     "contract:snapshot:check": "node scripts/contract-snapshot.mjs --check",
     "contract:snapshot:update": "pnpm -s build && node scripts/contract-snapshot.mjs --update",

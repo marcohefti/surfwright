@@ -57,6 +57,15 @@ pnpm test
 pnpm skill:validate
 ```
 
+## Dev Auto-Sync (Optional, Recommended)
+
+For active development, you can install local git hooks that keep your workstation's `surfwright`
+CLI + Codex skill synced on commit/push:
+
+```bash
+pnpm dev:install-git-hooks
+```
+
 ## Agent-First Execution Rule
 
 Treat all feature work, refactors, and optimizations as agent-operator surface design:

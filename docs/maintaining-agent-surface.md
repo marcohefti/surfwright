@@ -38,6 +38,27 @@ pnpm skill:install
 
 By default this installs `skills/surfwright` into `${CODEX_HOME:-~/.codex}/skills/surfwright`.
 
+## 3b) Dev workstation auto-sync (recommended)
+
+If you are actively developing SurfWright and want your machine to always use the newest local
+CLI + skill after `git commit` / `git push`, install the local git hooks:
+
+```bash
+pnpm dev:install-git-hooks
+```
+
+What it does (best-effort, never blocks git operations):
+
+- builds the local CLI (`pnpm build`)
+- shadows the published npm installation for your active Node version via `npm link --force`
+- installs the skill into `${CODEX_HOME:-~/.codex}/skills/surfwright`
+
+Undo:
+
+- remove the hooks in `.git/hooks/` (post-commit, pre-push, post-merge, post-checkout, post-rewrite)
+- run `npm unlink -g surfwright` to stop shadowing the published install for the current Node version
+- reinstall the published CLI if you want it back on `PATH` (example: `npm i -g @marcohefti/surfwright`)
+
 ## 4) Release confidence checks
 
 1. Contract shape check:

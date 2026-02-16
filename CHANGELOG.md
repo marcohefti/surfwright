@@ -23,7 +23,7 @@ All notable changes to SurfWright are documented here.
 ### Changed
 - [release] Publish and release-draft workflows now use shared smoke script `scripts/release/smoke-contract.mjs`.
 - [release] `release-check` now fails when `CHANGELOG.md` is missing the current package version section.
-- [docs] `docs-check` now enforces full `Unreleased` skeleton buckets with list items.
+- [docs] `changelog-check` now enforces only the `Unreleased` skeleton buckets (with list items).
 - [contract] `session list` now includes `browserMode` per session row.
 - [docs] Documented headed/headless defaults and a minimal human login handoff recipe (README + skill).
 - [target] `target snapshot` now accepts `0` for `--max-chars`, `--max-headings`, `--max-buttons`, and `--max-links` to omit categories.
@@ -41,7 +41,7 @@ All notable changes to SurfWright are documented here.
 
 ### Added
 - [docs] Added release governance and contributor release-routing documentation.
-- [ci] Added explicit docs-check, release-check, and dual-package-parity CI jobs.
+- [ci] Added explicit changelog-check, release-check, and dual-package-parity CI jobs.
 - [npm] Added dual-package workspace manifests for `@marcohefti/surfwright` and `surfwright`.
 - [distribution] Added Homebrew tap sync workflow and deferred winget scaffold/backlog tracking.
 
@@ -53,7 +53,7 @@ All notable changes to SurfWright are documented here.
 - [docs] README install matrix now includes active Homebrew tap install/upgrade commands.
 
 ### Fixed
-- [docs] Enforced changelog/docs presence through `scripts/docs-check.mjs` wired into `pnpm validate`.
+- [docs] Enforced changelog presence through `scripts/changelog-check.mjs` wired into `pnpm validate`.
 - [release] Publish workflow smoke command resolution failures no longer block successful release verification.
 
 ## [0.1.0] - 2026-02-13

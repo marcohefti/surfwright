@@ -26,7 +26,7 @@ Current required release-critical checks:
 
 - `validate`
 - `test`
-- `docs-check`
+- `changelog-check`
 - `release-check`
 - `dual-package-parity-check`
 

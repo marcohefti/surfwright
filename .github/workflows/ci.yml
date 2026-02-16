@@ -128,7 +128,7 @@ jobs:
           name: ci-validate-node-22-artifacts
           path: artifacts/validate-node-22/validate.log
 
-  docs-check:
+  changelog-check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -140,17 +140,17 @@ jobs:
         with:
           node-version: 24
 
-      - name: Docs check
+      - name: Changelog check
         run: |
-          mkdir -p artifacts/docs
-          node scripts/docs-check.mjs | tee artifacts/docs/docs-check.log
+          mkdir -p artifacts/changelog
+          node scripts/changelog-check.mjs | tee artifacts/changelog/changelog-check.log
 
-      - name: Upload docs-check artifacts
+      - name: Upload changelog-check artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: ci-docs-check-artifacts
-          path: artifacts/docs/docs-check.log
+          name: ci-changelog-check-artifacts
+          path: artifacts/changelog/changelog-check.log
 
   test:
     runs-on: ubuntu-latest

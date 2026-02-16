@@ -55,6 +55,48 @@ jobs:
             dist
             test/fixtures/contract/contract.snapshot.json
 
+  validate-strict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate strict
+        run: |
+          mkdir -p artifacts/validate-strict
+          pnpm -s validate:strict | tee artifacts/validate-strict/validate-strict.log
+
+      - name: Capture strict policy-check JSON
+        run: pnpm -s policy:check:strict --json > artifacts/validate-strict/policy-strict.json
+
+      - name: Capture contract JSON
+        run: node dist/cli.js --json contract > artifacts/validate-strict/contract.json
+
+      - name: Upload validate:strict artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ci-validate-strict-artifacts
+          path: |
+            artifacts/validate-strict/validate-strict.log
+            artifacts/validate-strict/policy-strict.json
+            artifacts/validate-strict/contract.json
+            dist
+            test/fixtures/contract/contract.snapshot.json
+
   validate-node-22:
     runs-on: ubuntu-latest
     timeout-minutes: 20

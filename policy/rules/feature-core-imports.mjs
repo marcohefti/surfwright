@@ -5,10 +5,17 @@ const DEFAULT_OPTIONS = {
   exclude: [],
   allowCoreImports: [
     "src/core/cli-contract",
+    "src/core/daemon/public",
+    "src/core/extensions/public",
+    "src/core/network/public",
     "src/core/network-types",
-    "src/core/target/network/index",
+    "src/core/pipeline/public",
+    "src/core/session/public",
+    "src/core/state/public",
+    "src/core/target/public",
     "src/core/types",
-    "src/core/usecases",
+    "src/core/update/public",
+    "src/core/*/public",
   ],
 };
 

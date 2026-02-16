@@ -19,6 +19,7 @@ function runCli(args) {
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      SURFWRIGHT_TEST_BROWSER: "1",
     },
   });
 }
@@ -29,6 +30,7 @@ function runCliAsync(args) {
       env: {
         ...process.env,
         SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+        SURFWRIGHT_TEST_BROWSER: "1",
       },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -57,9 +59,6 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
-  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
-    return false;
-  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -68,6 +67,10 @@ function hasBrowser() {
   hasBrowserCache =
     payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
+}
+
+function requireBrowser() {
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
 }
 
 async function withHttpServer(handler, fn) {
@@ -125,7 +128,8 @@ process.on("exit", () => {
   }
 });
 
-test("session cookie-copy transfers scoped cookies between explicit sessions", { skip: !hasBrowser() }, async () => {
+test("session cookie-copy transfers scoped cookies between explicit sessions", async () => {
+  requireBrowser();
   await withHttpServer((req, res) => {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end("<!doctype html><title>Cookie Copy Host</title><main>cookie copy</main>");

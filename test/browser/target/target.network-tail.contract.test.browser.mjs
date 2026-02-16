@@ -14,9 +14,6 @@ function parseJson(stdout) {
 let hasBrowserCache;
 
 function hasBrowser() {
-  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
-    return false;
-  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -31,7 +28,12 @@ function hasBrowser() {
   return hasBrowserCache;
 }
 
-test("target network-tail --failed-only emits only failed request events", { skip: !hasBrowser() }, () => {
+function requireBrowser() {
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+}
+
+test("target network-tail --failed-only emits only failed request events", () => {
+  requireBrowser();
   const dataHtml = [
     "<!doctype html>",
     "<meta charset=utf-8>",
@@ -48,6 +50,7 @@ test("target network-tail --failed-only emits only failed request events", { ski
       env: {
         ...process.env,
         SURFWRIGHT_STATE_DIR: tailStateDir,
+        SURFWRIGHT_TEST_BROWSER: "1",
       },
     });
 

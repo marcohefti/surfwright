@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { nowIso, stateRootDir } from "../state.js";
+import { nowIso, stateRootDir } from "../state/index.js";
 import type { LoadedPlan, PipelineStepInput } from "./plan.js";
 
 const RUN_ARTIFACT_LABEL_MAX = 64;

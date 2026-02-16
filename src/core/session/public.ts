@@ -12,12 +12,17 @@ import {
 import { CliError } from "../errors.js";
 import {
   assertSessionDoesNotExist,
+  allocateSessionIdForState,
   defaultSessionUserDataDir,
   inferDebugPortFromCdpOrigin,
+  listSessionsSnapshot,
+  mutateState,
   nowIso,
   readState,
   sanitizeSessionId,
-} from "../state.js";
+  sessionClear,
+  sessionPrune,
+} from "../state/index.js";
 import {
   defaultSessionPolicyForKind,
   normalizeSessionLeaseTtlMs,
@@ -25,10 +30,9 @@ import {
   withSessionHeartbeat,
 } from "./hygiene.js";
 import { buildSessionReport } from "../session-report.js";
-import { allocateSessionIdForState, listSessionsSnapshot, mutateState, sessionClear, sessionPrune } from "../state/index.js";
 import type { DoctorReport, OpenReport, SessionListReport, SessionReport, SessionState } from "../types.js";
-import { parseManagedBrowserMode } from "../usecases/browser-mode.js";
-import { openUrl as openUrlInternal } from "../usecases/open.js";
+import { parseManagedBrowserMode } from "./browser-mode.js";
+import { openUrl as openUrlInternal } from "./open.js";
 
 export function getDoctorReport(): DoctorReport {
   const candidates = chromeCandidatesForPlatform();

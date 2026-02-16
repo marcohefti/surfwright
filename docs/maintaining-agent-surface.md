@@ -27,6 +27,7 @@ pnpm contract:snapshot:check
 Notes:
 
 - `pnpm validate` is the main gate. It runs policy, docs, perf budgets, contract snapshot checks, and knowledge-store drift checks.
+- Browser-dependent contract tests live under `test/browser/` and are not part of `pnpm test`. Run `pnpm test:browser` locally when changing browser-executing commands.
 - If `surfwright --json contract` changes intentionally, update the snapshot (`pnpm contract:snapshot:update`) and keep skill pins aligned (`skills/surfwright/skill.json` and `skills/surfwright.lock.json`).
 
 ## 3) Install/update local skill

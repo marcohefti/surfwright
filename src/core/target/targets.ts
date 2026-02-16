@@ -2,7 +2,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { allocateFreePort, ensureSessionReachable, startManagedSession } from "../browser.js";
 import { CliError } from "../errors.js";
 import { withSessionHeartbeat } from "../session/index.js";
-import { defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId } from "../state.js";
+import { defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId } from "../state/index.js";
 import { allocateSessionIdForState, mutateState, saveTargetSnapshot } from "../state/index.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,

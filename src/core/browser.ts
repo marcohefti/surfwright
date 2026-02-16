@@ -8,7 +8,7 @@ import {
   normalizeSessionPolicy,
   withSessionHeartbeat,
 } from "./session/hygiene.js";
-import { defaultSessionUserDataDir, nowIso } from "./state.js";
+import { defaultSessionUserDataDir, nowIso } from "./state/index.js";
 import {
   DEFAULT_SESSION_ID,
   type ManagedBrowserMode,

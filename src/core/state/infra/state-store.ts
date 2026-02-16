@@ -2,17 +2,20 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { CliError } from "./errors.js";
-import { asPositiveInteger } from "./shared/numeric.js";
-import { currentAgentId, withSessionHeartbeat } from "./session/hygiene.js";
-import { normalizeSessionState } from "./session/state-normalizer.js";
-import { migrateStatePayload } from "./state/domain/migrations.js";
-import { STATE_VERSION, type SessionState, type SurfwrightState, type TargetState } from "./types.js";
+
+import { CliError } from "../../errors.js";
+import { asPositiveInteger } from "../../shared/index.js";
+import { currentAgentId, normalizeSessionState, withSessionHeartbeat } from "../../session/index.js";
+import { migrateStatePayload } from "../domain/migrations.js";
+import { STATE_VERSION, type SessionState, type SurfwrightState, type TargetState } from "../../types.js";
+
 const SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
+
 const STATE_LOCK_FILENAME = "state.lock";
 const STATE_LOCK_RETRY_MS = 40;
 const STATE_LOCK_TIMEOUT_MS = 12000;
 const STATE_LOCK_STALE_MS = 20000;
+
 export function stateRootDir(): string {
   const fromEnv = process.env.SURFWRIGHT_STATE_DIR;
   if (typeof fromEnv === "string" && fromEnv.trim().length > 0) {
@@ -24,15 +27,19 @@ export function stateRootDir(): string {
   }
   return path.join(os.homedir(), ".surfwright");
 }
+
 export function stateFilePath(): string {
   return path.join(stateRootDir(), "state.json");
 }
+
 function stateLockFilePath(): string {
   return path.join(stateRootDir(), STATE_LOCK_FILENAME);
 }
+
 export function defaultSessionUserDataDir(sessionId: string): string {
   return path.join(stateRootDir(), "profiles", sessionId);
 }
+
 function emptyState(): SurfwrightState {
   return {
     version: STATE_VERSION,
@@ -46,10 +53,10 @@ function emptyState(): SurfwrightState {
     networkArtifacts: {},
   };
 }
+
 export function nowIso(): string {
   return new Date().toISOString();
 }
-export { asPositiveInteger } from "./shared/numeric.js";
 
 export function inferDebugPortFromCdpOrigin(cdpOrigin: string): number | null {
   try {
@@ -63,6 +70,7 @@ export function inferDebugPortFromCdpOrigin(cdpOrigin: string): number | null {
     return null;
   }
 }
+
 function normalizeTarget(raw: unknown): TargetState | null {
   if (typeof raw !== "object" || raw === null) {
     return null;
@@ -100,6 +108,7 @@ function normalizeTarget(raw: unknown): TargetState | null {
     updatedAt: typeof value.updatedAt === "string" && value.updatedAt.length > 0 ? value.updatedAt : nowIso(),
   };
 }
+
 function normalizeNetworkCapture(captureId: string, raw: unknown): SurfwrightState["networkCaptures"][string] | null {
   if (typeof raw !== "object" || raw === null) {
     return null;
@@ -150,6 +159,7 @@ function normalizeNetworkCapture(captureId: string, raw: unknown): SurfwrightSta
     actionId: typeof value.actionId === "string" && value.actionId.length > 0 ? value.actionId : "a-unknown",
   };
 }
+
 function normalizeNetworkArtifact(artifactId: string, raw: unknown): SurfwrightState["networkArtifacts"][string] | null {
   if (typeof raw !== "object" || raw === null) {
     return null;
@@ -185,10 +195,12 @@ function normalizeNetworkArtifact(artifactId: string, raw: unknown): SurfwrightS
     bytes: asPositiveInteger(value.bytes) ?? 0,
   };
 }
+
 export function readState(): SurfwrightState {
   const statePath = stateFilePath();
   return readStateFromPath(statePath);
 }
+
 function readStateFromPath(statePath: string): SurfwrightState {
   try {
     const raw = fs.readFileSync(statePath, "utf8");
@@ -262,6 +274,7 @@ function readStateFromPath(statePath: string): SurfwrightState {
     return emptyState();
   }
 }
+
 function writeStateAtomic(state: SurfwrightState) {
   const rootDir = stateRootDir();
   fs.mkdirSync(rootDir, { recursive: true });
@@ -279,6 +292,7 @@ function writeStateAtomic(state: SurfwrightState) {
     }
   }
 }
+
 function readLockTimestampMs(lockPath: string): number | null {
   try {
     const raw = fs.readFileSync(lockPath, "utf8");
@@ -299,6 +313,7 @@ function readLockTimestampMs(lockPath: string): number | null {
     return null;
   }
 }
+
 function clearStaleLock(lockPath: string): boolean {
   const createdMs = readLockTimestampMs(lockPath);
   if (createdMs === null) {
@@ -314,6 +329,7 @@ function clearStaleLock(lockPath: string): boolean {
     return false;
   }
 }
+
 function tryCreateLock(lockPath: string): boolean {
   try {
     const fd = fs.openSync(lockPath, "wx");
@@ -331,6 +347,7 @@ function tryCreateLock(lockPath: string): boolean {
     throw new CliError("E_STATE_LOCK_IO", `Failed to create state lock: ${err.message ?? "unknown error"}`);
   }
 }
+
 function releaseLock(lockPath: string) {
   try {
     fs.unlinkSync(lockPath);
@@ -338,9 +355,11 @@ function releaseLock(lockPath: string) {
     // ignore missing lock on release
   }
 }
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
 async function withStateLock<T>(fn: () => Promise<T>): Promise<T> {
   const rootDir = stateRootDir();
   fs.mkdirSync(rootDir, { recursive: true });
@@ -361,6 +380,7 @@ async function withStateLock<T>(fn: () => Promise<T>): Promise<T> {
     await sleep(STATE_LOCK_RETRY_MS);
   }
 }
+
 export async function updateState<T>(mutate: (state: SurfwrightState) => Promise<T> | T): Promise<T> {
   return await withStateLock(async () => {
     const state = readStateFromPath(stateFilePath());
@@ -369,11 +389,13 @@ export async function updateState<T>(mutate: (state: SurfwrightState) => Promise
     return result;
   });
 }
+
 export async function writeState(state: SurfwrightState) {
   await withStateLock(async () => {
     writeStateAtomic(state);
   });
 }
+
 export function sanitizeSessionId(input: string): string {
   const value = input.trim();
   if (!SESSION_ID_PATTERN.test(value)) {
@@ -381,6 +403,7 @@ export function sanitizeSessionId(input: string): string {
   }
   return value;
 }
+
 export function allocateSessionId(state: SurfwrightState, prefix: "s" | "a"): string {
   const profileExistsForSession = (sessionId: string): boolean => {
     if (prefix !== "s") {
@@ -405,6 +428,7 @@ export function allocateSessionId(state: SurfwrightState, prefix: "s" | "a"): st
   state.nextSessionOrdinal = Math.floor(ordinal) + 1;
   return candidate;
 }
+
 export function allocateCaptureId(state: SurfwrightState): string {
   let ordinal = state.nextCaptureOrdinal;
   if (!Number.isFinite(ordinal) || ordinal <= 0) {
@@ -418,6 +442,7 @@ export function allocateCaptureId(state: SurfwrightState): string {
   state.nextCaptureOrdinal = Math.floor(ordinal) + 1;
   return candidate;
 }
+
 export function allocateArtifactId(state: SurfwrightState): string {
   let ordinal = state.nextArtifactOrdinal;
   if (!Number.isFinite(ordinal) || ordinal <= 0) {
@@ -431,11 +456,13 @@ export function allocateArtifactId(state: SurfwrightState): string {
   state.nextArtifactOrdinal = Math.floor(ordinal) + 1;
   return candidate;
 }
+
 export function assertSessionDoesNotExist(state: SurfwrightState, sessionId: string) {
   if (state.sessions[sessionId]) {
     throw new CliError("E_SESSION_EXISTS", `Session ${sessionId} already exists`);
   }
 }
+
 export async function upsertTargetState(target: TargetState) {
   await updateState((state) => {
     const existing = state.targets[target.targetId];
@@ -452,3 +479,4 @@ export async function upsertTargetState(target: TargetState) {
     }
   });
 }
+

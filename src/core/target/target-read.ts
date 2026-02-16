@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { chromium, type Locator } from "playwright-core";
 import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
-import { nowIso } from "../state.js";
+import { nowIso } from "../state/index.js";
 import { saveTargetSnapshot } from "../state/index.js";
 import { DEFAULT_TARGET_READ_CHUNK_SIZE } from "../types.js";
 import { frameScopeHints, framesForScope, parseFrameScope } from "./target-find.js";

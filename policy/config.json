@@ -44,6 +44,14 @@
       }
     },
     {
+      "name": "feature-layer-purity",
+      "enabled": true,
+      "options": {
+        "include": ["src/features/**/domain/**/*.ts", "src/features/**/usecases/**/*.ts"],
+        "exclude": []
+      }
+    },
+    {
       "name": "core-boundaries",
       "enabled": true,
       "options": {
@@ -64,6 +72,15 @@
           "update"
         ],
         "allowCrossDomainInternal": ["src/core/*/public", "src/core/*/index"]
+      }
+    },
+    {
+      "name": "core-root-state-imports",
+      "enabled": true,
+      "options": {
+        "include": ["src/**/*.ts"],
+        "exclude": [],
+        "allowImportFromCoreRootState": ["src/core/state/**/*.ts"]
       }
     },
     {
@@ -88,7 +105,7 @@
           "src/core/extensions/index.ts",
           "src/core/pipeline-support/plan.ts",
           "src/core/skills/manager.ts",
-          "src/core/state.ts",
+          "src/core/state/infra/state-store.ts",
           "src/core/target/target-eval.ts",
           "src/core/target/target-read.ts",
           "src/core/target/network/target-network-capture.ts",
@@ -123,7 +140,6 @@
           "src/core/report-fields.ts",
           "src/core/session-isolation.ts",
           "src/core/session-report.ts",
-          "src/core/state.ts",
           "src/core/types.ts"
         ]
       }

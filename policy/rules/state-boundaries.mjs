@@ -33,7 +33,7 @@ function normalizeOptions(options) {
 
 function extractImports(content) {
   const out = [];
-  const pattern = /import\s+([\s\S]*?)\s+from\s+["']([^"']+)["']/g;
+  const pattern = /^\s*import\s+([\s\S]*?)\s+from\s+["']([^"']+)["']/gm;
   let match;
   while ((match = pattern.exec(content)) !== null) {
     const clause = match[1];
@@ -105,7 +105,7 @@ export const rule = {
           continue;
         }
         const target = resolveRelativeImport(file, statement.specifier);
-        if (target !== "src/core/state") {
+        if (target !== "src/core/state" && target !== "src/core/state/infra/state-store") {
           continue;
         }
 
@@ -127,8 +127,8 @@ export const rule = {
           file,
           message:
             importedMutations.length > 0
-              ? `direct state mutation import(s) from state module are restricted: ${importedMutations.join(", ")}`
-              : "default/namespace import from state module is restricted outside approved mutation boundaries",
+              ? `direct state mutation import(s) from state store are restricted: ${importedMutations.join(", ")}`
+              : "default/namespace import from state store is restricted outside approved mutation boundaries",
           suggestion: "Move state writes behind src/core/state/repo/* and import repo functions instead",
         });
       }

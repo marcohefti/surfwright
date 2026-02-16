@@ -17,6 +17,7 @@ function runCli(args) {
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      SURFWRIGHT_TEST_BROWSER: "1",
     },
   });
 }
@@ -29,9 +30,6 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
-  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
-    return false;
-  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -40,6 +38,10 @@ function hasBrowser() {
   const payload = parseJson(doctor.stdout);
   hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
+}
+
+function requireBrowser() {
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
 }
 
 let sharedSessionId;
@@ -92,7 +94,8 @@ process.on("exit", () => {
   }
 });
 
-test("target snapshot accepts 0 for --max-* caps", { skip: !hasBrowser() }, () => {
+test("target snapshot accepts 0 for --max-* caps", () => {
+  requireBrowser();
   const html = `<title>Snapshot Caps</title><main><h1>Hi</h1><button id="b1">One</button><a href="#a1">A1</a></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
 
@@ -124,7 +127,8 @@ test("target snapshot accepts 0 for --max-* caps", { skip: !hasBrowser() }, () =
   assert.equal(payload.textPreview, "");
 });
 
-test("target snapshot supports paging via --cursor", { skip: !hasBrowser() }, () => {
+test("target snapshot supports paging via --cursor", () => {
+  requireBrowser();
   const html = `
     <title>Snapshot Paging</title>
     <main>
@@ -223,7 +227,8 @@ test("target snapshot supports paging via --cursor", { skip: !hasBrowser() }, ()
   assert.equal(thirdPayload.nextCursor, null);
 });
 
-test("target snapshot --include-selector-hints returns bounded selectorHint rows", { skip: !hasBrowser() }, () => {
+test("target snapshot --include-selector-hints returns bounded selectorHint rows", () => {
+  requireBrowser();
   const html = `
     <title>Snapshot Hints</title>
     <main>
@@ -266,7 +271,8 @@ test("target snapshot --include-selector-hints returns bounded selectorHint rows
   assert.equal(payload.items.links[0].selectorHint, "a#x.l1.l2");
 });
 
-test("target snapshot --mode orient returns a quiet orientation payload", { skip: !hasBrowser() }, () => {
+test("target snapshot --mode orient returns a quiet orientation payload", () => {
+  requireBrowser();
   const html = `
     <title>Orient</title>
     <header>

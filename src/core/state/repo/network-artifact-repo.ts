@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { CliError } from "../../errors.js";
-import { allocateArtifactId, readState, updateState } from "../../state.js";
+import { allocateArtifactId, readState, updateState } from "../infra/state-store.js";
 import type { SurfwrightState, TargetNetworkArtifactPruneReport, TargetNetworkExportReport } from "../../types.js";
 
 type NetworkArtifactState = SurfwrightState["networkArtifacts"][string];

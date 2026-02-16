@@ -17,6 +17,7 @@ function runCli(args) {
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      SURFWRIGHT_TEST_BROWSER: "1",
     },
   });
 }
@@ -29,9 +30,6 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
-  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
-    return false;
-  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -40,6 +38,10 @@ function hasBrowser() {
   hasBrowserCache =
     payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
+}
+
+function requireBrowser() {
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
 }
 
 function cleanupManagedBrowsers() {
@@ -80,7 +82,8 @@ process.on("exit", () => {
   }
 });
 
-test("target frames lists stable handles for MDN iframe fixture", { skip: !hasBrowser() }, () => {
+test("target frames lists stable handles for MDN iframe fixture", () => {
+  requireBrowser();
   const url = "https://mdn.github.io/dom-examples/channel-messaging-basic/";
   const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
@@ -126,7 +129,8 @@ test("target frames lists stable handles for MDN iframe fixture", { skip: !hasBr
   }
 });
 
-test("target eval can target a specific frame via --frame-id", { skip: !hasBrowser() }, () => {
+test("target eval can target a specific frame via --frame-id", () => {
+  requireBrowser();
   const url = "https://mdn.github.io/dom-examples/channel-messaging-basic/";
   const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);

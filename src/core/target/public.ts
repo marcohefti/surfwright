@@ -16,6 +16,7 @@ export { targetFormFill, targetRead } from "./target-read.js";
 export { targetDialog, targetKeypress, targetWait } from "./target-wait.js";
 export { targetList } from "./targets.js";
 export { targetSnapshot } from "./snapshot/target-snapshot.js";
+export { readPageTargetId, resolveSessionForAction } from "./targets.js";
 export { targetFrames } from "./frames/target-frames.js";
 export { targetUrlAssert } from "./url/url-assert.js";
 

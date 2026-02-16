@@ -84,6 +84,8 @@ Policy rules are intentionally simple and file-system based. The names below map
 - `ARC007 boundary-json-parse`: `JSON.parse` is allowed only in explicit boundary modules.
 - `ARC008 core-layer-purity`: app/domain layers must not import from infra/boundary modules.
 - `ARC009 core-root-freeze`: adding new `src/core/*.ts` modules requires an explicit decision (freeze core-root growth).
+- `ARC010 feature-layer-purity`: feature `domain/**` and `usecases/**` must not import Node built-ins or Playwright (keeps feature layers pure and testable).
+- `ARC011 core-root-state-imports`: code outside the state domain must not import a core-root state facade (use `src/core/state/index` for core internals and `src/core/state/public` for feature access).
 - `DIR001 max-files-per-directory`: keeps directories small for review and navigation.
 - `LOC001 max-loc`: prevents single-file mega-modules.
 

@@ -18,6 +18,7 @@ function runCli(args) {
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      SURFWRIGHT_TEST_BROWSER: "1",
     },
   });
 }
@@ -30,9 +31,6 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
-  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
-    return false;
-  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -41,6 +39,10 @@ function hasBrowser() {
   const payload = parseJson(doctor.stdout);
   hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
+}
+
+function requireBrowser() {
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
 }
 
 function cleanupManagedBrowsers() {
@@ -81,7 +83,8 @@ process.on("exit", () => {
   }
 });
 
-test("target upload keypress and drag-drop return deterministic shapes", { skip: !hasBrowser() }, () => {
+test("target upload keypress and drag-drop return deterministic shapes", () => {
+  requireBrowser();
   const ensureResult = runCli(["--json", "session", "fresh", "--timeout-ms", "8000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
@@ -155,7 +158,8 @@ test("target upload keypress and drag-drop return deterministic shapes", { skip:
   assert.equal(cleared.status, 0);
 });
 
-test("target click returns deterministic shape for selector/text modes", { skip: !hasBrowser() }, () => {
+test("target click returns deterministic shape for selector/text modes", () => {
+  requireBrowser();
   const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
@@ -258,7 +262,8 @@ test("target click returns deterministic shape for selector/text modes", { skip:
   assert.equal(typeof textPayload.snapshot.textPreview, "string");
 });
 
-test("target click returns typed query failure when no match exists", { skip: !hasBrowser() }, () => {
+test("target click returns typed query failure when no match exists", () => {
+  requireBrowser();
   const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
@@ -287,7 +292,8 @@ test("target click returns typed query failure when no match exists", { skip: !h
   assert.equal(clickPayload.code, "E_QUERY_INVALID");
 });
 
-test("target fill and form-fill return deterministic compact shapes", { skip: !hasBrowser() }, () => {
+test("target fill and form-fill return deterministic compact shapes", () => {
+  requireBrowser();
   const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
@@ -422,7 +428,8 @@ test("target fill and form-fill return deterministic compact shapes", { skip: !h
 
 });
 
-test("target fill and form-fill return typed validation failures", { skip: !hasBrowser() }, () => {
+test("target fill and form-fill return typed validation failures", () => {
+  requireBrowser();
   const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);

@@ -14,6 +14,7 @@ function runCli(args) {
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      SURFWRIGHT_TEST_BROWSER: "1",
     },
   });
 }
@@ -26,9 +27,6 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
-  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
-    return false;
-  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -39,6 +37,10 @@ function hasBrowser() {
   return hasBrowserCache;
 }
 
+function requireBrowser() {
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+}
+
 process.on("exit", () => {
   try {
     fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
@@ -47,7 +49,8 @@ process.on("exit", () => {
   }
 });
 
-test("open reports requestedUrl/finalUrl redirect evidence", { skip: !hasBrowser() }, () => {
+test("open reports requestedUrl/finalUrl redirect evidence", () => {
+  requireBrowser();
   const openResult = runCli(["--json", "open", "http://example.com", "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);

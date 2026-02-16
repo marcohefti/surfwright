@@ -1,7 +1,7 @@
 import { chromium } from "playwright-core";
 import type { Cookie } from "playwright-core";
 import { CliError } from "../../errors.js";
-import { sanitizeSessionId } from "../../state.js";
+import { sanitizeSessionId } from "../../state/index.js";
 import { resolveSessionForAction } from "../targets.js";
 import type { SessionCookieCopyReport } from "../../types.js";
 

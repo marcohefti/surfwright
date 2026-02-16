@@ -1,4 +1,4 @@
-import { allocateSessionId, updateState } from "../../state.js";
+import { allocateSessionId, updateState } from "../infra/state-store.js";
 import type { SurfwrightState } from "../../types.js";
 
 export async function mutateState<T>(fn: (state: SurfwrightState) => T | Promise<T>): Promise<T> {

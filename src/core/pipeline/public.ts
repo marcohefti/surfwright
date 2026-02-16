@@ -1,4 +1,4 @@
-import { runPipeline as runPipelineInternal } from "../usecases/pipeline.js";
+import { runPipeline as runPipelineInternal } from "./run.js";
 import { sessionEnsure } from "../session/public.js";
 
 export async function runPipeline(opts: {
@@ -24,4 +24,3 @@ export async function runPipeline(opts: {
       }),
   });
 }
-

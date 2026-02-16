@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { CliError } from "../errors.js";
-import { nowIso, stateRootDir } from "../state.js";
+import { nowIso, stateRootDir } from "../state/index.js";
 
 const EXTENSION_REGISTRY_VERSION = 1;
 

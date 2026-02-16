@@ -1,4 +1,4 @@
-import { readState, upsertTargetState } from "../../state.js";
+import { readState, upsertTargetState } from "../infra/state-store.js";
 import type { TargetState } from "../../types.js";
 
 const DEFAULT_RECENT_ACTION_WINDOW_MS = 2 * 60 * 1000;

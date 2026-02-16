@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { CliError } from "../../errors.js";
-import { readState } from "../../state.js";
+import { readState } from "../../state/index.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints } from "./target-network-analysis.js";
 import type { TargetNetworkReport, TargetNetworkRequestReport } from "../../types.js";
 

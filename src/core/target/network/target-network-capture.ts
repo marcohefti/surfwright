@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { chromium } from "playwright-core";
 import { newActionId, sanitizeActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso, stateRootDir } from "../../state.js";
+import { nowIso, stateRootDir } from "../../state/index.js";
 import {
   createNetworkCapture,
   deleteNetworkCapture,

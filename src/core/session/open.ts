@@ -2,9 +2,9 @@ import { chromium, type Request, type Response } from "playwright-core";
 import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
 import { resolveOpenSessionHint } from "../session-isolation.js";
-import { nowIso } from "../state.js";
+import { nowIso } from "../state/index.js";
 import { saveTargetSnapshot } from "../state/index.js";
-import { readPageTargetId, resolveSessionForAction } from "../target/targets.js";
+import { readPageTargetId, resolveSessionForAction } from "../target/public.js";
 import type { OpenReport, SessionReport } from "../types.js";
 import { parseManagedBrowserMode } from "./browser-mode.js";
 
@@ -30,10 +30,7 @@ function buildRedirectEvidence(opts: {
   }
 
   const fromResponse = opts.response ? collectRedirectChain(opts.response.request()) : [];
-  const merged =
-    fromResponse.length > 0
-      ? fromResponse
-      : [opts.requestedUrl, opts.finalUrl];
+  const merged = fromResponse.length > 0 ? fromResponse : [opts.requestedUrl, opts.finalUrl];
 
   const normalized = merged.filter((entry, idx) => idx === 0 || entry !== merged[idx - 1]);
   if (normalized.length === 0) {

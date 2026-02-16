@@ -1,4 +1,4 @@
-import { allocateCaptureId, readState, updateState } from "../../state.js";
+import { allocateCaptureId, readState, updateState } from "../infra/state-store.js";
 import type { SurfwrightState, TargetNetworkCaptureStatus } from "../../types.js";
 
 type NetworkCaptureState = SurfwrightState["networkCaptures"][string];

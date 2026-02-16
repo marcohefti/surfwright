@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { CliError } from "../errors.js";
 import { readRuntimeConfig, type UpdateChannel, type UpdatePolicy } from "./config.js";
 import { compareSemver, isSamePatchLine } from "../shared/index.js";
-import { stateRootDir } from "../state.js";
+import { stateRootDir } from "../state/index.js";
 
 export const UPDATE_DIST_TAG_BY_CHANNEL: Record<UpdateChannel, string> = {
   stable: "latest",

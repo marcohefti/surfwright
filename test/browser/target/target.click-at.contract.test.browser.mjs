@@ -18,6 +18,7 @@ function runCli(args) {
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      SURFWRIGHT_TEST_BROWSER: "1",
     },
   });
 }
@@ -30,9 +31,6 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
-  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
-    return false;
-  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -40,6 +38,10 @@ function hasBrowser() {
   const payload = parseJson(doctor.stdout);
   hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
+}
+
+function requireBrowser() {
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
 }
 
 function cleanupManagedBrowsers() {
@@ -76,7 +78,8 @@ process.on("exit", () => {
   }
 });
 
-test("target click-at returns deterministic coordinate click shape", { skip: !hasBrowser() }, () => {
+test("target click-at returns deterministic coordinate click shape", () => {
+  requireBrowser();
   const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
@@ -151,7 +154,8 @@ test("target click-at returns deterministic coordinate click shape", { skip: !ha
   assert.equal(parseJson(invalidClickAt.stdout).code, "E_QUERY_INVALID");
 });
 
-test("target form-fill shorthand --field is discoverable and typed", { skip: !hasBrowser() }, () => {
+test("target form-fill shorthand --field is discoverable and typed", () => {
+  requireBrowser();
   const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);

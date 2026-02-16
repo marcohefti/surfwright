@@ -1,4 +1,4 @@
-import { readState } from "../../state.js";
+import { readState } from "../infra/state-store.js";
 import type { SessionState } from "../../types.js";
 
 export function listSessionsSnapshot(): {

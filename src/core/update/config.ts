@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { stateRootDir } from "../state.js";
+import { stateRootDir } from "../state/index.js";
 
 export type UpdateChannel = "stable" | "beta" | "dev";
 export type UpdatePolicy = "manual" | "pinned" | "safe-patch";

@@ -1,17 +1,20 @@
 import { CliError } from "../errors.js";
-import { executePipelinePlan, loadPipelinePlan } from "../pipeline.js";
 import { resolvePipelineSessionId } from "../session-isolation.js";
-import { targetClick } from "../target/target-click.js";
-import { targetEval } from "../target/target-eval.js";
-import { targetExtract } from "../target/target-extract.js";
-import { targetFind } from "../target/target-find.js";
-import { targetRead } from "../target/target-read.js";
-import { targetSnapshot } from "../target/snapshot/target-snapshot.js";
-import { targetWait } from "../target/target-wait.js";
-import { resolveSessionForAction, targetList } from "../target/targets.js";
+import { parseManagedBrowserMode } from "../session/index.js";
+import { openUrl } from "../session/public.js";
+import {
+  resolveSessionForAction,
+  targetClick,
+  targetEval,
+  targetExtract,
+  targetFind,
+  targetList,
+  targetRead,
+  targetSnapshot,
+  targetWait,
+} from "../target/public.js";
 import type { SessionReport } from "../types.js";
-import { parseManagedBrowserMode } from "./browser-mode.js";
-import { openUrl } from "./open.js";
+import { executePipelinePlan, loadPipelinePlan } from "./index.js";
 
 export async function runPipeline(opts: {
   planPath?: string;
@@ -45,15 +48,14 @@ export async function runPipeline(opts: {
 
   const ops = {
     open: async (input: { url: string; timeoutMs: number; sessionId?: string; reuseUrl: boolean }) =>
-      await openUrl({
+      (await openUrl({
         inputUrl: input.url,
         timeoutMs: input.timeoutMs,
         sessionId: input.sessionId,
         reuseUrl: input.reuseUrl,
         isolation: opts.isolation,
         browserModeInput: opts.browserModeInput,
-        ensureSharedSession: opts.ensureSharedSession,
-      }),
+      })) as unknown as Record<string, unknown>,
     list: async (input: { timeoutMs: number; sessionId?: string; persistState: boolean }) =>
       (await targetList({ timeoutMs: input.timeoutMs, sessionId: input.sessionId, persistState: input.persistState })) as unknown as Record<
         string,
@@ -265,3 +267,4 @@ export async function runPipeline(opts: {
     lintIssues: issues,
   });
 }
+

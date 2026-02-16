@@ -139,6 +139,7 @@ jobs:
           set -o pipefail
           pnpm -s test:contract
           pnpm -s test:fixtures
+          pnpm -s test:browser
           echo "contract+fixture lanes passed" | tee artifacts/test/test.log
 
       - name: Upload test artifacts

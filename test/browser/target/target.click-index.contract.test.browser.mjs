@@ -17,6 +17,7 @@ function runCli(args) {
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      SURFWRIGHT_TEST_BROWSER: "1",
     },
   });
 }
@@ -29,9 +30,6 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
-  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
-    return false;
-  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -40,6 +38,10 @@ function hasBrowser() {
   hasBrowserCache =
     payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
+}
+
+function requireBrowser() {
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
 }
 
 function cleanupManagedBrowsers() {
@@ -80,7 +82,8 @@ process.on("exit", () => {
   }
 });
 
-test("target click supports --index for deterministic multi-match selection", { skip: !hasBrowser() }, () => {
+test("target click supports --index for deterministic multi-match selection", () => {
+  requireBrowser();
   const openResult = runCli(["--json", "open", "https://the-internet.herokuapp.com/add_remove_elements/", "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);

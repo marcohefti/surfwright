@@ -18,6 +18,7 @@ function runCli(args) {
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      SURFWRIGHT_TEST_BROWSER: "1",
     },
   });
 }
@@ -30,9 +31,6 @@ function parseJson(stdout) {
 
 let hasBrowserCache;
 function hasBrowser() {
-  if (process.env.SURFWRIGHT_TEST_BROWSER !== "1") {
-    return false;
-  }
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
@@ -40,6 +38,10 @@ function hasBrowser() {
   const payload = parseJson(doctor.stdout);
   hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
+}
+
+function requireBrowser() {
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
 }
 
 function cleanupManagedBrowsers() {
@@ -80,7 +82,8 @@ process.on("exit", () => {
   }
 });
 
-test("session new accepts explicit policy and lease ttl", { skip: !hasBrowser() }, () => {
+test("session new accepts explicit policy and lease ttl", () => {
+  requireBrowser();
   const sessionId = `s-policy-${Date.now()}`;
   const createResult = runCli([
     "--json",

@@ -4,7 +4,7 @@ import path from "node:path";
 import { chromium } from "playwright-core";
 import { newActionId } from "../action-id.js";
 import { CliError } from "../errors.js";
-import { nowIso } from "../state.js";
+import { nowIso } from "../state/index.js";
 import { saveTargetSnapshot } from "../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 

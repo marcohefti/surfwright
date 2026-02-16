@@ -3,7 +3,7 @@ import { chromium } from "playwright-core";
 import { CDP_HEALTHCHECK_TIMEOUT_MS, isCdpEndpointAlive } from "../../browser.js";
 import { CliError } from "../../errors.js";
 import { hasSessionLeaseExpired, withSessionHeartbeat } from "../../session/index.js";
-import { nowIso } from "../../state.js";
+import { nowIso } from "./state-store.js";
 import { mutateState } from "../repo/mutations.js";
 import type { SessionPruneReport, SessionState, StateReconcileReport, TargetPruneReport } from "../../types.js";
 

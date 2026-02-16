@@ -3,7 +3,7 @@ import path from "node:path";
 const DEFAULT_OPTIONS = {
   include: ["src/**/*.ts"],
   exclude: [],
-  allowlist: ["src/cli.ts", "src/core/state.ts", "src/core/pipeline-support/plan.ts"],
+  allowlist: ["src/cli.ts", "src/core/state/infra/state-store.ts", "src/core/pipeline-support/plan.ts"],
 };
 
 function normalizeOptions(options) {
@@ -56,4 +56,3 @@ export const rule = {
     return violations;
   },
 };
-

@@ -1,7 +1,7 @@
 # ZeroContext Lab
 
-ZeroContext Lab is an agent UX evaluation harness for cold-start behavior.
-It is intentionally external to core SurfWright runtime behavior.
+ZeroContext Lab (ZCL) is the workflow we use to evaluate cold-start agent UX for SurfWright.
+ZCL itself is intentionally **external** to SurfWright runtime behavior; this repo does not ship a ZCL implementation.
 
 ## Purpose
 
@@ -10,38 +10,44 @@ Use this when you want to measure what a fresh agent does on first contact:
 - first-try success rate,
 - command count to completion,
 - runtime per task,
-- recurring friction from agent feedback.
-- missing-command demand based on real command attempts.
+- recurring friction from agent feedback,
+- missing-command demand based on real command attempts,
 - architecture fit (new primitive vs better naming/output for existing primitives).
 
 ## What It Captures
 
-Per attempt, the harness writes deterministic artifacts:
+Per attempt, ZCL should write deterministic artifacts (exact filenames/layout are owned by ZCL; do not treat them as a SurfWright contract).
+At minimum, we need:
 
-- `prompt.txt`: exact prompt fed to the agent command
-- `agent.command.txt`: exact command that launched the agent
-- `agent.stdout.log`, `agent.stderr.log`: transcript output
-- `commands.jsonl`: shim-logged CLI invocations (`argv`, status, duration)
-- `feedback.json`: parsed terminal feedback line (`ZCL_FEEDBACK:`)
-- `run.json`: normalized run summary and task outcomes
+- the exact prompt used,
+- the exact runner/agent command used,
+- attempt-level stdout/stderr logs or equivalent evidence for debugging,
+- a tool-call trace (append-only JSONL) as primary evidence of what was attempted,
+- structured feedback/outcome for the attempt,
+- a normalized run summary and per-attempt outcomes/metrics.
 
-`commands.jsonl` is the primary evidence of what the agent actually tried.
+The tool-call trace JSONL is the primary evidence of what the agent actually tried.
 Agent self-reports are secondary.
 
 ## Trace Integrity Gate
 
-Runs are valid only if browser actions are executed via the traced CLI binary (`surfwright` by default).
+Runs are valid only if browser actions are executed via the traced SurfWright CLI (`surfwright`).
 
 - valid: `surfwright --json ...`
-- invalid for discovery evidence: wrapper/browser commands for browser actions (`pnpm dev -- ...`, direct Playwright scripts)
+- invalid for discovery evidence: bypassing the traced SurfWright surface for browser actions (wrapper stacks that hide calls, direct Playwright scripts, etc.)
 
-If wrappers are used for browser actions, `commands.jsonl` may be incomplete and the run should be marked invalid for discovery scoring.
+If browser actions bypass tracing, the tool-call trace may be incomplete and the run should be marked invalid for discovery scoring.
+
+### SurfWright Command Name (Important)
+
+In ZeroContext runs, we prefer the agent only ever types `surfwright` for browser actions.
+If ZCL needs a wrapper/funnel mechanism, we route it behind that name (skill/docs-level wiring), so the agent still experiences “SurfWright speaks for itself”.
 
 ## Two Evaluation Modes
 
 ### Mode A: Harness-native one-turn suite
 
-Use `zcl:run` with task `expect` checks and optional inline feedback parsing.
+Use ZCL’s suite runner to execute one-turn missions with expectations and machine-readable results.
 Best for repeatable CI-style measurements.
 
 ### Mode B: Capability-gap two-turn subagent workflow
@@ -53,7 +59,7 @@ Use this when discovering missing CLI primitives/names/output shapes:
 3. Send a follow-up prompt asking how the CLI should improve.
 4. Evaluate with both:
    - follow-up proposal (`decision tag`, `missing command`, `usage`, `output shape`),
-   - command evidence from `commands.jsonl`.
+   - trace evidence from the tool-call JSONL.
 
 This mode is intentionally qualitative + evidence-backed. It is designed to reveal
 natural command demand and where agents get stuck.
@@ -72,7 +78,7 @@ Prefer that the agent includes:
 
 If the follow-up is vague or does not contain a concrete proposal, send a second follow-up prompt asking for a single concrete change (name + usage + one-line example output).
 
-If you need a machine-parsed summary, instruct the agent to end with exactly one line prefixed by `ZCL_FEEDBACK:` followed by JSON (see “What It Captures”).
+If you need a machine-parsed summary, use ZCL’s feedback mechanism (whatever ZCL currently documents as the canonical way to persist an attempt outcome).
 
 Decision tags:
 
@@ -81,52 +87,16 @@ Decision tags:
 - `output_shape`: capability exists, but returned payload is not actionable/compact enough.
 - `already_possible_better_way`: agent got stuck, but a good existing workflow already solves it.
 
-## Suite Format
-
-`schemaVersion` must be `1`.
-
-```json
-{
-  "schemaVersion": 1,
-  "name": "surfwright-smoke",
-  "agentPreamble": "Optional preamble prepended to every task prompt.",
-  "tasks": [
-    {
-      "id": "example-title",
-      "prompt": "Open https://example.com and print TITLE=<title>",
-      "expect": {
-        "stdoutIncludes": ["TITLE=Example Domain"],
-        "stdoutRegex": "TITLE=.*",
-        "maxCliCommands": 8,
-        "requireFeedback": true
-      }
-    }
-  ]
-}
-```
-
 ## Run
 
-Agent command template must include `{prompt_file}`.
-
-```bash
-pnpm -s build
-pnpm zcl:run --suite test/fixtures/zerocontext-lab/surfwright-smoke.json --agent-cmd "codex exec --prompt-file {prompt_file}" --repeat 3 --label gpt-5
-```
-
-Useful placeholders in `--agent-cmd`:
-
-- `{prompt_file}`
-- `{task_id}`
-- `{run_id}`
-- `{attempt_id}`
-- `{attempt_dir}`
+ZCL is external. Use whatever the current ZCL CLI documents.
+If you need to confirm the published ZCL surface, prefer inspecting its contract output (for example, `zcl contract --json` if supported).
 
 ## Timeout Semantics
 
 ZeroContext has two timeout modes with different behavior:
 
-- hard timeout (`zcl:run --timeout-ms <ms>`):
+- hard timeout:
   - kills the attempt process when timeout is hit,
   - may prevent follow-up feedback capture from the same process.
 - soft timeout (recommended for discovery campaigns):
@@ -142,8 +112,8 @@ Use soft timeout for capability-gap discovery where post-attempt feedback is req
 - Do not leak command names in mission prompts when testing discoverability.
 - Keep task intent clear, but execution path open.
 - Ask for CLI improvement in a follow-up turn, not in the initial mission prompt.
-- Tell agents to use the traced CLI binary name (`surfwright` by default).
-- Avoid wrapper/browser commands (`pnpm dev -- ...`, direct Playwright scripts) when collecting command-trace evidence, or traces will be incomplete.
+- Tell agents to use the traced CLI binary name: `surfwright`.
+- Avoid bypassing the traced SurfWright surface for browser actions, or traces will be incomplete.
 
 ## Abort Procedure (Discovery Mode)
 
@@ -157,20 +127,17 @@ For one-agent-per-mission discovery runs:
 
 ## Report
 
-```bash
-pnpm zcl:report --out-root .zerocontext-lab/runs
-pnpm zcl:report --run .zerocontext-lab/runs/<run-id>/run.json --json
-```
+Reporting is owned by ZCL. The key requirement for SurfWright is that reports remain trace-backed and comparable across runs.
 
 ## How To Evaluate Results
 
 Per mission/attempt:
 
-1. Inspect `commands.jsonl`:
+1. Inspect the tool-call trace JSONL:
    - attempted commands and order,
    - retries/loops,
    - non-zero status events.
-2. Inspect `agent.stdout.log` and `agent.stderr.log`:
+2. Inspect attempt stdout/stderr logs (or equivalent captured outputs):
    - where reasoning diverged from available primitives,
    - whether failures were input mistakes vs capability gaps.
 3. Inspect feedback (`feedback.json` or manual follow-up response):
@@ -198,11 +165,9 @@ For comparability across sessions, capture at minimum:
 - git SHA (or commit ref)
 - timeout policy (`hard` or `soft`)
 - timeout threshold
-- trace binary set
+- trace configuration (what is traced and how)
 - timestamp/run id
 
 ## Notes
 
-- The harness defaults to tracing `surfwright` via shim. Add extra traced binaries with repeated `--trace-bin <name>`.
-- Each attempt gets an isolated `SURFWRIGHT_STATE_DIR`, preventing stale cross-run state pollution.
-- For strict CI gating, add `--fail-on-fail`.
+- Each attempt should use an isolated `SURFWRIGHT_STATE_DIR`, preventing stale cross-run state pollution.

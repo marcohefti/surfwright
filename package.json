@@ -27,8 +27,6 @@
     "skill:install": "bash scripts/install-skill.sh",
     "skill:doctor": "pnpm -s build && node dist/cli.js --json skill doctor",
     "skill:update": "pnpm -s build && node dist/cli.js --json skill update --source ./skills/surfwright --lock ./skills/surfwright.lock.json",
-    "zcl:run": "node scripts/zerocontext-lab.mjs run",
-    "zcl:report": "node scripts/zerocontext-lab.mjs report",
     "start": "node dist/cli.js",
     "verify": "pnpm -s test && pnpm -s validate",
     "validate": "pnpm -s typecheck && pnpm -s policy:check && pnpm -s perf:check && pnpm -s changelog:check && pnpm -s skill:validate && pnpm -s build && pnpm -s startup-envelope:check && pnpm -s contract:snapshot:check && pnpm -s knowledge-store:check",

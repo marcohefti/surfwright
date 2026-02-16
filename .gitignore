@@ -8,6 +8,7 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *.tsbuildinfo
+.zcl/
 .zerocontext-lab/
 tmp/
 artifacts/

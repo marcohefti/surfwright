@@ -415,7 +415,7 @@ Lock file:
 - Contributor release/doc routing: `docs/contributor-release-routing.md`
 - Update lifecycle details: `docs/update-lifecycle.md`
 - Skill lifecycle details: `docs/skills-lifecycle.md`
-- Zero-context evaluation harness: `docs/zerocontext-lab.md`
+- Zero-context evaluation workflow (ZCL is external): `docs/zerocontext-lab.md`
 - Installable runtime skill: `skills/surfwright/SKILL.md`
 
 ## ZERO_CONTEXT_DAY

@@ -35,7 +35,7 @@ All notable changes to SurfWright are documented here.
 - [docs] None.
 
 ### Removed
-- [docs] None.
+- [dev] Removed the in-repo ZeroContext Lab (ZCL) harness implementation; ZeroContext workflows remain documented, but ZCL is now treated as an external tool.
 
 ## [0.1.1] - 2026-02-14
 

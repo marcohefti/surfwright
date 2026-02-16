@@ -35,7 +35,7 @@ Do not version control campaign artifacts.
 6. If the follow-up is vague or lacks a concrete proposal, send a second follow-up asking for one concrete change (name + usage + one-line example JSON).
 7. Collect:
    - follow-up response(s),
-   - trace artifacts (`commands.jsonl`, stdout/stderr logs).
+   - trace artifacts (tool-call JSONL + attempt stdout/stderr logs or equivalent).
 8. Classify outcome and record decision tag.
 
 ## Timeout Policy
@@ -50,7 +50,7 @@ Hard kill is acceptable for CI guardrails, but not for command-design discovery.
 Browser actions must use `surfwright` directly.
 
 - acceptable: `surfwright --json open https://example.com`
-- not acceptable for discovery evidence: `pnpm dev -- ...` for browser actions
+- not acceptable for discovery evidence: bypassing the traced SurfWright surface for browser actions
 
 If mission actions bypass the traced binary, mark run invalid for discovery scoring.
 
@@ -79,8 +79,8 @@ If you need a machine-parsed summary, request exactly one trailing line prefixed
 
 ## Evaluation Priority
 
-1. `commands.jsonl` (ground truth of what was attempted)
-2. `agent.stdout.log` and `agent.stderr.log`
+1. tool-call trace JSONL (ground truth of what was attempted)
+2. attempt stdout/stderr logs (or equivalent captured outputs)
 3. follow-up proposal text
 
 ## Record Per Mission

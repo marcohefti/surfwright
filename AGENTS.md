@@ -81,7 +81,7 @@ When the user asks to "spawn agents", "zero context test", or evaluate fresh-age
 - Keep task prompts short and unbiased; do not leak implementation hints or feature names unless explicitly requested.
 - Ensure runs are trace-backed (captured command artifacts/logs), then evaluate from those artifacts first.
 - Prefer evidence-based scoring: success/failure, command count, typed failures, and where agents got stuck.
-- Treat agent self-reports as secondary; ground conclusions in ZeroContext outputs (`commands.jsonl`, run artifacts, report).
+- Treat agent self-reports as secondary; ground conclusions in ZeroContext outputs (tool-call trace JSONL, run artifacts, report).
 
 ## Commit Message Rule
 

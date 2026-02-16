@@ -92,6 +92,17 @@ Decision tags:
 ZCL is external. Use whatever the current ZCL CLI documents.
 If you need to confirm the published ZCL surface, prefer inspecting its contract output (for example, `zcl contract --json` if supported).
 
+### Recommended Path (SurfWright)
+
+For unbiased SurfWright discoverability, prefer a flow where the agent only ever types `surfwright` for browser actions, while ZCL still captures trace-backed evidence.
+In practice, this is typically achieved via ZCL suite runs that can shim the `surfwright` command name for the runner environment (so `surfwright ...` is trace-backed without adding “ZCL ceremony” to the mission prompt).
+
+For fast post-mortems, prefer a ZCL workflow that:
+- captures runner IO per attempt (`runner.*` logs or equivalent),
+- emits a tool-call trace (`tool.calls.jsonl` or equivalent),
+- writes an authoritative attempt outcome (`feedback.json` or equivalent),
+- provides an operator command to summarize an attempt from artifacts only (for example an `attempt explain` command).
+
 ## Timeout Semantics
 
 ZeroContext has two timeout modes with different behavior:

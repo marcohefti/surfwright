@@ -78,6 +78,7 @@ When the user asks to "spawn agents", "zero context test", or evaluate fresh-age
 
 - Use the ZeroContext Lab workflow in `docs/zerocontext-lab.md` (do not invent an ad-hoc process).
 - For capability-gap discovery, follow `docs/zerocontext-gap-workflow.md` (sparse mission prompts, 120s soft timeout, follow-up feedback, trace-first evaluation).
+- If running under Codex and the `zcl` skill is available, use it for orchestration (it keeps runner wiring and evidence paths consistent).
 - Keep task prompts short and unbiased; do not leak implementation hints or feature names unless explicitly requested.
 - Ensure runs are trace-backed (captured command artifacts/logs), then evaluate from those artifacts first.
 - Prefer evidence-based scoring: success/failure, command count, typed failures, and where agents got stuck.

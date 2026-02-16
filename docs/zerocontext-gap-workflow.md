@@ -64,7 +64,7 @@ Prefer the agent includes:
 - one concrete SurfWright improvement (missing primitive, naming, output shape, or “document existing”)
 - an example usage line and one-line example JSON output (when possible)
 
-If you need a machine-parsed summary, request exactly one trailing line prefixed by `ZCL_FEEDBACK:` followed by JSON.
+If you need a machine-parsed outcome for scoring, require the attempt to finish by writing the authoritative outcome via ZCL (for example `zcl feedback --ok|--fail --result ...` or `--result-json ...`), and optionally capture additional narrative as secondary evidence (for example via ZCL notes).
 
 ## Decision Tag Rubric
 

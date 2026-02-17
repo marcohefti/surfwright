@@ -1,4 +1,4 @@
-import type { ActionTimingMs, SessionSource } from "../types.js";
+import type { ActionTimingMs, DownloadCaptureReport, SessionSource } from "../types.js";
 
 export type TargetListReport = {
   ok: true;
@@ -157,6 +157,62 @@ export type TargetClickReport = {
   } | null;
   delta?: TargetClickDeltaEvidence;
   timingMs: ActionTimingMs;
+};
+
+export type TargetDownloadReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  actionId: string;
+  mode: "text" | "selector";
+  selector: string | null;
+  contains: string | null;
+  visibleOnly: boolean;
+  query: string;
+  matchCount: number;
+  pickedIndex: number;
+  clicked: {
+    index: number;
+    text: string;
+    visible: boolean;
+    selectorHint: string | null;
+  };
+  url: string;
+  title: string;
+  download: DownloadCaptureReport;
+  timingMs: ActionTimingMs;
+};
+
+export type TargetSnapshotDiffReport = {
+  ok: true;
+  a: {
+    path: string;
+    url: string;
+    title: string;
+    mode: TargetSnapshotMode;
+    counts: { headings: number; buttons: number; links: number };
+  };
+  b: {
+    path: string;
+    url: string;
+    title: string;
+    mode: TargetSnapshotMode;
+    counts: { headings: number; buttons: number; links: number };
+  };
+  changed: {
+    url: boolean;
+    title: boolean;
+    textPreview: boolean;
+    headings: boolean;
+    buttons: boolean;
+    links: boolean;
+  };
+  delta: {
+    headings: { added: string[]; removed: string[]; truncated: boolean };
+    buttons: { added: string[]; removed: string[]; truncated: boolean };
+    links: { added: Array<{ text: string; href: string }>; removed: Array<{ text: string; href: string }>; truncated: boolean };
+  };
 };
 
 export type TargetClickDeltaRole = "dialog" | "alert" | "status" | "menu" | "listbox";

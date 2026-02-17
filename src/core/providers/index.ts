@@ -31,6 +31,8 @@ export type Providers = {
   fs: {
     chmodSync: typeof fs.chmodSync;
     cpSync: typeof fs.cpSync;
+    createReadStream: typeof fs.createReadStream;
+    appendFileSync: typeof fs.appendFileSync;
     existsSync: typeof fs.existsSync;
     mkdirSync: typeof fs.mkdirSync;
     readFileSync: typeof fs.readFileSync;
@@ -102,12 +104,14 @@ function defaultProviders(): Providers {
       cwd: () => process.cwd(),
     },
     fs: {
-      chmodSync: fs.chmodSync,
-      cpSync: fs.cpSync,
-      existsSync: fs.existsSync,
-      mkdirSync: fs.mkdirSync,
-      readFileSync: fs.readFileSync,
-      readdirSync: fs.readdirSync,
+    chmodSync: fs.chmodSync,
+    cpSync: fs.cpSync,
+    createReadStream: fs.createReadStream,
+    appendFileSync: fs.appendFileSync,
+    existsSync: fs.existsSync,
+    mkdirSync: fs.mkdirSync,
+    readFileSync: fs.readFileSync,
+    readdirSync: fs.readdirSync,
       renameSync: fs.renameSync,
       rmSync: fs.rmSync,
       statSync: fs.statSync,

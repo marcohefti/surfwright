@@ -14,11 +14,12 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
       .command("eval")
       .description(meta.summary)
       .argument("<targetId>", "Target handle returned by open/target list")
-      .option("--expr <js>", "JavaScript expression to evaluate and return (no explicit return required)")
+      .option("--expr <js>", "JavaScript expression to evaluate and return")
       .option("--expression <js>", "JavaScript function body to run in page context (use return to yield a value)")
       .option("--js <js>", "Alias for --expression")
       .option("--script <js>", "Alias for --expression")
-      .option("--script-file <path>", "Read JavaScript expression from file")
+      .option("--script-file <path>", "Read JavaScript from file (defaults to script mode; use --mode expr to treat as expression)")
+      .option("--mode <mode>", "Mode for --script-file: expr|script")
       .option("--arg-json <json>", "JSON value passed as arg to the expression")
       .option("--frame-id <id>", "Frame handle returned by target frames (default: f-0)")
       .option("--capture-console", "Capture console output during evaluation", false)
@@ -35,6 +36,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
             js?: string;
             script?: string;
             scriptFile?: string;
+            mode?: string;
             argJson?: string;
             frameId?: string;
             captureConsole?: boolean;
@@ -60,6 +62,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
               expr: options.expr,
               expression,
               scriptFile: options.scriptFile,
+              mode: options.mode === "expr" || options.mode === "script" ? (options.mode as "expr" | "script") : undefined,
               argJson: options.argJson,
               frameId: options.frameId,
               captureConsole: Boolean(options.captureConsole),

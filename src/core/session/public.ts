@@ -44,6 +44,8 @@ export async function openUrl(opts: {
   reuseUrl?: boolean;
   isolation?: string;
   browserModeInput?: string;
+  allowDownload?: boolean;
+  downloadOutDir?: string;
 }): Promise<OpenReport> {
   return await openUrlInternal({
     ...opts,

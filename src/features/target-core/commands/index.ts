@@ -4,11 +4,13 @@ import {
   targetCloseCommandSpec,
   targetDialogCommandSpec,
   targetDragDropCommandSpec,
+  // click-related commands
   targetFillCommandSpec,
   targetKeypressCommandSpec,
   targetSpawnCommandSpec,
   targetUploadCommandSpec,
 } from "./target-click.js";
+import { targetDownloadCommandSpec } from "./actions/target-download.js";
 import {
   targetObserveCommandSpec,
   targetScrollPlanCommandSpec,
@@ -32,6 +34,7 @@ import { targetConsoleGetCommandSpec, targetConsoleTailCommandSpec, targetHealth
 import { targetPruneCommandSpec } from "./target-prune.js";
 import { targetReadCommandSpec } from "./target-read.js";
 import { targetSnapshotCommandSpec } from "./target-snapshot.js";
+import { targetSnapshotDiffCommandSpec } from "./snapshot/target-snapshot-diff.js";
 import {
   targetEmulateCommandSpec,
   targetExtractCommandSpec,
@@ -46,9 +49,11 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetListCommandSpec,
   targetFramesCommandSpec,
   targetSnapshotCommandSpec,
+  targetSnapshotDiffCommandSpec,
   targetCountCommandSpec,
   targetFindCommandSpec,
   targetClickCommandSpec,
+  targetDownloadCommandSpec,
   targetClickAtCommandSpec,
   targetFillCommandSpec,
   targetUploadCommandSpec,

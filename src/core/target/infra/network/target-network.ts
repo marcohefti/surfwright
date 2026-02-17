@@ -24,6 +24,7 @@ import type {
   TargetNetworkWebSocketMessageReport,
   TargetNetworkWebSocketReport,
 } from "../../../types.js";
+import { redactHeaders } from "../../../shared/index.js";
 
 type MutableRequest = TargetNetworkRequestReport;
 type MutableWebSocket = TargetNetworkWebSocketReport;
@@ -55,6 +56,8 @@ export async function targetNetwork(opts: {
   maxRequests?: number;
   maxWebSockets?: number;
   maxWsMessages?: number;
+  bodySampleBytes?: number;
+  redactRegex?: string[];
   reload?: boolean;
   includeHeaders?: boolean;
   includePostData?: boolean;
@@ -65,6 +68,7 @@ export async function targetNetwork(opts: {
   status?: string;
   failedOnly?: boolean;
   stopSignalPath?: string;
+  readySignalPath?: string;
 }): Promise<TargetNetworkReport> {
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const parsed = parseNetworkInput({
@@ -72,9 +76,12 @@ export async function targetNetwork(opts: {
     view: opts.view,
     fields: opts.fields,
     captureMs: opts.captureMs,
+    captureMsMax: typeof opts.stopSignalPath === "string" && opts.stopSignalPath.trim().length > 0 ? 60 * 60 * 1000 : undefined,
     maxRequests: opts.maxRequests,
     maxWebSockets: opts.maxWebSockets,
     maxWsMessages: opts.maxWsMessages,
+    bodySampleBytes: opts.bodySampleBytes,
+    redactRegex: opts.redactRegex,
     reload: opts.reload,
     includeHeaders: opts.includeHeaders,
     includePostData: opts.includePostData,
@@ -165,11 +172,16 @@ export async function targetNetwork(opts: {
       if (parsed.includeHeaders || parsed.includePostData) {
         pushBackgroundTask(backgroundTasks, async () => {
           if (parsed.includeHeaders) {
-            record.requestHeaders = await request.allHeaders();
+            record.requestHeaders = redactHeaders({
+              headers: await request.allHeaders(),
+              redactors: parsed.redactors,
+            });
           }
           if (parsed.includePostData) {
             const postData = request.postDataBuffer();
-            record.postDataPreview = postData ? postDataPreview(postData) : null;
+            record.postDataPreview = postData
+              ? postDataPreview(postData, { maxBytes: parsed.bodySampleBytes, redactors: parsed.redactors })
+              : null;
           }
         });
       }
@@ -202,7 +214,10 @@ export async function targetNetwork(opts: {
           }
         }
         if (parsed.includeHeaders) {
-          record.responseHeaders = await response.allHeaders();
+          record.responseHeaders = redactHeaders({
+            headers: await response.allHeaders(),
+            redactors: parsed.redactors,
+          });
         }
       });
     };
@@ -286,6 +301,16 @@ export async function targetNetwork(opts: {
     target.page.on("requestfailed", onRequestFailed);
     target.page.on("websocket", onWebSocket);
 
+    if (typeof opts.readySignalPath === "string" && opts.readySignalPath.trim().length > 0) {
+      const readyPath = providers().path.resolve(opts.readySignalPath);
+      try {
+        providers().fs.mkdirSync(providers().path.dirname(readyPath), { recursive: true });
+        providers().fs.writeFileSync(readyPath, `${JSON.stringify({ ok: true, at: nowIso() })}\n`, "utf8");
+      } catch {
+        // Readiness signaling is best-effort and should never break capture.
+      }
+    }
+
     try {
       if (parsed.reload) {
         await target.page.reload({
@@ -335,6 +360,12 @@ export async function targetNetwork(opts: {
       actionId: captureActionId,
       url: pageUrl,
       title: pageTitle,
+      redaction: {
+        headers: {
+          always: true,
+        },
+        regex: parsed.redactRegex,
+      },
       capture: {
         startedAt: captureStartedAtIso,
         endedAt: captureEndedAtIso,
@@ -357,6 +388,7 @@ export async function targetNetwork(opts: {
         maxRequests: parsed.maxRequests,
         maxWebSockets: parsed.maxWebSockets,
         maxWsMessages: parsed.maxWsMessages,
+        bodySampleBytes: parsed.bodySampleBytes,
       },
       counts,
       performance: buildPerformanceSummary(filteredRequests),

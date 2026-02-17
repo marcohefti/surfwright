@@ -1,6 +1,6 @@
 import process from "node:process";
 import { chromium } from "playwright-core";
-import { CDP_HEALTHCHECK_TIMEOUT_MS, isCdpEndpointAlive } from "../../browser.js";
+import { CDP_HEALTHCHECK_TIMEOUT_MS, isCdpEndpointAlive, killManagedBrowserProcessTree } from "../../browser.js";
 import { CliError } from "../../errors.js";
 import { hasSessionLeaseExpired, withSessionHeartbeat } from "../../session/index.js";
 import { nowIso } from "./state-store.js";
@@ -51,11 +51,7 @@ function stopManagedSessionProcess(session: SessionState): void {
   if (!pidIsAlive(session.browserPid ?? null)) {
     return;
   }
-  try {
-    process.kill(session.browserPid ?? 0, "SIGTERM");
-  } catch {
-    // best-effort termination for stale managed sessions
-  }
+  killManagedBrowserProcessTree(session.browserPid ?? null, "SIGTERM");
 }
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -66,11 +62,7 @@ async function stopManagedSessionProcessStrict(session: SessionState, timeoutMs:
   if (!pidIsAlive(pid)) {
     return true;
   }
-  try {
-    process.kill(pid ?? 0, "SIGTERM");
-  } catch {
-    return false;
-  }
+  killManagedBrowserProcessTree(pid, "SIGTERM");
 
   const waitUntil = Date.now() + Math.max(100, Math.min(timeoutMs, SESSION_CLEAR_SIGTERM_GRACE_MS));
   while (Date.now() < waitUntil) {
@@ -84,11 +76,7 @@ async function stopManagedSessionProcessStrict(session: SessionState, timeoutMs:
     return true;
   }
 
-  try {
-    process.kill(pid ?? 0, "SIGKILL");
-  } catch {
-    return false;
-  }
+  killManagedBrowserProcessTree(pid, "SIGKILL");
   return !pidIsAlive(pid);
 }
 

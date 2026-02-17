@@ -157,6 +157,12 @@ function buildReportFromHarSource(opts: {
         ? firstPage._surfwright.url
         : requests[0]?.url ?? "",
     title: typeof firstPage?.title === "string" ? firstPage.title : `HAR ${opts.sourceId}`,
+    redaction: {
+      headers: {
+        always: true,
+      },
+      regex: [],
+    },
     capture: {
       startedAt: captureStartedAt,
       endedAt: new Date((Number.isFinite(captureStartMs) ? captureStartMs : Date.now()) + durationMs).toISOString(),
@@ -179,6 +185,7 @@ function buildReportFromHarSource(opts: {
       maxRequests: Math.max(1, requests.length),
       maxWebSockets: 1,
       maxWsMessages: 1,
+      bodySampleBytes: 512,
     },
     counts,
     performance: buildPerformanceSummary(requests),
@@ -202,12 +209,36 @@ function buildReportFromHarSource(opts: {
 }
 
 function parseReportFromCapture(path: string): TargetNetworkReport {
-  const raw = readJsonFile(path) as TargetNetworkReport & { sessionSource?: unknown };
+  const raw = readJsonFile(path) as TargetNetworkReport & { sessionSource?: unknown; redaction?: unknown; limits?: unknown };
   if (!raw || raw.ok !== true || !Array.isArray(raw.requests) || !Array.isArray(raw.webSockets)) {
     throw new CliError("E_QUERY_INVALID", `Capture result is invalid: ${path}`);
   }
+  const limitsRaw = typeof raw.limits === "object" && raw.limits !== null ? (raw.limits as Record<string, unknown>) : {};
+  const maxRequests = typeof limitsRaw.maxRequests === "number" && Number.isFinite(limitsRaw.maxRequests) ? limitsRaw.maxRequests : 1;
+  const maxWebSockets =
+    typeof limitsRaw.maxWebSockets === "number" && Number.isFinite(limitsRaw.maxWebSockets) ? limitsRaw.maxWebSockets : 1;
+  const maxWsMessages =
+    typeof limitsRaw.maxWsMessages === "number" && Number.isFinite(limitsRaw.maxWsMessages) ? limitsRaw.maxWsMessages : 1;
+  const bodySampleBytes =
+    typeof limitsRaw.bodySampleBytes === "number" && Number.isFinite(limitsRaw.bodySampleBytes) ? limitsRaw.bodySampleBytes : 512;
+
+  const redactionRaw = typeof raw.redaction === "object" && raw.redaction !== null ? (raw.redaction as Record<string, unknown>) : {};
+  const regex =
+    Array.isArray((redactionRaw as any).regex) ? (redactionRaw as any).regex.filter((v: unknown) => typeof v === "string") : [];
   return {
     ...raw,
+    redaction: {
+      headers: {
+        always: true,
+      },
+      regex,
+    },
+    limits: {
+      maxRequests,
+      maxWebSockets,
+      maxWsMessages,
+      bodySampleBytes,
+    },
     sessionSource:
       raw.sessionSource === "explicit" || raw.sessionSource === "target-inferred" || raw.sessionSource === "implicit-new"
         ? raw.sessionSource

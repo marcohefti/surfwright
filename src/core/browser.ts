@@ -196,15 +196,28 @@ function launchDetachedBrowser(opts: {
   }
 }
 
-function terminateBrowserProcess(browserPid: number | null): void {
+export function killManagedBrowserProcessTree(browserPid: number | null, signal: "SIGTERM" | "SIGKILL"): void {
   if (typeof browserPid !== "number" || !Number.isFinite(browserPid) || browserPid <= 0) {
     return;
   }
+  // Managed sessions launch Chrome detached, so the pid is the process group leader on POSIX.
+  // Kill the group first to avoid leaking Chrome helper processes.
+  if (process.platform !== "win32") {
+    try {
+      process.kill(-browserPid, signal);
+    } catch {
+      // ignore and try the pid directly
+    }
+  }
   try {
-    process.kill(browserPid, "SIGTERM");
+    process.kill(browserPid, signal);
   } catch {
     // Ignore already-exited process cleanup.
   }
+}
+
+function terminateBrowserProcess(browserPid: number | null): void {
+  killManagedBrowserProcessTree(browserPid, "SIGTERM");
 }
 
 export async function startManagedSession(

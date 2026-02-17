@@ -4,7 +4,7 @@ export const networkCommandManifest: CliCommandContract[] = [
   {
     id: "target.network",
     usage:
-      "surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--body-sample-bytes <n>] [--redact-regex <pattern> ...] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]",
     summary: "capture bounded network/websocket diagnostics and performance summary for a target",
   },
   {
@@ -37,9 +37,15 @@ export const networkCommandManifest: CliCommandContract[] = [
     summary: "prune indexed export artifacts by retention policy",
   },
   {
+    id: "target.network-around",
+    usage:
+      "surfwright target network-around <targetId> (--click-text <query> | --click-selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--frame-scope <scope>] [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--body-sample-bytes <n>] [--redact-regex <pattern> ...] [--include-headers] [--include-post-data] [--no-ws-messages] [--view <mode>] [--fields <csv>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]",
+    summary: "capture network around a deterministic click and return combined click + network report",
+  },
+  {
     id: "target.network-begin",
     usage:
-      "surfwright target network-begin <targetId> [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--include-headers] [--include-post-data] [--no-ws-messages] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target network-begin <targetId> [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--body-sample-bytes <n>] [--redact-regex <pattern> ...] [--include-headers] [--include-post-data] [--no-ws-messages] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]",
     summary: "start handle-based background network capture for an action window",
   },
   {

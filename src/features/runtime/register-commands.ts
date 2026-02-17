@@ -10,7 +10,7 @@ import {
   sessionPrune,
   sessionUse,
 } from "../../core/session/public.js";
-import { workspaceInfo, workspaceInit } from "../../core/workspace/public.js";
+import { workspaceInfo, workspaceInit, workspaceProfileLockClear, workspaceProfileLocks } from "../../core/workspace/public.js";
 import { runPipeline } from "../../core/pipeline/public.js";
 import { stateReconcile } from "../../core/state/public.js";
 import { parseFieldsCsv, projectReportFields } from "../../core/target/public.js";
@@ -109,6 +109,34 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
       }
     });
 
+  workspace
+    .command("profile-locks")
+    .description(runtimeCommandMeta("workspace.profile-locks").summary)
+    .action(() => {
+      const output = ctx.globalOutputOpts();
+      try {
+        const report = workspaceProfileLocks();
+        printWorkspaceSuccess(report, output);
+      } catch (error) {
+        ctx.handleFailure(error, output);
+      }
+    });
+
+  workspace
+    .command("profile-lock-clear")
+    .description(runtimeCommandMeta("workspace.profile-lock-clear").summary)
+    .argument("<profile>", "Workspace profile name whose lock to clear")
+    .option("--force", "Remove lock even if it does not look stale", false)
+    .action((profile: string, options: { force?: boolean }) => {
+      const output = ctx.globalOutputOpts();
+      try {
+        const report = workspaceProfileLockClear({ profile, force: Boolean(options.force) });
+        printWorkspaceSuccess(report, output);
+      } catch (error) {
+        ctx.handleFailure(error, output);
+      }
+    });
+
   const openMeta = runtimeCommandMeta("open");
   ctx.program
     .command("open")
@@ -116,6 +144,8 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .argument("<url>", "Absolute URL to open")
     .option("--profile <name>", "Use a project workspace profile for persisted auth (requires workspace init)")
     .option("--reuse-url", "Reuse existing tab for same URL if present", false)
+    .option("--allow-download", "Treat download navigations as success and capture deterministic download artifact", false)
+    .option("--download-out-dir <path>", "Directory to write captured downloads (default ./artifacts/downloads)")
     .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Navigation timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
@@ -123,7 +153,16 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .action(
       async (
         url: string,
-        options: { timeoutMs: number; reuseUrl?: boolean; browserMode?: string; isolation?: string; fields?: string; profile?: string },
+        options: {
+          timeoutMs: number;
+          reuseUrl?: boolean;
+          browserMode?: string;
+          isolation?: string;
+          fields?: string;
+          profile?: string;
+          allowDownload?: boolean;
+          downloadOutDir?: string;
+        },
       ) => {
       const output = ctx.globalOutputOpts();
       const globalOpts = ctx.program.opts<{ session?: string }>();
@@ -133,6 +172,8 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           inputUrl: url,
           timeoutMs: options.timeoutMs,
           reuseUrl: Boolean(options.reuseUrl),
+          allowDownload: Boolean(options.allowDownload),
+          downloadOutDir: typeof options.downloadOutDir === "string" ? options.downloadOutDir : undefined,
           browserModeInput: options.browserMode,
           isolation: options.isolation,
           profile: typeof options.profile === "string" ? options.profile : undefined,
@@ -345,6 +386,8 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .option("--record", "Write run artifact with timeline and replay payload", false)
     .option("--record-path <path>", "Explicit output path for recorded artifact")
     .option("--record-label <label>", "Label to include in recorded artifact metadata")
+    .option("--log-ndjson <path>", "Append-only NDJSON run log path (overwrites at start)")
+    .option("--log-mode <mode>", "NDJSON log mode: minimal|full", "minimal")
     .option("--profile <name>", "Use a project workspace profile for persisted auth (requires workspace init)")
     .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
@@ -368,6 +411,8 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         record?: boolean;
         recordPath?: string;
         recordLabel?: string;
+        logNdjson?: string;
+        logMode?: string;
         profile?: string;
         browserMode?: string;
         isolation?: string;
@@ -390,6 +435,8 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           record: Boolean(options.record),
           recordPath: options.recordPath,
           recordLabel: options.recordLabel,
+          logNdjsonPath: typeof options.logNdjson === "string" ? options.logNdjson : undefined,
+          logNdjsonMode: typeof options.logMode === "string" ? options.logMode : undefined,
           sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
         });
         printRunSuccess(report, output);

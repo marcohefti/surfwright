@@ -1,5 +1,6 @@
 import type { NetworkCommandSpec } from "./types.js";
 import { networkBeginCommandSpec } from "./network-begin.js";
+import { networkAroundCommandSpec } from "./actions/network-around.js";
 import { networkCheckCommandSpec } from "./network-check.js";
 import { networkEndCommandSpec } from "./network-end.js";
 import { networkExportCommandSpec } from "./network-export.js";
@@ -17,6 +18,7 @@ export const networkCommandSpecs: NetworkCommandSpec[] = [
   networkExportCommandSpec,
   networkExportListCommandSpec,
   networkExportPruneCommandSpec,
+  networkAroundCommandSpec,
   networkBeginCommandSpec,
   networkEndCommandSpec,
   traceBeginCommandSpec,

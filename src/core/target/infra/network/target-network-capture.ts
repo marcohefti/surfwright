@@ -10,11 +10,10 @@ import {
   setNetworkCaptureWorkerPid,
 } from "../../../state/index.js";
 import { targetNetwork } from "./target-network.js";
-import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";
 import {
-  matchesRequestFilters,
   parseNetworkInput,
 } from "./target-network-utils.js";
+import { applyCapturedView } from "./capture/apply-captured-view.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { providers } from "../../../providers/index.js";
 import type {
@@ -89,6 +88,8 @@ export async function targetNetworkCaptureBegin(opts: {
   maxRequests?: number;
   maxWebSockets?: number;
   maxWsMessages?: number;
+  bodySampleBytes?: number;
+  redactRegex?: string[];
   includeHeaders?: boolean;
   includePostData?: boolean;
   includeWsMessages?: boolean;
@@ -107,6 +108,8 @@ export async function targetNetworkCaptureBegin(opts: {
     maxRequests: opts.maxRequests,
     maxWebSockets: opts.maxWebSockets,
     maxWsMessages: opts.maxWsMessages,
+    bodySampleBytes: opts.bodySampleBytes,
+    redactRegex: opts.redactRegex,
     includeHeaders: opts.includeHeaders,
     includePostData: opts.includePostData,
     includeWsMessages: opts.includeWsMessages,
@@ -138,6 +141,13 @@ export async function targetNetworkCaptureBegin(opts: {
     }
   }
 
+  const readyPath = path.join(root, `${captureRecord.captureId}.ready`);
+  try {
+    fs.rmSync(readyPath, { force: true });
+  } catch {
+    // ignore
+  }
+
   const cliScript = runtime.argv[1];
   if (!cliScript) {
     throw new CliError("E_INTERNAL", "Unable to resolve CLI script path for recorder worker");
@@ -158,6 +168,8 @@ export async function targetNetworkCaptureBegin(opts: {
       captureRecord.resultPath,
       "--done-path",
       captureRecord.donePath,
+      "--ready-path",
+      readyPath,
       "--stop-path",
       captureRecord.stopSignalPath,
       "--max-runtime-ms",
@@ -172,12 +184,16 @@ export async function targetNetworkCaptureBegin(opts: {
       String(parsed.maxWebSockets),
       "--max-ws-messages",
       String(parsed.maxWsMessages),
+      "--body-sample-bytes",
+      String(parsed.bodySampleBytes),
       "--include-headers",
       parsed.includeHeaders ? "1" : "0",
       "--include-post-data",
       parsed.includePostData ? "1" : "0",
       "--include-ws-messages",
       parsed.includeWsMessages ? "1" : "0",
+      "--redact-regex",
+      JSON.stringify(parsed.redactRegex),
     ],
     {
       detached: true,
@@ -194,6 +210,19 @@ export async function targetNetworkCaptureBegin(opts: {
     throw new CliError("E_INTERNAL", "Failed to start network capture worker");
   }
   await setNetworkCaptureWorkerPid(captureRecord.captureId, child.pid);
+
+  // Wait for worker to attach listeners before returning to avoid missing early requests.
+  const readyDeadline = Date.now() + Math.min(1500, opts.timeoutMs);
+  while (Date.now() < readyDeadline) {
+    if (fs.existsSync(readyPath)) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+  if (!fs.existsSync(readyPath)) {
+    await deleteNetworkCapture(captureRecord.captureId);
+    throw new CliError("E_WAIT_TIMEOUT", "Timed out waiting for capture worker readiness");
+  }
 
   return {
     ok: true,
@@ -240,44 +269,6 @@ async function waitForCaptureDone(donePath: string, timeoutMs: number): Promise<
     await new Promise((resolve) => setTimeout(resolve, 120));
   }
   throw new CliError("E_WAIT_TIMEOUT", "Timed out waiting for capture worker to stop");
-}
-
-function applyCapturedView(raw: TargetNetworkReport, parsed: ReturnType<typeof parseNetworkInput>): TargetNetworkReport {
-  const requests = raw.requests.filter((request) => matchesRequestFilters(request, parsed));
-  const webSockets = parsed.urlContains ? raw.webSockets.filter((socket) => socket.url.includes(parsed.urlContains ?? "")) : raw.webSockets;
-  const counts = {
-    ...raw.counts,
-    requestsReturned: requests.length,
-    webSocketsReturned: webSockets.length,
-    wsMessagesReturned: webSockets.reduce((acc, socket) => acc + socket.messages.length, 0),
-  };
-  return {
-    ...raw,
-    filters: {
-      urlContains: parsed.urlContains,
-      method: parsed.method,
-      resourceType: parsed.resourceType,
-      status: parsed.statusInput,
-      failedOnly: parsed.failedOnly,
-      profile: parsed.profile,
-    },
-    view: parsed.view,
-    fields: parsed.fields,
-    tableRows: parsed.view === "table" ? toTableRows(requests, parsed.fields) : [],
-    counts,
-    performance: buildPerformanceSummary(requests),
-    hints: buildTruncationHints({
-      droppedRequests: raw.counts.droppedRequests,
-      droppedWebSockets: raw.counts.droppedWebSockets,
-      droppedWsMessages: raw.counts.droppedWsMessages,
-      maxRequests: raw.limits.maxRequests,
-      maxWebSockets: raw.limits.maxWebSockets,
-      maxWsMessages: raw.limits.maxWsMessages,
-    }),
-    insights: buildInsights(requests, webSockets),
-    requests: parsed.view === "summary" ? [] : requests,
-    webSockets: parsed.view === "summary" ? [] : webSockets,
-  };
 }
 
 export async function targetNetworkCaptureEnd(opts: {
@@ -338,7 +329,10 @@ export async function targetNetworkCaptureEnd(opts: {
       maxRequests: raw.limits.maxRequests,
       maxWebSockets: raw.limits.maxWebSockets,
       maxWsMessages: raw.limits.maxWsMessages,
+      bodySampleBytes: raw.limits.bodySampleBytes,
+      redactRegex: raw.redaction.regex,
       captureMs: raw.capture.captureMs,
+      captureMsMax: raw.capture.captureMs,
       includeHeaders: true,
       includePostData: true,
       includeWsMessages: true,
@@ -381,15 +375,18 @@ export async function runTargetNetworkWorker(opts: {
   actionId: string;
   resultPath: string;
   donePath: string;
+  readyPath: string;
   stopPath: string;
   maxRuntimeMs: number;
   profile: string;
   maxRequests: number;
   maxWebSockets: number;
   maxWsMessages: number;
+  bodySampleBytes: number;
   includeHeaders: boolean;
   includePostData: boolean;
   includeWsMessages: boolean;
+  redactRegex: string[];
 }): Promise<void> {
   const { fs, path } = providers();
   try {
@@ -406,10 +403,13 @@ export async function runTargetNetworkWorker(opts: {
       maxRequests: opts.maxRequests,
       maxWebSockets: opts.maxWebSockets,
       maxWsMessages: opts.maxWsMessages,
+      bodySampleBytes: opts.bodySampleBytes,
+      redactRegex: opts.redactRegex,
       includeHeaders: opts.includeHeaders,
       includePostData: opts.includePostData,
       includeWsMessages: opts.includeWsMessages,
       stopSignalPath: opts.stopPath,
+      readySignalPath: opts.readyPath,
     });
     fs.mkdirSync(path.dirname(opts.resultPath), { recursive: true });
     fs.writeFileSync(opts.resultPath, `${JSON.stringify(report)}\n`, "utf8");
@@ -427,15 +427,18 @@ export function parseWorkerArgv(argv: string[]): {
   actionId: string;
   resultPath: string;
   donePath: string;
+  readyPath: string;
   stopPath: string;
   maxRuntimeMs: number;
   profile: string;
   maxRequests: number;
   maxWebSockets: number;
   maxWsMessages: number;
+  bodySampleBytes: number;
   includeHeaders: boolean;
   includePostData: boolean;
   includeWsMessages: boolean;
+  redactRegex: string[];
 } {
   const get = (name: string): string => {
     const idx = argv.indexOf(name);
@@ -451,14 +454,24 @@ export function parseWorkerArgv(argv: string[]): {
     actionId: get("--action-id"),
     resultPath: get("--result-path"),
     donePath: get("--done-path"),
+    readyPath: get("--ready-path"),
     stopPath: get("--stop-path"),
     maxRuntimeMs: parseNumberOrThrow(get("--max-runtime-ms"), "max-runtime-ms"),
     profile: get("--profile"),
     maxRequests: parseNumberOrThrow(get("--max-requests"), "max-requests"),
     maxWebSockets: parseNumberOrThrow(get("--max-websockets"), "max-websockets"),
     maxWsMessages: parseNumberOrThrow(get("--max-ws-messages"), "max-ws-messages"),
+    bodySampleBytes: parseNumberOrThrow(get("--body-sample-bytes"), "body-sample-bytes"),
     includeHeaders: get("--include-headers") === "1",
     includePostData: get("--include-post-data") === "1",
     includeWsMessages: get("--include-ws-messages") === "1",
+    redactRegex: (() => {
+      try {
+        const parsed = JSON.parse(get("--redact-regex")) as unknown;
+        return Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === "string") : [];
+      } catch {
+        return [];
+      }
+    })(),
   };
 }

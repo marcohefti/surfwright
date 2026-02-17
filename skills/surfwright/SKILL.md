@@ -43,6 +43,7 @@ surfwright target snapshot <targetId>
 surfwright target count <targetId> --selector 'button,[role="button"],input[type="button"],input[type="submit"],input[type="reset"]' --visible-only
 surfwright target find <targetId> --selector a --contains "query" --first --visible-only
 surfwright target click <targetId> --text "query" --visible-only
+surfwright target download <targetId> --text "Export" --visible-only
 surfwright target read <targetId> --selector main --frame-scope main --chunk-size 1200 --chunk 1
 surfwright target extract <targetId> --kind blog --frame-scope all --limit 10
 surfwright target eval <targetId> --expr "console.log('hello from agent'), document.title" --capture-console
@@ -53,6 +54,7 @@ surfwright target hud <targetId>
 surfwright target network <targetId> --profile perf --view summary
 surfwright target network-tail <targetId> --profile api --capture-ms 3000 --max-events 200
 surfwright target network-query --capture-id <captureId> --preset slowest --limit 10
+surfwright target network-around <targetId> --click-text "Checkout" --profile api --view summary
 surfwright target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
 surfwright target network-end <captureId> --view summary --status 5xx
 surfwright target network-export <targetId> --profile page --reload --capture-ms 3000 --out ./artifacts/capture.har
@@ -99,6 +101,38 @@ Use `target frames` to enumerate stable `frameId` handles. Use `--frame-id` on `
 ```bash
 surfwright target frames <targetId> --limit 50
 surfwright target eval <targetId> --frame-id f-1 --expr "document.title"
+```
+
+If you use `--script-file`, set `--mode expr` when the file should behave like an expression (same return semantics as `--expr`).
+
+## Download Capture (Deterministic)
+
+Use `target download` when a click triggers a file download and you want deterministic metadata + an on-disk artifact:
+
+```bash
+surfwright target download <targetId> --text "Export CSV" --visible-only
+```
+
+The report includes `filename`, `sha256`, `size`, plus best-effort HTTP `headers`/`status` evidence when available.
+
+## Snapshot Diff (What Changed?)
+
+Save two `target snapshot` JSON payloads and diff them:
+
+```bash
+surfwright target snapshot <targetId> --mode snapshot > ./artifacts/snap-a.json
+# ...do something...
+surfwright target snapshot <targetId> --mode snapshot > ./artifacts/snap-b.json
+surfwright target snapshot-diff ./artifacts/snap-a.json ./artifacts/snap-b.json
+```
+
+## Network Capture Around One Click
+
+Use `target network-around` when you want a single command that:
+starts capture, clicks, then finalizes capture into one stable summary payload.
+
+```bash
+surfwright target network-around <targetId> --click-text "Checkout" --profile api --view summary
 ```
 
 ## Multi-Match Click (Nth Match)
@@ -177,6 +211,14 @@ Use `references/error-handling.md` as the canonical retry taxonomy (branch on `c
 - Streaming tails default to NDJSON-only. If you run with `--no-json`, stdout will be NDJSON lines plus a final `ok ...` summary line.
 - Stop reading when you see the final capture event: `{"type":"capture","phase":"end",...}`.
 - Use `--max-events <n>` on `target network-tail` to cap event volume (the final `capture end` line is still emitted).
+
+## Run logs (NDJSON)
+
+Use `run --log-ndjson <path>` to emit an append-only step log (use `--log-mode full` to include step reports):
+
+```bash
+surfwright run --plan ./plan.json --log-ndjson ./artifacts/run.ndjson --log-mode full
+```
 
 ## Reference map
 

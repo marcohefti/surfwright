@@ -4,8 +4,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-target-network-browser-"));
+test.after(async () => {
+  await cleanupStateDir(TEST_STATE_DIR);
+});
 
 function runCli(args) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
@@ -30,14 +34,6 @@ function requireBrowser() {
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
 }
-
-process.on("exit", () => {
-  try {
-    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore cleanup failures
-  }
-});
 
 test("target network returns deterministic JSON shape", () => {
   requireBrowser();
@@ -82,6 +78,7 @@ test("target network-export writes HAR artifact metadata", () => {
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
+  const outPath = path.join(TEST_STATE_DIR, "artifacts", "capture.har");
   const exportResult = runCli([
     "--json",
     "--session",
@@ -89,6 +86,8 @@ test("target network-export writes HAR artifact metadata", () => {
     "target",
     "network-export",
     openPayload.targetId,
+    "--out",
+    outPath,
     "--timeout-ms",
     "20000",
   ]);
@@ -96,7 +95,10 @@ test("target network-export writes HAR artifact metadata", () => {
   const payload = parseJson(exportResult.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.format, "har");
-  assert.equal(typeof payload.path, "string");
+  assert.equal(typeof payload.artifact?.path, "string");
+  assert.equal(payload.artifact.path, outPath);
+  assert.equal(typeof payload.artifact.bytes, "number");
+  assert.equal(fs.existsSync(payload.artifact.path), true);
 });
 
 test("target network begin/end returns capture handle and projected report", () => {
@@ -133,4 +135,3 @@ test("target network begin/end returns capture handle and projected report", () 
   assert.equal(endPayload.ok, true);
   assert.equal(endPayload.captureId, beginPayload.captureId);
 });
-

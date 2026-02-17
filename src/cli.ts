@@ -267,10 +267,8 @@ function parseCommandPath(argv: string[]): string[] {
     if (token.startsWith("-")) {
       break;
     }
-
     out.push(token);
     index += 1;
-
     if (out.length >= 2) {
       break;
     }
@@ -281,13 +279,16 @@ function parseCommandPath(argv: string[]): string[] {
 
   return out;
 }
-
 function shouldBypassDaemon(argv: string[]): boolean {
   const [first, second] = parseCommandPath(argv);
   if (!first) {
     return true;
   }
   if (first.startsWith("__")) {
+    return true;
+  }
+  if (first === "skill") {
+    // Skill commands often take local filesystem paths; resolve relative paths from operator cwd, not daemon worker cwd.
     return true;
   }
   if (first === "target" && second === "network-tail") {
@@ -314,7 +315,6 @@ function shouldBypassDaemon(argv: string[]): boolean {
 
 function createProgram(): Command {
   const program = new Command();
-
   function globalOutputOpts(): OutputOpts {
     const globalOpts = program.opts<{ json?: boolean; pretty?: boolean }>();
     return {

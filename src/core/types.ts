@@ -58,6 +58,42 @@ export type WorkspaceInitReport = {
   profileSessionsDir: string;
   gitignore: { path: string; updated: boolean };
 };
+
+export type WorkspaceProfileLocksReport = {
+  ok: true;
+  found: boolean;
+  workspaceDir: string | null;
+  profileSessionsDir: string | null;
+  locks: Array<{
+    profile: string;
+    path: string;
+    pid: number | null;
+    ageMs: number | null;
+    pidAlive: boolean | null;
+    stale: boolean;
+  }>;
+  hint: string | null;
+};
+
+export type WorkspaceProfileLockClearReport = {
+  ok: true;
+  found: boolean;
+  profile: string;
+  cleared: boolean;
+  path: string | null;
+  reason: "not_found" | "active" | "cleared" | "forced";
+  hint: string | null;
+};
+
+export type DownloadCaptureReport = {
+  finalUrl: string;
+  status: number | null;
+  headers: Record<string, string>;
+  filename: string;
+  path: string;
+  sha256: string;
+  size: number;
+};
 export type OpenReport = {
   ok: true;
   sessionId: string;
@@ -74,6 +110,7 @@ export type OpenReport = {
   url: string;
   status: number | null;
   title: string;
+  download: DownloadCaptureReport | null;
   timingMs: ActionTimingMs;
 };
 export type SessionReport = {
@@ -127,6 +164,7 @@ export type {
   TargetClickDeltaRole,
   TargetClickExplainReport,
   TargetClickReport,
+  TargetDownloadReport,
   TargetConsoleTailReport,
   TargetEvalReport,
   TargetExtractReport,
@@ -137,6 +175,7 @@ export type {
   TargetListReport,
   TargetPruneReport,
   TargetReadReport,
+  TargetSnapshotDiffReport,
   TargetSnapshotMode,
   TargetSnapshotReport,
   TargetUrlAssertReport,

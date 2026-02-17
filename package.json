@@ -36,7 +36,7 @@
     "validate": "pnpm -s typecheck && pnpm -s policy:check && pnpm -s perf:check && pnpm -s changelog:check && pnpm -s skill:validate && pnpm -s build && pnpm -s startup-envelope:check && pnpm -s contract:snapshot:check && pnpm -s knowledge-store:check",
     "validate:strict": "pnpm -s typecheck && pnpm -s policy:check:strict && pnpm -s perf:check && pnpm -s changelog:check && pnpm -s skill:validate && pnpm -s build && pnpm -s startup-envelope:check && pnpm -s contract:snapshot:check && pnpm -s knowledge-store:check",
     "test:contract": "pnpm -s build && node --test --test-isolation=process --test-concurrency=1 test/*.contract.test.mjs test/**/*.contract.test.mjs",
-    "test:browser": "pnpm -s build && node --test --test-isolation=process --test-concurrency=1 test/browser/**/*.browser.mjs",
+    "test:browser": "pnpm -s build && node scripts/tests/run-browser-tests.mjs",
     "test:fixtures": "node --test test/ingress.fixture-replay.test.mjs",
     "test:skill-lifecycle": "pnpm -s build && node --test test/lifecycle/skill.lifecycle.contract.test.mjs",
     "test:update-lifecycle": "pnpm -s build && node --test test/lifecycle/update.lifecycle.contract.test.mjs",

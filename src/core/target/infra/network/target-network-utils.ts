@@ -12,8 +12,11 @@ const NETWORK_CAPTURE_MAX_MS = 120000;
 const NETWORK_MAX_REQUESTS_CAP = 1000;
 const NETWORK_MAX_WEBSOCKETS_CAP = 200;
 const NETWORK_MAX_WS_MESSAGES_CAP = 2000;
-const NETWORK_POST_DATA_PREVIEW_MAX_BYTES = 512;
+const NETWORK_BODY_SAMPLE_BYTES_DEFAULT = 512;
+const NETWORK_BODY_SAMPLE_BYTES_CAP = 8192;
 const NETWORK_WS_PREVIEW_MAX_CHARS = 220;
+const NETWORK_REDACT_REGEX_MAX_PATTERNS = 8;
+const NETWORK_REDACT_REGEX_MAX_CHARS = 240;
 
 type StatusFilter = {
   kind: "exact" | "class";
@@ -28,6 +31,9 @@ export type ParsedNetworkInput = {
   maxRequests: number;
   maxWebSockets: number;
   maxWsMessages: number;
+  bodySampleBytes: number;
+  redactRegex: string[];
+  redactors: RegExp[];
   reload: boolean;
   includeHeaders: boolean;
   includePostData: boolean;
@@ -45,6 +51,7 @@ type NetworkProfileDefaults = {
   maxRequests: number;
   maxWebSockets: number;
   maxWsMessages: number;
+  bodySampleBytes: number;
   includeHeaders: boolean;
   includePostData: boolean;
   includeWsMessages: boolean;
@@ -57,6 +64,7 @@ const PROFILE_DEFAULTS: Record<ParsedNetworkInput["profile"], NetworkProfileDefa
     maxRequests: DEFAULT_TARGET_NETWORK_MAX_REQUESTS,
     maxWebSockets: DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS,
     maxWsMessages: DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES,
+    bodySampleBytes: NETWORK_BODY_SAMPLE_BYTES_DEFAULT,
     includeHeaders: false,
     includePostData: false,
     includeWsMessages: true,
@@ -67,6 +75,7 @@ const PROFILE_DEFAULTS: Record<ParsedNetworkInput["profile"], NetworkProfileDefa
     maxRequests: 240,
     maxWebSockets: 16,
     maxWsMessages: 80,
+    bodySampleBytes: NETWORK_BODY_SAMPLE_BYTES_DEFAULT,
     includeHeaders: true,
     includePostData: true,
     includeWsMessages: false,
@@ -77,6 +86,7 @@ const PROFILE_DEFAULTS: Record<ParsedNetworkInput["profile"], NetworkProfileDefa
     maxRequests: 220,
     maxWebSockets: 24,
     maxWsMessages: 120,
+    bodySampleBytes: NETWORK_BODY_SAMPLE_BYTES_DEFAULT,
     includeHeaders: false,
     includePostData: false,
     includeWsMessages: true,
@@ -87,6 +97,7 @@ const PROFILE_DEFAULTS: Record<ParsedNetworkInput["profile"], NetworkProfileDefa
     maxRequests: 140,
     maxWebSockets: 80,
     maxWsMessages: 600,
+    bodySampleBytes: NETWORK_BODY_SAMPLE_BYTES_DEFAULT,
     includeHeaders: false,
     includePostData: false,
     includeWsMessages: true,
@@ -97,12 +108,51 @@ const PROFILE_DEFAULTS: Record<ParsedNetworkInput["profile"], NetworkProfileDefa
     maxRequests: 320,
     maxWebSockets: 24,
     maxWsMessages: 120,
+    bodySampleBytes: NETWORK_BODY_SAMPLE_BYTES_DEFAULT,
     includeHeaders: false,
     includePostData: false,
     includeWsMessages: false,
     reload: true,
   },
 };
+
+function parseRedactRegexes(input: string[] | undefined): { patterns: string[]; redactors: RegExp[] } {
+  if (!Array.isArray(input) || input.length === 0) {
+    return { patterns: [], redactors: [] };
+  }
+  if (input.length > NETWORK_REDACT_REGEX_MAX_PATTERNS) {
+    throw new CliError("E_QUERY_INVALID", `redact-regex supports at most ${NETWORK_REDACT_REGEX_MAX_PATTERNS} patterns`);
+  }
+  const patterns: string[] = [];
+  const redactors: RegExp[] = [];
+  for (const raw of input) {
+    if (typeof raw !== "string") {
+      continue;
+    }
+    const pattern = raw.trim();
+    if (pattern.length === 0) {
+      throw new CliError("E_QUERY_INVALID", "redact-regex must not be empty");
+    }
+    if (pattern.length > NETWORK_REDACT_REGEX_MAX_CHARS) {
+      throw new CliError(
+        "E_QUERY_INVALID",
+        `redact-regex pattern must be at most ${NETWORK_REDACT_REGEX_MAX_CHARS} characters`,
+      );
+    }
+    let redactor: RegExp;
+    try {
+      redactor = new RegExp(pattern, "g");
+    } catch {
+      throw new CliError("E_QUERY_INVALID", "redact-regex must be a valid regular expression pattern");
+    }
+    if (redactor.exec("") !== null) {
+      throw new CliError("E_QUERY_INVALID", "redact-regex must not match empty string");
+    }
+    patterns.push(pattern);
+    redactors.push(redactor);
+  }
+  return { patterns, redactors };
+}
 
 function parseProfile(input: string | undefined): ParsedNetworkInput["profile"] {
   if (typeof input !== "string" || input.trim().length === 0) {
@@ -236,9 +286,12 @@ export function parseNetworkInput(opts: {
   view?: string;
   fields?: string;
   captureMs?: number;
+  captureMsMax?: number;
   maxRequests?: number;
   maxWebSockets?: number;
   maxWsMessages?: number;
+  bodySampleBytes?: number;
+  redactRegex?: string[];
   reload?: boolean;
   includeHeaders?: boolean;
   includePostData?: boolean;
@@ -253,6 +306,11 @@ export function parseNetworkInput(opts: {
   const profileDefaults = PROFILE_DEFAULTS[profile];
   const fields = parseFields(opts.fields);
   const status = parseStatusFilter(opts.status);
+  const parsedRedaction = parseRedactRegexes(opts.redactRegex);
+  const captureMsMax =
+    typeof opts.captureMsMax === "number" && Number.isFinite(opts.captureMsMax) && opts.captureMsMax > 0
+      ? Math.floor(opts.captureMsMax)
+      : NETWORK_CAPTURE_MAX_MS;
   return {
     profile,
     view: parseView(opts.view),
@@ -261,7 +319,7 @@ export function parseNetworkInput(opts: {
       value: opts.captureMs,
       defaultValue: profileDefaults.captureMs,
       min: NETWORK_CAPTURE_MIN_MS,
-      max: NETWORK_CAPTURE_MAX_MS,
+      max: captureMsMax,
       name: "capture-ms",
     }),
     maxRequests: parsePositiveInt({
@@ -285,6 +343,15 @@ export function parseNetworkInput(opts: {
       max: NETWORK_MAX_WS_MESSAGES_CAP,
       name: "max-ws-messages",
     }),
+    bodySampleBytes: parsePositiveInt({
+      value: opts.bodySampleBytes,
+      defaultValue: profileDefaults.bodySampleBytes,
+      min: 0,
+      max: NETWORK_BODY_SAMPLE_BYTES_CAP,
+      name: "body-sample-bytes",
+    }),
+    redactRegex: parsedRedaction.patterns,
+    redactors: parsedRedaction.redactors,
     reload: typeof opts.reload === "boolean" ? opts.reload : profileDefaults.reload,
     includeHeaders: typeof opts.includeHeaders === "boolean" ? opts.includeHeaders : profileDefaults.includeHeaders,
     includePostData: typeof opts.includePostData === "boolean" ? opts.includePostData : profileDefaults.includePostData,
@@ -320,13 +387,17 @@ function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-export function postDataPreview(buffer: Buffer): string {
-  const sliced = buffer.subarray(0, NETWORK_POST_DATA_PREVIEW_MAX_BYTES);
+export function postDataPreview(buffer: Buffer, opts: { maxBytes: number; redactors: RegExp[] }): string {
+  const sliced = buffer.subarray(0, Math.max(0, opts.maxBytes));
   const utf8Text = sliced.toString("utf8");
   const printable = /^[\x09\x0A\x0D\x20-\x7E]*$/.test(utf8Text);
   if (printable) {
     const text = normalizeWhitespace(utf8Text);
-    return maybeTruncate(text, NETWORK_POST_DATA_PREVIEW_MAX_BYTES);
+    const sampled = maybeTruncate(text, Math.max(0, opts.maxBytes));
+    if (opts.redactors.length > 0) {
+      return opts.redactors.reduce((acc, redactor) => acc.replace(redactor, "[REDACTED]"), sampled);
+    }
+    return sampled;
   }
   return `base64:${sliced.toString("base64")}`;
 }

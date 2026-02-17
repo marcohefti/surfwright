@@ -22,6 +22,16 @@ export const runtimeCommandManifest: CliCommandContract[] = [
     summary: "create a project workspace (./.surfwright) with gitignored profile storage",
   },
   {
+    id: "workspace.profile-locks",
+    usage: "surfwright workspace profile-locks [--no-json] [--pretty]",
+    summary: "list workspace profile lock files with staleness hints",
+  },
+  {
+    id: "workspace.profile-lock-clear",
+    usage: "surfwright workspace profile-lock-clear <profile> [--force] [--no-json] [--pretty]",
+    summary: "clear a stale workspace profile lock (safe by default)",
+  },
+  {
     id: "session.ensure",
     usage: "surfwright session ensure [--browser-mode <headless|headed>] [--timeout-ms <ms>] [--no-json] [--pretty]",
     summary: "reuse active session if reachable; otherwise use managed default",
@@ -73,7 +83,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   {
     id: "open",
     usage:
-      "surfwright open <url> [--profile <name>] [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright open <url> [--profile <name>] [--reuse-url] [--allow-download] [--download-out-dir <path>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "open URL and return minimal page report with target handle",
   },
   {
@@ -85,7 +95,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   {
     id: "run",
     usage:
-      "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--profile <name>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--log-ndjson <path>] [--log-mode <minimal|full>] [--profile <name>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]",
     summary: "execute, lint, record, or replay deterministic multi-step browser plans",
   },
   {

@@ -4,8 +4,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-commands-browser-"));
+test.after(async () => {
+  await cleanupStateDir(TEST_STATE_DIR);
+});
 
 function runCli(args) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
@@ -31,14 +35,6 @@ function requireBrowser() {
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
 }
 
-process.on("exit", () => {
-  try {
-    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore cleanup failures
-  }
-});
-
 test("session ensure + open success returns contract shape", () => {
   requireBrowser();
 
@@ -51,6 +47,7 @@ test("session ensure + open success returns contract shape", () => {
     "kind",
     "cdpOrigin",
     "browserMode",
+    "profile",
     "active",
     "created",
     "restarted",
@@ -70,6 +67,7 @@ test("session ensure + open success returns contract shape", () => {
     "sessionId",
     "sessionSource",
     "browserMode",
+    "profile",
     "targetId",
     "actionId",
     "requestedUrl",
@@ -80,6 +78,7 @@ test("session ensure + open success returns contract shape", () => {
     "url",
     "status",
     "title",
+    "download",
     "timingMs",
   ]);
   assert.equal(openPayload.ok, true);
@@ -87,4 +86,3 @@ test("session ensure + open success returns contract shape", () => {
   assert.equal(openPayload.sessionSource, "explicit");
   assert.equal(openPayload.browserMode, ensurePayload.browserMode);
 });
-

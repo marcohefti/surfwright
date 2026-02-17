@@ -130,6 +130,10 @@ Deferred distribution channels and enablement checklists are tracked in `docs/re
 ```bash
 surfwright doctor [--no-json] [--pretty]
 surfwright contract [--no-json] [--pretty]
+surfwright workspace info [--no-json] [--pretty]
+surfwright workspace init [--no-json] [--pretty]
+surfwright workspace profile-locks [--no-json] [--pretty]
+surfwright workspace profile-lock-clear <profile> [--force] [--no-json] [--pretty]
 surfwright session ensure [--browser-mode <headless|headed>] [--timeout-ms <ms>] [--no-json] [--pretty]
 surfwright session new [--session-id <id>] [--browser-mode <headless|headed>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--no-json] [--pretty]
 surfwright session fresh [--session-id <id>] [--browser-mode <headless|headed>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--no-json] [--pretty]
@@ -139,8 +143,8 @@ surfwright session list [--no-json] [--pretty]
 surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--no-json] [--pretty]
 surfwright session clear [--keep-processes] [--timeout-ms <ms>] [--no-json] [--pretty]
 surfwright session cookie-copy --from-session <id> --to-session <id> --url <url> [--url <url> ...] [--timeout-ms <ms>] [--no-json] [--pretty]
-surfwright open <url> [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
-surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright open <url> [--profile <name>] [--reuse-url] [--allow-download] [--download-out-dir <path>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--log-ndjson <path>] [--log-mode <minimal|full>] [--profile <name>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
 surfwright update check [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--no-json] [--pretty]
 surfwright update run [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--dry-run] [--no-json] [--pretty]
 surfwright update rollback [--package <name>] [--dry-run] [--no-json] [--pretty]
@@ -150,21 +154,24 @@ surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--no-
 surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target frames <targetId> [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target snapshot <targetId> [--mode <snapshot|orient>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target snapshot-diff <a> <b> [--no-json] [--pretty]
 surfwright target count <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
-surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--mode <expr|script>] [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--frame-scope <scope>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target url-assert <targetId> [--host <host>] [--origin <origin>] [--path-prefix <prefix>] [--url-prefix <prefix>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
 surfwright target health <targetId> [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target hud <targetId> [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
-surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
-surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--body-sample-bytes <n>] [--redact-regex <pattern> ...] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-events <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
 surfwright target network-query [--capture-id <id> | --artifact-id <id>] [--preset <name>] [--limit <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--no-json] [--pretty]
-surfwright target network-begin <targetId> [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--include-headers] [--include-post-data] [--no-ws-messages] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright target network-around <targetId> (--click-text <query> | --click-selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--frame-scope <scope>] [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--body-sample-bytes <n>] [--redact-regex <pattern> ...] [--include-headers] [--include-post-data] [--no-ws-messages] [--view <mode>] [--fields <csv>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright target network-begin <targetId> [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--body-sample-bytes <n>] [--redact-regex <pattern> ...] [--include-headers] [--include-post-data] [--no-ws-messages] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
 surfwright target network-end <captureId> [--profile <preset>] [--view <mode>] [--fields <csv>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--timeout-ms <ms>] [--no-json] [--pretty]
 surfwright target network-export <targetId> --out <path> [--action-id <id>] [--format har] [--profile <preset>] [--capture-ms <ms>] [--max-requests <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
 surfwright target network-export-list [--limit <n>] [--no-json] [--pretty]
@@ -217,6 +224,7 @@ Plan UX examples:
 ```bash
 surfwright run --doctor --plan-json '{"steps":[{"id":"open","url":"https://example.com"},{"id":"snapshot"}]}'
 surfwright run --plan ./plan.json --record --record-label smoke
+surfwright run --plan ./plan.json --log-ndjson ./artifacts/run.ndjson --log-mode full
 surfwright run --replay ~/.surfwright/runs/2026-02-13Z-smoke-abc123.json
 ```
 
@@ -274,6 +282,15 @@ Use `--max-... 0` to omit a category. If `nextCursor` is non-null, pass it back 
 
 Use `--include-selector-hints` to include bounded `items.*.selectorHint` rows. Use `--mode orient` for a quiet first-load payload (returns `h1` and limits `links` to header/nav links; defaults `--max-buttons 0`).
 
+To diff two snapshots (for "what changed?" without re-scraping), save JSON snapshots and run `target snapshot-diff`:
+
+```bash
+surfwright target snapshot <targetId> --mode snapshot > ./artifacts/snap-a.json
+# ...do something...
+surfwright target snapshot <targetId> --mode snapshot > ./artifacts/snap-b.json
+surfwright target snapshot-diff ./artifacts/snap-a.json ./artifacts/snap-b.json
+```
+
 `target find` returns bounded match records for text/selector queries:
 
 ```json
@@ -290,6 +307,12 @@ Use `--index <n>` (0-based) to click the Nth match. Use `--explain` to return bo
 
 Use `--delta` to include a bounded, evidence-based before/after payload (no semantic UI claims). v0 includes URL/title, focus evidence, and role-count deltas for `dialog|alert|status|menu|listbox`, plus a fixed list of ARIA attribute values captured on the clicked element.
 
+`target download` captures click-triggered downloads deterministically (saves the file and returns stable metadata like `sha256`, `size`, and best-effort headers/status evidence):
+
+```bash
+surfwright target download <targetId> --text "Export CSV" --visible-only
+```
+
 `target read` returns deterministic text chunks for long pages:
 
 ```json
@@ -304,11 +327,19 @@ Use `--delta` to include a bounded, evidence-based before/after payload (no sema
 
 Use `--expr` when you want the value of an expression without writing an explicit `return`. Use `target frames` to enumerate `frameId` handles and pass `--frame-id` when evaluating inside an iframe; `target eval` reports compact `context` metadata to clarify what was actually evaluated.
 
+If you use `--script-file`, set `--mode expr` when the file should behave like an expression (same return semantics as `--expr`).
+
 `target network` returns bounded request/websocket diagnostics plus performance summary, correlation ids, hints, and insights:
 
 ```json
 {"ok":true,"sessionId":"s-1","sessionSource":"target-inferred","targetId":"1764200ABD63A830C21F4BF2799536D0","captureId":null,"actionId":"a-m6m2p8-1sz7jc","url":"http://camelpay.localhost/","title":"CamelPay — Cross-chain crypto checkout","capture":{"startedAt":"2026-02-13T12:00:00.000Z","endedAt":"2026-02-13T12:00:02.600Z","durationMs":2600,"captureMs":2500,"reload":false},"filters":{"urlContains":null,"method":null,"resourceType":null,"status":"2xx","failedOnly":false,"profile":"custom"},"view":"raw","fields":["id","method","status","durationMs","resourceType","url"],"tableRows":[],"limits":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120},"counts":{"requestsSeen":31,"requestsReturned":24,"responsesSeen":31,"failedSeen":0,"webSocketsSeen":1,"webSocketsReturned":1,"wsMessagesSeen":14,"wsMessagesReturned":14,"droppedRequests":0,"droppedWebSockets":0,"droppedWsMessages":0},"performance":{"completedRequests":24,"bytesApproxTotal":198432,"statusBuckets":{"2xx":24,"3xx":0,"4xx":0,"5xx":0,"other":0},"latencyMs":{"min":11.2,"max":921.7,"avg":147.4,"p50":64.1,"p95":721.6},"ttfbMs":{"min":6.3,"max":680.4,"avg":83.2,"p50":41.7,"p95":421.9},"slowest":[{"id":5,"url":"https://camelpay.localhost/api/checkout","resourceType":"fetch","status":200,"durationMs":921.7}]},"truncated":{"requests":false,"webSockets":false,"wsMessages":false},"hints":{"shouldRecapture":false,"suggested":{"maxRequests":120,"maxWebSockets":24,"maxWsMessages":120}},"insights":{"topHosts":[],"errorHotspots":[],"websocketHotspots":[]},"requests":[],"webSockets":[]}
 ```
+
+For evidence capture safety, use bounded sampling and redaction:
+
+- `--body-sample-bytes <n>` caps sampled request body previews.
+- `--redact-regex <pattern>` applies regex-based redaction to sampled text.
+- When `--include-headers` is enabled, sensitive headers like `authorization` and `cookie` are always redacted.
 
 `target network-begin` / `target network-end` gives an action-scoped handle-based capture loop:
 
@@ -371,6 +402,13 @@ Workspace override:
 
 - CLI: `--workspace <dir>`
 - env: `SURFWRIGHT_WORKSPACE_DIR=<path>`
+
+If a machine restart/crash leaves a profile locked, inspect and clear stale locks:
+
+```bash
+surfwright workspace profile-locks
+surfwright workspace profile-lock-clear auth
+```
 
 `session ensure` still runs a built-in hygiene pass, but command defaults are now isolation-first:
 - `open`/`run` without `--session` use new ephemeral sessions by default.

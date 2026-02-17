@@ -7,6 +7,8 @@ import type {
   StateReconcileReport,
   WorkspaceInfoReport,
   WorkspaceInitReport,
+  WorkspaceProfileLockClearReport,
+  WorkspaceProfileLocksReport,
 } from "../../core/types.js";
 
 export type RuntimeOutputOpts = {
@@ -153,9 +155,32 @@ export function printRunSuccess(report: Record<string, unknown>, opts: RuntimeOu
   process.stdout.write(["ok", `steps=${steps}`, `sessionId=${sessionId}`, `targetId=${targetId}`, `totalMs=${totalMs}`].join(" ") + "\n");
 }
 
-export function printWorkspaceSuccess(report: WorkspaceInfoReport | WorkspaceInitReport, opts: RuntimeOutputOpts) {
+export function printWorkspaceSuccess(
+  report: WorkspaceInfoReport | WorkspaceInitReport | WorkspaceProfileLocksReport | WorkspaceProfileLockClearReport,
+  opts: RuntimeOutputOpts,
+) {
   if (opts.json) {
     writeJson(report, { pretty: opts.pretty });
+    return;
+  }
+  if ("locks" in report) {
+    if (!report.found) {
+      process.stdout.write(`workspace not found\n${report.hint ?? ""}\n`.trimEnd() + "\n");
+      return;
+    }
+    process.stdout.write(["ok", `locks=${report.locks.length}`].join(" ") + "\n");
+    return;
+  }
+  if ("cleared" in report) {
+    if (!report.found) {
+      process.stdout.write(`workspace not found\n${report.hint ?? ""}\n`.trimEnd() + "\n");
+      return;
+    }
+    process.stdout.write(
+      ["ok", `profile=${report.profile}`, `cleared=${report.cleared ? "true" : "false"}`, `reason=${report.reason}`].join(
+        " ",
+      ) + "\n",
+    );
     return;
   }
   if ("found" in report) {

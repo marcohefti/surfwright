@@ -118,6 +118,7 @@ test("target network-query/check/export-prune work on saved sources", () => {
       actionId: "a-1",
       url: "https://example.com",
       title: "Example",
+      redaction: { headers: { always: true }, regex: [] },
       capture: {
         startedAt: "2026-02-13T10:00:00.000Z",
         endedAt: "2026-02-13T10:00:01.000Z",
@@ -136,7 +137,7 @@ test("target network-query/check/export-prune work on saved sources", () => {
       view: "raw",
       fields: ["id", "method", "status", "durationMs", "url"],
       tableRows: [],
-      limits: { maxRequests: 10, maxWebSockets: 5, maxWsMessages: 10 },
+      limits: { maxRequests: 10, maxWebSockets: 5, maxWsMessages: 10, bodySampleBytes: 512 },
       counts: {
         requestsSeen: 1,
         requestsReturned: 1,
@@ -253,4 +254,3 @@ test("target network-query/check/export-prune work on saved sources", () => {
   assert.equal(prunePayload.ok, true);
   assert.equal(prunePayload.removed >= 1, true);
 });
-

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-target-click-explain-"));
 
@@ -44,42 +45,8 @@ function requireBrowser() {
   assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
 }
 
-function cleanupManagedBrowsers() {
-  try {
-    const statePath = stateFilePath();
-    if (!fs.existsSync(statePath)) {
-      return;
-    }
-    const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
-    const sessions = state?.sessions ?? {};
-    for (const session of Object.values(sessions)) {
-      if (!session || typeof session !== "object") {
-        continue;
-      }
-      if (session.kind !== "managed") {
-        continue;
-      }
-      if (typeof session.browserPid !== "number" || !Number.isFinite(session.browserPid) || session.browserPid <= 0) {
-        continue;
-      }
-      try {
-        process.kill(session.browserPid, "SIGTERM");
-      } catch {
-        // ignore already-dead processes
-      }
-    }
-  } catch {
-    // ignore cleanup failures
-  }
-}
-
-process.on("exit", () => {
-  cleanupManagedBrowsers();
-  try {
-    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore cleanup failures
-  }
+test.after(async () => {
+  await cleanupStateDir(TEST_STATE_DIR);
 });
 
 test("target click --explain returns bounded rejection reasons without clicking", () => {

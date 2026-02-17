@@ -6,6 +6,7 @@ import path from "node:path";
 import process from "node:process";
 import zlib from "node:zlib";
 import test from "node:test";
+import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
 
 const TEST_TARGET_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-agent-target-"));
 
@@ -35,38 +36,8 @@ function requireBrowser() {
   assert.equal(ensured.status, 0, ensured.stdout || ensured.stderr);
 }
 
-function cleanupManagedBrowsers(stateDir) {
-  try {
-    const statePath = path.join(stateDir, "state.json");
-    if (!fs.existsSync(statePath)) {
-      return;
-    }
-    const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
-    for (const session of Object.values(state?.sessions ?? {})) {
-      if (!session || typeof session !== "object" || session.kind !== "managed") {
-        continue;
-      }
-      if (typeof session.browserPid !== "number" || !Number.isFinite(session.browserPid) || session.browserPid <= 0) {
-        continue;
-      }
-      try {
-        process.kill(session.browserPid, "SIGTERM");
-      } catch {
-        // ignore
-      }
-    }
-  } catch {
-    // ignore cleanup failures
-  }
-}
-
-process.on("exit", () => {
-  cleanupManagedBrowsers(TEST_TARGET_STATE_DIR);
-  try {
-    fs.rmSync(TEST_TARGET_STATE_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore cleanup failures
-  }
+test.after(async () => {
+  await cleanupStateDir(TEST_TARGET_STATE_DIR);
 });
 
 test("target spawn close and dialog return deterministic shapes", () => {
@@ -378,4 +349,3 @@ test("target trace begin export and insight return deterministic shapes", () => 
   assert.equal(typeof insightPayload.insight.severity, "string");
   assert.equal(typeof insightPayload.insight.evidence, "object");
 });
-

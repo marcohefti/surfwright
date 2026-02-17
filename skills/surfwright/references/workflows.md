@@ -16,6 +16,7 @@ surfwright open https://example.com
 surfwright target snapshot <targetId>
 surfwright target find <targetId> --selector a --contains "query" --first --visible-only
 surfwright target click <targetId> --text "query" --visible-only
+surfwright target download <targetId> --text "Export CSV" --visible-only
 surfwright target click-at <targetId> --x 120 --y 80
 surfwright target fill <targetId> --selector "#email" --value "agent@example.com"
 surfwright target form-fill <targetId> --field "#email=agent@example.com" --field "#agree=true"
@@ -34,6 +35,7 @@ surfwright target wait <targetId> --for-selector "h1" --frame-scope main
 surfwright target network <targetId> --profile perf --view summary
 surfwright target network-tail <targetId> --profile api --capture-ms 3000 --max-events 200
 surfwright target network-query --capture-id <captureId> --preset slowest --limit 10
+surfwright target network-around <targetId> --click-text "Checkout" --profile api --view summary
 surfwright target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
 surfwright target network-end <captureId> --view summary --status 5xx
 surfwright target trace begin <targetId> --profile perf --max-runtime-ms 300000
@@ -55,8 +57,10 @@ surfwright extension uninstall "missing-extension" --fail-if-missing
 - `target *` without `--session` infers session from `targetId`; no active-session fallback is used.
 - `target list` requires `--session` if no target-based inference is possible.
 - `target snapshot` returns bounded text/headings/buttons/links for one explicit target.
+- Save two snapshot JSON payloads and use `target snapshot-diff <a> <b>` for high-signal "what changed?" diffs (links/buttons/text blocks + URL/title deltas).
 - `target find` checks match counts and returns bounded match metadata for one explicit query.
 - `target click` executes one explicit click action from text/selector query semantics.
+- `target download` captures a click-triggered download deterministically (saves the file and returns `sha256`/`size`/`filename`, plus best-effort headers/status evidence).
 - `target click-at` executes one explicit coordinate click (`--x`, `--y`) for canvas/overlay workflows.
 - `target fill` executes one explicit form-control fill from text/selector query semantics.
 - `target form-fill` applies multiple selector/value entries in one deterministic action (`--fields-json`, `--fields-file`, or repeated `--field`).
@@ -75,6 +79,7 @@ surfwright extension uninstall "missing-extension" --fail-if-missing
 - `target network` captures bounded request/websocket diagnostics with profiles, projections, hints, and insights.
 - `target network-tail` streams NDJSON events for live request/socket observation.
 - `target network-query` answers common diagnostics directly from saved capture/HAR sources.
+- `target network-around` captures network-begin + click + network-end in one stable payload.
 - `target network-begin` / `target network-end` gives action-scoped handle capture around workflows.
 - `target trace begin` / `target trace export` / `target trace insight` provide discoverable trace-first perf flows.
 - `target network-export --out <path>` writes a compact HAR artifact for deep offline inspection.

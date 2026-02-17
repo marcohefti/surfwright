@@ -30,6 +30,17 @@ export const networkBeginCommandSpec: NetworkCommandSpec = {
         "Maximum websocket frame previews to retain across all sockets",
         String(DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES),
       )
+      .option("--body-sample-bytes <n>", "Maximum bytes to sample for post-data preview", "512")
+      .option(
+        "--redact-regex <pattern>",
+        "Redact matching substrings in headers/post-data preview (repeatable)",
+        (value, prev) => {
+          const next = Array.isArray(prev) ? prev : [];
+          next.push(value);
+          return next;
+        },
+        [] as string[],
+      )
       .option("--include-headers", "Include request/response headers in recorder")
       .option("--include-post-data", "Include bounded request post-data preview in recorder")
       .option("--no-ws-messages", "Disable websocket frame preview capture in recorder")
@@ -44,6 +55,8 @@ export const networkBeginCommandSpec: NetworkCommandSpec = {
             maxRequests: string;
             maxWebsockets: string;
             maxWsMessages: string;
+            bodySampleBytes: string;
+            redactRegex: string[];
             includeHeaders?: boolean;
             includePostData?: boolean;
             wsMessages?: boolean;
@@ -63,6 +76,8 @@ export const networkBeginCommandSpec: NetworkCommandSpec = {
               maxRequests: Number.parseInt(options.maxRequests, 10),
               maxWebSockets: Number.parseInt(options.maxWebsockets, 10),
               maxWsMessages: Number.parseInt(options.maxWsMessages, 10),
+              bodySampleBytes: Number.parseInt(options.bodySampleBytes, 10),
+              redactRegex: options.redactRegex,
               includeHeaders: Boolean(options.includeHeaders),
               includePostData: Boolean(options.includePostData),
               includeWsMessages: options.wsMessages !== false,

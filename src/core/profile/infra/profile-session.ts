@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { allocateFreePort, isCdpEndpointReachable, startManagedSession } from "../../browser.js";
+import { allocateFreePort, isCdpEndpointReachable, killManagedBrowserProcessTree, startManagedSession } from "../../browser.js";
 import { CliError } from "../../errors.js";
 import { nowIso, readState } from "../../state/index.js";
 import type { ManagedBrowserMode, SessionState } from "../../types.js";
@@ -192,11 +192,7 @@ export async function ensureProfileManagedSession(opts: {
     const existing = readMeta(workspaceDir, profile);
     if (existing && isProcessAlive(existing.browserPid) && (await isCdpEndpointReachable(existing.cdpOrigin, opts.timeoutMs))) {
       if (existing.browserMode !== desiredMode) {
-        try {
-          process.kill(existing.browserPid, "SIGTERM");
-        } catch {
-          // ignore
-        }
+        killManagedBrowserProcessTree(existing.browserPid, "SIGTERM");
         removeMeta(workspaceDir, profile);
       } else {
         const sessionRaw: SessionState = {

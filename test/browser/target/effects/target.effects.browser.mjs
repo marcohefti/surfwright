@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import test from "node:test";
+import { cleanupStateDir } from "../../helpers/managed-cleanup.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-target-effects-browser-"));
 
@@ -76,39 +77,8 @@ function openTarget(url, { timeoutMs = 5000 } = {}) {
   return parseJson(result.stdout);
 }
 
-function cleanupManagedBrowsers() {
-  try {
-    const statePath = stateFilePath();
-    if (!fs.existsSync(statePath)) {
-      return;
-    }
-    const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
-    const sessions = state?.sessions ?? {};
-    for (const session of Object.values(sessions)) {
-      if (!session || typeof session !== "object" || session.kind !== "managed") {
-        continue;
-      }
-      if (typeof session.browserPid !== "number" || !Number.isFinite(session.browserPid) || session.browserPid <= 0) {
-        continue;
-      }
-      try {
-        process.kill(session.browserPid, "SIGTERM");
-      } catch {
-        // ignore
-      }
-    }
-  } catch {
-    // ignore
-  }
-}
-
-process.on("exit", () => {
-  cleanupManagedBrowsers();
-  try {
-    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore cleanup failures
-  }
+test.after(async () => {
+  await cleanupStateDir(TEST_STATE_DIR);
 });
 
 test("target scroll-plan returns deterministic shape", () => {
@@ -341,4 +311,3 @@ test("target scroll-watch returns class/style deltas and transition events", () 
   assert.equal(typeof payload.transition.emitted, "number");
   assert.equal(payload.transition.emitted > 0, true);
 });
-

@@ -26,6 +26,30 @@ export type CdpEvaluator = {
   evaluate<T, Arg>(pageFunction: (arg: Arg) => T, arg: Arg): Promise<T>;
 };
 
+type ExecutionContextCreatedPayload = {
+  context?: {
+    id?: number;
+    auxData?: { frameId?: string; isDefault?: boolean };
+  };
+};
+
+function recordMainWorldContext(payload: ExecutionContextCreatedPayload, cache: Map<string, number>): void {
+  const ctx = payload?.context;
+  const id = ctx?.id;
+  const aux = ctx?.auxData;
+  if (typeof id !== "number" || !Number.isFinite(id) || id <= 0) {
+    return;
+  }
+  const frameId = aux?.frameId;
+  if (typeof frameId !== "string" || frameId.length === 0) {
+    return;
+  }
+  if (aux?.isDefault !== true) {
+    return;
+  }
+  cache.set(frameId, id);
+}
+
 function stringifyArgOrThrow(arg: unknown): string {
   try {
     const json = JSON.stringify(arg);
@@ -64,8 +88,15 @@ function countFrameTree(node: CdpFrameTree): number {
   return count;
 }
 
-export async function openCdpSession(page: Page): Promise<CDPSession> {
+export async function openCdpSession(page: Page, opts?: { mainWorldCache?: Map<string, number> }): Promise<CDPSession> {
   const cdp = await page.context().newCDPSession(page);
+  if (opts?.mainWorldCache) {
+    // Capture main-world contexts during Runtime.enable so callers can deterministically
+    // evaluate in the page's default realm without racing executionContextCreated.
+    cdp.on("Runtime.executionContextCreated", ((payload: ExecutionContextCreatedPayload) => {
+      recordMainWorldContext(payload, opts.mainWorldCache as Map<string, number>);
+    }) as never);
+  }
   // Idempotent enables are fine and keep callers simple.
   await cdp.send("Page.enable");
   await cdp.send("Runtime.enable");
@@ -187,6 +218,56 @@ export async function createIsolatedWorldContext(opts: {
   return contextId;
 }
 
+export async function ensureMainWorldContextId(opts: {
+  cdp: CDPSession;
+  frameCdpId: string;
+  cache: Map<string, number>;
+  timeoutMs: number;
+}): Promise<number> {
+  const cached = opts.cache.get(opts.frameCdpId);
+  if (typeof cached === "number") {
+    return cached;
+  }
+
+  // Runtime/Page enables are idempotent and may trigger executionContextCreated emissions.
+  const onCreatedTimeoutMs = Math.max(150, Math.min(1200, opts.timeoutMs));
+  const deadline = Date.now() + onCreatedTimeoutMs;
+
+  let found: number | null = null;
+  const onCreated = (payload: ExecutionContextCreatedPayload) => {
+    const ctx = payload?.context;
+    const id = ctx?.id;
+    const aux = ctx?.auxData;
+    if (typeof id !== "number" || !Number.isFinite(id) || id <= 0) {
+      return;
+    }
+    if (aux?.frameId !== opts.frameCdpId) {
+      return;
+    }
+    if (aux?.isDefault !== true) {
+      return;
+    }
+    found = id;
+  };
+
+  opts.cdp.on("Runtime.executionContextCreated", onCreated as never);
+  try {
+    await opts.cdp.send("Page.enable").catch(() => {});
+    await opts.cdp.send("Runtime.enable").catch(() => {});
+    while (found === null && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  } finally {
+    opts.cdp.off("Runtime.executionContextCreated", onCreated as never);
+  }
+
+  if (found === null) {
+    throw new CliError("E_INTERNAL", "Timed out waiting for main world execution context");
+  }
+  opts.cache.set(opts.frameCdpId, found);
+  return found;
+}
+
 export async function evalJsonInContext<T>(opts: { cdp: CDPSession; contextId: number; expression: string }): Promise<T> {
   const payload = (await opts.cdp.send("Runtime.evaluate", {
     expression: opts.expression,
@@ -229,6 +310,26 @@ export async function evalJsonInFrame<T>(opts: {
   });
 }
 
+export async function evalJsonInMainWorldFrame<T>(opts: {
+  cdp: CDPSession;
+  frameCdpId: string;
+  mainWorldCache: Map<string, number>;
+  timeoutMs: number;
+  expression: string;
+}): Promise<T> {
+  const contextId = await ensureMainWorldContextId({
+    cdp: opts.cdp,
+    frameCdpId: opts.frameCdpId,
+    cache: opts.mainWorldCache,
+    timeoutMs: opts.timeoutMs,
+  });
+  return await evalJsonInContext<T>({
+    cdp: opts.cdp,
+    contextId,
+    expression: opts.expression,
+  });
+}
+
 export function createCdpEvaluator(opts: {
   cdp: CDPSession;
   frameCdpId: string;
@@ -251,6 +352,29 @@ export function createCdpEvaluator(opts: {
     });
   }
 
+  return { evaluate } as CdpEvaluator;
+}
+
+export function createCdpMainWorldEvaluator(opts: {
+  cdp: CDPSession;
+  frameCdpId: string;
+  mainWorldCache: Map<string, number>;
+  timeoutMs: number;
+}): CdpEvaluator {
+  async function evaluate<T, Arg>(pageFunction: (arg: Arg) => T, arg?: Arg): Promise<T> {
+    const fnText = pageFunction.toString();
+    const expression =
+      arguments.length >= 2
+        ? `(${fnText})(${stringifyArgOrThrow(arg)})`
+        : `(${fnText})()`;
+    return await evalJsonInMainWorldFrame<T>({
+      cdp: opts.cdp,
+      frameCdpId: opts.frameCdpId,
+      mainWorldCache: opts.mainWorldCache,
+      timeoutMs: opts.timeoutMs,
+      expression,
+    });
+  }
   return { evaluate } as CdpEvaluator;
 }
 

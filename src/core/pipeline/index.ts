@@ -16,6 +16,7 @@ import {
   type PipelineStepInput,
 } from "../pipeline-support/index.js";
 import { writeRunArtifact } from "../pipeline-support/index.js";
+import { appendNdjsonLogLine, initNdjsonLogFile, resolveNdjsonLogPath } from "./infra/ndjson-log.js";
 
 export type { PipelineOps, PipelineStepInput } from "../pipeline-support/index.js";
 
@@ -42,6 +43,8 @@ export async function executePipelinePlan(opts: {
   record?: boolean;
   recordPath?: string;
   recordLabel?: string;
+  logNdjsonPath?: string;
+  logNdjsonMode?: string;
   ops: PipelineOps;
   loaded?: LoadedPlan;
   lintIssues?: PipelineLintIssue[];
@@ -76,11 +79,27 @@ export async function executePipelinePlan(opts: {
   const results: Array<Record<string, unknown>> = [];
   const aliases: Record<string, Record<string, unknown>> = {};
   const timeline: Array<Record<string, unknown>> = [];
+
+  const ndjsonPathRaw =
+    typeof opts.logNdjsonPath === "string" && opts.logNdjsonPath.trim().length > 0 ? opts.logNdjsonPath.trim() : null;
+  const ndjsonMode = opts.logNdjsonMode === "full" ? "full" : "minimal";
+  const ndjsonPath = ndjsonPathRaw ? resolveNdjsonLogPath(ndjsonPathRaw) : null;
+  const emitNdjson = (event: Record<string, unknown>) => {
+    if (!ndjsonPath) {
+      return;
+    }
+    appendNdjsonLogLine(ndjsonPath, event);
+  };
+  if (ndjsonPath) {
+    initNdjsonLogFile(ndjsonPath);
+  }
+
   timeline.push({
     atMs: 0,
     phase: "run.start",
     source: loaded.source,
   });
+  emitNdjson({ atMs: 0, phase: "run.start", source: loaded.source });
   const ctx: { sessionId?: string; targetId?: string } = {
     sessionId: opts.sessionId,
     targetId: undefined,
@@ -113,6 +132,14 @@ export async function executePipelinePlan(opts: {
       index,
       id: step.id,
       as: stepAlias,
+      targetId: stepTargetId ?? null,
+    });
+    emitNdjson({
+      atMs: stepStartedAt - startedAt,
+      phase: "step.start",
+      index,
+      id: step.id,
+      as: stepAlias ?? null,
       targetId: stepTargetId ?? null,
     });
 
@@ -288,7 +315,7 @@ export async function executePipelinePlan(opts: {
     }
 
     const stepEndedAt = Date.now();
-    timeline.push({
+    const stepEndEvent = {
       atMs: stepEndedAt - startedAt,
       phase: "step.end",
       index,
@@ -298,7 +325,19 @@ export async function executePipelinePlan(opts: {
       sessionId: typeof report.sessionId === "string" ? report.sessionId : null,
       targetId: typeof report.targetId === "string" ? report.targetId : null,
       assertions: assertions.total,
-    });
+    };
+    timeline.push(stepEndEvent);
+    emitNdjson({ ...stepEndEvent, as: stepAlias ?? null });
+    if (ndjsonPath && ndjsonMode === "full") {
+      emitNdjson({
+        atMs: stepEndedAt - startedAt,
+        phase: "step.report",
+        index,
+        id: step.id,
+        as: stepAlias ?? null,
+        report,
+      });
+    }
     results.push({
       index,
       id: step.id,
@@ -320,6 +359,13 @@ export async function executePipelinePlan(opts: {
     sessionId: ctx.sessionId ?? null,
     targetId: ctx.targetId ?? null,
   });
+  emitNdjson({
+    atMs: finishedAt - startedAt,
+    phase: "run.end",
+    steps: results.length,
+    sessionId: ctx.sessionId ?? null,
+    targetId: ctx.targetId ?? null,
+  });
 
   const report: Record<string, unknown> = {
     ok: true,
@@ -331,6 +377,9 @@ export async function executePipelinePlan(opts: {
     timeline,
     totalMs: finishedAt - startedAt,
   };
+  if (ndjsonPath) {
+    report.logNdjson = { path: ndjsonPath, mode: ndjsonMode };
+  }
   if (opts.record) {
     report.artifact = writeRunArtifact({
       outPath: opts.recordPath,

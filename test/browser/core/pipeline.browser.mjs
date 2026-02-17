@@ -4,8 +4,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-pipeline-browser-"));
+test.after(async () => {
+  await cleanupStateDir(TEST_STATE_DIR);
+});
 
 function runCli(args) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
@@ -30,14 +34,6 @@ function requireBrowser() {
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
 }
-
-process.on("exit", () => {
-  try {
-    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore cleanup failures
-  }
-});
 
 test("run executes deterministic multi-step pipeline", () => {
   requireBrowser();
@@ -82,3 +78,45 @@ test("run executes deterministic multi-step pipeline", () => {
   assert.equal(typeof payload.totalMs, "number");
 });
 
+test("run --log-ndjson writes compact append-only run log", () => {
+  requireBrowser();
+
+  const html = `<title>NDJSON</title><main><h1 id="done">Ready</h1></main>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+
+  const planPath = path.join(TEST_STATE_DIR, "plan-ndjson.json");
+  const plan = {
+    steps: [
+      { id: "open", url: dataUrl, timeoutMs: 5000 },
+      { id: "snapshot", timeoutMs: 5000, noPersist: true },
+    ],
+  };
+  fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
+
+  const logPath = path.join(TEST_STATE_DIR, "run.ndjson");
+  const result = runCli([
+    "--json",
+    "run",
+    "--plan",
+    planPath,
+    "--timeout-ms",
+    "5000",
+    "--log-ndjson",
+    logPath,
+    "--log-mode",
+    "minimal",
+  ]);
+  assert.equal(result.status, 0, result.stdout || result.stderr);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(typeof payload.logNdjson?.path, "string");
+  assert.equal(fs.existsSync(logPath), true);
+  const lines = fs
+    .readFileSync(logPath, "utf8")
+    .trim()
+    .split("\n")
+    .filter((line) => line.trim().length > 0);
+  assert.equal(lines.length >= 3, true);
+  assert.equal(lines.some((line) => JSON.parse(line).phase === "run.start"), true);
+  assert.equal(lines.some((line) => JSON.parse(line).phase === "run.end"), true);
+});

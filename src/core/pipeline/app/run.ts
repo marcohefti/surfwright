@@ -30,6 +30,8 @@ export async function runPipeline(opts: {
   record?: boolean;
   recordPath?: string;
   recordLabel?: string;
+  logNdjsonPath?: string;
+  logNdjsonMode?: string;
   ensureSharedSession: (input: { timeoutMs: number }) => Promise<SessionReport>;
 }): Promise<Record<string, unknown>> {
   const sourceCount =
@@ -224,6 +226,8 @@ export async function runPipeline(opts: {
       record: Boolean(opts.record),
       recordPath: opts.recordPath,
       recordLabel: opts.recordLabel,
+      logNdjsonPath: opts.logNdjsonPath,
+      logNdjsonMode: opts.logNdjsonMode,
       ops,
       loaded,
       lintIssues: issues,
@@ -277,6 +281,8 @@ export async function runPipeline(opts: {
     record: Boolean(opts.record),
     recordPath: opts.recordPath,
     recordLabel: opts.recordLabel,
+    logNdjsonPath: opts.logNdjsonPath,
+    logNdjsonMode: opts.logNdjsonMode,
     ops,
     loaded,
     lintIssues: issues,

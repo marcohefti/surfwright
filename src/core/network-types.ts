@@ -60,6 +60,12 @@ export type TargetNetworkReport = {
   actionId: string | null;
   url: string;
   title: string;
+  redaction: {
+    headers: {
+      always: boolean;
+    };
+    regex: string[];
+  };
   capture: {
     startedAt: string;
     endedAt: string;
@@ -82,6 +88,7 @@ export type TargetNetworkReport = {
     maxRequests: number;
     maxWebSockets: number;
     maxWsMessages: number;
+    bodySampleBytes: number;
   };
   counts: {
     requestsSeen: number;

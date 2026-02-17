@@ -51,6 +51,8 @@ export function targetNetworkQuery(opts: {
     maxRequests: source.report.limits.maxRequests,
     maxWebSockets: source.report.limits.maxWebSockets,
     maxWsMessages: source.report.limits.maxWsMessages,
+    bodySampleBytes: source.report.limits.bodySampleBytes,
+    redactRegex: source.report.redaction.regex,
     urlContains: opts.urlContains,
     method: opts.method,
     resourceType: opts.resourceType,

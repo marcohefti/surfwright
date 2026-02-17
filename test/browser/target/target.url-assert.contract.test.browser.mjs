@@ -5,8 +5,12 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import test from "node:test";
+import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-target-url-assert-"));
+test.after(async () => {
+  await cleanupStateDir(TEST_STATE_DIR);
+});
 
 function runCli(args) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
@@ -41,25 +45,18 @@ function requireBrowser() {
   assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
 }
 
-process.on("exit", () => {
-  try {
-    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore cleanup failures
-  }
-});
-
 test("target url-assert returns deterministic shape and typed failures", () => {
   requireBrowser();
-  const openResult = runCli(["--json", "open", "http://example.com", "--timeout-ms", "20000"]);
-  assert.equal(openResult.status, 0);
+  // Avoid relying on external redirect behavior (http -> https) for this contract test.
+  const openResult = runCli(["--json", "open", "https://example.com", "--timeout-ms", "20000"]);
+  assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
   const openPayload = parseJson(openResult.stdout);
   const targetId = openPayload.targetId;
   assert.equal(typeof targetId, "string");
   assert.equal(targetId.length > 0, true);
 
   const assertHostResult = runCli(["--json", "target", "url-assert", targetId, "--host", "example.com", "--timeout-ms", "8000"]);
-  assert.equal(assertHostResult.status, 0);
+  assert.equal(assertHostResult.status, 0, assertHostResult.stdout || assertHostResult.stderr);
   const assertHostPayload = parseJson(assertHostResult.stdout);
   assert.equal(assertHostPayload.ok, true);
   assert.equal(assertHostPayload.assert.host, "example.com");
@@ -81,7 +78,7 @@ test("target url-assert returns deterministic shape and typed failures", () => {
     "--timeout-ms",
     "8000",
   ]);
-  assert.equal(assertAllResult.status, 0);
+  assert.equal(assertAllResult.status, 0, assertAllResult.stdout || assertAllResult.stderr);
   const assertAllPayload = parseJson(assertAllResult.stdout);
   assert.equal(assertAllPayload.ok, true);
   assert.equal(assertAllPayload.url, "https://example.com/");

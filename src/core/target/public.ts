@@ -7,6 +7,7 @@ export function queryInvalid(message: string): CliError {
 export { parseFieldsCsv, projectReportFields } from "../report-fields.js";
 
 export { targetClick, targetFill, targetSpawn } from "./infra/target-click.js";
+export { targetDownload } from "./infra/actions/target-download.js";
 export { targetClose, targetEval } from "./infra/target-eval.js";
 export { targetClickAt, targetEmulate, targetScreenshot } from "./infra/target-emulation.js";
 export { targetCount } from "./infra/query/target-count.js";
@@ -21,6 +22,7 @@ export { targetDialog } from "./infra/actions/target-dialog.js";
 export { targetKeypress } from "./infra/actions/target-keypress.js";
 export { targetList } from "./infra/targets.js";
 export { targetSnapshot } from "./snapshot/target-snapshot.js";
+export { targetSnapshotDiffFromFiles } from "./infra/utils/target-snapshot-diff.js";
 export { readPageTargetId, resolveSessionForAction } from "./infra/targets.js";
 export { targetFrames } from "./frames/target-frames.js";
 export { targetUrlAssert } from "./url/url-assert.js";

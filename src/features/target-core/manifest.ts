@@ -20,6 +20,11 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "read bounded text and UI primitives for a target",
   },
   {
+    id: "target.snapshot-diff",
+    usage: "surfwright target snapshot-diff <a> <b> [--no-json] [--pretty]",
+    summary: "diff two saved target snapshot reports with high-signal deltas",
+  },
+  {
     id: "target.count",
     usage:
       "surfwright target count <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
@@ -36,6 +41,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     usage:
       "surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "click the first matching element in a target",
+  },
+  {
+    id: "target.download",
+    usage:
+      "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+    summary: "click a deterministic element and capture a download artifact",
   },
   {
     id: "target.click-at",
@@ -124,7 +135,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.eval",
     usage:
-      "surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--mode <expr|script>] [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "execute bounded JavaScript in page context for a target",
   },
   {

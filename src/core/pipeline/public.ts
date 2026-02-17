@@ -15,6 +15,8 @@ export async function runPipeline(opts: {
   record?: boolean;
   recordPath?: string;
   recordLabel?: string;
+  logNdjsonPath?: string;
+  logNdjsonMode?: string;
 }): Promise<Record<string, unknown>> {
   return await runPipelineInternal({
     ...opts,

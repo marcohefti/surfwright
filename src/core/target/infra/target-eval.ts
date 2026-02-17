@@ -4,9 +4,10 @@ import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { providers } from "../../providers/index.js";
-import { createCdpEvaluator, getCdpFrameTree, openCdpSession, resolveCdpFrameByStableId } from "./cdp/index.js";
+import { createCdpMainWorldEvaluator, getCdpFrameTree, openCdpSession, resolveCdpFrameByStableId } from "./cdp/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { safePageTitle } from "./utils/safe-page-title.js";
+import { parseEvalExpression } from "./utils/eval-expression.js";
 import type { TargetEvalReport } from "../../types.js";
 type TargetCloseReport = {
   ok: true;
@@ -31,65 +32,7 @@ const EVAL_MAX_CONSOLE_TEXT_CHARS = 4000;
 const EVAL_MAX_RESULT_STRING_CHARS = 4000;
 const EVAL_MAX_RESULT_ITEMS = 200;
 const EVAL_MAX_RESULT_DEPTH = 6;
-function parseExpression(opts: { expression?: string; expr?: string; scriptFile?: string }): { expression: string; evaluatorBody: string } {
-  const expression = typeof opts.expression === "string" ? opts.expression : "";
-  const expr = typeof opts.expr === "string" ? opts.expr : "";
-  const scriptFile = typeof opts.scriptFile === "string" ? opts.scriptFile.trim() : "";
-  const hasExpression = expression.trim().length > 0;
-  const hasExpr = expr.trim().length > 0;
-  const hasScriptFile = scriptFile.length > 0;
-  const selectedCount = Number(hasExpression) + Number(hasExpr) + Number(hasScriptFile);
-  if (selectedCount === 0) {
-    throw new CliError("E_QUERY_INVALID", "expr, expression, or script-file is required");
-  }
-  if (selectedCount > 1) {
-    if (hasExpression && hasScriptFile) {
-      throw new CliError("E_QUERY_INVALID", "choose either expression/js/script or script-file");
-    }
-    if (hasExpr && hasScriptFile) {
-      throw new CliError("E_QUERY_INVALID", "choose either expr or script-file");
-    }
-    throw new CliError("E_QUERY_INVALID", "choose either expr or expression/js/script");
-  }
-  if (scriptFile.length > 0) {
-    const { fs } = providers();
-    let stat: { isFile(): boolean; size: number };
-    try {
-      stat = fs.statSync(scriptFile);
-    } catch {
-      throw new CliError("E_QUERY_INVALID", "script-file is not readable");
-    }
-    if (!stat.isFile()) {
-      throw new CliError("E_QUERY_INVALID", "script-file must point to a file");
-    }
-    if (stat.size > EVAL_MAX_SCRIPT_FILE_BYTES) {
-      throw new CliError("E_EVAL_SCRIPT_TOO_LARGE", `script-file must be at most ${EVAL_MAX_SCRIPT_FILE_BYTES} bytes`);
-    }
-    let scriptText: string;
-    try {
-      scriptText = fs.readFileSync(scriptFile, "utf8");
-    } catch {
-      throw new CliError("E_QUERY_INVALID", "script-file is not readable");
-    }
-    if (scriptText.trim().length === 0) {
-      throw new CliError("E_QUERY_INVALID", "script-file is empty");
-    }
-    return { expression: scriptText, evaluatorBody: scriptText };
-  }
-  if (hasExpr) {
-    if (expr.length > EVAL_MAX_INLINE_EXPRESSION_CHARS) {
-      throw new CliError("E_EVAL_SCRIPT_TOO_LARGE", `expr must be at most ${EVAL_MAX_INLINE_EXPRESSION_CHARS} characters`);
-    }
-    return {
-      expression: expr,
-      evaluatorBody: `return (${expr});`,
-    };
-  }
-  if (expression.length > EVAL_MAX_INLINE_EXPRESSION_CHARS) {
-    throw new CliError("E_EVAL_SCRIPT_TOO_LARGE", `expression must be at most ${EVAL_MAX_INLINE_EXPRESSION_CHARS} characters`);
-  }
-  return { expression, evaluatorBody: expression };
-}
+
 function parseArgJson(input: string | undefined): unknown {
   if (typeof input !== "string") {
     return null;
@@ -150,6 +93,7 @@ export async function targetEval(opts: {
   expression?: string;
   expr?: string;
   scriptFile?: string;
+  mode?: "expr" | "script";
   argJson?: string;
   captureConsole?: boolean;
   maxConsole?: number;
@@ -157,11 +101,18 @@ export async function targetEval(opts: {
 }): Promise<TargetEvalReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
-  const parsed = parseExpression({
-    expression: opts.expression,
-    expr: opts.expr,
-    scriptFile: opts.scriptFile,
-  });
+  const parsed = parseEvalExpression(
+    {
+      expression: opts.expression,
+      expr: opts.expr,
+      scriptFile: opts.scriptFile,
+      mode: opts.mode,
+    },
+    {
+      maxInlineChars: EVAL_MAX_INLINE_EXPRESSION_CHARS,
+      maxScriptFileBytes: EVAL_MAX_SCRIPT_FILE_BYTES,
+    },
+  );
   const arg = parseArgJson(opts.argJson);
   const captureConsole = Boolean(opts.captureConsole);
   const maxConsole = parseMaxConsole(opts.maxConsole);
@@ -177,17 +128,18 @@ export async function targetEval(opts: {
   const connectedAt = Date.now();
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
-    const cdp = await openCdpSession(target.page);
+    const worldCache = new Map<string, number>();
+    const cdp = await openCdpSession(target.page, { mainWorldCache: worldCache });
     const frameTree = await getCdpFrameTree(cdp);
     const frameSelection = resolveCdpFrameByStableId({
       frameTree,
       stableFrameIdInput: typeof opts.frameId === "string" && opts.frameId.trim().length > 0 ? opts.frameId : "f-0",
     });
-    const worldCache = new Map<string, number>();
-    const evaluator = createCdpEvaluator({
+    const evaluator = createCdpMainWorldEvaluator({
       cdp,
       frameCdpId: frameSelection.entry.cdpFrameId,
-      worldCache,
+      mainWorldCache: worldCache,
+      timeoutMs: opts.timeoutMs,
     });
     const consoleEntries: TargetEvalReport["console"]["entries"] = [];
     let consoleCount = 0;

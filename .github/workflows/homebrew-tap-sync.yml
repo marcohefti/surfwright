@@ -39,7 +39,21 @@ jobs:
             echo "Unable to resolve version" >&2
             exit 1
           fi
-          TARBALL=$(npm view @marcohefti/surfwright@"$VERSION" dist.tarball --json | tr -d '"')
+          # New npm versions can take a short time to become visible on all registry edges.
+          TARBALL=""
+          for i in {1..20}; do
+            CANDIDATE=$(npm view @marcohefti/surfwright@"$VERSION" dist.tarball --json 2>/dev/null | tr -d '"' || true)
+            if [[ "$CANDIDATE" == http*://* ]]; then
+              TARBALL="$CANDIDATE"
+              break
+            fi
+            echo "Waiting for npm tarball metadata (attempt $i/20)..." >&2
+            sleep 6
+          done
+          if [[ -z "$TARBALL" ]]; then
+            echo "Unable to resolve npm tarball for @marcohefti/surfwright@$VERSION after retries" >&2
+            exit 1
+          fi
           curl -fsSL "$TARBALL" -o /tmp/surfwright.tgz
           SHA256=$(sha256sum /tmp/surfwright.tgz | awk '{print $1}')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"

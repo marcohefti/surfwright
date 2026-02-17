@@ -155,16 +155,18 @@ jobs:
         run: |
           VERSION="${{ steps.release.outputs.version }}"
           DIST_TAG="${{ steps.release.outputs.dist_tag }}"
-          CAN_TAG_VERSION=$(npm view @marcohefti/surfwright@"$DIST_TAG" version)
-          GUARD_TAG_VERSION=$(npm view surfwright@"$DIST_TAG" version)
-          if [[ "$CAN_TAG_VERSION" != "$VERSION" ]]; then
-            echo "Canonical dist-tag mismatch: expected=$VERSION actual=$CAN_TAG_VERSION" >&2
-            exit 1
-          fi
-          if [[ "$GUARD_TAG_VERSION" != "$VERSION" ]]; then
-            echo "Guard dist-tag mismatch: expected=$VERSION actual=$GUARD_TAG_VERSION" >&2
-            exit 1
-          fi
+          # npm dist-tag propagation is occasionally eventual-consistent right after publish.
+          for i in {1..10}; do
+            CAN_TAG_VERSION=$(npm view @marcohefti/surfwright@"$DIST_TAG" version 2>/dev/null || true)
+            GUARD_TAG_VERSION=$(npm view surfwright@"$DIST_TAG" version 2>/dev/null || true)
+            if [[ "$CAN_TAG_VERSION" == "$VERSION" && "$GUARD_TAG_VERSION" == "$VERSION" ]]; then
+              exit 0
+            fi
+            echo "Dist-tag mismatch (attempt $i/10): expected=$VERSION canonical=$CAN_TAG_VERSION guard=$GUARD_TAG_VERSION" >&2
+            sleep 6
+          done
+          echo "Dist-tag mismatch after retries: expected=$VERSION canonical=$CAN_TAG_VERSION guard=$GUARD_TAG_VERSION" >&2
+          exit 1
 
       - name: Post-publish smoke checks
         run: |

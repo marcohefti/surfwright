@@ -14,7 +14,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
       .command("snapshot")
       .description(meta.summary)
       .argument("<targetId>", "Target handle returned by open/target list")
-      .option("--mode <mode>", "Snapshot mode: snapshot|orient", "snapshot")
+      .option("--mode <mode>", "Snapshot mode: snapshot|orient|a11y", "snapshot")
       .option("--selector <query>", "Scope snapshot to a selector")
       .option("--visible-only", "Only include visible content")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
@@ -24,6 +24,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
       .option("--max-headings <n>", "Maximum heading rows to return (0 to omit)")
       .option("--max-buttons <n>", "Maximum button rows to return (0 to omit)")
       .option("--max-links <n>", "Maximum link rows to return (0 to omit)")
+      .option("--max-ax-rows <n>", "Maximum accessibility rows to return when mode=a11y (0 to omit)")
       .option("--timeout-ms <ms>", "Snapshot timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -41,6 +42,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
             maxHeadings?: string;
             maxButtons?: string;
             maxLinks?: string;
+            maxAxRows?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -55,6 +57,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
           const maxButtons =
             typeof options.maxButtons === "string" ? Number.parseInt(options.maxButtons, 10) : undefined;
           const maxLinks = typeof options.maxLinks === "string" ? Number.parseInt(options.maxLinks, 10) : undefined;
+          const maxAxRows = typeof options.maxAxRows === "string" ? Number.parseInt(options.maxAxRows, 10) : undefined;
 
           try {
             const report = await targetSnapshot({
@@ -71,6 +74,7 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
               maxHeadings,
               maxButtons,
               maxLinks,
+              maxAxRows,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

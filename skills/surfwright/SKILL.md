@@ -94,6 +94,16 @@ Use `--include-selector-hints` when you want bounded `items.*.selectorHint` rows
 surfwright target snapshot <targetId> --include-selector-hints --max-buttons 12 --max-links 12
 ```
 
+## Snapshot A11y Handles (Click by Handle)
+
+Use `target snapshot --mode a11y` when you want accessibility-anchored inventory rows with per-row `handle` values:
+
+```bash
+SNAP=$(surfwright target snapshot <targetId> --mode a11y --max-ax-rows 60)
+HANDLE=$(printf '%s' "$SNAP" | jq -r '.a11y.rows[] | select(.role=="link" and (.name|test("Blog";"i"))) | .handle' | head -n 1)
+surfwright target click <targetId> --handle "$HANDLE" --timeout-ms 20000
+```
+
 ## Frames + iframe eval
 
 Use `target frames` to enumerate stable `frameId` handles. Use `--frame-id` on `target eval` to run JS inside a specific iframe. Prefer `--expr` when you want expression values without remembering `return`.

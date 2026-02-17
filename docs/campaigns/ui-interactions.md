@@ -65,3 +65,11 @@ Add a value-expression mode:
 
 - Delta flag: `target click --delta`
 - Output field: `delta` (bounded evidence-only payload; no semantic narratives)
+
+### Accessibility Snapshot + Click Handles (Opt-in)
+
+- Snapshot mode: `target snapshot --mode a11y`
+  - Output field: `a11y` (bounded rows with `role`, `name`, and optional `handle`)
+  - Cursor paging: `ax=<n>` via `--cursor` / `nextCursor`
+- Click by handle: `target click --handle <handle>`
+  - `TargetClickReport.mode` includes `"handle"` when used

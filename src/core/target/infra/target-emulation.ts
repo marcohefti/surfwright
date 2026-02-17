@@ -6,6 +6,7 @@ import { saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { providers } from "../../providers/index.js";
 import { openCdpSession } from "./cdp/index.js";
+import { safePageTitle } from "./utils/safe-page-title.js";
 
 type ActionTimingMs = {
   total: number;
@@ -234,7 +235,7 @@ export async function targetEmulate(opts: {
         targetId: report.targetId,
         sessionId: report.sessionId,
         url: target.page.url(),
-        title: await target.page.title(),
+        title: await safePageTitle(target.page, opts.timeoutMs),
         status: null,
         lastActionId: report.actionId,
         lastActionAt: nowIso(),
@@ -293,7 +294,7 @@ export async function targetClickAt(opts: {
       });
 
     const actionCompletedAt = Date.now();
-    const title = await target.page.title();
+    const title = await safePageTitle(target.page, opts.timeoutMs);
     const report: TargetClickAtReport = {
       ok: true,
       sessionId: session.sessionId,

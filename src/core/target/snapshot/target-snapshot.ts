@@ -7,8 +7,10 @@ import { frameScopeHints, parseFrameScope } from "../infra/target-find.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "../infra/cdp/index.js";
 import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { extractScopedSnapshotSample } from "./snapshot-sample.js";
+import { safePageTitle } from "../infra/utils/safe-page-title.js";
+import { targetSnapshotA11y } from "./snapshot-a11y.js";
 
-type SnapshotMode = "snapshot" | "orient";
+type SnapshotMode = "snapshot" | "orient" | "a11y";
 
 const SNAPSHOT_TEXT_MAX_CHARS = 1200;
 const SNAPSHOT_MAX_HEADINGS = 12;
@@ -22,11 +24,14 @@ const ORIENT_MAX_LINKS = 10;
 
 const SNAPSHOT_MAX_TEXT_CAP = 20000;
 const SNAPSHOT_MAX_ITEMS_CAP = 200;
+const SNAPSHOT_MAX_AX_ROWS_DEFAULT = 60;
+const SNAPSHOT_MAX_AX_ROWS_CAP = 200;
 
 type SnapshotCursor = {
   headings: number;
   buttons: number;
   links: number;
+  ax: number;
 };
 
 function parseSnapshotMode(input: string | undefined): SnapshotMode {
@@ -34,10 +39,10 @@ function parseSnapshotMode(input: string | undefined): SnapshotMode {
     return "snapshot";
   }
   const normalized = input.trim().toLowerCase();
-  if (normalized === "snapshot" || normalized === "orient") {
+  if (normalized === "snapshot" || normalized === "orient" || normalized === "a11y") {
     return normalized;
   }
-  throw new CliError("E_QUERY_INVALID", "mode must be one of: snapshot, orient");
+  throw new CliError("E_QUERY_INVALID", "mode must be one of: snapshot, orient, a11y");
 }
 
 function parseNonNegativeIntInRange(opts: {
@@ -58,7 +63,7 @@ function parseNonNegativeIntInRange(opts: {
 
 function parseSnapshotCursor(input: string | undefined): SnapshotCursor {
   if (typeof input === "undefined") {
-    return { headings: 0, buttons: 0, links: 0 };
+    return { headings: 0, buttons: 0, links: 0, ax: 0 };
   }
   const raw = input.trim();
   if (raw.length === 0) {
@@ -81,13 +86,15 @@ function parseSnapshotCursor(input: string | undefined): SnapshotCursor {
     if (key === "h") parsed.headings = value;
     else if (key === "b") parsed.buttons = value;
     else if (key === "l") parsed.links = value;
-    else throw new CliError("E_QUERY_INVALID", "cursor keys must be: h, b, l");
+    else if (key === "ax") parsed.ax = value;
+    else throw new CliError("E_QUERY_INVALID", "cursor keys must be: h, b, l, ax");
   }
 
   return {
     headings: parsed.headings ?? 0,
     buttons: parsed.buttons ?? 0,
     links: parsed.links ?? 0,
+    ax: parsed.ax ?? 0,
   };
 }
 
@@ -110,6 +117,7 @@ export async function targetSnapshot(opts: {
   maxHeadings?: number;
   maxButtons?: number;
   maxLinks?: number;
+  maxAxRows?: number;
 }): Promise<TargetSnapshotReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -148,6 +156,13 @@ export async function targetSnapshot(opts: {
     max: SNAPSHOT_MAX_ITEMS_CAP,
     name: "max-links",
   });
+  const maxAxRows = parseNonNegativeIntInRange({
+    value: opts.maxAxRows,
+    defaultValue: SNAPSHOT_MAX_AX_ROWS_DEFAULT,
+    min: 0,
+    max: SNAPSHOT_MAX_AX_ROWS_CAP,
+    name: "max-ax-rows",
+  });
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -179,6 +194,31 @@ export async function targetSnapshot(opts: {
         frameCdpId: frameTree.frame.id,
         worldCache,
         selectorQuery,
+      });
+    }
+
+    if (mode === "a11y") {
+      if (cursor.headings !== 0 || cursor.buttons !== 0 || cursor.links !== 0) {
+        throw new CliError("E_QUERY_INVALID", "a11y cursor must use ax=<n> (e.g. ax=0)");
+      }
+      return await targetSnapshotA11y({
+        startedAt,
+        resolvedSessionAt,
+        connectedAt,
+        timeoutMs: opts.timeoutMs,
+        sessionId: session.sessionId,
+        sessionSource,
+        targetId: requestedTargetId,
+        page: target.page,
+        cdp,
+        selectorQuery,
+        visibleOnly,
+        frameScope,
+        cursorTokenProvided: Boolean(opts.cursor),
+        cursorAx: cursor.ax,
+        maxAxRows,
+        hints,
+        persistState: opts.persistState !== false,
       });
     }
 
@@ -284,6 +324,7 @@ export async function targetSnapshot(opts: {
           headings: cursorHeadings + headings.length,
           buttons: cursorButtons + buttons.length,
           links: cursorLinks + links.length,
+          ax: 0,
         })
       : null;
 
@@ -296,7 +337,7 @@ export async function targetSnapshot(opts: {
       cursor: opts.cursor ? formatSnapshotCursor(cursor) : null,
       nextCursor,
       url: target.page.url(),
-      title: await target.page.title(),
+      title: await safePageTitle(target.page, opts.timeoutMs),
       scope: {
         selector: selectorQuery,
         matched: scopeMatched,

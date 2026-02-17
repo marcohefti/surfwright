@@ -28,6 +28,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--text <query>", "Text query for fuzzy text match")
       .option("--selector <query>", "CSS/Playwright selector query")
       .option("--contains <text>", "Text filter to apply with --selector")
+      .option("--handle <handle>", "Element handle (from target snapshot --mode a11y)")
       .option("--visible-only", "Only match visible elements")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--index <n>", "Pick the Nth match (0-based) instead of first match")
@@ -47,6 +48,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             text?: string;
             selector?: string;
             contains?: string;
+            handle?: string;
             visibleOnly?: boolean;
             frameScope?: string;
             index?: string;
@@ -73,6 +75,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               textQuery: options.text,
               selectorQuery: options.selector,
               containsQuery: options.contains,
+              handle: options.handle,
               visibleOnly: Boolean(options.visibleOnly),
               frameScope: options.frameScope,
               index,

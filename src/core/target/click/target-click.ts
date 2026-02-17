@@ -18,6 +18,8 @@ import { CLICK_EXPLAIN_MAX_REJECTED, parseMatchIndex, parseWaitAfterClick, readP
 import { cdpQueryOp } from "./cdp-query-op.js";
 import { buildClickExplainReport } from "./click-explain.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
+import { safePageTitle } from "../infra/utils/safe-page-title.js";
+import { targetClickByHandle } from "./target-click-handle.js";
 
 async function pollUntil(opts: { timeoutMs: number; intervalMs: number; check: () => Promise<boolean> }): Promise<void> {
   const startedAt = Date.now();
@@ -38,6 +40,7 @@ export async function targetClick(opts: {
   textQuery?: string;
   selectorQuery?: string;
   containsQuery?: string;
+  handle?: string;
   visibleOnly?: boolean;
   frameScope?: string;
   index?: number;
@@ -50,13 +53,17 @@ export async function targetClick(opts: {
 }): Promise<TargetClickReport | TargetClickExplainReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
-  const parsed = parseTargetQueryInput({
-    textQuery: opts.textQuery,
-    selectorQuery: opts.selectorQuery,
-    containsQuery: opts.containsQuery,
-    visibleOnly: opts.visibleOnly,
-  });
   const requestedIndex = parseMatchIndex(opts.index);
+  const handleQuery = typeof opts.handle === "string" ? opts.handle.trim() : "";
+  const hasHandle = handleQuery.length > 0;
+  const parsed = hasHandle
+    ? null
+    : parseTargetQueryInput({
+        textQuery: opts.textQuery,
+        selectorQuery: opts.selectorQuery,
+        containsQuery: opts.containsQuery,
+        visibleOnly: opts.visibleOnly,
+      });
   const explain = Boolean(opts.explain);
   const includeDelta = Boolean(opts.delta);
   const waitAfter = parseWaitAfterClick({
@@ -65,7 +72,25 @@ export async function targetClick(opts: {
     waitNetworkIdle: opts.waitNetworkIdle,
   });
 
+  if (hasHandle) {
+    const hasText = typeof opts.textQuery === "string" && opts.textQuery.trim().length > 0;
+    const hasSelector = typeof opts.selectorQuery === "string" && opts.selectorQuery.trim().length > 0;
+    const hasContains = typeof opts.containsQuery === "string" && opts.containsQuery.trim().length > 0;
+    if (hasText || hasSelector || hasContains) {
+      throw new CliError("E_QUERY_INVALID", "Use either --handle or a query via --text/--selector/--contains");
+    }
+    if (requestedIndex !== null) {
+      throw new CliError("E_QUERY_INVALID", "--index cannot be combined with --handle");
+    }
+    if (Boolean(opts.visibleOnly)) {
+      throw new CliError("E_QUERY_INVALID", "--visible-only cannot be combined with --handle");
+    }
+  }
+
   if (explain) {
+    if (hasHandle) {
+      throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with --handle");
+    }
     const hasPostClickEvidence = Boolean(opts.snapshot) || includeDelta || waitAfter !== null;
     if (hasPostClickEvidence) {
       throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with post-click wait options, --snapshot, or --delta");
@@ -91,7 +116,7 @@ export async function targetClick(opts: {
     const worldCache = new Map<string, number>();
     const frameIds = frameIdsForScope({ frameTree, scope: frameScope });
 
-    if (parsed.mode === "selector" && typeof parsed.selector === "string") {
+    if (parsed && parsed.mode === "selector" && typeof parsed.selector === "string") {
       await ensureValidSelectorSyntaxCdp({
         cdp,
         frameCdpId: frameTree.frame.id,
@@ -105,6 +130,32 @@ export async function targetClick(opts: {
       frameCdpId: frameTree.frame.id,
       worldCache,
     });
+
+    if (hasHandle) {
+      return await targetClickByHandle({
+        startedAt,
+        resolvedSessionAt,
+        connectedAt,
+        sessionId: session.sessionId,
+        sessionSource,
+        targetId: requestedTargetId,
+        page: target.page,
+        cdp,
+        frameTree,
+        worldCache,
+        mainEvaluator,
+        handleQuery,
+        timeoutMs: opts.timeoutMs,
+        waitAfter,
+        snapshot: Boolean(opts.snapshot),
+        includeDelta,
+        persistState: opts.persistState !== false,
+      });
+    }
+
+    if (!parsed) {
+      throw new CliError("E_INTERNAL", "Unable to parse click query");
+    }
 
     const queryMode = parsed.mode;
     const query = parsed.query;
@@ -187,7 +238,7 @@ export async function targetClick(opts: {
 
     if (explain) {
       const url = target.page.url();
-      const title = await target.page.title();
+      const title = await safePageTitle(target.page, opts.timeoutMs);
       const actionCompletedAt = Date.now();
 
       const report = await buildClickExplainReport({
@@ -258,7 +309,7 @@ export async function targetClick(opts: {
       pickedIndex = found;
     }
 
-    const deltaBefore = includeDelta ? await captureClickDeltaState(target.page as any, mainEvaluator) : null;
+    const deltaBefore = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;
     const clickedAriaBefore = includeDelta ? await readAriaAt(pickedIndex) : null;
 
     const clickedPreview = await clickAt(pickedIndex);
@@ -308,7 +359,7 @@ export async function targetClick(opts: {
             })();
 
     const postSnapshot = opts.snapshot ? await readPostSnapshot(mainEvaluator) : null;
-    const deltaAfter = includeDelta ? await captureClickDeltaState(target.page as any, mainEvaluator) : null;
+    const deltaAfter = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;
     const clickedAriaAfter = includeDelta ? await readAriaAt(pickedIndex) : null;
     const actionCompletedAt = Date.now();
 
@@ -342,7 +393,7 @@ export async function targetClick(opts: {
         selectorHint: clickedPreview.selectorHint,
       },
       url: target.page.url(),
-      title: await target.page.title(),
+      title: await safePageTitle(target.page, opts.timeoutMs),
       wait: waited,
       snapshot: postSnapshot,
       ...(delta ? { delta } : {}),

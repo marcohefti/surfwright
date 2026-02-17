@@ -1,4 +1,5 @@
 import type { TargetClickDeltaEvidence } from "../../types.js";
+import { safePageTitle } from "../infra/utils/safe-page-title.js";
 
 const CLICK_DELTA_FOCUS_TEXT_MAX_CHARS = 120;
 const CLICK_DELTA_ROLES = ["dialog", "alert", "status", "menu", "listbox"] as const;
@@ -97,8 +98,9 @@ async function captureDeltaProbe(evaluator: {
 }
 
 export async function captureClickDeltaState(
-  page: { url(): string; title(): Promise<string> },
+  page: { url(): string; title(): Promise<string>; waitForLoadState(state: "domcontentloaded", opts: { timeout: number }): Promise<void> },
   evaluator: { evaluate<T, Arg>(fn: (arg: Arg) => T, arg: Arg): Promise<T> },
+  timeoutMs: number,
 ): Promise<{
   url: string;
   title: string;
@@ -106,7 +108,7 @@ export async function captureClickDeltaState(
   roleCounts: ClickDeltaRoleCounts;
 }> {
   const url = page.url();
-  const [title, probe] = await Promise.all([page.title(), captureDeltaProbe(evaluator)]);
+  const [title, probe] = await Promise.all([safePageTitle(page, timeoutMs), captureDeltaProbe(evaluator)]);
   return {
     url,
     title,
@@ -134,4 +136,3 @@ export function buildClickDeltaEvidence(opts: {
     },
   };
 }
-

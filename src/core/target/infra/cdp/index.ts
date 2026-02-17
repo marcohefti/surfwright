@@ -292,22 +292,51 @@ export async function evalJsonInContext<T>(opts: { cdp: CDPSession; contextId: n
   return (payload.result?.value ?? null) as T;
 }
 
+function isExecutionContextLostError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : "";
+  if (!message) {
+    return false;
+  }
+  // When a navigation occurs, cached executionContextIds can become invalid.
+  // CDP surfaces this in a few different ways depending on timing.
+  return (
+    /Cannot find context with specified id/i.test(message) ||
+    /Execution context was destroyed/i.test(message) ||
+    /most likely because of a navigation/i.test(message) ||
+    /Inspected target navigated or closed/i.test(message) ||
+    /Target closed/i.test(message)
+  );
+}
+
 export async function evalJsonInFrame<T>(opts: {
   cdp: CDPSession;
   frameCdpId: string;
   worldCache: Map<string, number>;
   expression: string;
 }): Promise<T> {
-  const contextId = await createIsolatedWorldContext({
-    cdp: opts.cdp,
-    frameCdpId: opts.frameCdpId,
-    cache: opts.worldCache,
-  });
-  return await evalJsonInContext<T>({
-    cdp: opts.cdp,
-    contextId,
-    expression: opts.expression,
-  });
+  const attempt = async (): Promise<T> => {
+    const contextId = await createIsolatedWorldContext({
+      cdp: opts.cdp,
+      frameCdpId: opts.frameCdpId,
+      cache: opts.worldCache,
+    });
+    return await evalJsonInContext<T>({
+      cdp: opts.cdp,
+      contextId,
+      expression: opts.expression,
+    });
+  };
+
+  try {
+    return await attempt();
+  } catch (error) {
+    if (!isExecutionContextLostError(error)) {
+      throw error;
+    }
+    // Navigation can invalidate cached context ids. Clear and retry once.
+    opts.worldCache.delete(opts.frameCdpId);
+    return await attempt();
+  }
 }
 
 export async function evalJsonInMainWorldFrame<T>(opts: {
@@ -317,17 +346,29 @@ export async function evalJsonInMainWorldFrame<T>(opts: {
   timeoutMs: number;
   expression: string;
 }): Promise<T> {
-  const contextId = await ensureMainWorldContextId({
-    cdp: opts.cdp,
-    frameCdpId: opts.frameCdpId,
-    cache: opts.mainWorldCache,
-    timeoutMs: opts.timeoutMs,
-  });
-  return await evalJsonInContext<T>({
-    cdp: opts.cdp,
-    contextId,
-    expression: opts.expression,
-  });
+  const attempt = async (): Promise<T> => {
+    const contextId = await ensureMainWorldContextId({
+      cdp: opts.cdp,
+      frameCdpId: opts.frameCdpId,
+      cache: opts.mainWorldCache,
+      timeoutMs: opts.timeoutMs,
+    });
+    return await evalJsonInContext<T>({
+      cdp: opts.cdp,
+      contextId,
+      expression: opts.expression,
+    });
+  };
+
+  try {
+    return await attempt();
+  } catch (error) {
+    if (!isExecutionContextLostError(error)) {
+      throw error;
+    }
+    opts.mainWorldCache.delete(opts.frameCdpId);
+    return await attempt();
+  }
 }
 
 export function createCdpEvaluator(opts: {

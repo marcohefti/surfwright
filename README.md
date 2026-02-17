@@ -153,11 +153,11 @@ surfwright skill doctor [--dest <path>] [--lock <path>] [--no-json] [--pretty]
 surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--no-json] [--pretty]
 surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target frames <targetId> [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
-surfwright target snapshot <targetId> [--mode <snapshot|orient>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target snapshot <targetId> [--mode <snapshot|orient|a11y>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--max-ax-rows <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target snapshot-diff <a> <b> [--no-json] [--pretty]
 surfwright target count <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
-surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
 surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
@@ -282,6 +282,8 @@ Use `--max-... 0` to omit a category. If `nextCursor` is non-null, pass it back 
 
 Use `--include-selector-hints` to include bounded `items.*.selectorHint` rows. Use `--mode orient` for a quiet first-load payload (returns `h1` and limits `links` to header/nav links; defaults `--max-buttons 0`).
 
+Use `--mode a11y` to return a bounded accessibility-tree slice (`a11y.rows`) with per-row `handle` values you can feed into `target click --handle <handle>`.
+
 To diff two snapshots (for "what changed?" without re-scraping), save JSON snapshots and run `target snapshot-diff`:
 
 ```bash
@@ -304,6 +306,8 @@ surfwright target snapshot-diff ./artifacts/snap-a.json ./artifacts/snap-b.json
 ```
 
 Use `--index <n>` (0-based) to click the Nth match. Use `--explain` to return bounded match-selection evidence and rejection reasons without performing the click.
+
+Use `--handle <handle>` to click an element handle returned by `target snapshot --mode a11y`.
 
 Use `--delta` to include a bounded, evidence-based before/after payload (no semantic UI claims). v0 includes URL/title, focus evidence, and role-count deltas for `dialog|alert|status|menu|listbox`, plus a fixed list of ARIA attribute values captured on the clicked element.
 

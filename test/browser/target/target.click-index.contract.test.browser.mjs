@@ -1,26 +1,20 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { createCliRunner } from "../helpers/cli-runner.mjs";
 import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
+import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 
-const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-target-click-index-"));
+const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-target-click-index-");
+const { runCliSync } = createCliRunner({ stateDir: TEST_STATE_DIR });
 
 function stateFilePath() {
   return path.join(TEST_STATE_DIR, "state.json");
 }
 
 function runCli(args) {
-  return spawnSync(process.execPath, ["dist/cli.js", ...args], {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-      SURFWRIGHT_TEST_BROWSER: "1",
-    },
-  });
+  return runCliSync(args);
 }
 
 function parseJson(stdout) {
@@ -51,7 +45,26 @@ test.after(async () => {
 
 test("target click supports --index for deterministic multi-match selection", () => {
   requireBrowser();
-  const openResult = runCli(["--json", "open", "https://the-internet.herokuapp.com/add_remove_elements/", "--timeout-ms", "20000"]);
+  const html = `<!doctype html>
+    <html><head><meta charset="utf-8"><title>Click Index</title></head>
+      <body>
+        <main>
+          <button id="add">Add Element</button>
+          <div id="container"></div>
+        </main>
+        <script>
+          const container = document.getElementById('container');
+          document.getElementById('add').addEventListener('click', () => {
+            const btn = document.createElement('button');
+            btn.className = 'added-manually';
+            btn.textContent = 'Delete';
+            btn.addEventListener('click', () => btn.remove());
+            container.appendChild(btn);
+          });
+        </script>
+      </body></html>`;
+  const url = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 

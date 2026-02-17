@@ -1,27 +1,20 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import process from "node:process";
 import test from "node:test";
+import { createCliRunner } from "../helpers/cli-runner.mjs";
 import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
+import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 
-const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-target-click-at-"));
+const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-target-click-at-");
+const { runCliSync } = createCliRunner({ stateDir: TEST_STATE_DIR });
 
 function stateFilePath() {
   return path.join(TEST_STATE_DIR, "state.json");
 }
 
 function runCli(args) {
-  return spawnSync(process.execPath, ["dist/cli.js", ...args], {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-      SURFWRIGHT_TEST_BROWSER: "1",
-    },
-  });
+  return runCliSync(args);
 }
 
 function parseJson(stdout) {

@@ -1,26 +1,20 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { createCliRunner } from "../helpers/cli-runner.mjs";
 import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
+import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 
-const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-target-frames-"));
+const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-target-frames-");
+const { runCliSync } = createCliRunner({ stateDir: TEST_STATE_DIR });
 
 function stateFilePath() {
   return path.join(TEST_STATE_DIR, "state.json");
 }
 
 function runCli(args) {
-  return spawnSync(process.execPath, ["dist/cli.js", ...args], {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-      SURFWRIGHT_TEST_BROWSER: "1",
-    },
-  });
+  return runCliSync(args);
 }
 
 function parseJson(stdout) {
@@ -49,9 +43,16 @@ test.after(async () => {
   await cleanupStateDir(TEST_STATE_DIR);
 });
 
-test("target frames lists stable handles for MDN iframe fixture", () => {
+function fixtureUrl() {
+  const childHtml = "<!doctype html><title>Child Frame</title><main>child</main>";
+  const childUrl = `data:text/html;base64,${Buffer.from(childHtml, "utf8").toString("base64")}`;
+  const html = `<!doctype html><title>Frames Fixture</title><main>parent</main><iframe src="${childUrl}"></iframe>`;
+  return `data:text/html,${encodeURIComponent(html)}`;
+}
+
+test("target frames lists stable handles for local iframe fixture", () => {
   requireBrowser();
-  const url = "https://mdn.github.io/dom-examples/channel-messaging-basic/";
+  const url = fixtureUrl();
   const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
@@ -77,7 +78,7 @@ test("target frames lists stable handles for MDN iframe fixture", () => {
   assert.equal(framesPayload.sessionId, openPayload.sessionId);
   assert.equal(framesPayload.sessionSource, "target-inferred");
   assert.equal(framesPayload.targetId, openPayload.targetId);
-  assert.equal(framesPayload.url.startsWith("https://mdn.github.io/"), true);
+  assert.equal(framesPayload.url.startsWith("data:text/html,"), true);
   assert.equal(typeof framesPayload.title, "string");
   assert.equal(typeof framesPayload.count, "number");
   assert.equal(framesPayload.count >= 2, true);
@@ -98,7 +99,7 @@ test("target frames lists stable handles for MDN iframe fixture", () => {
 
 test("target eval can target a specific frame via --frame-id", () => {
   requireBrowser();
-  const url = "https://mdn.github.io/dom-examples/channel-messaging-basic/";
+  const url = fixtureUrl();
   const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);

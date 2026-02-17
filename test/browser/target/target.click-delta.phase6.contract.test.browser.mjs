@@ -1,27 +1,20 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import process from "node:process";
 import test from "node:test";
+import { createCliRunner } from "../helpers/cli-runner.mjs";
 import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
+import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 
-const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-target-click-delta-"));
+const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-target-click-delta-");
+const { runCliSync } = createCliRunner({ stateDir: TEST_STATE_DIR });
 
 function stateFilePath() {
   return path.join(TEST_STATE_DIR, "state.json");
 }
 
 function runCli(args) {
-  return spawnSync(process.execPath, ["dist/cli.js", ...args], {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-      SURFWRIGHT_TEST_BROWSER: "1",
-    },
-  });
+  return runCliSync(args);
 }
 
 function parseJson(stdout) {
@@ -52,7 +45,31 @@ test.after(async () => {
 
 test("target click --delta returns bounded evidence-based delta", () => {
   requireBrowser();
-  const openResult = runCli(["--json", "open", "https://getbootstrap.com/docs/5.3/components/modal/", "--timeout-ms", "20000"]);
+  const html = `<!doctype html>
+    <html>
+      <head><meta charset="utf-8"><title>Delta Modal</title></head>
+      <body>
+        <button id="launch" aria-controls="demo-modal" aria-expanded="false">Launch demo modal</button>
+        <div id="demo-modal" aria-hidden="true" style="display:none">
+          <p>Modal content</p>
+          <button id="close" aria-label="Close">Close</button>
+        </div>
+        <script>
+          const btn = document.getElementById('launch');
+          const modal = document.getElementById('demo-modal');
+          btn.addEventListener('click', () => {
+            btn.setAttribute('aria-expanded','true');
+            modal.style.display = 'block';
+            modal.setAttribute('role','dialog');
+            modal.setAttribute('aria-modal','true');
+            modal.setAttribute('aria-hidden','false');
+            document.getElementById('close').focus();
+          });
+        </script>
+      </body>
+    </html>`;
+  const url = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 

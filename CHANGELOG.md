@@ -54,6 +54,8 @@ All notable changes to SurfWright are documented here.
 - [target] Fixed `target spawn` on pages where programmatic `element.click()` does not open a new tab (uses a trusted mouse click instead).
 - [target] Fixed `target eval` failing when an expression triggers navigation while persisting state (best-effort title capture).
 - [network] Hardened `target network-begin` capture correctness by waiting for listener readiness before returning the `captureId`.
+- [test] Browser contract tests now run with a default per-test timeout and abort-safe temp-root cleanup to prevent leaked Chrome processes.
+- [test] Browser contract tests no longer depend on external websites (use local fixtures and local HTTP servers).
 
 ### Deprecated
 - [docs] None.

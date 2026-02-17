@@ -131,17 +131,18 @@ export async function targetSpawn(opts: {
 
     const childPagePromise = context.waitForEvent("page", { timeout: opts.timeoutMs });
     const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
-    const clicked = (await evaluator.evaluate(cdpQueryOp, {
-      op: "click",
+    const clickPoint = (await evaluator.evaluate(cdpQueryOp, {
+      op: "click-point",
       mode: parsed.mode,
       query: parsed.query,
       selector: parsed.selector,
       contains: parsed.contains,
       index: localIndex,
-    })) as { ok: boolean };
-    if (!clicked.ok) {
+    })) as { ok: boolean; x?: number; y?: number };
+    if (!clickPoint.ok || typeof clickPoint.x !== "number" || typeof clickPoint.y !== "number") {
       throw new CliError("E_QUERY_INVALID", parsed.visibleOnly ? "No visible element matched spawn query" : "No element matched spawn query");
     }
+    await parent.page.mouse.click(clickPoint.x, clickPoint.y);
 
     let childPage: (typeof beforePages)[number] | null = null;
     try {
@@ -206,4 +207,3 @@ export async function targetSpawn(opts: {
     await browser.close();
   }
 }
-

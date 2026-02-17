@@ -51,6 +51,7 @@ All notable changes to SurfWright are documented here.
 - [daemon] `skill *` commands now bypass the daemon so relative `--source`/`--lock` paths resolve from the operator's current working directory (not a long-lived worker cwd).
 - [target] Fixed DOM evaluation on some OOPIF-heavy pages (e.g. Substack custom domains) where Playwright `evaluate()` could bind to a hidden tracking iframe realm; `target eval/read/snapshot/extract/frames/health/screenshot` now execute DOM reads via CDP in an isolated world anchored to the selected frame.
 - [target] Fixed `target find/click/fill/spawn/wait --for-text/--for-selector` on OOPIF-heavy pages by moving element queries/actions onto the same CDP isolated-world evaluator surface (avoids Playwright realm binding issues on reattached sessions).
+- [target] Fixed `target spawn` on pages where programmatic `element.click()` does not open a new tab (uses a trusted mouse click instead).
 - [target] Fixed `target eval` failing when an expression triggers navigation while persisting state (best-effort title capture).
 - [network] Hardened `target network-begin` capture correctness by waiting for listener readiness before returning the `captureId`.
 

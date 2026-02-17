@@ -1,5 +1,14 @@
 export function cdpQueryOp(arg: {
-  op: "summary" | "preview" | "click" | "invisible" | "aria" | "fill" | "wait-selector-visible" | "wait-text-visible";
+  op:
+    | "summary"
+    | "preview"
+    | "click"
+    | "click-point"
+    | "invisible"
+    | "aria"
+    | "fill"
+    | "wait-selector-visible"
+    | "wait-text-visible";
   mode?: "text" | "selector";
   query?: string;
   selector?: string | null;
@@ -14,6 +23,7 @@ export function cdpQueryOp(arg: {
 }):
   | { rawCount: number; firstVisibleIndex: number | null }
   | { ok: true; visible: boolean; text: string; selectorHint: string | null }
+  | { ok: true; x: number; y: number; visible: boolean; text: string; selectorHint: string | null }
   | { ok: false }
   | { rejected: Array<{ index: number; visible: boolean; text: string; selectorHint: string | null }>; rejectedTruncated: boolean }
   | { detached: boolean; values: Record<string, string | null> }
@@ -154,6 +164,51 @@ export function cdpQueryOp(arg: {
     };
   }
 
+  if (arg.op === "click-point") {
+    const index = typeof arg.index === "number" ? arg.index : -1;
+    const node = index >= 0 ? (matches[index] ?? null) : null;
+    if (!node) return { ok: false };
+    try {
+      node.scrollIntoView?.({ block: "center", inline: "center" });
+    } catch {
+      // ignore
+    }
+
+    // Prefer returning a click point for a trusted mouse click (required for actions like opening a new tab).
+    const rect = node.getBoundingClientRect?.();
+    let x = (rect?.left ?? 0) + (rect?.width ?? 0) / 2;
+    let y = (rect?.top ?? 0) + (rect?.height ?? 0) / 2;
+
+    // Best-effort: translate iframe-relative coordinates into top-level viewport coordinates for same-origin frames.
+    try {
+      let win: any = globalThis;
+      for (let i = 0; i < 16; i += 1) {
+        const frameEl = win?.frameElement ?? null;
+        if (!frameEl) break;
+        const fr = frameEl.getBoundingClientRect?.();
+        x += (fr?.left ?? 0);
+        y += (fr?.top ?? 0);
+        const parent = win?.parent ?? null;
+        if (!parent || parent === win) break;
+        win = parent;
+      }
+    } catch {
+      // ignore
+    }
+
+    // Guard against non-finite values to avoid flaky downstream input.
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return { ok: false };
+
+    return {
+      ok: true,
+      x,
+      y,
+      visible: isVisible(node),
+      text: normalize(String(textFor(node) ?? "")).slice(0, 180),
+      selectorHint: selectorHintFor(node),
+    };
+  }
+
   if (arg.op === "invisible") {
     const stopExclusive = Math.max(
       0,
@@ -241,4 +296,3 @@ export function cdpQueryOp(arg: {
 
   return { ok: false };
 }
-

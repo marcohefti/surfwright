@@ -74,6 +74,11 @@ jobs:
           pnpm -s release-check
           pnpm -s dual-package-parity-check
 
+      - name: Verify skill is discoverable via skills CLI (local)
+        env:
+          DISABLE_TELEMETRY: "1"
+        run: npx -y skills add . --list
+
       - name: Local post-publish smoke (dry-run)
         run: |
           node scripts/release/smoke-contract.mjs \

@@ -13,6 +13,7 @@
    - `pnpm validate`
    - `pnpm test`
    - `pnpm skill:validate`
+   - `npx -y skills add . --list` (skill discoverability check)
 2. Confirm changelog quality:
    - every user-visible change is listed
    - breaking deltas include migration action

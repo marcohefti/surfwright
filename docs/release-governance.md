@@ -9,6 +9,8 @@ If implementation diverges from this document, update implementation and docs in
 
 - Canonical npm package: `@marcohefti/surfwright`
 - Guard/discoverability package: `surfwright`
+- skills.sh lightweight ref: `marcohefti/surfwright@skills-dist`
+- skills.sh pinned tags: `skills-vX.Y.Z` (repo tags, not GitHub releases)
 - License: `MIT`
 - Runtime Node policy: `>=22.14.0`
 - Primary dev/CI target: Node 24
@@ -75,6 +77,13 @@ This workflow must pass release-check, parity checks, local dual-package smoke c
 4. Capture rollback metadata artifact from workflow execution.
 
 ## Deferred Distribution Backlog
+
+### skills.sh Listing (Enabled)
+
+Notes:
+
+- skills.sh listing is driven by anonymous telemetry from the `skills` CLI (not by an explicit publish step).
+- SurfWright maintains a generated `skills-dist` branch and `skills-v*` tags so installs are fast and reproducible.
 
 ### Homebrew Core (Deferred)
 

@@ -5,6 +5,7 @@ All notable changes to SurfWright are documented here.
 ## [Unreleased]
 
 ### Added
+- [distribution] Added generated `skills-dist` branch and `skills-v*` tags for lightweight, pinned installs via the `skills` CLI (skills.sh ecosystem).
 - [release] Added `publish-dry-run.yml` to exercise publish-path checks before tag-based release.
 - [test] Added coverage for `scripts/release/release-notes-from-changelog.mjs` failure/success behavior.
 - [workspace] Added `workspace init` and `workspace info` for a project-local `./.surfwright/` workspace (gitignored) that stores reusable browser profiles.
@@ -22,12 +23,14 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target click --explain` for bounded match selection/rejection diagnostics without clicking.
 - [target] Added `target click --delta` for bounded evidence-based before/after change capture (URL/title, focus evidence, role counts, and clicked-element ARIA attribute values; no semantic UI claims).
 - [target] Added `target snapshot --mode <snapshot|orient>` for quiet first-load orientation payloads (`orient` returns `h1` and scopes `links` to header/nav links).
+- [target] Added `target snapshot --mode a11y` for bounded accessibility-tree rows (`a11y.rows`) with optional element `handle` values and paging via `ax=<n>` cursor tokens (`--max-ax-rows <n>`).
 - [target] Added `target snapshot` paging via `--cursor <token>` and `nextCursor` in the report.
 - [target] Added `target snapshot --include-selector-hints` returning bounded `items` rows with `selectorHint`.
 - [target] Added `target snapshot-diff` for high-signal diffs between two saved snapshot reports.
 - [target] Added `target count` for fast, bounded element counts (`--selector`/`--text`, optional `--visible-only`, optional `--frame-scope`).
 - [target] Added `target download` for deterministic download capture (filename, sha256, size, headers/status when available) into an artifacts dir.
 - [target] Added `--frame-scope <main|all>` to `target find/click/fill/spawn/wait` for deterministic cross-iframe queries/actions.
+- [target] Added `target click --handle <handle>` to click an element handle returned by `target snapshot --mode a11y`.
 - [network] Added `target network-around` to capture `network-begin` + click + `network-end` in one deterministic command.
 - [network] Added per-capture sampling/redaction controls: `--body-sample-bytes` (bounded) and repeated `--redact-regex` (with safe defaults for sensitive header redaction when headers are included).
 - [run] Added replayable evidence logs via `run --log-ndjson <path>` and `--log-mode <minimal|full>` (append-only NDJSON run log).
@@ -53,6 +56,7 @@ All notable changes to SurfWright are documented here.
 - [target] Fixed `target find/click/fill/spawn/wait --for-text/--for-selector` on OOPIF-heavy pages by moving element queries/actions onto the same CDP isolated-world evaluator surface (avoids Playwright realm binding issues on reattached sessions).
 - [target] Fixed `target spawn` on pages where programmatic `element.click()` does not open a new tab (uses a trusted mouse click instead).
 - [target] Fixed `target eval` failing when an expression triggers navigation while persisting state (best-effort title capture).
+- [target] Fixed intermittent `target click`/`target snapshot` follow-up reads failing after navigation by retrying CDP evaluations when cached execution contexts are invalidated.
 - [network] Hardened `target network-begin` capture correctness by waiting for listener readiness before returning the `captureId`.
 - [test] Browser contract tests now run with a default per-test timeout and abort-safe temp-root cleanup to prevent leaked Chrome processes.
 - [test] Browser contract tests no longer depend on external websites (use local fixtures and local HTTP servers).

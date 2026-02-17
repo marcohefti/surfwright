@@ -123,6 +123,28 @@ brew update
 brew upgrade surfwright
 ```
 
+## Install the Skill (skills.sh)
+
+SurfWright also ships an agent skill (guidance package) that can be installed via the `skills` CLI.
+
+Fast install (lightweight branch):
+
+```bash
+npx -y skills add marcohefti/surfwright@skills-dist --skill surfwright -a codex -g -y
+```
+
+Pinned install (per-release tag):
+
+```bash
+npx -y skills add marcohefti/surfwright@skills-vX.Y.Z --skill surfwright -a codex -g -y
+```
+
+Telemetry opt-out:
+
+```bash
+DISABLE_TELEMETRY=1 npx -y skills add marcohefti/surfwright@skills-dist --skill surfwright -a codex -g -y
+```
+
 Deferred distribution channels and enablement checklists are tracked in `docs/release-governance.md`.
 
 ## Commands (Current)

@@ -234,7 +234,7 @@ export function createCdpEvaluator(opts: {
   frameCdpId: string;
   worldCache: Map<string, number>;
 }): CdpEvaluator {
-  const evaluate = async <T, Arg>(pageFunction: (arg: Arg) => T, arg?: Arg): Promise<T> => {
+  async function evaluate<T, Arg>(pageFunction: (arg: Arg) => T, arg?: Arg): Promise<T> {
     // Playwright normally serializes a function + arg and runs it in the page.
     // We do the same over CDP, but force an isolated world in the desired frame
     // to avoid Playwright realm binding bugs on OOPIF/third-party iframes.
@@ -249,7 +249,7 @@ export function createCdpEvaluator(opts: {
       worldCache: opts.worldCache,
       expression,
     });
-  };
+  }
 
   return { evaluate } as CdpEvaluator;
 }

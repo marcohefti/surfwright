@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "name": "surfwright",
-  "skillVersion": "0.1.0",
+  "skillVersion": "0.1.1",
   "channel": "stable",
   "requires": {
     "surfwrightVersion": ">=0.1.0 <0.2.0",
     "contractSchemaVersion": "^1",
-    "contractFingerprint": "sha256:71e259f336eb356a4c70a11d7db379a1b70333491522fef1e8d33eda4fc87095"
+    "contractFingerprint": "sha256:f2b9ff24d9f221aa0c0bf0a3c368923aba130cdb7e7cefcc8df9675608abda2d"
   },
   "artifacts": {
     "entry": "SKILL.md",

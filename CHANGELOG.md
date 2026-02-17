@@ -22,6 +22,8 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target snapshot --mode <snapshot|orient>` for quiet first-load orientation payloads (`orient` returns `h1` and scopes `links` to header/nav links).
 - [target] Added `target snapshot` paging via `--cursor <token>` and `nextCursor` in the report.
 - [target] Added `target snapshot --include-selector-hints` returning bounded `items` rows with `selectorHint`.
+- [target] Added `target count` for fast, bounded element counts (`--selector`/`--text`, optional `--visible-only`, optional `--frame-scope`).
+- [target] Added `--frame-scope <main|all>` to `target find/click/fill/spawn/wait` for deterministic cross-iframe queries/actions.
 
 ### Changed
 - [release] Publish and release-draft workflows now use shared smoke script `scripts/release/smoke-contract.mjs`.
@@ -32,10 +34,14 @@ All notable changes to SurfWright are documented here.
 - [cli] JSON output is now the default for all commands; use `--no-json` for human-friendly summaries and `--pretty` for multiline JSON.
 - [docs] Documented headed/headless defaults and a minimal human login handoff recipe (README + skill).
 - [target] `target snapshot` now accepts `0` for `--max-chars`, `--max-headings`, `--max-buttons`, and `--max-links` to omit categories.
+- [target] `target extract --kind blog/news/docs/generic` DOM presets now prioritize semantic tags/ARIA roles over site-shaped class selectors.
+- [skill] Bumped `skills/surfwright` to `skillVersion=0.1.1` and refreshed lock metadata for the updated runtime contract fingerprint.
 
 ### Fixed
 - [release] Removed drift-prone duplicate smoke command logic across release workflows.
 - [target] Fixed DOM evaluation on some OOPIF-heavy pages (e.g. Substack custom domains) where Playwright `evaluate()` could bind to a hidden tracking iframe realm; `target eval/read/snapshot/extract/frames/health/screenshot` now execute DOM reads via CDP in an isolated world anchored to the selected frame.
+- [target] Fixed `target find/click/fill/spawn/wait --for-text/--for-selector` on OOPIF-heavy pages by moving element queries/actions onto the same CDP isolated-world evaluator surface (avoids Playwright realm binding issues on reattached sessions).
+- [target] Fixed `target eval` failing when an expression triggers navigation while persisting state (best-effort title capture).
 
 ### Deprecated
 - [docs] None.

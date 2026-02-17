@@ -40,12 +40,13 @@ This stores the browser profile under `./.surfwright/` (gitignored), so future a
 surfwright open https://example.com
 surfwright target frames <targetId>
 surfwright target snapshot <targetId>
+surfwright target count <targetId> --selector 'button,[role="button"],input[type="button"],input[type="submit"],input[type="reset"]' --visible-only
 surfwright target find <targetId> --selector a --contains "query" --first --visible-only
 surfwright target click <targetId> --text "query" --visible-only
 surfwright target read <targetId> --selector main --frame-scope main --chunk-size 1200 --chunk 1
 surfwright target extract <targetId> --kind blog --frame-scope all --limit 10
 surfwright target eval <targetId> --expr "console.log('hello from agent'), document.title" --capture-console
-surfwright target wait <targetId> --for-selector "h1"
+surfwright target wait <targetId> --for-selector "h1" --frame-scope main
 surfwright target console-tail <targetId> --capture-ms 2000 --levels error,warn
 surfwright target health <targetId>
 surfwright target hud <targetId>
@@ -62,6 +63,8 @@ surfwright session cookie-copy --from-session a-login --to-session s-checkout --
 ```
 
 `open` returns `sessionId`, `sessionSource`, and `targetId`; persist these handles in your run state. `target *` commands can infer the session from `targetId` when `--session` is omitted.
+
+`target extract --kind blog` is an interface-agnostic preset for "post/feed index" pages (blogs, newsletters, changelogs, news pages). The name may evolve, but the intent is generic extraction, not site-specific scraping.
 
 ## Snapshot Orientation (Quiet First Pass)
 

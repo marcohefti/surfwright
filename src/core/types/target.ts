@@ -112,6 +112,21 @@ export type TargetFindReport = {
   timingMs: ActionTimingMs;
 };
 
+export type TargetCountReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  mode: "text" | "selector";
+  selector: string | null;
+  contains: string | null;
+  visibleOnly: boolean;
+  query: string;
+  rawCount: number;
+  count: number;
+  timingMs: ActionTimingMs;
+};
+
 export type TargetClickReport = {
   ok: true;
   sessionId: string;

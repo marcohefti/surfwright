@@ -1,0 +1,244 @@
+export function cdpQueryOp(arg: {
+  op: "summary" | "preview" | "click" | "invisible" | "aria" | "fill" | "wait-selector-visible" | "wait-text-visible";
+  mode?: "text" | "selector";
+  query?: string;
+  selector?: string | null;
+  contains?: string | null;
+  index?: number;
+  stopExclusive?: number;
+  maxRejected?: number;
+  attrNames?: string[];
+  waitSelector?: string;
+  waitText?: string;
+  fillValue?: string;
+}):
+  | { rawCount: number; firstVisibleIndex: number | null }
+  | { ok: true; visible: boolean; text: string; selectorHint: string | null }
+  | { ok: false }
+  | { rejected: Array<{ index: number; visible: boolean; text: string; selectorHint: string | null }>; rejectedTruncated: boolean }
+  | { detached: boolean; values: Record<string, string | null> }
+  | { filled: boolean; valueLength: number }
+  | boolean {
+  const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
+  const doc = runtime.document;
+  const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+  const normLower = (value: string): string => normalize(value).toLowerCase();
+
+  const selectorHintFor = (node: any): string | null => {
+    const el = node;
+    const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";
+    const classSuffix =
+      classListRaw.length > 0
+        ? classListRaw
+            .split(" ")
+            .filter((entry) => entry.length > 0)
+            .slice(0, 2)
+            .map((entry) => `.${entry}`)
+            .join("")
+        : "";
+    const tag = typeof el?.tagName === "string" ? el.tagName.toLowerCase() : "";
+    const id = typeof el?.id === "string" && el.id.length > 0 ? `#${el.id}` : "";
+    return tag.length > 0 ? `${tag}${id}${classSuffix}` : null;
+  };
+
+  const isVisible = (node: any): boolean => {
+    if (!node) return false;
+    if (node.hasAttribute?.("hidden")) return false;
+    const style = runtime.getComputedStyle?.(node);
+    if (style && (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")) return false;
+    return (node.getClientRects?.().length ?? 0) > 0;
+  };
+
+  const textFor = (node: any): string => {
+    const el = node;
+    const tag = typeof el?.tagName === "string" ? el.tagName.toLowerCase() : "";
+    if (tag === "input" || tag === "textarea" || tag === "select") {
+      return (
+        el?.getAttribute?.("aria-label") ??
+        el?.getAttribute?.("placeholder") ??
+        el?.getAttribute?.("name") ??
+        el?.id ??
+        el?.value ??
+        ""
+      );
+    }
+    return el?.innerText ?? el?.textContent ?? el?.getAttribute?.("aria-label") ?? el?.getAttribute?.("title") ?? "";
+  };
+
+  if (arg.op === "wait-selector-visible") {
+    const selector = typeof arg.waitSelector === "string" ? arg.waitSelector : "";
+    const node = doc?.querySelector?.(selector) ?? null;
+    return Boolean(node && isVisible(node));
+  }
+
+  if (arg.op === "wait-text-visible") {
+    const body = doc?.body ?? null;
+    const hay = normLower(String(body?.innerText ?? ""));
+    const needle = normLower(String(arg.waitText ?? ""));
+    return needle.length > 0 && hay.includes(needle);
+  }
+
+  const root = doc?.body ?? null;
+  if (!root) {
+    if (arg.op === "summary") return { rawCount: 0, firstVisibleIndex: null };
+    if (arg.op === "invisible") return { rejected: [], rejectedTruncated: false };
+    if (arg.op === "aria") {
+      const values: Record<string, string | null> = {};
+      for (const name of arg.attrNames ?? []) values[name] = null;
+      return { detached: true, values };
+    }
+    if (arg.op === "fill") return { filled: false, valueLength: 0 };
+    return { ok: false };
+  }
+
+  const mode = arg.mode ?? "selector";
+  const query = typeof arg.query === "string" ? arg.query : "";
+  const selector = typeof arg.selector === "string" ? arg.selector : "";
+  const containsLower = typeof arg.contains === "string" && arg.contains.trim().length > 0 ? normLower(arg.contains) : null;
+  const queryLower = normLower(query);
+
+  const buildMatches = (): any[] => {
+    if (mode === "selector") {
+      const nodes = Array.from(root.querySelectorAll?.(selector) ?? []);
+      return containsLower ? nodes.filter((node) => normLower(textFor(node)).includes(containsLower)) : nodes;
+    }
+
+    const candidateSelector =
+      "a,button,input,textarea,select,option,label,summary,[role=\"button\"],[role=\"link\"],[role=\"menuitem\"],[role=\"tab\"],[role=\"checkbox\"],[role=\"radio\"],[role=\"option\"],[role=\"heading\"],h1,h2,h3,h4,h5,h6,[tabindex]:not([tabindex=\"-1\"])";
+    const nodes = Array.from(root.querySelectorAll?.(candidateSelector) ?? []);
+    const exact = nodes.filter((node) => normLower(textFor(node)) === queryLower);
+    const pool = exact.length > 0 ? exact : nodes;
+    return pool.filter((node) => normLower(textFor(node)).includes(queryLower));
+  };
+
+  const matches = buildMatches();
+
+  if (arg.op === "summary") {
+    let firstVisibleIndex: number | null = null;
+    for (let i = 0; i < matches.length; i += 1) {
+      if (isVisible(matches[i])) {
+        firstVisibleIndex = i;
+        break;
+      }
+    }
+    return { rawCount: matches.length, firstVisibleIndex };
+  }
+
+  if (arg.op === "preview") {
+    const index = typeof arg.index === "number" ? arg.index : -1;
+    const node = index >= 0 ? (matches[index] ?? null) : null;
+    if (!node) return { ok: false };
+    return {
+      ok: true,
+      visible: isVisible(node),
+      text: normalize(String(textFor(node) ?? "")).slice(0, 180),
+      selectorHint: selectorHintFor(node),
+    };
+  }
+
+  if (arg.op === "click") {
+    const index = typeof arg.index === "number" ? arg.index : -1;
+    const node = index >= 0 ? (matches[index] ?? null) : null;
+    if (!node) return { ok: false };
+    try {
+      node.scrollIntoView?.({ block: "center", inline: "center" });
+    } catch {
+      // ignore
+    }
+    node.click?.();
+    return {
+      ok: true,
+      visible: isVisible(node),
+      text: normalize(String(textFor(node) ?? "")).slice(0, 180),
+      selectorHint: selectorHintFor(node),
+    };
+  }
+
+  if (arg.op === "invisible") {
+    const stopExclusive = Math.max(
+      0,
+      Math.min(typeof arg.stopExclusive === "number" ? arg.stopExclusive : matches.length, matches.length),
+    );
+    const maxRejected = Math.max(0, typeof arg.maxRejected === "number" ? arg.maxRejected : 0);
+    const rejected: Array<{ index: number; visible: boolean; text: string; selectorHint: string | null }> = [];
+    let rejectedTruncated = false;
+    for (let i = 0; i < stopExclusive; i += 1) {
+      const node = matches[i];
+      const visible = isVisible(node);
+      if (visible) continue;
+      if (rejected.length >= maxRejected) {
+        rejectedTruncated = true;
+        continue;
+      }
+      rejected.push({
+        index: i,
+        visible,
+        text: normalize(String(textFor(node) ?? "")).slice(0, 180),
+        selectorHint: selectorHintFor(node),
+      });
+    }
+    return { rejected, rejectedTruncated };
+  }
+
+  if (arg.op === "aria") {
+    const index = typeof arg.index === "number" ? arg.index : -1;
+    const names = Array.isArray(arg.attrNames) ? arg.attrNames : [];
+    const node = index >= 0 ? (matches[index] ?? null) : null;
+    const values: Record<string, string | null> = {};
+    if (!node) {
+      for (const name of names) values[name] = null;
+      return { detached: true, values };
+    }
+    for (const name of names) {
+      values[name] = node?.getAttribute?.(name) ?? null;
+    }
+    return { detached: false, values };
+  }
+
+  if (arg.op === "fill") {
+    const index = typeof arg.index === "number" ? arg.index : -1;
+    const node = index >= 0 ? (matches[index] ?? null) : null;
+    const raw = typeof arg.fillValue === "string" ? arg.fillValue : "";
+    if (!node) {
+      return { filled: false, valueLength: raw.length };
+    }
+    const tag = typeof node?.tagName === "string" ? node.tagName.toLowerCase() : "";
+    if (tag === "input" || tag === "textarea" || tag === "select") {
+      try {
+        node.focus?.();
+      } catch {
+        // ignore
+      }
+      try {
+        node.value = raw;
+      } catch {
+        // ignore
+      }
+      try {
+        node.dispatchEvent?.(new Event("input", { bubbles: true }));
+        node.dispatchEvent?.(new Event("change", { bubbles: true }));
+      } catch {
+        // ignore
+      }
+      return { filled: true, valueLength: raw.length };
+    }
+    if (node?.isContentEditable) {
+      try {
+        node.focus?.();
+      } catch {
+        // ignore
+      }
+      node.textContent = raw;
+      try {
+        node.dispatchEvent?.(new Event("input", { bubbles: true }));
+      } catch {
+        // ignore
+      }
+      return { filled: true, valueLength: raw.length };
+    }
+    return { filled: false, valueLength: raw.length };
+  }
+
+  return { ok: false };
+}
+

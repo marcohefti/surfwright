@@ -1,45 +1,12 @@
-import { chromium, type Locator } from "playwright-core";
-import { newActionId } from "../../action-id.js";
+import { chromium } from "playwright-core";
 import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
-import { parseTargetQueryInput, resolveTargetQueryLocator } from "./target-query.js";
-import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
-import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "./cdp/index.js";
+import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { parseFrameScope } from "./target-find.js";
+import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "./cdp/index.js";
 import type { TargetWaitReport } from "../../types.js";
-type TargetKeypressReport = {
-  ok: true;
-  sessionId: string;
-  targetId: string;
-  actionId: string;
-  key: string;
-  selector: string | null;
-  resultText: string;
-  timingMs: {
-    total: number;
-    resolveSession: number;
-    connectCdp: number;
-    action: number;
-    persistState: number;
-  };
-};
-type TargetDialogReport = {
-  ok: true;
-  sessionId: string;
-  targetId: string;
-  dialog: {
-    type: string;
-    message: string;
-    action: "accept" | "dismiss";
-  };
-  timingMs: {
-    total: number;
-    resolveSession: number;
-    connectCdp: number;
-    action: number;
-    persistState: number;
-  };
-};
+
 function parseWaitInput(opts: {
   forText?: string;
   forSelector?: string;
@@ -79,68 +46,6 @@ function parseWaitInput(opts: {
   };
 }
 
-function parseKeyInput(value: string | undefined): string {
-  const key = typeof value === "string" ? value.trim() : "";
-  if (key.length === 0) {
-    throw new CliError("E_QUERY_INVALID", "key is required");
-  }
-  return key;
-}
-
-function parseDialogAction(value: string | undefined): "accept" | "dismiss" {
-  const action = typeof value === "string" ? value.trim().toLowerCase() : "accept";
-  if (action === "accept" || action === "dismiss") {
-    return action;
-  }
-  throw new CliError("E_QUERY_INVALID", "dialog action must be one of: accept, dismiss");
-}
-
-function parseOptionalKeypressQuery(opts: {
-  textQuery?: string;
-  selectorQuery?: string;
-  containsQuery?: string;
-  visibleOnly?: boolean;
-}): ReturnType<typeof parseTargetQueryInput> | null {
-  const selectedCount =
-    Number(typeof opts.textQuery === "string" && opts.textQuery.trim().length > 0) +
-    Number(typeof opts.selectorQuery === "string" && opts.selectorQuery.trim().length > 0) +
-    Number(typeof opts.containsQuery === "string" && opts.containsQuery.trim().length > 0);
-  if (selectedCount === 0) {
-    return null;
-  }
-  return parseTargetQueryInput({
-    textQuery: opts.textQuery,
-    selectorQuery: opts.selectorQuery,
-    containsQuery: opts.containsQuery,
-    visibleOnly: opts.visibleOnly,
-  });
-}
-
-async function resolveFirstQueryMatch(opts: {
-  locator: Locator;
-  count: number;
-  visibleOnly: boolean;
-}): Promise<Locator> {
-  for (let idx = 0; idx < opts.count; idx += 1) {
-    const candidate = opts.locator.nth(idx);
-    let visible = false;
-    try {
-      visible = await candidate.isVisible();
-    } catch {
-      visible = false;
-    }
-
-    if (opts.visibleOnly && !visible) {
-      continue;
-    }
-    return candidate;
-  }
-  throw new CliError(
-    "E_QUERY_INVALID",
-    opts.visibleOnly ? "No visible element matched keypress query" : "No element matched keypress query",
-  );
-}
-
 export async function targetWait(opts: {
   targetId: string;
   timeoutMs: number;
@@ -149,6 +54,7 @@ export async function targetWait(opts: {
   forText?: string;
   forSelector?: string;
   networkIdle?: boolean;
+  frameScope?: string;
 }): Promise<TargetWaitReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -157,6 +63,7 @@ export async function targetWait(opts: {
     forSelector: opts.forSelector,
     networkIdle: opts.networkIdle,
   });
+  const frameScope = parseFrameScope(opts.frameScope);
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -176,30 +83,76 @@ export async function targetWait(opts: {
     };
 
     if (parsed.mode === "text") {
-      try {
-        await target.page.getByText(parsed.value ?? "", { exact: false }).first().waitFor({
-          state: "visible",
-          timeout: opts.timeoutMs,
-        });
-      } catch (error) {
-        if (error instanceof Error && /timeout/i.test(error.message)) {
-          throwWaitTimeout();
+      const cdp = await openCdpSession(target.page);
+      const frameTree = await getCdpFrameTree(cdp);
+      const frameIds = frameIdsForScope({ frameTree, scope: frameScope });
+      const worldCache = new Map<string, number>();
+      const needle = parsed.value ?? "";
+      const started = Date.now();
+      while (Date.now() - started < opts.timeoutMs) {
+        let matched = false;
+        for (const frameCdpId of frameIds) {
+          const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
+          const ok = await evaluator.evaluate(({ text }: { text: string }) => {
+            const runtime = globalThis as unknown as { document?: any };
+            const body = runtime.document?.body ?? null;
+            const normalize = (value: string): string => value.replace(/\s+/g, " ").trim().toLowerCase();
+            const hay = normalize(String(body?.innerText ?? ""));
+            const needle = normalize(text);
+            return needle.length > 0 && hay.includes(needle);
+          }, { text: needle });
+          if (ok) {
+            matched = true;
+            break;
+          }
         }
-        throw error;
+        if (matched) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      if (Date.now() - started >= opts.timeoutMs) {
+        throwWaitTimeout();
       }
     } else if (parsed.mode === "selector") {
       const selectorQuery = parsed.value ?? "";
-      await ensureValidSelector(target.page, selectorQuery);
-      try {
-        await target.page.locator(selectorQuery).first().waitFor({
-          state: "visible",
-          timeout: opts.timeoutMs,
-        });
-      } catch (error) {
-        if (error instanceof Error && /timeout/i.test(error.message)) {
-          throwWaitTimeout();
+      const cdp = await openCdpSession(target.page);
+      const frameTree = await getCdpFrameTree(cdp);
+      const frameIds = frameIdsForScope({ frameTree, scope: frameScope });
+      const worldCache = new Map<string, number>();
+      await ensureValidSelectorSyntaxCdp({
+        cdp,
+        frameCdpId: frameTree.frame.id,
+        worldCache,
+        selectorQuery,
+      });
+      const started = Date.now();
+      while (Date.now() - started < opts.timeoutMs) {
+        let matched = false;
+        for (const frameCdpId of frameIds) {
+          const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
+          const ok = await evaluator.evaluate(({ selector }: { selector: string }) => {
+            const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
+            const doc = runtime.document;
+            const node = doc?.querySelector?.(selector) ?? null;
+            if (!node) return false;
+            if (node.hasAttribute?.("hidden")) return false;
+            const style = runtime.getComputedStyle?.(node);
+            if (style && (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")) return false;
+            return (node.getClientRects?.().length ?? 0) > 0;
+          }, { selector: selectorQuery });
+          if (ok) {
+            matched = true;
+            break;
+          }
         }
-        throw error;
+        if (matched) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      if (Date.now() - started >= opts.timeoutMs) {
+        throwWaitTimeout();
       }
     } else {
       try {
@@ -248,250 +201,6 @@ export async function targetWait(opts: {
     report.timingMs.persistState = persistedAt - persistStartedAt;
     report.timingMs.total = persistedAt - startedAt;
 
-    return report;
-  } finally {
-    await browser.close();
-  }
-}
-
-export async function targetKeypress(opts: {
-  targetId: string;
-  timeoutMs: number;
-  sessionId?: string;
-  persistState?: boolean;
-  key?: string;
-  textQuery?: string;
-  selectorQuery?: string;
-  containsQuery?: string;
-  visibleOnly?: boolean;
-}): Promise<TargetKeypressReport> {
-  const startedAt = Date.now();
-  const requestedTargetId = sanitizeTargetId(opts.targetId);
-  const key = parseKeyInput(opts.key);
-  const parsedQuery = parseOptionalKeypressQuery({
-    textQuery: opts.textQuery,
-    selectorQuery: opts.selectorQuery,
-    containsQuery: opts.containsQuery,
-    visibleOnly: opts.visibleOnly,
-  });
-
-  const { session } = await resolveSessionForAction({
-    sessionHint: opts.sessionId,
-    timeoutMs: opts.timeoutMs,
-    targetIdHint: requestedTargetId,
-  });
-  const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
-    timeout: opts.timeoutMs,
-  });
-  const connectedAt = Date.now();
-
-  try {
-    const target = await resolveTargetHandle(browser, requestedTargetId);
-
-    if (parsedQuery) {
-      const { locator, count } = await resolveTargetQueryLocator({
-        page: target.page,
-        parsed: parsedQuery,
-        preferExactText: parsedQuery.mode === "text",
-      });
-      const selected = await resolveFirstQueryMatch({
-        locator,
-        count,
-        visibleOnly: parsedQuery.visibleOnly,
-      });
-      await selected.focus({
-        timeout: opts.timeoutMs,
-      });
-    } else {
-      await target.page.focus("body").catch(() => {
-        // Fallback path for pages with no focusable body.
-      });
-    }
-
-    await target.page.keyboard.press(key);
-    const cdp = await openCdpSession(target.page);
-    const frameTree = await getCdpFrameTree(cdp);
-    const worldCache = new Map<string, number>();
-    const evaluator = createCdpEvaluator({
-      cdp,
-      frameCdpId: frameTree.frame.id,
-      worldCache,
-    });
-    const resultText = await evaluator.evaluate(() => {
-      const runtime = globalThis as unknown as { document?: any };
-      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
-      const active = runtime.document?.activeElement as
-        | null
-        | {
-            value?: string;
-            innerText?: string;
-            textContent?: string;
-          };
-      const raw =
-        typeof active?.value === "string"
-          ? active.value
-          : typeof active?.innerText === "string"
-            ? active.innerText
-            : typeof active?.textContent === "string"
-              ? active.textContent
-              : "";
-      return normalize(raw).slice(0, 240);
-    });
-    const actionCompletedAt = Date.now();
-
-    const report: TargetKeypressReport = {
-      ok: true,
-      sessionId: session.sessionId,
-      targetId: requestedTargetId,
-      actionId: newActionId(),
-      key,
-      selector: parsedQuery?.selector ?? null,
-      resultText,
-      timingMs: {
-        total: 0,
-        resolveSession: resolvedSessionAt - startedAt,
-        connectCdp: connectedAt - resolvedSessionAt,
-        action: actionCompletedAt - connectedAt,
-        persistState: 0,
-      },
-    };
-
-    const persistStartedAt = Date.now();
-    if (opts.persistState !== false) {
-      await saveTargetSnapshot({
-        targetId: report.targetId,
-        sessionId: report.sessionId,
-        url: target.page.url(),
-        title: await target.page.title(),
-        status: null,
-        lastActionId: report.actionId,
-        lastActionAt: nowIso(),
-        lastActionKind: "keypress",
-        updatedAt: nowIso(),
-      });
-    }
-    const persistedAt = Date.now();
-    report.timingMs.persistState = persistedAt - persistStartedAt;
-    report.timingMs.total = persistedAt - startedAt;
-    return report;
-  } finally {
-    await browser.close();
-  }
-}
-
-export async function targetDialog(opts: {
-  targetId: string;
-  timeoutMs: number;
-  sessionId?: string;
-  persistState?: boolean;
-  action?: string;
-  promptText?: string;
-  triggerText?: string;
-  triggerSelector?: string;
-  containsQuery?: string;
-  visibleOnly?: boolean;
-}): Promise<TargetDialogReport> {
-  const startedAt = Date.now();
-  const requestedTargetId = sanitizeTargetId(opts.targetId);
-  const action = parseDialogAction(opts.action);
-  const triggerQuery = parseOptionalKeypressQuery({
-    textQuery: opts.triggerText,
-    selectorQuery: opts.triggerSelector,
-    containsQuery: opts.containsQuery,
-    visibleOnly: opts.visibleOnly,
-  });
-
-  const { session } = await resolveSessionForAction({
-    sessionHint: opts.sessionId,
-    timeoutMs: opts.timeoutMs,
-    targetIdHint: requestedTargetId,
-  });
-  const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
-    timeout: opts.timeoutMs,
-  });
-  const connectedAt = Date.now();
-
-  try {
-    const target = await resolveTargetHandle(browser, requestedTargetId);
-    const dialogPromise = target.page.waitForEvent("dialog", {
-      timeout: opts.timeoutMs,
-    });
-    const handledDialogPromise = dialogPromise.then(async (dialog) => {
-      const dialogType = dialog.type();
-      const dialogMessage = dialog.message();
-      if (action === "accept") {
-        await dialog.accept(typeof opts.promptText === "string" ? opts.promptText : undefined);
-      } else {
-        await dialog.dismiss();
-      }
-      return {
-        type: dialogType,
-        message: dialogMessage,
-      };
-    });
-
-    if (triggerQuery) {
-      const { locator, count } = await resolveTargetQueryLocator({
-        page: target.page,
-        parsed: triggerQuery,
-        preferExactText: triggerQuery.mode === "text",
-      });
-      const selected = await resolveFirstQueryMatch({
-        locator,
-        count,
-        visibleOnly: triggerQuery.visibleOnly,
-      });
-      await selected.click({
-        timeout: opts.timeoutMs,
-      });
-    }
-    let handledDialog: {
-      type: string;
-      message: string;
-    };
-    try {
-      handledDialog = await handledDialogPromise;
-    } catch {
-      throw new CliError("E_WAIT_TIMEOUT", "dialog did not appear before timeout");
-    }
-    const actionCompletedAt = Date.now();
-
-    const report: TargetDialogReport = {
-      ok: true,
-      sessionId: session.sessionId,
-      targetId: requestedTargetId,
-      dialog: {
-        type: handledDialog.type,
-        message: handledDialog.message,
-        action,
-      },
-      timingMs: {
-        total: 0,
-        resolveSession: resolvedSessionAt - startedAt,
-        connectCdp: connectedAt - resolvedSessionAt,
-        action: actionCompletedAt - connectedAt,
-        persistState: 0,
-      },
-    };
-
-    const persistStartedAt = Date.now();
-    if (opts.persistState !== false) {
-      await saveTargetSnapshot({
-        targetId: report.targetId,
-        sessionId: report.sessionId,
-        url: target.page.url(),
-        title: await target.page.title(),
-        status: null,
-        lastActionAt: nowIso(),
-        lastActionKind: "dialog",
-        updatedAt: nowIso(),
-      });
-    }
-    const persistedAt = Date.now();
-    report.timingMs.persistState = persistedAt - persistStartedAt;
-    report.timingMs.total = persistedAt - startedAt;
     return report;
   } finally {
     await browser.close();

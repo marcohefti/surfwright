@@ -30,7 +30,7 @@ surfwright target screenshot <targetId> --out ./artifacts/page.png --full-page
 surfwright target console-get <targetId> --contains "CONSOLE_SENTINEL_EXAMPLE" --capture-ms 1200
 surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1
 surfwright target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
-surfwright target wait <targetId> --for-selector "h1"
+surfwright target wait <targetId> --for-selector "h1" --frame-scope main
 surfwright target network <targetId> --profile perf --view summary
 surfwright target network-tail <targetId> --profile api --capture-ms 3000 --max-events 200
 surfwright target network-query --capture-id <captureId> --preset slowest --limit 10

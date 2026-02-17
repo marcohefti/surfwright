@@ -6,6 +6,7 @@ import { saveTargetSnapshot } from "../../state/index.js";
 import { providers } from "../../providers/index.js";
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession, resolveCdpFrameByStableId } from "./cdp/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { safePageTitle } from "./utils/safe-page-title.js";
 import type { TargetEvalReport } from "../../types.js";
 type TargetCloseReport = {
   ok: true;
@@ -62,10 +63,7 @@ function parseExpression(opts: { expression?: string; expr?: string; scriptFile?
       throw new CliError("E_QUERY_INVALID", "script-file must point to a file");
     }
     if (stat.size > EVAL_MAX_SCRIPT_FILE_BYTES) {
-      throw new CliError(
-        "E_EVAL_SCRIPT_TOO_LARGE",
-        `script-file must be at most ${EVAL_MAX_SCRIPT_FILE_BYTES} bytes`,
-      );
+      throw new CliError("E_EVAL_SCRIPT_TOO_LARGE", `script-file must be at most ${EVAL_MAX_SCRIPT_FILE_BYTES} bytes`);
     }
     let scriptText: string;
     try {
@@ -80,10 +78,7 @@ function parseExpression(opts: { expression?: string; expr?: string; scriptFile?
   }
   if (hasExpr) {
     if (expr.length > EVAL_MAX_INLINE_EXPRESSION_CHARS) {
-      throw new CliError(
-        "E_EVAL_SCRIPT_TOO_LARGE",
-        `expr must be at most ${EVAL_MAX_INLINE_EXPRESSION_CHARS} characters`,
-      );
+      throw new CliError("E_EVAL_SCRIPT_TOO_LARGE", `expr must be at most ${EVAL_MAX_INLINE_EXPRESSION_CHARS} characters`);
     }
     return {
       expression: expr,
@@ -91,10 +86,7 @@ function parseExpression(opts: { expression?: string; expr?: string; scriptFile?
     };
   }
   if (expression.length > EVAL_MAX_INLINE_EXPRESSION_CHARS) {
-    throw new CliError(
-      "E_EVAL_SCRIPT_TOO_LARGE",
-      `expression must be at most ${EVAL_MAX_INLINE_EXPRESSION_CHARS} characters`,
-    );
+    throw new CliError("E_EVAL_SCRIPT_TOO_LARGE", `expression must be at most ${EVAL_MAX_INLINE_EXPRESSION_CHARS} characters`);
   }
   return { expression, evaluatorBody: expression };
 }
@@ -149,6 +141,7 @@ function normalizeEvalFailure(error: unknown): never {
   }
   throw new CliError("E_EVAL_RUNTIME", "evaluation failed");
 }
+
 export async function targetEval(opts: {
   targetId: string;
   timeoutMs: number;
@@ -423,11 +416,12 @@ export async function targetEval(opts: {
 
     const persistStartedAt = Date.now();
     if (opts.persistState !== false) {
+      const title = await safePageTitle(target.page, opts.timeoutMs);
       await saveTargetSnapshot({
         targetId: report.targetId,
         sessionId: report.sessionId,
         url: target.page.url(),
-        title: await target.page.title(),
+        title,
         status: null,
         lastActionId: report.actionId,
         lastActionAt: nowIso(),

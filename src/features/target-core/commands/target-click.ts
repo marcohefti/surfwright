@@ -14,9 +14,7 @@ import {
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";
-function collectRepeatedString(value: string, previous: string[]): string[] {
-  return [...previous, value];
-}
+function collectRepeatedString(value: string, previous: string[]): string[] { return [...previous, value]; }
 const meta = targetCommandMeta("target.click");
 export const targetClickCommandSpec: TargetCommandSpec = {
   id: meta.id,
@@ -31,6 +29,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--selector <query>", "CSS/Playwright selector query")
       .option("--contains <text>", "Text filter to apply with --selector")
       .option("--visible-only", "Only match visible elements")
+      .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--index <n>", "Pick the Nth match (0-based) instead of first match")
       .option("--explain", "Explain match selection/rejection without clicking", false)
       .option("--wait-for-text <text>", "After click, wait until text becomes visible")
@@ -49,6 +48,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             selector?: string;
             contains?: string;
             visibleOnly?: boolean;
+            frameScope?: string;
             index?: string;
             explain?: boolean;
             waitForText?: string;
@@ -74,6 +74,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               selectorQuery: options.selector,
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
+              frameScope: options.frameScope,
               index,
               explain: Boolean(options.explain),
               waitForText: options.waitForText,
@@ -144,6 +145,7 @@ export const targetFillCommandSpec: TargetCommandSpec = {
       .option("--selector <query>", "CSS/Playwright selector query")
       .option("--contains <text>", "Text filter to apply with --selector")
       .option("--visible-only", "Only match visible elements")
+      .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .requiredOption("--value <text>", "Value to fill into the matched control")
       .option("--timeout-ms <ms>", "Fill timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
@@ -156,6 +158,7 @@ export const targetFillCommandSpec: TargetCommandSpec = {
             selector?: string;
             contains?: string;
             visibleOnly?: boolean;
+            frameScope?: string;
             value: string;
             timeoutMs: number;
             persist?: boolean;
@@ -174,6 +177,7 @@ export const targetFillCommandSpec: TargetCommandSpec = {
               selectorQuery: options.selector,
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
+              frameScope: options.frameScope,
               value: options.value,
               persistState: options.persist !== false,
             });
@@ -185,9 +189,7 @@ export const targetFillCommandSpec: TargetCommandSpec = {
       );
   },
 };
-
 const uploadMeta = targetCommandMeta("target.upload");
-
 export const targetUploadCommandSpec: TargetCommandSpec = {
   id: uploadMeta.id,
   usage: uploadMeta.usage,
@@ -216,7 +218,6 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
           const fields = parseFieldsCsv(options.fields);
-
           try {
             const report = await targetUpload({
               targetId,
@@ -234,9 +235,7 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
       );
   },
 };
-
 const keypressMeta = targetCommandMeta("target.keypress");
-
 export const targetKeypressCommandSpec: TargetCommandSpec = {
   id: keypressMeta.id,
   usage: keypressMeta.usage,
@@ -271,7 +270,6 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
           const fields = parseFieldsCsv(options.fields);
-
           try {
             const report = await targetKeypress({
               targetId,
@@ -292,9 +290,7 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
       );
   },
 };
-
 const dragDropMeta = targetCommandMeta("target.drag-drop");
-
 export const targetDragDropCommandSpec: TargetCommandSpec = {
   id: dragDropMeta.id,
   usage: dragDropMeta.usage,
@@ -323,7 +319,6 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
           const fields = parseFieldsCsv(options.fields);
-
           try {
             const report = await targetDragDrop({
               targetId,
@@ -341,9 +336,7 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
       );
   },
 };
-
 const spawnMeta = targetCommandMeta("target.spawn");
-
 export const targetSpawnCommandSpec: TargetCommandSpec = {
   id: spawnMeta.id,
   usage: spawnMeta.usage,
@@ -357,6 +350,7 @@ export const targetSpawnCommandSpec: TargetCommandSpec = {
       .option("--selector <query>", "CSS/Playwright selector query")
       .option("--contains <text>", "Text filter to apply with --selector")
       .option("--visible-only", "Only match visible elements")
+      .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--timeout-ms <ms>", "Spawn timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -368,6 +362,7 @@ export const targetSpawnCommandSpec: TargetCommandSpec = {
             selector?: string;
             contains?: string;
             visibleOnly?: boolean;
+            frameScope?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -385,6 +380,7 @@ export const targetSpawnCommandSpec: TargetCommandSpec = {
               selectorQuery: options.selector,
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
+              frameScope: options.frameScope,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -395,9 +391,7 @@ export const targetSpawnCommandSpec: TargetCommandSpec = {
       );
   },
 };
-
 const closeMeta = targetCommandMeta("target.close");
-
 export const targetCloseCommandSpec: TargetCommandSpec = {
   id: closeMeta.id,
   usage: closeMeta.usage,
@@ -437,9 +431,7 @@ export const targetCloseCommandSpec: TargetCommandSpec = {
       );
   },
 };
-
 const dialogMeta = targetCommandMeta("target.dialog");
-
 export const targetDialogCommandSpec: TargetCommandSpec = {
   id: dialogMeta.id,
   usage: dialogMeta.usage,

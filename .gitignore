@@ -16,3 +16,4 @@ packages/*/dist/
 packages/*/*.tgz
 packages/*/README.md
 packages/*/LICENSE
+/.surfwright/

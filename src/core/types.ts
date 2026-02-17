@@ -122,6 +122,7 @@ export type SessionPruneReport = {
   repairedManagedPid: number;
 };
 export type {
+  TargetCountReport,
   TargetClickDeltaEvidence,
   TargetClickDeltaRole,
   TargetClickExplainReport,

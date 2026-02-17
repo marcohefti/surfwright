@@ -1,27 +1,25 @@
-import { parseFieldsCsv, projectReportFields, targetFind } from "../../../core/target/public.js";
-import { DEFAULT_TARGET_FIND_LIMIT, DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
-import { targetCommandMeta } from "../manifest.js";
-import type { TargetCommandSpec } from "./types.js";
+import { parseFieldsCsv, projectReportFields, targetCount } from "../../../../core/target/public.js";
+import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../../core/types.js";
+import { targetCommandMeta } from "../../manifest.js";
+import type { TargetCommandSpec } from "../types.js";
 
-const meta = targetCommandMeta("target.find");
+const meta = targetCommandMeta("target.count");
 
-export const targetFindCommandSpec: TargetCommandSpec = {
+export const targetCountCommandSpec: TargetCommandSpec = {
   id: meta.id,
   usage: meta.usage,
   summary: meta.summary,
   register: (ctx) => {
     ctx.target
-      .command("find")
+      .command("count")
       .description(meta.summary)
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--text <query>", "Text query for fuzzy text match")
-      .option("--selector <query>", "CSS/Playwright selector query")
+      .option("--selector <query>", "CSS selector query")
       .option("--contains <text>", "Text filter to apply with --selector")
-      .option("--visible-only", "Only return visible matches")
+      .option("--visible-only", "Only count visible matches")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
-      .option("--first", "Return at most the first actionable match")
-      .option("--limit <n>", "Maximum matches to return", String(DEFAULT_TARGET_FIND_LIMIT))
-      .option("--timeout-ms <ms>", "Find timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--timeout-ms <ms>", "Count timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
       .action(
@@ -33,8 +31,6 @@ export const targetFindCommandSpec: TargetCommandSpec = {
             contains?: string;
             visibleOnly?: boolean;
             frameScope?: string;
-            first?: boolean;
-            limit: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -42,11 +38,10 @@ export const targetFindCommandSpec: TargetCommandSpec = {
         ) => {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
-          const limit = Number.parseInt(options.limit, 10);
           const fields = parseFieldsCsv(options.fields);
 
           try {
-            const report = await targetFind({
+            const report = await targetCount({
               targetId,
               timeoutMs: options.timeoutMs,
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
@@ -55,8 +50,6 @@ export const targetFindCommandSpec: TargetCommandSpec = {
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
               frameScope: options.frameScope,
-              first: Boolean(options.first),
-              limit,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

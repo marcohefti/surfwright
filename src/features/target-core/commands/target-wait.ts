@@ -17,6 +17,7 @@ export const targetWaitCommandSpec: TargetCommandSpec = {
       .option("--for-text <text>", "Wait until text becomes visible")
       .option("--for-selector <query>", "Wait until selector becomes visible")
       .option("--network-idle", "Wait for network idle state")
+      .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--timeout-ms <ms>", "Wait timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -27,6 +28,7 @@ export const targetWaitCommandSpec: TargetCommandSpec = {
             forText?: string;
             forSelector?: string;
             networkIdle?: boolean;
+            frameScope?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -43,6 +45,7 @@ export const targetWaitCommandSpec: TargetCommandSpec = {
               forText: options.forText,
               forSelector: options.forSelector,
               networkIdle: Boolean(options.networkIdle),
+              frameScope: options.frameScope,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

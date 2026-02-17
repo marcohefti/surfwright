@@ -3,8 +3,11 @@ import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
-import { parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
+import { parseTargetQueryInput } from "../infra/target-query.js";
+import { parseFrameScope } from "../infra/target-find.js";
 import { readPageTargetId, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
+import { cdpQueryOp } from "./cdp-query-op.js";
 
 type TargetSpawnReport = {
   ok: true;
@@ -33,6 +36,7 @@ export async function targetSpawn(opts: {
   selectorQuery?: string;
   containsQuery?: string;
   visibleOnly?: boolean;
+  frameScope?: string;
 }): Promise<TargetSpawnReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -42,6 +46,7 @@ export async function targetSpawn(opts: {
     containsQuery: opts.containsQuery,
     visibleOnly: opts.visibleOnly,
   });
+  const frameScope = parseFrameScope(opts.frameScope);
 
   const { session } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -59,40 +64,84 @@ export async function targetSpawn(opts: {
     const context = parent.page.context();
     const beforePages = context.pages();
 
-    const { locator, count } = await resolveTargetQueryLocator({
-      page: parent.page,
-      parsed,
-      preferExactText: parsed.mode === "text",
-    });
+    const cdp = await openCdpSession(parent.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const worldCache = new Map<string, number>();
+    const frameIds = frameIdsForScope({ frameTree, scope: frameScope });
 
-    // Match selection follows the click logic: first matching element (optionally visible-only).
-    let selectedLocator = locator.first();
-    let selectedIndex = -1;
-    for (let idx = 0; idx < count; idx += 1) {
-      const candidate = locator.nth(idx);
-      let visible = false;
-      try {
-        visible = await candidate.isVisible();
-      } catch {
-        visible = false;
-      }
-      if (parsed.visibleOnly && !visible) {
-        continue;
-      }
-      selectedLocator = candidate;
-      selectedIndex = idx;
-      break;
+    if (parsed.mode === "selector" && typeof parsed.selector === "string") {
+      await ensureValidSelectorSyntaxCdp({
+        cdp,
+        frameCdpId: frameTree.frame.id,
+        worldCache,
+        selectorQuery: parsed.selector,
+      });
     }
-    if (selectedIndex < 0) {
+
+    const perFrameCounts: Array<{ frameCdpId: string; rawCount: number; firstVisibleIndex: number | null }> = [];
+    for (const frameCdpId of frameIds) {
+      const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
+      const summary = (await evaluator.evaluate(cdpQueryOp, {
+        op: "summary",
+        mode: parsed.mode,
+        query: parsed.query,
+        selector: parsed.selector,
+        contains: parsed.contains,
+      })) as { rawCount: number; firstVisibleIndex: number | null };
+      perFrameCounts.push({ frameCdpId, rawCount: summary.rawCount, firstVisibleIndex: summary.firstVisibleIndex });
+    }
+
+    const matchCount = perFrameCounts.reduce((sum, entry) => sum + entry.rawCount, 0);
+    if (matchCount < 1) {
       throw new CliError("E_QUERY_INVALID", parsed.visibleOnly ? "No visible element matched spawn query" : "No element matched spawn query");
     }
 
-    const childPagePromise = context.waitForEvent("page", {
-      timeout: opts.timeoutMs,
-    });
-    await selectedLocator.click({
-      timeout: opts.timeoutMs,
-    });
+    let pickedIndex = 0;
+    if (parsed.visibleOnly) {
+      let found: number | null = null;
+      let offset = 0;
+      for (const entry of perFrameCounts) {
+        if (typeof entry.firstVisibleIndex === "number") {
+          found = offset + entry.firstVisibleIndex;
+          break;
+        }
+        offset += entry.rawCount;
+      }
+      if (found === null) {
+        throw new CliError("E_QUERY_INVALID", "No visible element matched spawn query");
+      }
+      pickedIndex = found;
+    }
+
+    // Resolve pickedIndex -> frame/localIndex.
+    let offset = 0;
+    let frameCdpId: string | null = null;
+    let localIndex = -1;
+    for (const entry of perFrameCounts) {
+      if (pickedIndex < offset + entry.rawCount) {
+        frameCdpId = entry.frameCdpId;
+        localIndex = pickedIndex - offset;
+        break;
+      }
+      offset += entry.rawCount;
+    }
+    if (!frameCdpId || localIndex < 0) {
+      throw new CliError("E_INTERNAL", "Unable to resolve spawn target");
+    }
+
+    const childPagePromise = context.waitForEvent("page", { timeout: opts.timeoutMs });
+    const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
+    const clicked = (await evaluator.evaluate(cdpQueryOp, {
+      op: "click",
+      mode: parsed.mode,
+      query: parsed.query,
+      selector: parsed.selector,
+      contains: parsed.contains,
+      index: localIndex,
+    })) as { ok: boolean };
+    if (!clicked.ok) {
+      throw new CliError("E_QUERY_INVALID", parsed.visibleOnly ? "No visible element matched spawn query" : "No element matched spawn query");
+    }
 
     let childPage: (typeof beforePages)[number] | null = null;
     try {
@@ -157,3 +206,4 @@ export async function targetSpawn(opts: {
     await browser.close();
   }
 }
+

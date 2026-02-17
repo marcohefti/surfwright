@@ -3,8 +3,11 @@ import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
-import { parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
+import { parseTargetQueryInput } from "../infra/target-query.js";
+import { parseFrameScope } from "../infra/target-find.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
+import { cdpQueryOp } from "./cdp-query-op.js";
 
 type TargetFillReport = {
   ok: true;
@@ -38,6 +41,7 @@ export async function targetFill(opts: {
   selectorQuery?: string;
   containsQuery?: string;
   visibleOnly?: boolean;
+  frameScope?: string;
   value?: string;
 }): Promise<TargetFillReport> {
   const startedAt = Date.now();
@@ -49,6 +53,7 @@ export async function targetFill(opts: {
     visibleOnly: opts.visibleOnly,
   });
   const value = parseFillValue(opts.value);
+  const frameScope = parseFrameScope(opts.frameScope);
 
   const { session } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -63,37 +68,86 @@ export async function targetFill(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
-    const { locator, count } = await resolveTargetQueryLocator({
-      page: target.page,
-      parsed,
-      preferExactText: parsed.mode === "text",
-    });
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const worldCache = new Map<string, number>();
+    const frameIds = frameIdsForScope({ frameTree, scope: frameScope });
 
-    // Match selection follows the click logic: first matching element (optionally visible-only).
-    let selectedLocator = locator.first();
-    let selectedVisible = false;
-    for (let idx = 0; idx < count; idx += 1) {
-      const candidate = locator.nth(idx);
-      let visible = false;
-      try {
-        visible = await candidate.isVisible();
-      } catch {
-        visible = false;
-      }
-      if (parsed.visibleOnly && !visible) {
-        continue;
-      }
-      selectedLocator = candidate;
-      selectedVisible = visible;
-      break;
+    if (parsed.mode === "selector" && typeof parsed.selector === "string") {
+      await ensureValidSelectorSyntaxCdp({
+        cdp,
+        frameCdpId: frameTree.frame.id,
+        worldCache,
+        selectorQuery: parsed.selector,
+      });
     }
-    if (count < 1 || (parsed.visibleOnly && !selectedVisible)) {
+
+    const perFrameCounts: Array<{ frameCdpId: string; rawCount: number; firstVisibleIndex: number | null }> = [];
+    for (const frameCdpId of frameIds) {
+      const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
+      const summary = (await evaluator.evaluate(cdpQueryOp, {
+        op: "summary",
+        mode: parsed.mode,
+        query: parsed.query,
+        selector: parsed.selector,
+        contains: parsed.contains,
+      })) as { rawCount: number; firstVisibleIndex: number | null };
+      perFrameCounts.push({ frameCdpId, rawCount: summary.rawCount, firstVisibleIndex: summary.firstVisibleIndex });
+    }
+
+    const matchCount = perFrameCounts.reduce((sum, entry) => sum + entry.rawCount, 0);
+    if (matchCount < 1) {
       throw new CliError("E_QUERY_INVALID", parsed.visibleOnly ? "No visible element matched fill query" : "No element matched fill query");
     }
 
-    await selectedLocator.fill(value, {
-      timeout: opts.timeoutMs,
-    });
+    let pickedIndex = 0;
+    if (parsed.visibleOnly) {
+      let found: number | null = null;
+      let offset = 0;
+      for (const entry of perFrameCounts) {
+        if (typeof entry.firstVisibleIndex === "number") {
+          found = offset + entry.firstVisibleIndex;
+          break;
+        }
+        offset += entry.rawCount;
+      }
+      if (found === null) {
+        throw new CliError("E_QUERY_INVALID", "No visible element matched fill query");
+      }
+      pickedIndex = found;
+    }
+
+    // Resolve pickedIndex -> frame/localIndex.
+    let offset = 0;
+    let frameCdpId: string | null = null;
+    let localIndex = -1;
+    for (const entry of perFrameCounts) {
+      if (pickedIndex < offset + entry.rawCount) {
+        frameCdpId = entry.frameCdpId;
+        localIndex = pickedIndex - offset;
+        break;
+      }
+      offset += entry.rawCount;
+    }
+    if (!frameCdpId || localIndex < 0) {
+      throw new CliError("E_INTERNAL", "Unable to resolve fill target");
+    }
+
+    const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
+    const filled = (await evaluator.evaluate(cdpQueryOp, {
+      op: "fill",
+      mode: parsed.mode,
+      query: parsed.query,
+      selector: parsed.selector,
+      contains: parsed.contains,
+      index: localIndex,
+      fillValue: value,
+    })) as { filled: boolean; valueLength: number };
+
+    if (!filled.filled) {
+      throw new CliError("E_QUERY_INVALID", "matched element is not fillable");
+    }
+
     const title = await target.page.title();
     const actionCompletedAt = Date.now();
 
@@ -137,3 +191,4 @@ export async function targetFill(opts: {
     await browser.close();
   }
 }
+

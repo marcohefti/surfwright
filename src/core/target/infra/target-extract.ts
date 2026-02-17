@@ -64,10 +64,11 @@ async function extractFrameItems(opts: {
       }
 
       const primarySelectorByKind: Record<TargetExtractReport["kind"], string> = {
-        generic: "article,.post,.blog-post,.entry,.h-entry,main a[href]",
-        blog: "article,.post,.blog-post,.entry,.h-entry",
-        news: "article,.post,.entry,.news-item,.story",
-        docs: "main a[href],article a[href],nav a[href]",
+        // Heuristic presets should stay interface-shaped (semantic tags/ARIA), not site-shaped classes.
+        generic: "article,[role=\"article\"],main a[href]",
+        blog: "article,[role=\"article\"]",
+        news: "article,[role=\"article\"]",
+        docs: "main a[href],nav a[href],article a[href]",
       };
       const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
       const primarySelector = primarySelectorByKind[kind];

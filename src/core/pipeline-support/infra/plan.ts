@@ -264,6 +264,13 @@ export function parseOptionalInteger(input: unknown, pathLabel: string): number 
 export function lintPlan(input: { steps: PipelineStepInput[] }): PipelineLintIssue[] {
   const issues: PipelineLintIssue[] = [];
   const aliases = new Set<string>();
+
+  // Pipeline steps can contain {{ templates }} that resolve at runtime to non-string values.
+  // Lint should reject obviously invalid shapes, but avoid flagging template strings that may
+  // legitimately resolve to the correct type during execution.
+  const isTemplateString = (value: unknown): boolean =>
+    typeof value === "string" && value.includes("{{") && value.includes("}}");
+
   for (let index = 0; index < input.steps.length; index += 1) {
     const step = input.steps[index];
     if (!step || typeof step !== "object") {
@@ -277,6 +284,9 @@ export function lintPlan(input: { steps: PipelineStepInput[] }): PipelineLintIss
     if (!SUPPORTED_STEP_IDS.has(step.id)) {
       issues.push({ level: "error", path: `steps[${index}].id`, message: `unsupported step id: ${step.id}` });
       continue;
+    }
+    if (typeof step.targetId !== "undefined" && typeof step.targetId !== "string" && !isTemplateString(step.targetId)) {
+      issues.push({ level: "error", path: `steps[${index}].targetId`, message: "targetId must be a string" });
     }
     if (step.id === "open" && (typeof step.url !== "string" || step.url.trim().length === 0)) {
       issues.push({ level: "error", path: `steps[${index}].url`, message: "url is required for open" });

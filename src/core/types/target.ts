@@ -35,7 +35,17 @@ export type TargetFramesReport = {
   timingMs: ActionTimingMs;
 };
 
-export type TargetSnapshotMode = "snapshot" | "orient";
+export type TargetSnapshotMode = "snapshot" | "orient" | "a11y";
+
+export type TargetSnapshotA11yRow = {
+  index: number;
+  depth: number;
+  role: string;
+  name: string;
+  handle: string | null;
+  value?: string | null;
+  description?: string | null;
+};
 
 export type TargetSnapshotReport = {
   ok: true;
@@ -65,6 +75,11 @@ export type TargetSnapshotReport = {
     headings: boolean;
     buttons: boolean;
     links: boolean;
+  };
+  a11y?: {
+    total: number;
+    rows: TargetSnapshotA11yRow[];
+    truncated: boolean;
   };
   h1?: string | null;
   items?: {
@@ -133,7 +148,7 @@ export type TargetClickReport = {
   sessionSource: SessionSource;
   targetId: string;
   actionId: string;
-  mode: "text" | "selector";
+  mode: "text" | "selector" | "handle";
   selector: string | null;
   contains: string | null;
   visibleOnly: boolean;
@@ -145,6 +160,7 @@ export type TargetClickReport = {
     text: string;
     visible: boolean;
     selectorHint: string | null;
+    handle?: string | null;
   };
   url: string;
   title: string;

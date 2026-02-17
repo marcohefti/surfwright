@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import process from "node:process";
 
 import { CliError } from "../../errors.js";
+import { providers } from "../../providers/index.js";
 
 export const WORKSPACE_VERSION = 1;
 export const WORKSPACE_DIRNAME = ".surfwright";
@@ -31,13 +31,17 @@ export function workspaceProfileSessionsDir(workspaceDir: string): string {
   return path.join(workspaceDir, WORKSPACE_PROFILE_SESSIONS_DIRNAME);
 }
 
+export function resolveRepoDirForWorkspaceInit(opts?: { cwd?: string }): string {
+  return path.resolve(opts?.cwd ?? providers().runtime.cwd());
+}
+
 export function resolveWorkspaceDir(opts?: { cwd?: string }): string | null {
-  const fromEnv = process.env.SURFWRIGHT_WORKSPACE_DIR;
+  const fromEnv = providers().env.get("SURFWRIGHT_WORKSPACE_DIR");
   if (typeof fromEnv === "string" && fromEnv.trim().length > 0) {
     return path.resolve(fromEnv.trim());
   }
 
-  let current = path.resolve(opts?.cwd ?? process.cwd());
+  let current = path.resolve(opts?.cwd ?? providers().runtime.cwd());
   while (true) {
     const markerPath = workspaceMarkerPathForRepoDir(current);
     try {
@@ -135,4 +139,3 @@ export function initWorkspaceInRepoDir(repoDir: string): {
     gitignore,
   };
 }
-

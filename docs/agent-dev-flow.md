@@ -98,6 +98,20 @@ If fewer than two are true, prefer documentation over new script surface.
 5. Update `README.md` examples if user-visible flows changed.
 6. Run validation commands.
 
+### Bugfix TDD loop (recommended)
+
+When fixing a bug or regression, default to the TDD workflow:
+
+1. Reproduce with `surfwright --json` and capture the smallest failing command sequence.
+2. Add a failing test in the smallest lane that can guard the regression:
+   - hermetic `test/*.contract.test.mjs` when possible
+   - otherwise `test/browser/**/*.browser.mjs` (prefer deterministic `data:` pages)
+   - ingress fixtures only when you cannot get a deterministic repro
+3. Fix the root cause and make the test pass.
+4. Run `pnpm -s smoke` for fast operator-surface sanity.
+
+See `docs/bugfix-tdd-workflow.md`.
+
 ### Process-only change
 
 1. Update `docs/*.md`.

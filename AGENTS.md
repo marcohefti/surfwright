@@ -19,10 +19,11 @@ This repo exists for one thing: a stable browser control surface that agents can
 5. `docs/maintaining-agent-surface.md` for pre-merge and release checklist.
 6. `docs/policy-harness.md` for structural rule framework and plug-in rules.
 7. `docs/fixture-ingress-workflow.md` for adding regression fixtures when new edge cases appear.
-8. `docs/zerocontext-lab.md` for unbiased cold-start subagent evaluation workflow.
-9. `docs/zerocontext-gap-workflow.md` for one-agent-per-mission capability-gap discovery and evaluation.
-10. `docs/release-governance.md` for locked release/update policy and required checks.
-11. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
+8. `docs/bugfix-tdd-workflow.md` for the reproduce-test-fix loop (TDD) when you hit regressions.
+9. `docs/zerocontext-lab.md` for unbiased cold-start subagent evaluation workflow.
+10. `docs/zerocontext-gap-workflow.md` for one-agent-per-mission capability-gap discovery and evaluation.
+11. `docs/release-governance.md` for locked release/update policy and required checks.
+12. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
 
 ## Runtime Source of Truth
 

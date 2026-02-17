@@ -5,6 +5,24 @@ All notable changes to SurfWright are documented here.
 ## [Unreleased]
 
 ### Added
+- None.
+
+### Changed
+- None.
+
+### Fixed
+- None.
+
+### Deprecated
+- None.
+
+### Removed
+- None.
+
+## [0.1.2] - 2026-02-17
+
+
+### Added
 - [distribution] Added generated `skills-dist` branch and `skills-v*` tags for lightweight, pinned installs via the `skills` CLI (skills.sh ecosystem).
 - [release] Added `publish-dry-run.yml` to exercise publish-path checks before tag-based release.
 - [test] Added coverage for `scripts/release/release-notes-from-changelog.mjs` failure/success behavior.
@@ -47,7 +65,7 @@ All notable changes to SurfWright are documented here.
 - [target] `target extract --kind blog/news/docs/generic` DOM presets now prioritize semantic tags/ARIA roles over site-shaped class selectors.
 - [target] `target eval --script-file` now supports `--mode expr` to align return-value semantics with `--expr` (expression vs program).
 - [network] Network capture reports now include explicit `limits.bodySampleBytes` and `redaction` metadata for safe evidence storage.
-- [skill] Bumped `skills/surfwright` to `skillVersion=0.1.1` and refreshed lock metadata for the updated runtime contract fingerprint.
+- [skill] Bumped `skills/surfwright` to `skillVersion=0.1.2` and refreshed lock metadata for the updated runtime contract fingerprint.
 
 ### Fixed
 - [release] Removed drift-prone duplicate smoke command logic across release workflows.

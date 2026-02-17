@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "surfwright",
-  "skillVersion": "0.1.1",
+  "skillVersion": "0.1.2",
   "channel": "stable",
   "requires": {
     "surfwrightVersion": ">=0.1.0 <0.2.0",

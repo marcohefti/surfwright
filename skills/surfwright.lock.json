@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "name": "surfwright",
-  "skillVersion": "0.1.1",
+  "skillVersion": "0.1.2",
   "channel": "stable",
-  "digest": "sha256:7fb12c3bbe885637607fdf2541a81ee3b783ce421220b6e14c5088a7dcee3672",
+  "digest": "sha256:dae99c28d888aaff208eda60adfc6370e9aecb743b97101f7df0614b004117ee",
   "requires": {
     "surfwrightVersion": ">=0.1.0 <0.2.0",
     "contractSchemaVersion": "^1",
     "contractFingerprint": "sha256:603c46851ec70989adb2dda743572593459e8fc84e37097cd8d7ff32cfb7108b"
   },
-  "updatedAt": "2026-02-17T18:36:41.639Z"
+  "updatedAt": "2026-02-17T20:34:32.096Z"
 }

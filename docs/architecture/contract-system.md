@@ -35,7 +35,7 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
     - `computeContractFingerprint()`: SHA-256 over normalized command ids/usage/summary + error codes
     - `getCliContractReport(version)`: the payload behind `surfwright --json contract`
 - Snapshot gate (CI / validation):
-  - `scripts/contract-snapshot.mjs`
+  - `scripts/checks/contract-snapshot.mjs`
     - executes `dist/cli.js --json contract`
     - normalizes/sorts and compares against `test/fixtures/contract/contract.snapshot.json`
 - Contract truth tests:
@@ -55,7 +55,7 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
    - `surfwright --json contract` returns the report from `getCliContractReport(...)`.
 4. Enforce in CI:
    - `pnpm -s build` produces `dist/cli.js`.
-   - `pnpm -s contract:snapshot:check` runs `scripts/contract-snapshot.mjs --check`.
+   - `pnpm -s contract:snapshot:check` runs `scripts/checks/contract-snapshot.mjs --check`.
 
 ## Invariants / Guardrails
 
@@ -66,7 +66,7 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
   - `contractFingerprint` is derived from `{ id, usage, summary }` for commands and `{ code, retryable }` for errors (`src/core/cli-contract.ts`).
   - If you change any of those fields (or add/remove commands/errors), the snapshot and/or fixtures must be updated intentionally.
 - Snapshot is dist-backed:
-  - The snapshot script reads the built CLI (`dist/cli.js`) to avoid “ts-node vs dist” drift (`scripts/contract-snapshot.mjs`).
+- The snapshot script reads the built CLI (`dist/cli.js`) to avoid “ts-node vs dist” drift (`scripts/checks/contract-snapshot.mjs`).
 
 ## Observability
 
@@ -74,11 +74,10 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
   - `contractSchemaVersion`
   - `contractFingerprint`
   - `commands[]` and `errors[]`
-- Snapshot check produces a short diff summary (counts) and a single remediation command (`scripts/contract-snapshot.mjs`).
+- Snapshot check produces a short diff summary (counts) and a single remediation command (`scripts/checks/contract-snapshot.mjs`).
 
 ## Testing Expectations
 
 - Contract payload matches expected command surface fixture sets (`test/commands.contract.test.mjs`).
 - Contract ids match Commander help-derived leaf ids (truthfulness) (`test/dot-alias.contract.test.mjs`).
 - Daemon path does not change contract output determinism (`test/daemon.contract.test.mjs`).
-

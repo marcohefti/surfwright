@@ -3,7 +3,8 @@ import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import type { TargetSnapshotReport } from "../../types.js";
-import { frameScopeHints, framesForScope, parseFrameScope } from "../infra/target-find.js";
+import { frameScopeHints, parseFrameScope } from "../infra/target-find.js";
+import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "../infra/cdp/index.js";
 import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { extractScopedSnapshotSample } from "./snapshot-sample.js";
 
@@ -161,21 +162,24 @@ export async function targetSnapshot(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
-    const frames = framesForScope(target.page, frameScope);
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const frameCount = listCdpFrameEntries({ frameTree, limit: 1 }).count;
+    const frameIds = frameIdsForScope({ frameTree, scope: frameScope });
     const hints = frameScopeHints({
       frameScope,
-      frameCount: target.page.frames().length,
+      frameCount,
       command: "target.snapshot",
       targetId: requestedTargetId,
     });
+    const worldCache = new Map<string, number>();
     if (selectorQuery) {
-      for (const frame of frames) {
-        try {
-          await frame.locator(selectorQuery).count();
-        } catch {
-          throw new CliError("E_SELECTOR_INVALID", `Invalid selector query: ${selectorQuery}`);
-        }
-      }
+      await ensureValidSelectorSyntaxCdp({
+        cdp,
+        frameCdpId: frameTree.frame.id,
+        worldCache,
+        selectorQuery,
+      });
     }
 
     const cursorHeadings = cursor.headings;
@@ -200,14 +204,19 @@ export async function targetSnapshot(opts: {
     let textPreview = "";
     let h1: string | null = null;
 
-    for (const frame of frames) {
+    for (const frameCdpId of frameIds) {
+      const evaluator = createCdpEvaluator({
+        cdp,
+        frameCdpId,
+        worldCache,
+      });
       const remainingText = Math.max(0, textMaxChars - textPreview.length);
       const remainingHeadings = Math.max(0, maxHeadings - headings.length);
       const remainingButtons = Math.max(0, maxButtons - buttons.length);
       const remainingLinks = Math.max(0, maxLinks - links.length);
 
       const sample = await extractScopedSnapshotSample({
-        evaluator: frame,
+        evaluator,
         selectorQuery,
         visibleOnly,
         mode,

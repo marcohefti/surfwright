@@ -3,6 +3,7 @@ import { newActionId } from "../../action-id.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import { parseSettleMs, parseStepsCsv } from "./parse.js";
 import type { TargetScrollPlanReport } from "./types.js";
 
@@ -34,7 +35,12 @@ export async function targetScrollPlan(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
-    const runtimeInfo = await target.page.evaluate(() => {
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const worldCache = new Map<string, number>();
+    const evaluator = createCdpEvaluator({ cdp, frameCdpId: frameTree.frame.id, worldCache });
+
+    const runtimeInfo = await evaluator.evaluate(() => {
       const runtime = globalThis as unknown as {
         document?: {
           scrollingElement?: {
@@ -62,7 +68,7 @@ export async function targetScrollPlan(opts: {
     for (let idx = 0; idx < requestedSteps.length; idx += 1) {
       const requestedY = requestedSteps[idx];
       const appliedY = Math.max(0, Math.min(requestedY, runtimeInfo.maxScroll));
-      await target.page.evaluate(
+      await evaluator.evaluate(
         ({ y }: { y: number }) => {
           const runtime = globalThis as unknown as {
             window?: {
@@ -76,7 +82,7 @@ export async function targetScrollPlan(opts: {
       if (settleMs > 0) {
         await target.page.waitForTimeout(settleMs);
       }
-      const achievedY = await target.page.evaluate(() => {
+      const achievedY = await evaluator.evaluate(() => {
         const runtime = globalThis as unknown as {
           window?: {
             scrollY?: number;

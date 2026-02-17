@@ -13,14 +13,14 @@ Read order:
 ## Where Truth Lives
 
 - Runtime contract (machine): `surfwright --json contract`
-- Contract snapshot gate (CI): `pnpm -s contract:snapshot:check` (`scripts/contract-snapshot.mjs` reads `dist/cli.js --json contract`)
+- Contract snapshot gate (CI): `pnpm -s contract:snapshot:check` (`scripts/checks/contract-snapshot.mjs` reads `dist/cli.js --json contract`)
 - Architecture enforcement (repo): `pnpm -s policy:check` / `pnpm -s policy:check:strict` (`policy/config.json`, `policy/rules/*`, `scripts/policy-check.mjs`)
 - Human docs: `README.md`, `AGENTS.md`, `docs/*`
 
 ## One-Screen System Model
 
 - CLI entrypoint/orchestration: `src/cli.ts`
-  - global flags (`--json`, `--pretty`, `--agent-id`, `--session`)
+  - global flags (`--json`, `--pretty`, `--agent-id`, `--workspace`, `--session`)
   - dot-command alias rewriting (manifest-driven)
   - daemon proxy default path with explicit bypass for streaming commands and special cases
   - internal workers: `__network-worker`, `__daemon-worker`

@@ -9,6 +9,7 @@ export type SessionState = {
   cdpOrigin: string;
   debugPort: number | null;
   userDataDir: string | null;
+  profile: string | null;
   browserPid: number | null;
   ownerId: string | null;
   leaseExpiresAt: string | null;
@@ -72,4 +73,3 @@ export type SurfwrightState = {
     }
   >;
 };
-

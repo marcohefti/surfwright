@@ -353,6 +353,24 @@ Sessions are tracked in state with an explicit active pointer:
 - agent-scoped: set `SURFWRIGHT_AGENT_ID=<agentId>` to use `~/.surfwright/agents/<agentId>/state.json`
 - explicit override: `SURFWRIGHT_STATE_DIR=<path>`
 
+Project workspaces are separate from state. A workspace stores reusable browser profiles for authenticated flows under `./.surfwright/` (gitignored by `workspace init`):
+
+```bash
+surfwright --json workspace init
+surfwright --json open https://github.com/login --profile auth --browser-mode headed
+```
+
+Future runs (even from a different agent) can reuse the same logged-in state:
+
+```bash
+surfwright --json open https://github.com --profile auth
+```
+
+Workspace override:
+
+- CLI: `--workspace <dir>`
+- env: `SURFWRIGHT_WORKSPACE_DIR=<path>`
+
 `session ensure` still runs a built-in hygiene pass, but command defaults are now isolation-first:
 - `open`/`run` without `--session` use new ephemeral sessions by default.
 - `target *` without `--session` infer from persisted `targetId`.

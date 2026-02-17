@@ -3,8 +3,9 @@ import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { fetchAssistedExtractItems, normalizeExtractWhitespace, type ExtractItemDraft } from "./target-extract-assist.js";
-import { frameScopeHints, framesForScope, parseFrameScope } from "./target-find.js";
-import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { frameScopeHints, parseFrameScope } from "./target-find.js";
+import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "./cdp/index.js";
+import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetExtractReport } from "../../types.js";
 
 const EXTRACT_MAX_LIMIT = 100;
@@ -29,17 +30,17 @@ function parseKind(input: string | undefined): TargetExtractReport["kind"] {
 }
 
 async function extractFrameItems(opts: {
-  frame: {
-    url(): string;
+  evaluator: {
     evaluate<T, Arg>(pageFunction: (arg: Arg) => T, arg: Arg): Promise<T>;
   };
+  frameUrl: string;
   selectorQuery: string | null;
   visibleOnly: boolean;
   kind: TargetExtractReport["kind"];
   scanLimit: number;
 }): Promise<{ frameUrl: string; matched: boolean; items: ExtractItemDraft[] }> {
-  const frameUrl = opts.frame.url();
-  const payload = await opts.frame.evaluate(
+  const frameUrl = opts.frameUrl;
+  const payload = await opts.evaluator.evaluate(
     ({ selectorQuery, visibleOnly, kind, scanLimit }) => {
       const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
       const doc = runtime.document;
@@ -157,25 +158,29 @@ export async function targetExtract(opts: {
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
     const pageUrl = target.page.url();
-    const frames = framesForScope(target.page, frameScope);
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const frameCount = listCdpFrameEntries({ frameTree, limit: 1 }).count;
+    const frameIds = frameIdsForScope({ frameTree, scope: frameScope });
+    const allEntries = listCdpFrameEntries({ frameTree, limit: Number.MAX_SAFE_INTEGER }).entries;
+    const urlByFrameId = new Map<string, string>();
+    for (const entry of allEntries) {
+      urlByFrameId.set(entry.cdpFrameId, entry.url);
+    }
     const hints = frameScopeHints({
       frameScope,
-      frameCount: target.page.frames().length,
+      frameCount,
       command: "target.extract",
       targetId: requestedTargetId,
     });
+    const worldCache = new Map<string, number>();
     if (selectorQuery) {
-      if (frameScope === "main") {
-        await ensureValidSelector(target.page, selectorQuery);
-      } else {
-        for (const frame of frames) {
-          try {
-            await frame.locator(selectorQuery).count();
-          } catch {
-            throw new CliError("E_SELECTOR_INVALID", `Invalid selector query: ${selectorQuery}`);
-          }
-        }
-      }
+      await ensureValidSelectorSyntaxCdp({
+        cdp,
+        frameCdpId: frameTree.frame.id,
+        worldCache,
+        selectorQuery,
+      });
     }
 
     let scopeMatched = false;
@@ -203,9 +208,15 @@ export async function targetExtract(opts: {
       });
     };
 
-    for (const frame of frames) {
+    for (const frameCdpId of frameIds) {
+      const evaluator = createCdpEvaluator({
+        cdp,
+        frameCdpId,
+        worldCache,
+      });
       const extracted = await extractFrameItems({
-        frame,
+        evaluator,
+        frameUrl: urlByFrameId.get(frameCdpId) ?? pageUrl,
         selectorQuery,
         visibleOnly,
         kind,

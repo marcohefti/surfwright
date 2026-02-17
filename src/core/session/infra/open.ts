@@ -58,6 +58,7 @@ export async function openUrl(opts: {
   inputUrl: string;
   timeoutMs: number;
   sessionId?: string;
+  profile?: string;
   reuseUrl?: boolean;
   isolation?: string;
   browserModeInput?: string;
@@ -71,18 +72,22 @@ export async function openUrl(opts: {
     throw new CliError("E_URL_INVALID", "URL must be absolute (e.g. https://example.com)");
   }
   const requestedUrl = parsedUrl.toString();
-  const sessionHint = await resolveOpenSessionHint({
-    sessionId: opts.sessionId,
-    isolation: opts.isolation,
-    timeoutMs: opts.timeoutMs,
-    ensureSharedSession: opts.ensureSharedSession,
-  });
+  const profileHint = typeof opts.profile === "string" && opts.profile.trim().length > 0 ? opts.profile : undefined;
+  const sessionHint = profileHint
+    ? undefined
+    : await resolveOpenSessionHint({
+        sessionId: opts.sessionId,
+        isolation: opts.isolation,
+        timeoutMs: opts.timeoutMs,
+        ensureSharedSession: opts.ensureSharedSession,
+      });
 
   const desiredBrowserMode = parseManagedBrowserMode(opts.browserModeInput);
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint,
+    profileHint,
     timeoutMs: opts.timeoutMs,
-    allowImplicitNewSession: !sessionHint,
+    allowImplicitNewSession: !sessionHint && !profileHint,
     browserMode: desiredBrowserMode ?? undefined,
   });
   const resolvedSessionAt = Date.now();
@@ -110,6 +115,7 @@ export async function openUrl(opts: {
           sessionId: session.sessionId,
           sessionSource,
           browserMode: session.browserMode,
+          profile: session.profile ?? null,
           targetId,
           actionId,
           requestedUrl,
@@ -165,6 +171,7 @@ export async function openUrl(opts: {
       sessionId: session.sessionId,
       sessionSource,
       browserMode: session.browserMode,
+      profile: session.profile ?? null,
       targetId,
       actionId: newActionId(),
       requestedUrl,

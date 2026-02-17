@@ -5,6 +5,7 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import type { TargetClickDeltaEvidence, TargetClickExplainReport, TargetClickReport } from "../../types.js";
 import {
   explainSelection,
@@ -38,13 +39,13 @@ type ClickDeltaFocus = {
 type ClickDeltaRole = (typeof CLICK_DELTA_ROLES)[number];
 type ClickDeltaRoleCounts = Record<ClickDeltaRole, number>;
 
-async function captureDeltaProbe(page: {
+async function captureDeltaProbe(evaluator: {
   evaluate<T, Arg>(fn: (arg: Arg) => T, arg: Arg): Promise<T>;
 }): Promise<{
   focus: ClickDeltaFocus;
   roleCounts: ClickDeltaRoleCounts;
 }> {
-  return await page.evaluate(
+  return await evaluator.evaluate(
     ({
       focusTextMaxChars,
       roles,
@@ -121,6 +122,7 @@ async function captureDeltaProbe(page: {
 async function captureDeltaState(page: {
   url(): string;
   title(): Promise<string>;
+}, evaluator: {
   evaluate<T, Arg>(fn: (arg: Arg) => T, arg: Arg): Promise<T>;
 }): Promise<{
   url: string;
@@ -129,7 +131,7 @@ async function captureDeltaState(page: {
   roleCounts: ClickDeltaRoleCounts;
 }> {
   const url = page.url();
-  const [title, probe] = await Promise.all([page.title(), captureDeltaProbe(page)]);
+  const [title, probe] = await Promise.all([page.title(), captureDeltaProbe(evaluator)]);
   return {
     url,
     title,
@@ -217,6 +219,18 @@ export async function targetClick(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    const needDomEval = includeDelta || Boolean(opts.snapshot);
+    const cdp = needDomEval ? await openCdpSession(target.page) : null;
+    const frameTree = cdp ? await getCdpFrameTree(cdp) : null;
+    const worldCache = cdp ? new Map<string, number>() : null;
+    const mainEvaluator =
+      cdp && frameTree && worldCache
+        ? createCdpEvaluator({
+            cdp,
+            frameCdpId: frameTree.frame.id,
+            worldCache,
+          })
+        : null;
     const { locator, count } = await resolveTargetQueryLocator({
       page: target.page,
       parsed,
@@ -293,7 +307,7 @@ export async function targetClick(opts: {
 
     const preview = await extractTargetQueryPreview(selected.locator);
 
-    const deltaBefore = includeDelta ? await captureDeltaState(target.page as any) : null;
+    const deltaBefore = includeDelta && mainEvaluator ? await captureDeltaState(target.page as any, mainEvaluator) : null;
     const clickedAriaBefore = includeDelta ? await captureLocatorAriaAttributes(selected.locator as any) : null;
 
     await selected.locator.click({
@@ -314,8 +328,8 @@ export async function targetClick(opts: {
       timeoutMs: opts.timeoutMs,
     });
 
-    const postSnapshot = opts.snapshot ? await readPostSnapshot(target.page as any) : null;
-    const deltaAfter = includeDelta ? await captureDeltaState(target.page as any) : null;
+    const postSnapshot = opts.snapshot && mainEvaluator ? await readPostSnapshot(mainEvaluator) : null;
+    const deltaAfter = includeDelta && mainEvaluator ? await captureDeltaState(target.page as any, mainEvaluator) : null;
     const clickedAriaAfter = includeDelta ? await captureLocatorAriaAttributes(selected.locator as any) : null;
     const actionCompletedAt = Date.now();
 

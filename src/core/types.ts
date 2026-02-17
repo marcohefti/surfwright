@@ -15,7 +15,7 @@ export const DEFAULT_TARGET_NETWORK_MAX_REQUESTS = 120;
 export const DEFAULT_TARGET_NETWORK_MAX_WEBSOCKETS = 24;
 export const DEFAULT_TARGET_NETWORK_MAX_WS_MESSAGES = 120;
 export const DEFAULT_TARGET_NETWORK_MAX_RUNTIME_MS = 600000;
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 export type ActionTimingMs = {
   total: number;
   resolveSession: number;
@@ -40,11 +40,30 @@ export type SessionPolicy = "ephemeral" | "persistent";
 export type SessionSource = "explicit" | "target-inferred" | "implicit-new";
 export type BrowserMode = "headless" | "headed" | "unknown";
 export type ManagedBrowserMode = Exclude<BrowserMode, "unknown">;
+
+export type WorkspaceInfoReport = {
+  ok: true;
+  found: boolean;
+  workspaceDir: string | null;
+  profilesDir: string | null;
+  profileSessionsDir: string | null;
+  hint: string | null;
+};
+
+export type WorkspaceInitReport = {
+  ok: true;
+  workspaceDir: string;
+  markerPath: string;
+  profilesDir: string;
+  profileSessionsDir: string;
+  gitignore: { path: string; updated: boolean };
+};
 export type OpenReport = {
   ok: true;
   sessionId: string;
   sessionSource: SessionSource;
   browserMode: BrowserMode;
+  profile: string | null;
   targetId: string;
   actionId: string;
   requestedUrl: string;
@@ -63,6 +82,7 @@ export type SessionReport = {
   kind: SessionKind;
   cdpOrigin: string;
   browserMode: BrowserMode;
+  profile: string | null;
   active: boolean;
   created: boolean;
   restarted: boolean;
@@ -75,6 +95,7 @@ export type SessionListReport = {
     kind: SessionKind;
     cdpOrigin: string;
     browserMode: BrowserMode;
+    profile: string | null;
     lastSeenAt: string;
   }>;
 };

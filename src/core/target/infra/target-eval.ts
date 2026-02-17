@@ -4,7 +4,7 @@ import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { providers } from "../../providers/index.js";
-import { resolveFrameById } from "../frames/frames.js";
+import { createCdpEvaluator, getCdpFrameTree, openCdpSession, resolveCdpFrameByStableId } from "./cdp/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetEvalReport } from "../../types.js";
 type TargetCloseReport = {
@@ -111,7 +111,6 @@ function parseArgJson(input: string | undefined): unknown {
     throw new CliError("E_QUERY_INVALID", "arg-json must be valid JSON");
   }
 }
-
 function parseMaxConsole(value: number | undefined): number {
   const maxConsole = value ?? 20;
   if (!Number.isFinite(maxConsole) || !Number.isInteger(maxConsole) || maxConsole <= 0 || maxConsole > EVAL_MAX_CONSOLE) {
@@ -119,7 +118,6 @@ function parseMaxConsole(value: number | undefined): number {
   }
   return maxConsole;
 }
-
 async function runWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
   try {
@@ -137,7 +135,6 @@ async function runWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promis
     }
   }
 }
-
 function normalizeEvalFailure(error: unknown): never {
   if (error instanceof CliError) {
     throw error;
@@ -152,7 +149,6 @@ function normalizeEvalFailure(error: unknown): never {
   }
   throw new CliError("E_EVAL_RUNTIME", "evaluation failed");
 }
-
 export async function targetEval(opts: {
   targetId: string;
   timeoutMs: number;
@@ -176,7 +172,6 @@ export async function targetEval(opts: {
   const arg = parseArgJson(opts.argJson);
   const captureConsole = Boolean(opts.captureConsole);
   const maxConsole = parseMaxConsole(opts.maxConsole);
-
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
     timeoutMs: opts.timeoutMs,
@@ -187,11 +182,20 @@ export async function targetEval(opts: {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();
-
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
-    const frameSelection = resolveFrameById(target.page, typeof opts.frameId === "string" && opts.frameId.trim().length > 0 ? opts.frameId : "f-0");
-    const evalFrame = frameSelection.frame;
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const frameSelection = resolveCdpFrameByStableId({
+      frameTree,
+      stableFrameIdInput: typeof opts.frameId === "string" && opts.frameId.trim().length > 0 ? opts.frameId : "f-0",
+    });
+    const worldCache = new Map<string, number>();
+    const evaluator = createCdpEvaluator({
+      cdp,
+      frameCdpId: frameSelection.entry.cdpFrameId,
+      worldCache,
+    });
     const consoleEntries: TargetEvalReport["console"]["entries"] = [];
     let consoleCount = 0;
     let consoleTruncated = false;
@@ -211,11 +215,9 @@ export async function targetEval(opts: {
         text,
       });
     };
-
     if (captureConsole) {
       target.page.on("console", consoleListener as never);
     }
-
     let evaluationPayload: {
       ok: boolean;
       errorMessage?: string;
@@ -223,7 +225,7 @@ export async function targetEval(opts: {
     };
     try {
       evaluationPayload = await runWithTimeout(
-        evalFrame.evaluate(
+        evaluator.evaluate(
           async ({
             expression,
             arg,
@@ -376,7 +378,6 @@ export async function targetEval(opts: {
         target.page.off("console", consoleListener as never);
       }
     }
-
     if (!evaluationPayload.ok) {
       const message = (evaluationPayload.errorMessage ?? "").toLowerCase();
       if (message.includes("unserializable") || message.includes("cyclic")) {

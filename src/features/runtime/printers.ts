@@ -5,6 +5,8 @@ import type {
   SessionPruneReport,
   SessionReport,
   StateReconcileReport,
+  WorkspaceInfoReport,
+  WorkspaceInitReport,
 } from "../../core/types.js";
 
 export type RuntimeOutputOpts = {
@@ -68,6 +70,7 @@ export function printOpenSuccess(report: Record<string, unknown>, opts: RuntimeO
   const status = typeof report.status === "number" ? String(report.status) : "null";
   const url = typeof report.url === "string" ? report.url : "unknown";
   const browserMode = typeof report.browserMode === "string" ? report.browserMode : null;
+  const profile = typeof report.profile === "string" ? report.profile : null;
   process.stdout.write(
     [
       "ok",
@@ -77,6 +80,7 @@ export function printOpenSuccess(report: Record<string, unknown>, opts: RuntimeO
       `status=${status}`,
       `url=${url}`,
       ...(browserMode ? [`browserMode=${browserMode}`] : []),
+      ...(profile ? [`profile=${profile}`] : []),
     ].join(" ") + "\n",
   );
 }
@@ -108,6 +112,7 @@ export function printSessionSuccess(report: SessionReport | SessionListReport | 
       `sessionId=${report.sessionId}`,
       `kind=${report.kind}`,
       `browserMode=${report.browserMode}`,
+      ...(report.profile ? [`profile=${report.profile}`] : []),
       `active=${report.active ? "true" : "false"}`,
       `created=${report.created ? "true" : "false"}`,
       `restarted=${report.restarted ? "true" : "false"}`,
@@ -148,3 +153,31 @@ export function printRunSuccess(report: Record<string, unknown>, opts: RuntimeOu
   process.stdout.write(["ok", `steps=${steps}`, `sessionId=${sessionId}`, `targetId=${targetId}`, `totalMs=${totalMs}`].join(" ") + "\n");
 }
 
+export function printWorkspaceSuccess(report: WorkspaceInfoReport | WorkspaceInitReport, opts: RuntimeOutputOpts) {
+  if (opts.json) {
+    writeJson(report, { pretty: opts.pretty });
+    return;
+  }
+  if ("found" in report) {
+    if (!report.found) {
+      process.stdout.write(`workspace not found\n${report.hint ?? ""}\n`.trimEnd() + "\n");
+      return;
+    }
+    process.stdout.write(
+      [
+        "ok",
+        `workspaceDir=${report.workspaceDir ?? "null"}`,
+        `profilesDir=${report.profilesDir ?? "null"}`,
+      ].join(" ") + "\n",
+    );
+    return;
+  }
+  process.stdout.write(
+    [
+      "ok",
+      `workspaceDir=${report.workspaceDir}`,
+      `profilesDir=${report.profilesDir}`,
+      `gitignoreUpdated=${report.gitignore.updated ? "true" : "false"}`,
+    ].join(" ") + "\n",
+  );
+}

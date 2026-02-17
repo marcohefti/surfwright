@@ -5,8 +5,8 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { parseTargetQueryInput, resolveTargetQueryLocator } from "./target-query.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "./cdp/index.js";
 import type { TargetWaitReport } from "../../types.js";
-
 type TargetKeypressReport = {
   ok: true;
   sessionId: string;
@@ -23,7 +23,6 @@ type TargetKeypressReport = {
     persistState: number;
   };
 };
-
 type TargetDialogReport = {
   ok: true;
   sessionId: string;
@@ -41,7 +40,6 @@ type TargetDialogReport = {
     persistState: number;
   };
 };
-
 function parseWaitInput(opts: {
   forText?: string;
   forSelector?: string;
@@ -53,7 +51,6 @@ function parseWaitInput(opts: {
   const forText = typeof opts.forText === "string" ? opts.forText.trim() : "";
   const forSelector = typeof opts.forSelector === "string" ? opts.forSelector.trim() : "";
   const networkIdle = Boolean(opts.networkIdle);
-
   const hasText = forText.length > 0;
   const hasSelector = forSelector.length > 0;
   const selectedCount = Number(hasText) + Number(hasSelector) + Number(networkIdle);
@@ -70,14 +67,12 @@ function parseWaitInput(opts: {
       value: forText,
     };
   }
-
   if (hasSelector) {
     return {
       mode: "selector",
       value: forSelector,
     };
   }
-
   return {
     mode: "network-idle",
     value: null,
@@ -315,7 +310,15 @@ export async function targetKeypress(opts: {
     }
 
     await target.page.keyboard.press(key);
-    const resultText = await target.page.evaluate(() => {
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const worldCache = new Map<string, number>();
+    const evaluator = createCdpEvaluator({
+      cdp,
+      frameCdpId: frameTree.frame.id,
+      worldCache,
+    });
+    const resultText = await evaluator.evaluate(() => {
       const runtime = globalThis as unknown as { document?: any };
       const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
       const active = runtime.document?.activeElement as

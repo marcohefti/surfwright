@@ -2,6 +2,14 @@ import type { CliErrorContract } from "../types.js";
 
 export const errorContracts: CliErrorContract[] = [
   { code: "E_URL_INVALID", message: "URL must be absolute (e.g. https://example.com)", retryable: false },
+  { code: "E_WORKSPACE_NOT_FOUND", message: "No SurfWright workspace found", retryable: false },
+  { code: "E_WORKSPACE_INVALID", message: "Workspace marker is invalid", retryable: false },
+  {
+    code: "E_PROFILE_INVALID",
+    message: "profile may only contain letters, numbers, dot, underscore, and dash",
+    retryable: false,
+  },
+  { code: "E_PROFILE_LOCKED", message: "profile is currently in use by another process", retryable: true },
   {
     code: "E_SESSION_ID_INVALID",
     message: "sessionId may only contain letters, numbers, dot, underscore, and dash",

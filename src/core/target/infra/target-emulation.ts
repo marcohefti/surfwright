@@ -5,6 +5,7 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { providers } from "../../providers/index.js";
+import { openCdpSession } from "./cdp/index.js";
 
 type ActionTimingMs = {
   total: number;
@@ -368,29 +369,52 @@ export async function targetScreenshot(opts: {
     const target = await resolveTargetHandle(browser, requestedTargetId);
     const { fs, path } = providers();
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    const viewport = target.page.viewportSize() ?? { width: 1280, height: 720 };
-    const pageHeight = await target.page.evaluate(() => {
-      const runtime = globalThis as unknown as {
-        document?: {
-          documentElement?: { scrollHeight?: number; clientHeight?: number };
-          body?: { scrollHeight?: number };
-        };
-      };
-      const root = runtime.document?.documentElement;
-      return Math.max(
-        root?.scrollHeight ?? 0,
-        root?.clientHeight ?? 0,
-        runtime.document?.body?.scrollHeight ?? 0,
-      );
-    });
+    const cdp = await openCdpSession(target.page);
+    const metrics = (await cdp.send("Page.getLayoutMetrics")) as {
+      contentSize?: { x?: number; y?: number; width?: number; height?: number };
+      visualViewport?: { clientWidth?: number; clientHeight?: number; scale?: number };
+      layoutViewport?: { clientWidth?: number; clientHeight?: number; scale?: number };
+    };
+    const contentWidth = Math.max(0, Number(metrics.contentSize?.width ?? 0));
+    const contentHeight = Math.max(0, Number(metrics.contentSize?.height ?? 0));
+    const viewportWidth = Math.max(
+      0,
+      Number(metrics.visualViewport?.clientWidth ?? metrics.layoutViewport?.clientWidth ?? 0),
+    );
+    const viewportHeight = Math.max(
+      0,
+      Number(metrics.visualViewport?.clientHeight ?? metrics.layoutViewport?.clientHeight ?? 0),
+    );
 
-    const screenshot = await target.page.screenshot({
-      path: outPath,
-      fullPage: Boolean(opts.fullPage),
-      type,
+    if (Boolean(opts.fullPage) && (contentWidth <= 0 || contentHeight <= 0)) {
+      throw new CliError("E_INTERNAL", "Unable to capture fullPage screenshot (layout metrics returned 0 size)");
+    }
+    if (!Boolean(opts.fullPage) && (viewportWidth <= 0 || viewportHeight <= 0)) {
+      throw new CliError("E_INTERNAL", "Unable to capture screenshot (viewport metrics returned 0 size)");
+    }
+
+    const capture = (await cdp.send("Page.captureScreenshot", {
+      format: type,
       quality: quality ?? undefined,
-      timeout: opts.timeoutMs,
-    });
+      fromSurface: true,
+      captureBeyondViewport: Boolean(opts.fullPage),
+      clip: Boolean(opts.fullPage)
+        ? {
+            x: 0,
+            y: 0,
+            width: contentWidth,
+            height: contentHeight,
+            scale: 1,
+          }
+        : undefined,
+    })) as { data?: string };
+
+    const base64 = capture.data;
+    if (typeof base64 !== "string" || base64.length === 0) {
+      throw new CliError("E_INTERNAL", "CDP did not return screenshot data");
+    }
+    const screenshot = Buffer.from(base64, "base64");
+    fs.writeFileSync(outPath, screenshot);
     const actionCompletedAt = Date.now();
     const sha256 = providers().crypto.createHash("sha256").update(screenshot).digest("hex");
 
@@ -401,8 +425,8 @@ export async function targetScreenshot(opts: {
       path: outPath,
       fullPage: Boolean(opts.fullPage),
       type,
-      width: viewport.width,
-      height: Boolean(opts.fullPage) ? pageHeight : viewport.height,
+      width: Math.round(Boolean(opts.fullPage) ? contentWidth : viewportWidth),
+      height: Math.round(Boolean(opts.fullPage) ? contentHeight : viewportHeight),
       bytes: screenshot.byteLength,
       sha256,
       timingMs: {

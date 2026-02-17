@@ -5,6 +5,7 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import { parsePropertiesCsv, parseSettleMs, parseStepsCsv } from "./parse.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetScrollWatchReport } from "./types.js";
@@ -86,7 +87,12 @@ export async function targetScrollWatch(opts: {
     });
     const preview = await extractTargetQueryPreview(selected.locator);
 
-    const runtimeInfo = await target.page.evaluate(() => {
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const worldCache = new Map<string, number>();
+    const evaluator = createCdpEvaluator({ cdp, frameCdpId: frameTree.frame.id, worldCache });
+
+    const runtimeInfo = await evaluator.evaluate(() => {
       const runtime = globalThis as unknown as {
         document?: { scrollingElement?: { scrollHeight?: number } | null } | null;
         window?: { innerHeight?: number; innerWidth?: number } | null;
@@ -100,7 +106,7 @@ export async function targetScrollWatch(opts: {
       };
     });
 
-    await target.page.evaluate(
+    await evaluator.evaluate(
       ({ maxEvents }: { maxEvents: number }) => {
         const runtime = globalThis as unknown as {
           __surfwrightScrollWatch?: {
@@ -211,7 +217,7 @@ export async function targetScrollWatch(opts: {
     for (let idx = 0; idx < requestedSteps.length; idx += 1) {
       const requestedY = requestedSteps[idx];
       const appliedY = Math.max(0, Math.min(requestedY, runtimeInfo.maxScroll));
-      await target.page.evaluate(
+      await evaluator.evaluate(
         ({ y }: { y: number }) => {
           const runtime = globalThis as unknown as {
             window?: { scrollTo?: (x: number, y: number) => void } | null;
@@ -265,7 +271,7 @@ export async function targetScrollWatch(opts: {
       });
     }
 
-    const trace = await target.page.evaluate(() => {
+    const trace = await evaluator.evaluate(() => {
       const runtime = globalThis as unknown as {
         __surfwrightScrollWatch?: {
           dropped: number;

@@ -5,6 +5,7 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetTransitionTraceReport } from "./types.js";
 
@@ -98,8 +99,12 @@ export async function targetTransitionTrace(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const worldCache = new Map<string, number>();
+    const evaluator = createCdpEvaluator({ cdp, frameCdpId: frameTree.frame.id, worldCache });
 
-    await target.page.evaluate(
+    await evaluator.evaluate(
       ({ maxEvents }: { maxEvents: number }) => {
         const runtime = globalThis as unknown as {
           __surfwrightTransitionTrace?: {
@@ -251,7 +256,7 @@ export async function targetTransitionTrace(opts: {
     }
 
     await target.page.waitForTimeout(captureMs);
-    const trace = await target.page.evaluate(() => {
+    const trace = await evaluator.evaluate(() => {
       const runtime = globalThis as unknown as {
         __surfwrightTransitionTrace?: {
           dropped: number;

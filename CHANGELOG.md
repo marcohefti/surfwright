@@ -7,6 +7,9 @@ All notable changes to SurfWright are documented here.
 ### Added
 - [release] Added `publish-dry-run.yml` to exercise publish-path checks before tag-based release.
 - [test] Added coverage for `scripts/release/release-notes-from-changelog.mjs` failure/success behavior.
+- [workspace] Added `workspace init` and `workspace info` for a project-local `./.surfwright/` workspace (gitignored) that stores reusable browser profiles.
+- [auth] Added `open --profile <name>` and `run --profile <name>` to reuse a named workspace profile (persistent login state across agents).
+- [cli] Added global `--workspace <dir>` (and `SURFWRIGHT_WORKSPACE_DIR`) to override workspace resolution.
 - [session] Added `--browser-mode <headless|headed>` to managed session flows (`session ensure/new/fresh`, `open`, `run`) for headed/headless control (defaults unchanged).
 - [contract] Added `browserMode` reporting to `open`/`session` JSON outputs (`unknown` for attached sessions).
 - [open] Added redirect evidence fields to `open` output: `requestedUrl`, `finalUrl`, `wasRedirected`, optional `redirectChain` + `redirectChainTruncated` (keeps `url` as final for back-compat).
@@ -25,11 +28,13 @@ All notable changes to SurfWright are documented here.
 - [release] `release-check` now fails when `CHANGELOG.md` is missing the current package version section.
 - [docs] `changelog-check` now enforces only the `Unreleased` skeleton buckets (with list items).
 - [contract] `session list` now includes `browserMode` per session row.
+- [contract] `open` and `session` JSON outputs now include `profile` when a workspace profile is in use.
 - [docs] Documented headed/headless defaults and a minimal human login handoff recipe (README + skill).
 - [target] `target snapshot` now accepts `0` for `--max-chars`, `--max-headings`, `--max-buttons`, and `--max-links` to omit categories.
 
 ### Fixed
 - [release] Removed drift-prone duplicate smoke command logic across release workflows.
+- [target] Fixed DOM evaluation on some OOPIF-heavy pages (e.g. Substack custom domains) where Playwright `evaluate()` could bind to a hidden tracking iframe realm; `target eval/read/snapshot/extract/frames/health/screenshot` now execute DOM reads via CDP in an isolated world anchored to the selected frame.
 
 ### Deprecated
 - [docs] None.

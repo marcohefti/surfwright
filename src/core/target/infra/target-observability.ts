@@ -2,6 +2,7 @@ import { chromium, type Request } from "playwright-core";
 import { CliError } from "../../errors.js";
 import { readRecentTargetAction } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { createCdpEvaluator, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "./cdp/index.js";
 import type { SessionSource, TargetConsoleTailReport, TargetHealthReport, TargetHudReport } from "../../types.js";
 
 type TargetConsoleGetEvent = {
@@ -298,14 +299,21 @@ export async function targetHealth(opts: {
   const connectedAt = Date.now();
   try {
     const target = await resolveTargetHandle(browser, targetId);
-    const metrics = await target.page.evaluate(() => {
-      const runtime = globalThis as unknown as { document?: any; window?: any };
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const frameCount = listCdpFrameEntries({ frameTree, limit: 1 }).count;
+    const worldCache = new Map<string, number>();
+    const evaluator = createCdpEvaluator({
+      cdp,
+      frameCdpId: frameTree.frame.id,
+      worldCache,
+    });
+    const pageMetrics = await evaluator.evaluate(() => {
+      const runtime = globalThis as unknown as { document?: any };
       const doc = runtime.document;
-      const win = runtime.window;
       return {
         readyState: doc?.readyState ?? "unknown",
         visibilityState: doc?.visibilityState ?? "unknown",
-        frameCount: (win?.frames?.length ?? 0) + 1,
         domNodes: doc?.querySelectorAll?.("*")?.length ?? 0,
         headings: doc?.querySelectorAll?.("h1,h2,h3")?.length ?? 0,
         buttons: doc?.querySelectorAll?.("button,[role=button],input[type=button],input[type=submit],input[type=reset]")?.length ?? 0,
@@ -315,6 +323,10 @@ export async function targetHealth(opts: {
         images: doc?.querySelectorAll?.("img")?.length ?? 0,
       };
     });
+    const metrics = {
+      ...pageMetrics,
+      frameCount,
+    };
     const actionCompletedAt = Date.now();
     const checks: TargetHealthReport["checks"] = [
       {

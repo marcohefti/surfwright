@@ -24,7 +24,15 @@ surfwright --json contract
 4. Use `--isolation shared` only when you intentionally want shared managed-session reuse.
 5. Treat every non-zero exit as a typed failure and branch on `code`.
 6. Keep loops small: open once, act once, verify, repeat.
-7. For authenticated carry-over, use `session cookie-copy` between explicit source/destination sessions with one or more scoped `--url` values.
+7. For project-persistent auth across agents, initialize a workspace and use `--profile <name>`:
+
+```bash
+surfwright --json workspace init
+surfwright --json open https://app.example.com/login --profile auth --browser-mode headed
+```
+
+This stores the browser profile under `./.surfwright/` (gitignored), so future agents can reuse the same logged-in state with `--profile auth`.
+8. For authenticated carry-over between disposable sessions, use `session cookie-copy` between explicit source/destination sessions with one or more scoped `--url` values.
 
 ## Canonical loop
 
@@ -132,14 +140,16 @@ surfwright --json target url-assert <targetId> --host github.com --path-prefix /
 Default managed sessions are `headless`. When you need a visible browser for a human to complete auth/2FA, launch a headed managed session and keep using its explicit `sessionId`:
 
 ```bash
-surfwright --json session new --session-id s-login --browser-mode headed
-surfwright --json --session s-login open https://github.com/login
+surfwright --json workspace init
+surfwright --json open https://github.com/login --profile auth --browser-mode headed
 
 # Human: finish login in the headed browser window, then continue.
 surfwright --json target snapshot <targetId>
 ```
 
-`browserMode` is returned in `session` and `open` JSON outputs. Attached sessions report `browserMode: "unknown"`.
+`--profile auth` is the smoothest path for future agents: the login state is persisted under `./.surfwright/` and reused automatically on the next run.
+
+If you need an ad-hoc headed session without persisting auth, use `session new --browser-mode headed` and pass `--session <id>`.
 
 If local state may be stale (machine restart, browser crash), run:
 

@@ -103,6 +103,7 @@
           "src/core/daemon/infra/daemon.ts",
           "src/core/daemon/infra/worker.ts",
           "src/core/extensions/infra/registry.ts",
+          "src/core/profile/infra/profile-session.ts",
           "src/core/pipeline-support/infra/plan.ts",
           "src/core/skills/infra/manager.ts",
           "src/core/state/infra/state-store.ts",
@@ -112,7 +113,8 @@
           "src/core/target/infra/network/target-network-check.ts",
           "src/core/target/infra/network/target-network-source.ts",
           "src/core/update/infra/config.ts",
-          "src/core/update/infra/manager.ts"
+          "src/core/update/infra/manager.ts",
+          "src/core/workspace/infra/workspace.ts"
         ]
       }
     },

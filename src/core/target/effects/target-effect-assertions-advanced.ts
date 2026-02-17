@@ -4,6 +4,7 @@ import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import { parseSettleMs, parseStepsCsv } from "./parse.js";
 import { targetScrollWatch } from "./target-scroll-watch.js";
 import { targetTransitionTrace } from "./target-transition-trace.js";
@@ -191,7 +192,12 @@ async function discoverRevealSelectors(opts: {
   });
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
-    const selectors = await target.page.evaluate(
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const worldCache = new Map<string, number>();
+    const evaluator = createCdpEvaluator({ cdp, frameCdpId: frameTree.frame.id, worldCache });
+
+    const selectors = await evaluator.evaluate(
       ({ maxCandidates, selectorQuery }: { maxCandidates: number; selectorQuery: string }) => {
         const runtime = globalThis as unknown as {
           document?: {

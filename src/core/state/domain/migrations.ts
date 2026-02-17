@@ -95,6 +95,37 @@ const MIGRATIONS = new Map<number, Migration>([
       };
     },
   ],
+  [
+    3,
+    (state) => {
+      const rawSessions = asStateRecord(state.sessions) ?? {};
+      const sessions = Object.fromEntries(
+        Object.entries(rawSessions).map(([sessionId, rawSession]) => {
+          const parsedSession = asStateRecord(rawSession);
+          if (!parsedSession) {
+            return [sessionId, rawSession];
+          }
+          const kind = parsedSession.kind === "attached" ? "attached" : "managed";
+          const profile =
+            kind === "managed" && typeof parsedSession.profile === "string" && parsedSession.profile.trim().length > 0
+              ? parsedSession.profile.trim()
+              : null;
+          return [
+            sessionId,
+            {
+              ...parsedSession,
+              profile,
+            },
+          ];
+        }),
+      );
+      return {
+        ...state,
+        version: 4,
+        sessions,
+      };
+    },
+  ],
 ]);
 
 export function migrateStatePayload(raw: unknown): StateEnvelope | null {

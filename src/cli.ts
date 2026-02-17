@@ -22,6 +22,8 @@ type OutputOpts = {
 };
 
 const INITIAL_AGENT_ID_ENV = typeof process.env.SURFWRIGHT_AGENT_ID === "string" ? process.env.SURFWRIGHT_AGENT_ID : null;
+const INITIAL_WORKSPACE_DIR_ENV =
+  typeof process.env.SURFWRIGHT_WORKSPACE_DIR === "string" ? process.env.SURFWRIGHT_WORKSPACE_DIR : null;
 
 function resolveRepoRoot(): string {
   const __filename = fileURLToPath(import.meta.url);
@@ -152,6 +154,23 @@ function applyAgentIdOverrideFromArgv(argv: string[]): void {
   delete process.env.SURFWRIGHT_AGENT_ID;
 }
 
+function applyWorkspaceDirOverrideFromArgv(argv: string[]): void {
+  const parsed = parseGlobalOptionValue(argv, "--workspace");
+  if (!parsed.found || !parsed.valid) {
+    if (INITIAL_WORKSPACE_DIR_ENV === null) {
+      delete process.env.SURFWRIGHT_WORKSPACE_DIR;
+    } else {
+      process.env.SURFWRIGHT_WORKSPACE_DIR = INITIAL_WORKSPACE_DIR_ENV;
+    }
+    return;
+  }
+  if (typeof parsed.value === "string") {
+    process.env.SURFWRIGHT_WORKSPACE_DIR = parsed.value;
+    return;
+  }
+  delete process.env.SURFWRIGHT_WORKSPACE_DIR;
+}
+
 const DOT_COMMAND_ALIAS_MAP = (() => {
   const map = new Map<string, string[]>();
   for (const command of allCommandManifest) {
@@ -181,6 +200,11 @@ function rewriteDotCommandAlias(argv: string[]): string[] {
     const agentIdSpan = parseOptionTokenSpan(out, commandIndex, "--agent-id");
     if (agentIdSpan > 0) {
       commandIndex += agentIdSpan;
+      continue;
+    }
+    const workspaceSpan = parseOptionTokenSpan(out, commandIndex, "--workspace");
+    if (workspaceSpan > 0) {
+      commandIndex += workspaceSpan;
       continue;
     }
 
@@ -231,6 +255,11 @@ function parseCommandPath(argv: string[]): string[] {
       index += agentIdSpan;
       continue;
     }
+    const workspaceSpan = parseOptionTokenSpan(argv, index, "--workspace");
+    if (workspaceSpan > 0) {
+      index += workspaceSpan;
+      continue;
+    }
     if (token === "--json" || token === "--pretty") {
       index += 1;
       continue;
@@ -245,7 +274,7 @@ function parseCommandPath(argv: string[]): string[] {
     if (out.length >= 2) {
       break;
     }
-    if (out.length === 1 && out[0] !== "target" && out[0] !== "session" && out[0] !== "state") {
+    if (out.length === 1 && out[0] !== "target" && out[0] !== "session" && out[0] !== "state" && out[0] !== "workspace") {
       break;
     }
   }
@@ -311,6 +340,7 @@ function createProgram(): Command {
     .option("--json", "Machine-readable output (where supported)", false)
     .option("--pretty", "Pretty-print JSON output", false)
     .option("--agent-id <agentId>", "Agent scope id for isolated state/daemon namespace")
+    .option("--workspace <dir>", "Workspace directory override for reusable profiles (default: auto-discover ./.surfwright)")
     .option("--session <sessionId>", "Use a specific session for this command")
     .exitOverride();
 
@@ -338,6 +368,7 @@ function commanderExitCode(error: unknown): number | null {
 
 async function runLocalCommand(argv: string[]): Promise<number> {
   applyAgentIdOverrideFromArgv(argv);
+  applyWorkspaceDirOverrideFromArgv(argv);
   const program = createProgram();
   process.exitCode = 0;
 
@@ -441,6 +472,7 @@ async function maybeRunInternalWorker(argv: string[]): Promise<number | null> {
 async function main(argv: string[]): Promise<number> {
   const normalizedArgv = normalizeArgv(argv);
   applyAgentIdOverrideFromArgv(normalizedArgv);
+  applyWorkspaceDirOverrideFromArgv(normalizedArgv);
 
   const workerExitCode = await maybeRunInternalWorker(normalizedArgv);
   if (workerExitCode !== null) {

@@ -3,11 +3,11 @@
   "name": "surfwright",
   "skillVersion": "0.1.0",
   "channel": "stable",
-  "digest": "sha256:d9ef6ac03febf3fceb2c92a9020f1570fb68475b900b6fac456d67e4edc72b1f",
+  "digest": "sha256:1c78357f36a7d714e0a8190198f125091148f110a3e9766e791ee77e438140b8",
   "requires": {
     "surfwrightVersion": ">=0.1.0 <0.2.0",
     "contractSchemaVersion": "^1",
-    "contractFingerprint": "sha256:3f192ade0ab13cfe480815c421b5a5bfb3d93c341888ebd8144476bca6ced7fd"
+    "contractFingerprint": "sha256:40694aa197fd32304a2669a6022928d52b8ee2b26b51bb60420cfd71778f533c"
   },
-  "updatedAt": "2026-02-15T08:06:49.716Z"
+  "updatedAt": "2026-02-16T19:43:13.563Z"
 }

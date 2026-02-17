@@ -30,7 +30,7 @@ function stateFilePath() {
 
 function baseState() {
   return {
-    version: 3,
+    version: 4,
     activeSessionId: null,
     nextSessionOrdinal: 1,
     nextCaptureOrdinal: 1,
@@ -88,7 +88,7 @@ test("legacy state payload migrates forward before maintenance commands run", ()
   assert.equal(payload.removed, 0);
 
   const state = readState();
-  assert.equal(state.version, 3);
+  assert.equal(state.version, 4);
   assert.equal(state.nextCaptureOrdinal, 1);
   assert.equal(state.nextArtifactOrdinal, 1);
   assert.deepEqual(state.networkCaptures, {});
@@ -123,11 +123,12 @@ test("v2 session payload migrates policy and lease hygiene fields", () => {
   assert.equal(result.status, 0);
 
   const state = readState();
-  assert.equal(state.version, 3);
+  assert.equal(state.version, 4);
   assert.equal(state.sessions["s-legacy"].policy, "ephemeral");
   assert.equal(typeof state.sessions["s-legacy"].leaseTtlMs, "number");
   assert.equal(state.sessions["s-legacy"].managedUnreachableCount, 0);
   assert.equal(state.sessions["s-legacy"].managedUnreachableSince, null);
+  assert.equal(state.sessions["s-legacy"].profile, null);
 });
 
 test("target prune removes orphaned, stale, and overflow metadata", () => {

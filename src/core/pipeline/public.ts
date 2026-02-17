@@ -8,6 +8,7 @@ export async function runPipeline(opts: {
   replayPath?: string;
   timeoutMs: number;
   sessionId?: string;
+  profile?: string;
   browserModeInput?: string;
   isolation?: string;
   doctor?: boolean;

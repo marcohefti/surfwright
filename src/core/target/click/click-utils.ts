@@ -141,10 +141,10 @@ export async function waitAfterClick(opts: {
   return opts.waitAfter;
 }
 
-export async function readPostSnapshot(page: {
+export async function readPostSnapshot(evaluator: {
   evaluate<T, Arg>(fn: (arg: Arg) => T, arg: Arg): Promise<T>;
 }): Promise<{ textPreview: string }> {
-  return await page.evaluate(
+  return await evaluator.evaluate(
     ({ maxChars }: { maxChars: number }) => {
       const runtime = globalThis as unknown as { document?: any };
       const normalize = (value: string): string => value.replace(/\\s+/g, " ").trim();

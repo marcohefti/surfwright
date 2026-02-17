@@ -1,6 +1,8 @@
 [
   { "id": "doctor", "usageMustContain": "surfwright doctor" },
   { "id": "contract", "usageMustContain": "surfwright contract" },
+  { "id": "workspace.info", "usageMustContain": "workspace info" },
+  { "id": "workspace.init", "usageMustContain": "workspace init" },
   { "id": "session.ensure", "usageMustContain": "session ensure" },
   { "id": "session.new", "usageMustContain": "session new" },
   { "id": "session.fresh", "usageMustContain": "session fresh" },

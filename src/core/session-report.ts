@@ -14,6 +14,7 @@ export function buildSessionReport(
     kind: session.kind,
     cdpOrigin: session.cdpOrigin,
     browserMode: session.browserMode,
+    profile: session.profile ?? null,
     active: meta.active,
     created: meta.created,
     restarted: meta.restarted,

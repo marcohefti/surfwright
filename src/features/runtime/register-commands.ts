@@ -10,6 +10,7 @@ import {
   sessionPrune,
   sessionUse,
 } from "../../core/session/public.js";
+import { workspaceInfo, workspaceInit } from "../../core/workspace/public.js";
 import { runPipeline } from "../../core/pipeline/public.js";
 import { stateReconcile } from "../../core/state/public.js";
 import { parseFieldsCsv, projectReportFields } from "../../core/target/public.js";
@@ -30,6 +31,7 @@ import {
   printRunSuccess,
   printSessionSuccess,
   printStateReconcileSuccess,
+  printWorkspaceSuccess,
   type RuntimeOutputOpts,
 } from "./printers.js";
 
@@ -79,11 +81,40 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
       }
     });
 
+  const workspace = ctx.program.command("workspace").description("Project workspace for reusable auth profiles");
+
+  workspace
+    .command("info")
+    .description(runtimeCommandMeta("workspace.info").summary)
+    .action(() => {
+      const output = ctx.globalOutputOpts();
+      try {
+        const report = workspaceInfo();
+        printWorkspaceSuccess(report, output);
+      } catch (error) {
+        ctx.handleFailure(error, output);
+      }
+    });
+
+  workspace
+    .command("init")
+    .description(runtimeCommandMeta("workspace.init").summary)
+    .action(() => {
+      const output = ctx.globalOutputOpts();
+      try {
+        const report = workspaceInit();
+        printWorkspaceSuccess(report, output);
+      } catch (error) {
+        ctx.handleFailure(error, output);
+      }
+    });
+
   const openMeta = runtimeCommandMeta("open");
   ctx.program
     .command("open")
     .description(openMeta.summary)
     .argument("<url>", "Absolute URL to open")
+    .option("--profile <name>", "Use a project workspace profile for persisted auth (requires workspace init)")
     .option("--reuse-url", "Reuse existing tab for same URL if present", false)
     .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
@@ -92,7 +123,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .action(
       async (
         url: string,
-        options: { timeoutMs: number; reuseUrl?: boolean; browserMode?: string; isolation?: string; fields?: string },
+        options: { timeoutMs: number; reuseUrl?: boolean; browserMode?: string; isolation?: string; fields?: string; profile?: string },
       ) => {
       const output = ctx.globalOutputOpts();
       const globalOpts = ctx.program.opts<{ session?: string }>();
@@ -104,6 +135,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           reuseUrl: Boolean(options.reuseUrl),
           browserModeInput: options.browserMode,
           isolation: options.isolation,
+          profile: typeof options.profile === "string" ? options.profile : undefined,
           sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
         });
         printOpenSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -313,6 +345,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .option("--record", "Write run artifact with timeline and replay payload", false)
     .option("--record-path <path>", "Explicit output path for recorded artifact")
     .option("--record-label <label>", "Label to include in recorded artifact metadata")
+    .option("--profile <name>", "Use a project workspace profile for persisted auth (requires workspace init)")
     .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Default step timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
@@ -335,6 +368,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         record?: boolean;
         recordPath?: string;
         recordLabel?: string;
+        profile?: string;
         browserMode?: string;
         isolation?: string;
         timeoutMs: number;
@@ -349,6 +383,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           stdinPlan,
           replayPath: options.replay,
           timeoutMs: options.timeoutMs,
+          profile: typeof options.profile === "string" ? options.profile : undefined,
           browserModeInput: options.browserMode,
           isolation: options.isolation,
           doctor: Boolean(options.doctor),

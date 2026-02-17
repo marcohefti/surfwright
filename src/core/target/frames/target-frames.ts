@@ -3,7 +3,7 @@ import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
-import { listFrameEntries } from "./frames.js";
+import { getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "../infra/cdp/index.js";
 import type { TargetFramesReport } from "../../types.js";
 
 const TARGET_FRAMES_LIMIT_MAX = 200;
@@ -40,7 +40,9 @@ export async function targetFrames(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
-    const frameListing = listFrameEntries(target.page, limit);
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const frameListing = listCdpFrameEntries({ frameTree, limit });
     const actionCompletedAt = Date.now();
 
     const report: TargetFramesReport = {
@@ -52,7 +54,7 @@ export async function targetFrames(opts: {
       title: await target.page.title(),
       count: frameListing.count,
       limit,
-      frames: frameListing.frames,
+      frames: frameListing.entries.map(({ cdpFrameId: _cdpFrameId, ...entry }) => entry),
       truncated: frameListing.truncated,
       timingMs: {
         total: 0,

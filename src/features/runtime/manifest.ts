@@ -12,6 +12,16 @@ export const runtimeCommandManifest: CliCommandContract[] = [
     summary: "emit machine-readable CLI contract and error codes",
   },
   {
+    id: "workspace.info",
+    usage: "surfwright workspace info [--json] [--pretty]",
+    summary: "show resolved project workspace (./.surfwright) for reusable profiles",
+  },
+  {
+    id: "workspace.init",
+    usage: "surfwright workspace init [--json] [--pretty]",
+    summary: "create a project workspace (./.surfwright) with gitignored profile storage",
+  },
+  {
     id: "session.ensure",
     usage: "surfwright session ensure [--browser-mode <headless|headed>] [--timeout-ms <ms>] [--json] [--pretty]",
     summary: "reuse active session if reachable; otherwise use managed default",
@@ -63,7 +73,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   {
     id: "open",
     usage:
-      "surfwright open <url> [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "surfwright open <url> [--profile <name>] [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
     summary: "open URL and return minimal page report with target handle",
   },
   {
@@ -75,7 +85,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   {
     id: "run",
     usage:
-      "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--profile <name>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
     summary: "execute, lint, record, or replay deterministic multi-step browser plans",
   },
   {

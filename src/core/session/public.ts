@@ -40,6 +40,7 @@ export async function openUrl(opts: {
   inputUrl: string;
   timeoutMs: number;
   sessionId?: string;
+  profile?: string;
   reuseUrl?: boolean;
   isolation?: string;
   browserModeInput?: string;
@@ -195,6 +196,7 @@ export async function sessionAttach(opts: {
       cdpOrigin,
       debugPort: inferDebugPortFromCdpOrigin(cdpOrigin),
       userDataDir: null,
+      profile: null,
       browserPid: null,
       ownerId: null,
       leaseExpiresAt: null,
@@ -246,6 +248,7 @@ export function sessionList(): SessionListReport {
     kind: session.kind,
     cdpOrigin: session.cdpOrigin,
     browserMode: session.browserMode,
+    profile: session.profile ?? null,
     lastSeenAt: session.lastSeenAt,
   }));
   return {

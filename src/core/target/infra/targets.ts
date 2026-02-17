@@ -1,6 +1,7 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
 import { allocateFreePort, ensureSessionReachable, startManagedSession } from "../../browser.js";
 import { CliError } from "../../errors.js";
+import { ensureProfileManagedSession } from "../../profile/index.js";
 import { withSessionHeartbeat } from "../../session/index.js";
 import { defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId } from "../../state/index.js";
 import { allocateSessionIdForState, mutateState, saveTargetSnapshot } from "../../state/index.js";
@@ -13,25 +14,6 @@ import {
 } from "../../types.js";
 
 const TARGET_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
-
-// tsx/esbuild dev transpilation may inject __name(...) wrappers into callbacks
-// we pass to frame/page.evaluate. Browser contexts do not define __name, so
-// we install a minimal compatibility helper for active and future documents.
-const ESBUILD_NAME_COMPAT_SCRIPT = `
-if (typeof globalThis.__name !== "function") {
-  globalThis.__name = (fn) => fn;
-}
-`;
-
-const esbuildNameCompatInstalled = new WeakSet<Page>();
-
-async function ensureEvaluateNameCompat(page: Page): Promise<void> {
-  if (!esbuildNameCompatInstalled.has(page)) {
-    await page.context().addInitScript({ content: ESBUILD_NAME_COMPAT_SCRIPT });
-    esbuildNameCompatInstalled.add(page);
-  }
-  await Promise.all(page.frames().map(async (frame) => frame.evaluate(ESBUILD_NAME_COMPAT_SCRIPT).catch(() => undefined)));
-}
 
 export function sanitizeTargetId(input: string): string {
   const value = input.trim();
@@ -94,6 +76,7 @@ async function createImplicitManagedSession(timeoutMs: number, browserMode: Mana
 
 export async function resolveSessionForAction(opts: {
   sessionHint?: string;
+  profileHint?: string;
   timeoutMs: number;
   targetIdHint?: string;
   allowImplicitNewSession?: boolean;
@@ -103,6 +86,28 @@ export async function resolveSessionForAction(opts: {
   sessionSource: SessionSource;
 }> {
   const targetIdHint = typeof opts.targetIdHint === "string" && opts.targetIdHint.length > 0 ? sanitizeTargetId(opts.targetIdHint) : null;
+
+  if (typeof opts.profileHint === "string" && opts.profileHint.trim().length > 0) {
+    if (typeof opts.sessionHint === "string" && opts.sessionHint.trim().length > 0) {
+      throw new CliError("E_QUERY_INVALID", "Use either --session or --profile (not both)");
+    }
+    if (targetIdHint) {
+      throw new CliError("E_QUERY_INVALID", "--profile is not allowed when targetId implies a session mapping");
+    }
+    const ensured = await ensureProfileManagedSession({
+      profileInput: opts.profileHint,
+      timeoutMs: opts.timeoutMs,
+      browserMode: opts.browserMode,
+    });
+    await mutateState(async (state) => {
+      state.sessions[ensured.session.sessionId] = ensured.session;
+      state.activeSessionId = ensured.session.sessionId;
+    });
+    return {
+      session: ensured.session,
+      sessionSource: "explicit",
+    };
+  }
 
   const resolveExplicitSession = async (sessionId: string): Promise<{
     session: SessionState;
@@ -228,7 +233,6 @@ export async function resolveTargetHandle(
   if (!target) {
     throw new CliError("E_TARGET_NOT_FOUND", `Target ${targetId} not found in session`);
   }
-  await ensureEvaluateNameCompat(target.page);
   return target;
 }
 

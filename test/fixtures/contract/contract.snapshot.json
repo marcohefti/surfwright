@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:3f192ade0ab13cfe480815c421b5a5bfb3d93c341888ebd8144476bca6ced7fd",
+  "contractFingerprint": "sha256:40694aa197fd32304a2669a6022928d52b8ee2b26b51bb60420cfd71778f533c",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -47,12 +47,12 @@
     },
     {
       "id": "open",
-      "usage": "surfwright open <url> [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
+      "usage": "surfwright open <url> [--profile <name>] [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]",
       "summary": "open URL and return minimal page report with target handle"
     },
     {
       "id": "run",
-      "usage": "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "usage": "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--profile <name>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
       "summary": "execute, lint, record, or replay deterministic multi-step browser plans"
     },
     {
@@ -374,6 +374,16 @@
       "id": "update.run",
       "usage": "surfwright update run [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--dry-run] [--json] [--pretty]",
       "summary": "apply CLI update via authoritative update pipeline with doctor verification"
+    },
+    {
+      "id": "workspace.info",
+      "usage": "surfwright workspace info [--json] [--pretty]",
+      "summary": "show resolved project workspace (./.surfwright) for reusable profiles"
+    },
+    {
+      "id": "workspace.init",
+      "usage": "surfwright workspace init [--json] [--pretty]",
+      "summary": "create a project workspace (./.surfwright) with gitignored profile storage"
     }
   ],
   "errors": [
@@ -419,6 +429,14 @@
     },
     {
       "code": "E_INTERNAL",
+      "retryable": true
+    },
+    {
+      "code": "E_PROFILE_INVALID",
+      "retryable": false
+    },
+    {
+      "code": "E_PROFILE_LOCKED",
       "retryable": true
     },
     {
@@ -528,6 +546,14 @@
     {
       "code": "E_WAIT_TIMEOUT",
       "retryable": true
+    },
+    {
+      "code": "E_WORKSPACE_INVALID",
+      "retryable": false
+    },
+    {
+      "code": "E_WORKSPACE_NOT_FOUND",
+      "retryable": false
     }
   ]
 }

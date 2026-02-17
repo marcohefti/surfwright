@@ -214,6 +214,7 @@ export async function startManagedSession(
     userDataDir: string;
     browserMode?: ManagedBrowserMode;
     policy?: SessionPolicy;
+    profile?: string | null;
     createdAt?: string;
   },
   timeoutMs: number,
@@ -265,6 +266,7 @@ export async function startManagedSession(
       cdpOrigin: started.cdpOrigin,
       debugPort: started.debugPort,
       userDataDir: opts.userDataDir,
+      profile: typeof opts.profile === "string" && opts.profile.trim().length > 0 ? opts.profile.trim() : null,
       browserPid: started.browserPid,
       ownerId: currentAgentId(),
       leaseExpiresAt: null,
@@ -301,6 +303,7 @@ export async function ensureSessionReachable(
           userDataDir,
           browserMode: desiredMode,
           policy: session.policy,
+          profile: session.profile,
           createdAt: session.createdAt,
         },
         timeoutMs,
@@ -334,6 +337,7 @@ export async function ensureSessionReachable(
         userDataDir,
         browserMode: session.kind === "managed" && session.browserMode !== "unknown" ? session.browserMode : undefined,
         policy: session.policy,
+        profile: session.profile,
         createdAt: session.createdAt,
       },
       timeoutMs,

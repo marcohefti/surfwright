@@ -35,7 +35,7 @@ function parseArgs(argv) {
     if (token === "-h" || token === "--help") {
       process.stdout.write(
         [
-          "Usage: node scripts/contract-snapshot.mjs [--check|--update] [--snapshot <path>]",
+          "Usage: node scripts/checks/contract-snapshot.mjs [--check|--update] [--snapshot <path>]",
           "",
           "Checks or updates the contract snapshot generated from dist/cli.js --json contract.",
         ].join("\n") + "\n",
@@ -149,7 +149,7 @@ function main() {
 
   if (stableJson(expected) !== stableJson(normalized)) {
     process.stderr.write(`contract snapshot mismatch (${summarizeDiff(expected, normalized)})\n`);
-    process.stderr.write(`run: node scripts/contract-snapshot.mjs --update --snapshot ${opts.snapshotPath}\n`);
+    process.stderr.write(`run: node scripts/checks/contract-snapshot.mjs --update --snapshot ${opts.snapshotPath}\n`);
     process.exit(1);
   }
 

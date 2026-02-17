@@ -5,17 +5,16 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { DEFAULT_TARGET_READ_CHUNK_SIZE } from "../../types.js";
 import { providers } from "../../providers/index.js";
-import { frameScopeHints, framesForScope, parseFrameScope } from "./target-find.js";
-import { ensureValidSelector, normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import { frameScopeHints, parseFrameScope } from "./target-find.js";
+import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "./cdp/index.js";
+import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { TargetReadReport } from "../../types.js";
 const READ_MAX_CHUNK_SIZE = 10000;
 const READ_MAX_CHUNK_INDEX = 100000;
 const FORM_FILL_MAX_FIELDS = 80;
 const FORM_FILL_MAX_JSON_CHARS = 50_000;
 const FORM_FILL_MAX_FILE_BYTES = 64 * 1024;
-
 type FormFieldValue = string | number | boolean | null | Array<string | number | boolean | null>;
-
 type TargetFormFillReport = {
   ok: true;
   sessionId: string;
@@ -44,7 +43,6 @@ function parseChunkSize(value: number | undefined): number {
   }
   return chunkSize;
 }
-
 function parseChunkIndex(value: number | undefined): number {
   const chunkIndex = value ?? 1;
   if (!Number.isFinite(chunkIndex) || !Number.isInteger(chunkIndex) || chunkIndex <= 0 || chunkIndex > READ_MAX_CHUNK_INDEX) {
@@ -52,19 +50,16 @@ function parseChunkIndex(value: number | undefined): number {
   }
   return chunkIndex;
 }
-
 function parseFormFieldValue(value: unknown): FormFieldValue {
   if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
     return value;
   }
-
   if (Array.isArray(value)) {
     if (value.some((entry) => entry !== null && !["string", "number", "boolean"].includes(typeof entry))) {
       throw new CliError("E_QUERY_INVALID", "form-fill values in arrays must be scalar (string|number|boolean|null)");
     }
     return value as Array<string | number | boolean | null>;
   }
-
   throw new CliError("E_QUERY_INVALID", "form-fill values must be scalar or scalar arrays");
 }
 
@@ -316,31 +311,36 @@ export async function targetRead(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
-    const frames = framesForScope(target.page, frameScope);
+    const cdp = await openCdpSession(target.page);
+    const frameTree = await getCdpFrameTree(cdp);
+    const frameListing = listCdpFrameEntries({ frameTree, limit: 1 });
+    const frameIds = frameIdsForScope({ frameTree, scope: frameScope });
     const hints = frameScopeHints({
       frameScope,
-      frameCount: target.page.frames().length,
+      frameCount: frameListing.count,
       command: "target.read",
       targetId: requestedTargetId,
     });
+    const worldCache = new Map<string, number>();
     if (selectorQuery) {
-      if (frameScope === "main") {
-        await ensureValidSelector(target.page, selectorQuery);
-      } else {
-        for (const frame of frames) {
-          try {
-            await frame.locator(selectorQuery).count();
-          } catch {
-            throw new CliError("E_SELECTOR_INVALID", `Invalid selector query: ${selectorQuery}`);
-          }
-        }
-      }
+      // Selector validity is syntax-only; validate once in main frame to keep behavior deterministic.
+      await ensureValidSelectorSyntaxCdp({
+        cdp,
+        frameCdpId: frameTree.frame.id,
+        worldCache,
+        selectorQuery,
+      });
     }
     const frameTexts: string[] = [];
     let scopeMatched = false;
-    for (const frame of frames) {
+    for (const frameCdpId of frameIds) {
+      const evaluator = createCdpEvaluator({
+        cdp,
+        frameCdpId,
+        worldCache,
+      });
       const scopedText = await extractScopedText({
-        evaluator: frame,
+        evaluator,
         selectorQuery,
         visibleOnly,
       });

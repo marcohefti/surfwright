@@ -23,6 +23,7 @@ export async function runPipeline(opts: {
   replayPath?: string;
   timeoutMs: number;
   sessionId?: string;
+  profile?: string;
   browserModeInput?: string;
   isolation?: string;
   doctor?: boolean;
@@ -233,18 +234,32 @@ export async function runPipeline(opts: {
     throw new CliError("E_QUERY_INVALID", `plan lint failed: ${lintErrors[0].path} ${lintErrors[0].message}`);
   }
 
-  const resolvedSessionId = await resolvePipelineSessionId({
-    sessionId: opts.sessionId,
-    isolation: opts.isolation,
-    timeoutMs: opts.timeoutMs,
-    ensureSharedSession: opts.ensureSharedSession,
-    ensureImplicitSession: async ({ timeoutMs }) =>
-      await resolveSessionForAction({
-        timeoutMs,
-        allowImplicitNewSession: true,
-        browserMode: desiredBrowserMode ?? undefined,
-      }),
-  });
+  if (typeof opts.profile === "string" && opts.profile.trim().length > 0 && typeof opts.sessionId === "string" && opts.sessionId.trim().length > 0) {
+    throw new CliError("E_QUERY_INVALID", "Use either --session or --profile (not both)");
+  }
+
+  const resolvedSessionId =
+    typeof opts.profile === "string" && opts.profile.trim().length > 0
+      ? (
+          await resolveSessionForAction({
+            profileHint: opts.profile,
+            timeoutMs: opts.timeoutMs,
+            allowImplicitNewSession: false,
+            browserMode: desiredBrowserMode ?? undefined,
+          })
+        ).session.sessionId
+      : await resolvePipelineSessionId({
+          sessionId: opts.sessionId,
+          isolation: opts.isolation,
+          timeoutMs: opts.timeoutMs,
+          ensureSharedSession: opts.ensureSharedSession,
+          ensureImplicitSession: async ({ timeoutMs }) =>
+            await resolveSessionForAction({
+              timeoutMs,
+              allowImplicitNewSession: true,
+              browserMode: desiredBrowserMode ?? undefined,
+            }),
+        });
 
   if (!opts.doctor && typeof resolvedSessionId === "string" && resolvedSessionId.length > 0 && desiredBrowserMode) {
     await resolveSessionForAction({

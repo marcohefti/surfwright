@@ -11,7 +11,7 @@ Use this workflow when you hit a bug in SurfWright behavior (CLI output, typed f
 
 ## Step 0: Reproduce With Evidence
 
-1. Reproduce the bug via the CLI with `--json`.
+1. Reproduce the bug via the CLI (JSON output is default).
 2. Capture the smallest command sequence and the exact typed failure (`code`, first-line `message`).
 3. If the repro depends on a live page, first attempt to reduce it to a deterministic `data:` page. If you cannot, keep the live repro as a secondary sanity check, not as your only test.
 
@@ -19,7 +19,7 @@ Recommended: run with a fresh state namespace to avoid stale handle mapping:
 
 ```bash
 SURFWRIGHT_STATE_DIR=$(mktemp -d /tmp/surfwright-bug-XXXXXX) \
-  surfwright --json open https://example.com
+  surfwright open https://example.com
 ```
 
 ## Step 1: Pick The Right Test Lane
@@ -97,4 +97,3 @@ pnpm -s test:browser
 
 - If behavior is user-visible, update `CHANGELOG.md` (`[Unreleased]`) and any relevant usage docs.
 - If you changed maintainer workflow, update `docs/agent-dev-flow.md` and/or `docs/maintaining-agent-surface.md`.
-

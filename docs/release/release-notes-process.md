@@ -46,4 +46,4 @@
 - `pnpm validate`: pass/fail
 - `pnpm test`: pass/fail
 - `pnpm skill:validate`: pass/fail
-- `surfwright --json contract`: captured
+- `surfwright contract`: captured

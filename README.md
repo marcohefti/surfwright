@@ -110,10 +110,10 @@ pnpm skill:install
 |---|---|
 | npm canonical | `npm i -g @marcohefti/surfwright` |
 | npm guard/discoverability | `npm i -g surfwright` |
-| one-off canonical | `npx -y @marcohefti/surfwright@latest --json contract` |
-| one-off guard | `npx -y surfwright@latest --json contract` |
-| pnpm dlx canonical | `pnpm dlx @marcohefti/surfwright@latest --json contract` |
-| pnpm dlx guard | `pnpm dlx surfwright@latest --json contract` |
+| one-off canonical | `npx -y @marcohefti/surfwright@latest contract` |
+| one-off guard | `npx -y surfwright@latest contract` |
+| pnpm dlx canonical | `pnpm dlx @marcohefti/surfwright@latest contract` |
+| pnpm dlx guard | `pnpm dlx surfwright@latest contract` |
 | Homebrew tap | `brew tap marcohefti/homebrew-tap && brew install surfwright` |
 
 Homebrew upgrade path:
@@ -128,49 +128,49 @@ Deferred distribution channels and enablement checklists are tracked in `docs/re
 ## Commands (Current)
 
 ```bash
-surfwright doctor [--json] [--pretty]
-surfwright contract [--json] [--pretty]
-surfwright session ensure [--browser-mode <headless|headed>] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session new [--session-id <id>] [--browser-mode <headless|headed>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session fresh [--session-id <id>] [--browser-mode <headless|headed>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session attach --cdp <origin> [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session use <sessionId> [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session list [--json] [--pretty]
-surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session clear [--keep-processes] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright session cookie-copy --from-session <id> --to-session <id> --url <url> [--url <url> ...] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright open <url> [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright update check [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--json] [--pretty]
-surfwright update run [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--dry-run] [--json] [--pretty]
-surfwright update rollback [--package <name>] [--dry-run] [--json] [--pretty]
-surfwright skill install [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]
-surfwright skill doctor [--dest <path>] [--lock <path>] [--json] [--pretty]
-surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--json] [--pretty]
-surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target frames <targetId> [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target snapshot <targetId> [--mode <snapshot|orient>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target url-assert <targetId> [--host <host>] [--origin <origin>] [--path-prefix <prefix>] [--url-prefix <prefix>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--session <id>]
-surfwright target health <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target hud <targetId> [--timeout-ms <ms>] [--fields <csv>] [--json] [--pretty] [--session <id>]
-surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--session <id>]
-surfwright target network-query [--capture-id <id> | --artifact-id <id>] [--preset <name>] [--limit <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--json] [--pretty]
-surfwright target network-begin <targetId> [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--include-headers] [--include-post-data] [--no-ws-messages] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target network-end <captureId> [--profile <preset>] [--view <mode>] [--fields <csv>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--timeout-ms <ms>] [--json] [--pretty]
-surfwright target network-export <targetId> --out <path> [--action-id <id>] [--format har] [--profile <preset>] [--capture-ms <ms>] [--max-requests <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target network-export-list [--limit <n>] [--json] [--pretty]
-surfwright target network-export-prune [--max-age-hours <h>] [--max-count <n>] [--max-total-mb <n>] [--keep-files] [--json] [--pretty]
-surfwright target network-check [targetId] --budget <path> [--capture-id <id>] [--artifact-id <id>] [--profile <preset>] [--capture-ms <ms>] [--fail-on-violation] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]
-surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--json] [--pretty]
-surfwright state reconcile [--timeout-ms <ms>] [--max-age-hours <h>] [--max-per-session <n>] [--drop-managed-unreachable] [--json] [--pretty]
+surfwright doctor [--no-json] [--pretty]
+surfwright contract [--no-json] [--pretty]
+surfwright session ensure [--browser-mode <headless|headed>] [--timeout-ms <ms>] [--no-json] [--pretty]
+surfwright session new [--session-id <id>] [--browser-mode <headless|headed>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--no-json] [--pretty]
+surfwright session fresh [--session-id <id>] [--browser-mode <headless|headed>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--no-json] [--pretty]
+surfwright session attach --cdp <origin> [--session-id <id>] [--policy <policy>] [--lease-ttl-ms <ms>] [--timeout-ms <ms>] [--no-json] [--pretty]
+surfwright session use <sessionId> [--timeout-ms <ms>] [--no-json] [--pretty]
+surfwright session list [--no-json] [--pretty]
+surfwright session prune [--drop-managed-unreachable] [--timeout-ms <ms>] [--no-json] [--pretty]
+surfwright session clear [--keep-processes] [--timeout-ms <ms>] [--no-json] [--pretty]
+surfwright session cookie-copy --from-session <id> --to-session <id> --url <url> [--url <url> ...] [--timeout-ms <ms>] [--no-json] [--pretty]
+surfwright open <url> [--reuse-url] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright update check [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--no-json] [--pretty]
+surfwright update run [--package <name>] [--channel <stable|beta|dev>] [--policy <manual|pinned|safe-patch>] [--pinned-version <x.y.z>] [--check-on-start <true|false>] [--dry-run] [--no-json] [--pretty]
+surfwright update rollback [--package <name>] [--dry-run] [--no-json] [--pretty]
+surfwright skill install [--source <path>] [--dest <path>] [--lock <path>] [--no-json] [--pretty]
+surfwright skill doctor [--dest <path>] [--lock <path>] [--no-json] [--pretty]
+surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--no-json] [--pretty]
+surfwright target list [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target frames <targetId> [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target snapshot <targetId> [--mode <snapshot|orient>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target click <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target read <targetId> [--selector <query>] [--visible-only] [--frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target url-assert <targetId> [--host <host>] [--origin <origin>] [--path-prefix <prefix>] [--url-prefix <prefix>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright target health <targetId> [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target hud <targetId> [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]
+surfwright target network <targetId> [--action-id <id>] [--profile <preset>] [--view <mode>] [--fields <csv>] [--capture-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--include-headers] [--include-post-data] [--no-ws-messages] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright target network-tail <targetId> [--action-id <id>] [--profile <preset>] [--capture-ms <ms>] [--max-ws-messages <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright target network-query [--capture-id <id> | --artifact-id <id>] [--preset <name>] [--limit <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--no-json] [--pretty]
+surfwright target network-begin <targetId> [--action-id <id>] [--profile <preset>] [--max-runtime-ms <ms>] [--max-requests <n>] [--max-websockets <n>] [--max-ws-messages <n>] [--include-headers] [--include-post-data] [--no-ws-messages] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright target network-end <captureId> [--profile <preset>] [--view <mode>] [--fields <csv>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--timeout-ms <ms>] [--no-json] [--pretty]
+surfwright target network-export <targetId> --out <path> [--action-id <id>] [--format har] [--profile <preset>] [--capture-ms <ms>] [--max-requests <n>] [--url-contains <text>] [--method <verb>] [--resource-type <type>] [--status <code|class>] [--failed-only] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright target network-export-list [--limit <n>] [--no-json] [--pretty]
+surfwright target network-export-prune [--max-age-hours <h>] [--max-count <n>] [--max-total-mb <n>] [--keep-files] [--no-json] [--pretty]
+surfwright target network-check [targetId] --budget <path> [--capture-id <id>] [--artifact-id <id>] [--profile <preset>] [--capture-ms <ms>] [--fail-on-violation] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]
+surfwright target prune [--max-age-hours <h>] [--max-per-session <n>] [--no-json] [--pretty]
+surfwright state reconcile [--timeout-ms <ms>] [--max-age-hours <h>] [--max-per-session <n>] [--drop-managed-unreachable] [--no-json] [--pretty]
 ```
 
 Default command execution uses a local daemon path for lower warm-start overhead.
@@ -180,43 +180,43 @@ Use `--agent-id <id>` (or `SURFWRIGHT_AGENT_ID`) to isolate state+daemon scope p
 Machine-readable runtime contract:
 
 ```bash
-surfwright --json contract
+surfwright contract
 ```
 
 Default workflow for agent loops:
 
 ```bash
-surfwright --json open https://example.com
-surfwright --json target frames <targetId>
-surfwright --json target snapshot <targetId>
-surfwright --json target find <targetId> --selector a --contains "Checkout" --first --visible-only
-surfwright --json target click <targetId> --text "Blog" --visible-only
-surfwright --json target read <targetId> --selector main --frame-scope main --chunk-size 1200 --chunk 1
-surfwright --json target extract <targetId> --kind blog --frame-scope all --limit 10
-surfwright --json target eval <targetId> --expr "console.log('hello from agent'), document.title" --capture-console
-surfwright --json target wait <targetId> --for-selector "h1"
-surfwright --json target url-assert <targetId> --host example.com --path-prefix /
+surfwright open https://example.com
+surfwright target frames <targetId>
+surfwright target snapshot <targetId>
+surfwright target find <targetId> --selector a --contains "Checkout" --first --visible-only
+surfwright target click <targetId> --text "Blog" --visible-only
+surfwright target read <targetId> --selector main --frame-scope main --chunk-size 1200 --chunk 1
+surfwright target extract <targetId> --kind blog --frame-scope all --limit 10
+surfwright target eval <targetId> --expr "console.log('hello from agent'), document.title" --capture-console
+surfwright target wait <targetId> --for-selector "h1"
+surfwright target url-assert <targetId> --host example.com --path-prefix /
 surfwright target console-tail <targetId> --capture-ms 2000 --levels error,warn
-surfwright --json target health <targetId>
-surfwright --json target hud <targetId>
-surfwright --json target network <targetId> --profile perf --view summary
+surfwright target health <targetId>
+surfwright target hud <targetId>
+surfwright target network <targetId> --profile perf --view summary
 surfwright target network-tail <targetId> --profile api --capture-ms 3000
-surfwright --json target network-query --capture-id <captureId> --preset slowest --limit 10
-surfwright --json target network <targetId> --view table --fields id,method,status,durationMs,url
-surfwright --json target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
-surfwright --json target network-end <captureId> --view summary --status 5xx
-surfwright --json target network-export <targetId> --profile page --reload --capture-ms 3000 --out ./artifacts/capture.har
-surfwright --json target network-export-list --limit 20
-surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
-surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
+surfwright target network-query --capture-id <captureId> --preset slowest --limit 10
+surfwright target network <targetId> --view table --fields id,method,status,durationMs,url
+surfwright target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
+surfwright target network-end <captureId> --view summary --status 5xx
+surfwright target network-export <targetId> --profile page --reload --capture-ms 3000 --out ./artifacts/capture.har
+surfwright target network-export-list --limit 20
+surfwright target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
+surfwright target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
 ```
 
 Plan UX examples:
 
 ```bash
-surfwright --json run --doctor --plan-json '{"steps":[{"id":"open","url":"https://example.com"},{"id":"snapshot"}]}'
-surfwright --json run --plan ./plan.json --record --record-label smoke
-surfwright --json run --replay ~/.surfwright/runs/2026-02-13Z-smoke-abc123.json
+surfwright run --doctor --plan-json '{"steps":[{"id":"open","url":"https://example.com"},{"id":"snapshot"}]}'
+surfwright run --plan ./plan.json --record --record-label smoke
+surfwright run --replay ~/.surfwright/runs/2026-02-13Z-smoke-abc123.json
 ```
 
 Session selection defaults:
@@ -236,20 +236,20 @@ Headless vs headed (managed sessions):
 Human login handoff (GitHub example):
 
 ```bash
-surfwright --json session new --session-id s-login --browser-mode headed
-surfwright --json --session s-login open https://github.com/login
+surfwright session new --session-id s-login --browser-mode headed
+surfwright --session s-login open https://github.com/login
 
 # Human: finish login in the headed browser window, then continue the agent loop.
-surfwright --json target snapshot <targetId>
+surfwright target snapshot <targetId>
 ```
 
 State hygiene workflow for stale local metadata:
 
 ```bash
-surfwright --json session prune
-surfwright --json session clear
-surfwright --json target prune --max-age-hours 168 --max-per-session 200
-surfwright --json state reconcile
+surfwright session prune
+surfwright session clear
+surfwright target prune --max-age-hours 168 --max-per-session 200
+surfwright state reconcile
 ```
 
 - `session prune` removes unreachable attached sessions and repairs stale managed `browserPid`.
@@ -345,7 +345,7 @@ Errors are typed and short:
 {"ok":false,"code":"E_URL_INVALID","message":"URL must be absolute (e.g. https://example.com)"}
 ```
 
-`--json` is compact by default (one line for easy piping). Add `--pretty` only when a human needs multiline output.
+Output is JSON by default and compact (one line for easy piping). Add `--pretty` only when a human needs multiline output. Use `--no-json` for human-friendly summaries.
 
 Sessions are tracked in state with an explicit active pointer:
 
@@ -356,14 +356,14 @@ Sessions are tracked in state with an explicit active pointer:
 Project workspaces are separate from state. A workspace stores reusable browser profiles for authenticated flows under `./.surfwright/` (gitignored by `workspace init`):
 
 ```bash
-surfwright --json workspace init
-surfwright --json open https://github.com/login --profile auth --browser-mode headed
+surfwright workspace init
+surfwright open https://github.com/login --profile auth --browser-mode headed
 ```
 
 Future runs (even from a different agent) can reuse the same logged-in state:
 
 ```bash
-surfwright --json open https://github.com --profile auth
+surfwright open https://github.com --profile auth
 ```
 
 Workspace override:
@@ -383,7 +383,7 @@ Guardrail: SurfWright never auto-attaches to arbitrary running browsers. Attachi
 
 If the endpoint is slow to answer `/json/version`, increase attach reachability window with `--timeout-ms <ms>`.
 
-Contract ids are executable aliases. Example: `surfwright --json target.find <targetId> --text Checkout`.
+Contract ids are executable aliases. Example: `surfwright target.find <targetId> --text Checkout`.
 
 ## Update Behavior
 
@@ -431,7 +431,7 @@ Lock file:
 - Maintenance checklist: `docs/maintaining-agent-surface.md`
 - Release/update policy source of truth: `docs/release-governance.md`
 - Contributor release/doc routing: `docs/contributor-release-routing.md`
-- Update lifecycle details: `docs/update-lifecycle.md`
+- Update lifecycle details: `docs/lifecycle/update-lifecycle.md`
 - Skill lifecycle details: `docs/skills-lifecycle.md`
 - Zero-context evaluation workflow (ZCL is external): `docs/zerocontext-lab.md`
 - Installable runtime skill: `skills/surfwright/SKILL.md`

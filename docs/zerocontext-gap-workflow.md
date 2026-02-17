@@ -49,7 +49,7 @@ Hard kill is acceptable for CI guardrails, but not for command-design discovery.
 
 Browser actions must use `surfwright` directly.
 
-- acceptable: `surfwright --json open https://example.com`
+- acceptable: `surfwright open https://example.com`
 - not acceptable for discovery evidence: bypassing the traced SurfWright surface for browser actions
 
 If mission actions bypass the traced binary, mark run invalid for discovery scoring.

@@ -33,7 +33,7 @@ Agent self-reports are secondary.
 
 Runs are valid only if browser actions are executed via the traced SurfWright CLI (`surfwright`).
 
-- valid: `surfwright --json ...`
+- valid: `surfwright ...` (JSON output is default)
 - invalid for discovery evidence: bypassing the traced SurfWright surface for browser actions (wrapper stacks that hide calls, direct Playwright scripts, etc.)
 
 If browser actions bypass tracing, the tool-call trace may be incomplete and the run should be marked invalid for discovery scoring.

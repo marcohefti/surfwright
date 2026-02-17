@@ -33,8 +33,7 @@ Deep dives follow a consistent structure:
 - Change routing: `docs/agent-dev-flow.md`
 - Maintainer workflow: `docs/maintaining-agent-surface.md`
 - Release governance: `docs/release-governance.md`
-- Update lifecycle: `docs/update-lifecycle.md`
+- Update lifecycle: `docs/lifecycle/update-lifecycle.md`
 - Skill lifecycle: `docs/skills-lifecycle.md`
 - Fixture ingress workflow: `docs/fixture-ingress-workflow.md`
 - ZeroContext workflows: `docs/zerocontext-lab.md`, `docs/zerocontext-gap-workflow.md`
-

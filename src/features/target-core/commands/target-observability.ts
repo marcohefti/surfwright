@@ -31,8 +31,8 @@ export const targetConsoleGetCommandSpec: TargetCommandSpec = {
         [
           "",
           "Examples:",
-          "  surfwright --json target console-get <targetId> --contains CONSOLE_SENTINEL_EXAMPLE",
-          "  surfwright --json --session s-1 target console-get <targetId> --reload --capture-ms 1200 --levels error,warn",
+          "  surfwright target console-get <targetId> --contains CONSOLE_SENTINEL_EXAMPLE",
+          "  surfwright --session s-1 target console-get <targetId> --reload --capture-ms 1200 --levels error,warn",
         ].join("\n"),
       )
       .action(
@@ -149,8 +149,8 @@ export const targetHealthCommandSpec: TargetCommandSpec = {
         [
           "",
           "Examples:",
-          "  surfwright --json target health <targetId>",
-          "  surfwright --json target health <targetId> --fields readyState,metrics,hints",
+          "  surfwright target health <targetId>",
+          "  surfwright target health <targetId> --fields readyState,metrics,hints",
         ].join("\n"),
       )
       .action(async (targetId: string, options: { timeoutMs: number; fields?: string }) => {

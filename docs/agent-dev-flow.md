@@ -25,7 +25,7 @@ For feature work, refactors, and optimizations, default to an evidence-first loo
 4. If behavior is involved, inspect current runtime contract:
 
 ```bash
-surfwright --json contract
+surfwright contract
 ```
 
 ## Change Classification
@@ -92,7 +92,7 @@ If fewer than two are true, prefer documentation over new script surface.
 ### Behavior-affecting change
 
 1. Update code.
-2. Update `surfwright --json contract` producer if user-facing behavior changed.
+2. Update `surfwright contract` producer if user-facing behavior changed.
 3. Update tests.
 4. Update skill references used by runtime agents.
 5. Update `README.md` examples if user-visible flows changed.
@@ -102,7 +102,7 @@ If fewer than two are true, prefer documentation over new script surface.
 
 When fixing a bug or regression, default to the TDD workflow:
 
-1. Reproduce with `surfwright --json` and capture the smallest failing command sequence.
+1. Reproduce with `surfwright` (JSON output is default) and capture the smallest failing command sequence.
 2. Add a failing test in the smallest lane that can guard the regression:
    - hermetic `test/*.contract.test.mjs` when possible
    - otherwise `test/browser/**/*.browser.mjs` (prefer deterministic `data:` pages)
@@ -144,9 +144,9 @@ pnpm contract:snapshot:check
 For release confidence, also run:
 
 ```bash
-surfwright --json contract
-surfwright --json open https://example.com
-surfwright --json target snapshot <targetId>
+surfwright contract
+surfwright open https://example.com
+surfwright target snapshot <targetId>
 ```
 
 ## Drift Policy

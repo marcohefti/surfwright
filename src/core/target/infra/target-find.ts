@@ -48,7 +48,7 @@ export function frameScopeHints(opts: {
   }
   return [
     `Multiple frames detected (${opts.frameCount}). Using main frame only by default.`,
-    `To include embedded frames, rerun: surfwright --json ${opts.command} ${opts.targetId} --frame-scope all`,
+    `To include embedded frames, rerun: surfwright ${opts.command} ${opts.targetId} --frame-scope all`,
   ];
 }
 

@@ -4,7 +4,7 @@ export const expEffectsCommandManifest: CliCommandContract[] = [
   {
     id: "exp.effects",
     usage:
-      "surfwright exp effects <targetId> [--profile <preset>] [--include-declared] [--timeout-ms <ms>] [--json] [--pretty] [--session <id>]",
+      "surfwright exp effects <targetId> [--profile <preset>] [--include-declared] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]",
     summary: "experimental scaffold for effect observation and coverage reporting",
   },
 ];

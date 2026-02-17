@@ -354,9 +354,9 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
       [
         "",
         "Examples:",
-        "  surfwright --json run --doctor --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"snapshot\"}]}'",
-        "  surfwright --json run --plan ./plan.json --record --record-label smoke",
-        "  surfwright --json run --replay ~/.surfwright/runs/<artifact>.json",
+        "  surfwright run --doctor --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"snapshot\"}]}'",
+        "  surfwright run --plan ./plan.json --record --record-label smoke",
+        "  surfwright run --replay ~/.surfwright/runs/<artifact>.json",
       ].join("\n"),
     )
     .action(

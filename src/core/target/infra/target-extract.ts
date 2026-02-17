@@ -250,9 +250,9 @@ export async function targetExtract(opts: {
 
     if (merged.length === 0) {
       hints.push(`No structured items found for kind=${kind}.`);
-      hints.push(`Try: surfwright --json target extract ${requestedTargetId} --kind blog --frame-scope all --limit 10`);
-      hints.push(`Try: surfwright --json target snapshot ${requestedTargetId} --frame-scope all --max-headings 30 --max-links 50`);
-      hints.push(`Try: surfwright --json target health ${requestedTargetId}`);
+      hints.push(`Try: surfwright target extract ${requestedTargetId} --kind blog --frame-scope all --limit 10`);
+      hints.push(`Try: surfwright target snapshot ${requestedTargetId} --frame-scope all --max-headings 30 --max-links 50`);
+      hints.push(`Try: surfwright target health ${requestedTargetId}`);
     }
 
     const actionCompletedAt = Date.now();

@@ -7,7 +7,8 @@ SurfWright is both an operator CLI and an agent-driven automation surface. The C
 ## Design Goals
 
 - Keep the user-visible CLI contract stable:
-  - `--json` means stdout is JSON only.
+  - JSON output is the default, and is stdout-only.
+  - use `--no-json` for human-friendly summaries.
   - failures are typed (`code` + `message`) without stack traces by default.
 - Make the “common case” fast by default via daemon proxying.
 - Preserve low-latency streaming for tail-style commands by bypassing the daemon.
@@ -84,4 +85,3 @@ SurfWright is both an operator CLI and an agent-driven automation surface. The C
   - oversized frames are rejected without wedging (`test/daemon.contract.test.mjs`)
 - Dot alias routing stays truthful:
   - dot aliases route to registered commands and contract ids match Commander help traversal (`test/dot-alias.contract.test.mjs`)
-

@@ -3,22 +3,22 @@ import type { CliCommandContract } from "../../core/types.js";
 export const extensionCommandManifest: CliCommandContract[] = [
   {
     id: "extension.load",
-    usage: "surfwright extension load <path> [--json] [--pretty] [--session <id>]",
+    usage: "surfwright extension load <path> [--no-json] [--pretty] [--session <id>]",
     summary: "register unpacked extension metadata with typed headless capability/fallback info",
   },
   {
     id: "extension.list",
-    usage: "surfwright extension list [--json] [--pretty]",
+    usage: "surfwright extension list [--no-json] [--pretty]",
     summary: "list registered extension metadata",
   },
   {
     id: "extension.reload",
-    usage: "surfwright extension reload <extensionRef> [--fail-if-missing] [--json] [--pretty] [--session <id>]",
+    usage: "surfwright extension reload <extensionRef> [--fail-if-missing] [--no-json] [--pretty] [--session <id>]",
     summary: "mark a registered extension as reloaded and enabled (idempotent when missing)",
   },
   {
     id: "extension.uninstall",
-    usage: "surfwright extension uninstall <extensionRef> [--fail-if-missing] [--json] [--pretty] [--session <id>]",
+    usage: "surfwright extension uninstall <extensionRef> [--fail-if-missing] [--no-json] [--pretty] [--session <id>]",
     summary: "remove a registered extension entry (idempotent when missing)",
   },
 ];

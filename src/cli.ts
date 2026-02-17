@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { toCliFailure } from "./core/errors.js";
 import {
   cleanupOwnedDaemonMeta,
@@ -208,7 +208,7 @@ function rewriteDotCommandAlias(argv: string[]): string[] {
       continue;
     }
 
-    if (token === "--json" || token === "--pretty") {
+    if (token === "--json" || token === "--no-json" || token === "--pretty") {
       commandIndex += 1;
       continue;
     }
@@ -260,7 +260,7 @@ function parseCommandPath(argv: string[]): string[] {
       index += workspaceSpan;
       continue;
     }
-    if (token === "--json" || token === "--pretty") {
+    if (token === "--json" || token === "--no-json" || token === "--pretty") {
       index += 1;
       continue;
     }
@@ -318,16 +318,15 @@ function createProgram(): Command {
   function globalOutputOpts(): OutputOpts {
     const globalOpts = program.opts<{ json?: boolean; pretty?: boolean }>();
     return {
-      json: Boolean(globalOpts.json),
+      // JSON is the default. `--no-json` opts into human summaries.
+      json: globalOpts.json !== false,
       pretty: Boolean(globalOpts.pretty),
     };
   }
-
   function handleFailure(error: unknown, opts: OutputOpts) {
     printFailure(toCliFailure(error), opts);
     process.exitCode = 1;
   }
-
   program
     .name("surfwright")
     .description(
@@ -337,13 +336,14 @@ function createProgram(): Command {
       ].join(" "),
     )
     .version(readPackageVersion(), "-v, --version")
-    .option("--json", "Machine-readable output (where supported)", false)
+    // Back-compat: older scripts/agents pass `--json`. Output is JSON by default now, so keep this flag as a no-op.
+    .addOption(new Option("--json", "Force JSON output (default)").hideHelp())
+    .option("--no-json", "Disable JSON output (human-friendly summaries)")
     .option("--pretty", "Pretty-print JSON output", false)
     .option("--agent-id <agentId>", "Agent scope id for isolated state/daemon namespace")
     .option("--workspace <dir>", "Workspace directory override for reusable profiles (default: auto-discover ./.surfwright)")
     .option("--session <sessionId>", "Use a specific session for this command")
     .exitOverride();
-
   registerFeaturePlugins({
     program,
     parseTimeoutMs,

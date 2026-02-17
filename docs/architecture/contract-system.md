@@ -33,10 +33,10 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
 - Contract report + fingerprint:
   - `src/core/cli-contract.ts`
     - `computeContractFingerprint()`: SHA-256 over normalized command ids/usage/summary + error codes
-    - `getCliContractReport(version)`: the payload behind `surfwright --json contract`
+    - `getCliContractReport(version)`: the payload behind `surfwright contract`
 - Snapshot gate (CI / validation):
   - `scripts/checks/contract-snapshot.mjs`
-    - executes `dist/cli.js --json contract`
+    - executes `dist/cli.js --json contract` (explicit, though JSON is the default)
     - normalizes/sorts and compares against `test/fixtures/contract/contract.snapshot.json`
 - Contract truth tests:
   - `test/commands.contract.test.mjs` (fixtures for expected ids and usage fragments)
@@ -52,7 +52,7 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
    - `src/features/registry.ts` flattens all manifests into `allCommandManifest`.
    - `src/core/cli-contract.ts` builds the contract report and fingerprint using `allCommandManifest`.
 3. Emit contract:
-   - `surfwright --json contract` returns the report from `getCliContractReport(...)`.
+   - `surfwright contract` returns the report from `getCliContractReport(...)`.
 4. Enforce in CI:
    - `pnpm -s build` produces `dist/cli.js`.
    - `pnpm -s contract:snapshot:check` runs `scripts/checks/contract-snapshot.mjs --check`.

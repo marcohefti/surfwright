@@ -57,9 +57,9 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
         [
           "",
           "Examples:",
-          "  surfwright --json target extract <targetId> --kind blog --limit 5",
-          "  surfwright --json target extract <targetId> --kind blog --frame-scope all --limit 10",
-          "  surfwright --json target extract <targetId> --kind news --selector main --visible-only",
+          "  surfwright target extract <targetId> --kind blog --limit 5",
+          "  surfwright target extract <targetId> --kind blog --frame-scope all --limit 10",
+          "  surfwright target extract <targetId> --kind news --selector main --visible-only",
         ].join("\n"),
       )
       .action(
@@ -123,8 +123,8 @@ export const targetFormFillCommandSpec: TargetCommandSpec = {
         [
           "",
           "Examples:",
-          "  surfwright --json target form-fill <targetId> --field '#email=agent@example.com' --field '#password=s3cret'",
-          "  surfwright --json target form-fill <targetId> --fields-json '{\"#email\":\"agent@example.com\",\"#agree\":true}'",
+          "  surfwright target form-fill <targetId> --field '#email=agent@example.com' --field '#password=s3cret'",
+          "  surfwright target form-fill <targetId> --fields-json '{\"#email\":\"agent@example.com\",\"#agree\":true}'",
         ].join("\n"),
       )
       .action(

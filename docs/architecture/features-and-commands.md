@@ -47,7 +47,7 @@ SurfWright needs a growing command surface without turning the CLI into a monoli
 ## Invariants / Guardrails
 
 - Manifests are authoritative:
-  - if a command exists in Commander, it must exist in the manifest and therefore in `--json contract` (truth-pinned by `test/dot-alias.contract.test.mjs`).
+  - if a command exists in Commander, it must exist in the manifest and therefore in `contract` output (truth-pinned by `test/dot-alias.contract.test.mjs`).
 - Feature stability is explicit:
   - experimental features live in `experimentalFeaturePlugins` and are aggregated into the contract separately in fixtures (`test/fixtures/contract/commands.experimental.json` is checked by `test/commands.contract.test.mjs`).
 - Features are isolated:
@@ -58,11 +58,10 @@ SurfWright needs a growing command surface without turning the CLI into a monoli
 
 ## Observability
 
-- `surfwright --json contract` is the canonical machine-readable view of the command surface.
+- `surfwright contract` is the canonical machine-readable view of the command surface.
 - Contract fixtures and truth tests provide quick signal when registration/manifests drift.
 
 ## Testing Expectations
 
 - Contract fixtures cover stable vs experimental surfaces (`test/commands.contract.test.mjs`).
 - Help traversal vs contract ids stays consistent (`test/dot-alias.contract.test.mjs`).
-

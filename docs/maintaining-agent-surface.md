@@ -29,7 +29,7 @@ Notes:
 - `pnpm validate` is the main gate. It runs policy, docs, perf budgets, contract snapshot checks, and knowledge-store drift checks.
 - Browser-dependent contract tests live under `test/browser/` and are not part of `pnpm test`. Run `pnpm test:browser` locally when changing browser-executing commands.
 - For a fast operator-surface sanity pass across core browser commands, run `pnpm smoke` (deterministic `data:` pages + minimal network probes).
-- If `surfwright --json contract` changes intentionally, update the snapshot (`pnpm contract:snapshot:update`) and keep skill pins aligned (`skills/surfwright/skill.json` and `skills/surfwright.lock.json`).
+- If `surfwright contract` changes intentionally, update the snapshot (`pnpm contract:snapshot:update`) and keep skill pins aligned (`skills/surfwright/skill.json` and `skills/surfwright.lock.json`).
 
 ## 3) Install/update local skill
 
@@ -65,20 +65,20 @@ Undo:
 1. Contract shape check:
 
 ```bash
-surfwright --json contract
+surfwright contract
 ```
 
 2. Core runtime loop:
 
 ```bash
-surfwright --json open https://example.com
-surfwright --json target snapshot <targetId>
+surfwright open https://example.com
+surfwright target snapshot <targetId>
 ```
 
 3. Typed failure check:
 
 ```bash
-surfwright --json open not-a-url
+surfwright open not-a-url
 ```
 
 Expect non-zero exit and `{"ok":false,"code":...}` payload.
@@ -101,7 +101,7 @@ When real-world behavior reveals a new edge case, add a deterministic ingress fi
 When a workstation restarts or browser processes are interrupted, run a maintenance pass before blaming command behavior:
 
 ```bash
-surfwright --json state reconcile
+surfwright state reconcile
 ```
 
 This combines:
@@ -112,7 +112,7 @@ This combines:
 For explicit teardown, use:
 
 ```bash
-surfwright --json session clear
+surfwright session clear
 ```
 
 - default behavior clears sessions/targets and shuts down associated browser processes

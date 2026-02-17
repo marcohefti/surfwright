@@ -46,7 +46,7 @@ surfwright --json contract
 - Changing release/publish/update policy:
   update `docs/release-governance.md` and route contributor instructions via `docs/contributor-release-routing.md`.
 - Changing update command behavior:
-  update `docs/update-lifecycle.md` plus `README.md` update section.
+  update `docs/lifecycle/update-lifecycle.md` plus `README.md` update section.
 - Changing skill compatibility/update flow:
   update `docs/skills-lifecycle.md`, `skills/surfwright/skill.json`, and `skills/surfwright.lock.json`.
 

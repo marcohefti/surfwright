@@ -3,8 +3,8 @@
 ## 1) Bootstrap and introspect surface
 
 ```bash
-surfwright --json contract
-surfwright --json doctor
+surfwright contract
+surfwright doctor
 ```
 
 Use `contract` output as source-of-truth for command ids, usage strings, and known error codes.
@@ -12,42 +12,42 @@ Use `contract` output as source-of-truth for command ids, usage strings, and kno
 ## 2) Default navigation loop
 
 ```bash
-surfwright --json open https://example.com
-surfwright --json target snapshot <targetId>
-surfwright --json target find <targetId> --selector a --contains "query" --first --visible-only
-surfwright --json target click <targetId> --text "query" --visible-only
-surfwright --json target click-at <targetId> --x 120 --y 80
-surfwright --json target fill <targetId> --selector "#email" --value "agent@example.com"
-surfwright --json target form-fill <targetId> --field "#email=agent@example.com" --field "#agree=true"
-surfwright --json target upload <targetId> --selector "input[type=file]" --file ./assets/avatar.png
-surfwright --json target keypress <targetId> --key Enter --selector "input[name=search]"
-surfwright --json target drag-drop <targetId> --from "#card-a" --to "#column-done"
-surfwright --json target spawn <targetId> --selector "a[target=_blank]"
-surfwright --json target close <targetId>
-surfwright --json target dialog <targetId> --action accept --trigger-selector "#delete"
-surfwright --json target emulate <targetId> --width 390 --height 844 --color-scheme dark --touch --device-scale-factor 2
-surfwright --json target screenshot <targetId> --out ./artifacts/page.png --full-page
-surfwright --json target console-get <targetId> --contains "CONSOLE_SENTINEL_EXAMPLE" --capture-ms 1200
-surfwright --json target read <targetId> --selector main --chunk-size 1200 --chunk 1
-surfwright --json target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
-surfwright --json target wait <targetId> --for-selector "h1"
-surfwright --json target network <targetId> --profile perf --view summary
-surfwright --json target network-tail <targetId> --profile api --capture-ms 3000 --max-events 200
-surfwright --json target network-query --capture-id <captureId> --preset slowest --limit 10
-surfwright --json target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
-surfwright --json target network-end <captureId> --view summary --status 5xx
-surfwright --json target trace begin <targetId> --profile perf --max-runtime-ms 300000
-surfwright --json target trace export --trace-id <traceId> --out ./artifacts/trace.json.gz --format json.gz
-surfwright --json target trace insight <targetId> --capture-ms 2000
-surfwright --json target network-export <targetId> --profile page --reload --capture-ms 3000 --out ./artifacts/capture.har
-surfwright --json target network-export-list --limit 20
-surfwright --json target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
-surfwright --json target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
-surfwright --json extension load ./assets/extensions/minimal-extension
-surfwright --json extension list
-surfwright --json extension reload "Minimal Example Extension"
-surfwright --json extension uninstall "Minimal Example Extension"
-surfwright --json extension uninstall "missing-extension" --fail-if-missing
+surfwright open https://example.com
+surfwright target snapshot <targetId>
+surfwright target find <targetId> --selector a --contains "query" --first --visible-only
+surfwright target click <targetId> --text "query" --visible-only
+surfwright target click-at <targetId> --x 120 --y 80
+surfwright target fill <targetId> --selector "#email" --value "agent@example.com"
+surfwright target form-fill <targetId> --field "#email=agent@example.com" --field "#agree=true"
+surfwright target upload <targetId> --selector "input[type=file]" --file ./assets/avatar.png
+surfwright target keypress <targetId> --key Enter --selector "input[name=search]"
+surfwright target drag-drop <targetId> --from "#card-a" --to "#column-done"
+surfwright target spawn <targetId> --selector "a[target=_blank]"
+surfwright target close <targetId>
+surfwright target dialog <targetId> --action accept --trigger-selector "#delete"
+surfwright target emulate <targetId> --width 390 --height 844 --color-scheme dark --touch --device-scale-factor 2
+surfwright target screenshot <targetId> --out ./artifacts/page.png --full-page
+surfwright target console-get <targetId> --contains "CONSOLE_SENTINEL_EXAMPLE" --capture-ms 1200
+surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1
+surfwright target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
+surfwright target wait <targetId> --for-selector "h1"
+surfwright target network <targetId> --profile perf --view summary
+surfwright target network-tail <targetId> --profile api --capture-ms 3000 --max-events 200
+surfwright target network-query --capture-id <captureId> --preset slowest --limit 10
+surfwright target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
+surfwright target network-end <captureId> --view summary --status 5xx
+surfwright target trace begin <targetId> --profile perf --max-runtime-ms 300000
+surfwright target trace export --trace-id <traceId> --out ./artifacts/trace.json.gz --format json.gz
+surfwright target trace insight <targetId> --capture-ms 2000
+surfwright target network-export <targetId> --profile page --reload --capture-ms 3000 --out ./artifacts/capture.har
+surfwright target network-export-list --limit 20
+surfwright target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
+surfwright target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
+surfwright extension load ./assets/extensions/minimal-extension
+surfwright extension list
+surfwright extension reload "Minimal Example Extension"
+surfwright extension uninstall "Minimal Example Extension"
+surfwright extension uninstall "missing-extension" --fail-if-missing
 ```
 
 - `open` without `--session` creates a new isolated ephemeral session and returns `sessionId`, `sessionSource`, and `targetId`.
@@ -88,21 +88,21 @@ surfwright --json extension uninstall "missing-extension" --fail-if-missing
 Create and pin a named managed session:
 
 ```bash
-surfwright --json session new --session-id s-checkout
-surfwright --json --session s-checkout open https://example.com
+surfwright session new --session-id s-checkout
+surfwright --session s-checkout open https://example.com
 ```
 
 Create a fresh ephemeral managed session in one command:
 
 ```bash
-surfwright --json session fresh
+surfwright session fresh
 ```
 
 Attach to external Chrome endpoint:
 
 ```bash
-surfwright --json session attach --cdp http://127.0.0.1:9222 --session-id a-login
-surfwright --json session use a-login
+surfwright session attach --cdp http://127.0.0.1:9222 --session-id a-login
+surfwright session use a-login
 ```
 
 If `/json/version` is slow to respond on your endpoint, add `--timeout-ms <ms>` to `session attach`.
@@ -110,13 +110,13 @@ If `/json/version` is slow to respond on your endpoint, add `--timeout-ms <ms>` 
 List known sessions:
 
 ```bash
-surfwright --json session list
+surfwright session list
 ```
 
 Copy scoped auth cookies from one explicit session to another:
 
 ```bash
-surfwright --json session cookie-copy --from-session a-login --to-session s-checkout --url https://dashboard.stripe.com --url https://access.stripe.com
+surfwright session cookie-copy --from-session a-login --to-session s-checkout --url https://dashboard.stripe.com --url https://access.stripe.com
 ```
 
 - `session cookie-copy` reads cookies visible for each provided `--url` from the source session, imports them into the destination session, and returns bounded metadata (counts + sampled names/domains only).
@@ -127,7 +127,7 @@ surfwright --json session cookie-copy --from-session a-login --to-session s-chec
 - Always parse JSON from stdout.
 - Avoid `--pretty` in automated loops.
 - Treat non-zero process exit as failure and decode `code` from JSON.
-- Streaming tails (`target network-tail`, `target console-tail`) emit NDJSON lines to stdout; use `--json` to suppress the trailing human summary line.
+- Streaming tails (`target network-tail`, `target console-tail`) emit NDJSON lines to stdout; use `--no-json` only if you want a trailing human summary line.
 - Prefer `targetId` from `open` when taking snapshots; use `target list --session <id>` only when recovering from lost handles.
 - Contract ids are executable aliases: `target.find`, `target.click`, `session.ensure`, `state.reconcile`, etc.
 
@@ -136,14 +136,14 @@ surfwright --json session cookie-copy --from-session a-login --to-session s-chec
 Run this when the host restarts, Chrome dies unexpectedly, or `state.json` might contain stale entries:
 
 ```bash
-surfwright --json session prune
-surfwright --json target prune --max-age-hours 168 --max-per-session 200
+surfwright session prune
+surfwright target prune --max-age-hours 168 --max-per-session 200
 ```
 
 Single-command equivalent:
 
 ```bash
-surfwright --json state reconcile
+surfwright state reconcile
 ```
 
 - `session prune` removes unreachable attached sessions and repairs stale managed `browserPid`.
@@ -153,7 +153,7 @@ surfwright --json state reconcile
 For explicit teardown where you want all session state cleared and associated browsers closed:
 
 ```bash
-surfwright --json session clear
+surfwright session clear
 ```
 
 - default behavior attempts browser shutdown for every tracked session before clearing state

@@ -70,8 +70,8 @@ This workflow must pass release-check, parity checks, local dual-package smoke c
    - `npm deprecate @marcohefti/surfwright@<bad> "<message>"`
    - `npm deprecate surfwright@<bad> "<message>"`
 3. Smoke-check both names with contract output:
-   - `npx -y @marcohefti/surfwright@<good> --json contract`
-   - `npx -y surfwright@<good> --json contract`
+   - `npx -y @marcohefti/surfwright@<good> contract`
+   - `npx -y surfwright@<good> contract`
 4. Capture rollback metadata artifact from workflow execution.
 
 ## Deferred Distribution Backlog

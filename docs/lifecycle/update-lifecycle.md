@@ -6,7 +6,7 @@
 - `surfwright update run`
 - `surfwright update rollback`
 
-All commands support `--json` output for deterministic machine parsing.
+All commands output JSON by default for deterministic machine parsing. Use `--no-json` for human-friendly summaries.
 
 ## Channels and Dist-Tags
 

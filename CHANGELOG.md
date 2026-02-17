@@ -29,6 +29,7 @@ All notable changes to SurfWright are documented here.
 - [docs] `changelog-check` now enforces only the `Unreleased` skeleton buckets (with list items).
 - [contract] `session list` now includes `browserMode` per session row.
 - [contract] `open` and `session` JSON outputs now include `profile` when a workspace profile is in use.
+- [cli] JSON output is now the default for all commands; use `--no-json` for human-friendly summaries and `--pretty` for multiline JSON.
 - [docs] Documented headed/headless defaults and a minimal human login handoff recipe (README + skill).
 - [target] `target snapshot` now accepts `0` for `--max-chars`, `--max-headings`, `--max-buttons`, and `--max-links` to omit categories.
 

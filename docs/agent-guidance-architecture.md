@@ -19,7 +19,7 @@ To keep both fast and maintainable, we separate guidance into explicit layers wi
 
 - Architecture map (human): `ARCHITECTURE.md`
 - Deep dives (human): `docs/architecture.md`
-- Runtime contract (machine): `surfwright --json contract`
+- Runtime contract (machine): `surfwright contract`
 - Runtime behavior (verification): `test/*.contract.test.mjs` (core + feature suites)
 - Product/developer narrative (human): `README.md`, `AGENTS.md`, `docs/*.md`
 - Installed skill for active usage: `skills/surfwright/`
@@ -36,7 +36,7 @@ To keep both fast and maintainable, we separate guidance into explicit layers wi
 
 ## Design rules
 
-1. Command contracts are manifest-driven. Update feature command specs and derive `surfwright --json contract` from those specs.
+1. Command contracts are manifest-driven. Update feature command specs and derive `surfwright contract` from those specs.
 2. `src/cli.ts` is orchestration-only: global flags, worker mode, and feature registration. Command behavior belongs in feature packages.
 3. State upgrades are explicit and versioned in `src/core/state/domain/migrations.ts`; no implicit schema upgrades in ad-hoc call sites.
 4. Keep `skills/surfwright/SKILL.md` concise and procedural; push detail to `skills/surfwright/references/*`.
@@ -55,9 +55,9 @@ To keep both fast and maintainable, we separate guidance into explicit layers wi
 A runtime agent should be able to run exactly this sequence without reading repo internals:
 
 ```bash
-surfwright --json contract
-surfwright --json open https://example.com
-surfwright --json target snapshot <targetId>
+surfwright contract
+surfwright open https://example.com
+surfwright target snapshot <targetId>
 ```
 
 If this loop breaks, the agent surface is regressing.

@@ -5,19 +5,22 @@ All notable changes to SurfWright are documented here.
 ## [Unreleased]
 
 ### Added
-- None.
+- [target] Added `target extract --include-actionable` with per-item actionable metadata (`handle`, `selectorHint`, `frameId`, `href`) for deterministic extract-to-action chaining.
+- [target] Added `--wait-timeout-ms <ms>` to `target click` and `target wait` so wait-stage budgets are explicit and independent from command timeout.
 
 ### Changed
-- None.
+- [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
+- [target] `target wait` now includes a structured `wait` payload (`mode`, `value`, `timeoutMs`, `elapsedMs`, `satisfied`) while keeping existing top-level `mode`/`value`.
+- [errors] Typed failures can now include optional bounded `hints` and `hintContext` fields (additive; `code` + `message` contract preserved).
 
 ### Fixed
-- None.
+- [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
 
 ### Deprecated
 - None.
 
 ### Removed
-- None.
+- [docs] Removed campaign planning docs under `docs/campaigns/`.
 
 ## [0.1.2] - 2026-02-17
 

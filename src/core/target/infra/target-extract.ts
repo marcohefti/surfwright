@@ -34,16 +34,19 @@ async function extractFrameItems(opts: {
     evaluate<T, Arg>(pageFunction: (arg: Arg) => T, arg: Arg): Promise<T>;
   };
   frameUrl: string;
+  frameId: string;
   selectorQuery: string | null;
   visibleOnly: boolean;
   kind: TargetExtractReport["kind"];
   scanLimit: number;
+  includeActionable: boolean;
 }): Promise<{ frameUrl: string; matched: boolean; items: ExtractItemDraft[] }> {
   const frameUrl = opts.frameUrl;
   const payload = await opts.evaluator.evaluate(
-    ({ selectorQuery, visibleOnly, kind, scanLimit }) => {
+    ({ selectorQuery, visibleOnly, kind, scanLimit, includeActionable, frameId }) => {
       const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
       const doc = runtime.document;
+      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
       const isVisible = (node: any): boolean => {
         if (!node) {
           return false;
@@ -56,6 +59,22 @@ async function extractFrameItems(opts: {
           return false;
         }
         return (node.getClientRects?.().length ?? 0) > 0;
+      };
+      const selectorHintFor = (node: any): string | null => {
+        const el = node;
+        const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";
+        const classSuffix =
+          classListRaw.length > 0
+            ? classListRaw
+                .split(" ")
+                .filter((entry) => entry.length > 0)
+                .slice(0, 2)
+                .map((entry) => `.${entry}`)
+                .join("")
+            : "";
+        const tag = typeof el?.tagName === "string" ? el.tagName.toLowerCase() : "";
+        const id = typeof el?.id === "string" && el.id.length > 0 ? `#${el.id}` : "";
+        return tag.length > 0 ? `${tag}${id}${classSuffix}` : null;
       };
 
       const rootNode = selectorQuery ? doc?.querySelector?.(selectorQuery) ?? null : doc?.body ?? null;
@@ -70,12 +89,22 @@ async function extractFrameItems(opts: {
         news: "article,[role=\"article\"]",
         docs: "main a[href],nav a[href],article a[href]",
       };
-      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
       const primarySelector = primarySelectorByKind[kind];
       const primaryNodes: any[] = Array.from(rootNode.querySelectorAll?.(primarySelector) ?? []);
       const fallbackNodes: any[] = primaryNodes.length > 0 ? [] : Array.from(rootNode.querySelectorAll?.("a[href]") ?? []);
       const nodes: any[] = [...primaryNodes, ...fallbackNodes].slice(0, Math.max(scanLimit * 3, scanLimit));
-      const items: Array<{ title: string; url: string | null; summary: string | null; publishedAt: string | null }> = [];
+      const items: Array<{
+        title: string;
+        url: string | null;
+        summary: string | null;
+        publishedAt: string | null;
+        actionable?: {
+          handle: string | null;
+          selectorHint: string | null;
+          frameId: string | null;
+          href: string | null;
+        };
+      }> = [];
       for (const node of nodes) {
         if (visibleOnly && !isVisible(node)) {
           continue;
@@ -101,7 +130,15 @@ async function extractFrameItems(opts: {
         const summaryNode = node.querySelector?.("p");
         const summaryRaw = summaryNode?.textContent ?? null;
         const summary = typeof summaryRaw === "string" ? normalize(summaryRaw) || null : null;
-        items.push({ title, url: href, summary, publishedAt });
+        const actionable = includeActionable
+          ? {
+              handle: null,
+              selectorHint: selectorHintFor(link ?? node),
+              frameId,
+              href,
+            }
+          : undefined;
+        items.push({ title, url: href, summary, publishedAt, actionable });
       }
       return { matched: true, items };
     },
@@ -110,6 +147,8 @@ async function extractFrameItems(opts: {
       visibleOnly: opts.visibleOnly,
       kind: opts.kind,
       scanLimit: opts.scanLimit,
+      includeActionable: opts.includeActionable,
+      frameId: opts.frameId,
     },
   );
 
@@ -122,6 +161,7 @@ async function extractFrameItems(opts: {
       summary: item.summary,
       publishedAt: item.publishedAt,
       frameUrl,
+      actionable: item.actionable,
     })),
   };
 }
@@ -136,6 +176,7 @@ export async function targetExtract(opts: {
   visibleOnly?: boolean;
   frameScope?: string;
   limit?: number;
+  includeActionable?: boolean;
 }): Promise<TargetExtractReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -144,6 +185,7 @@ export async function targetExtract(opts: {
   const frameScope = parseFrameScope(opts.frameScope);
   const kind = parseKind(opts.kind);
   const limit = parseLimit(opts.limit);
+  const includeActionable = Boolean(opts.includeActionable);
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -206,6 +248,16 @@ export async function targetExtract(opts: {
         summary: item.summary,
         publishedAt: item.publishedAt,
         frameUrl: item.frameUrl,
+        ...(includeActionable
+          ? {
+              actionable: {
+                handle: item.actionable?.handle ?? null,
+                selectorHint: item.actionable?.selectorHint ?? null,
+                frameId: item.actionable?.frameId ?? null,
+                href: item.actionable?.href ?? url,
+              },
+            }
+          : {}),
       });
     };
 
@@ -218,10 +270,12 @@ export async function targetExtract(opts: {
       const extracted = await extractFrameItems({
         evaluator,
         frameUrl: urlByFrameId.get(frameCdpId) ?? pageUrl,
+        frameId: frameCdpId,
         selectorQuery,
         visibleOnly,
         kind,
         scanLimit: limit,
+        includeActionable,
       });
       scopeMatched = scopeMatched || extracted.matched;
       totalRawCount += extracted.items.length;

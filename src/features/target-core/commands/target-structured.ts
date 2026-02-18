@@ -47,6 +47,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
       .option("--kind <kind>", "Extraction profile: generic|blog|news|docs")
       .option("--selector <query>", "Scope extraction to a selector")
       .option("--visible-only", "Only include visible content")
+      .option("--include-actionable", "Include compact action refs on extracted items for deterministic chaining")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--limit <n>", "Maximum extracted items to return")
       .option("--timeout-ms <ms>", "Extraction timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
@@ -69,6 +70,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
             kind?: string;
             selector?: string;
             visibleOnly?: boolean;
+            includeActionable?: boolean;
             frameScope?: string;
             limit?: string;
             timeoutMs: number;
@@ -88,6 +90,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
               kind: options.kind,
               selectorQuery: options.selector,
               visibleOnly: Boolean(options.visibleOnly),
+              includeActionable: Boolean(options.includeActionable),
               frameScope: options.frameScope,
               limit,
               persistState: options.persist !== false,

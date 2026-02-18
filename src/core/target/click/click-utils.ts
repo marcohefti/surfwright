@@ -6,6 +6,95 @@ import type { TargetClickExplainReport } from "../../types.js";
 
 export const CLICK_EXPLAIN_MAX_REJECTED = 10;
 
+export function resolveWaitTimeoutMs(waitTimeoutMs: number | undefined, timeoutMs: number): number {
+  const value = typeof waitTimeoutMs === "number" ? waitTimeoutMs : timeoutMs;
+  if (!Number.isFinite(value) || !Number.isInteger(value) || value <= 0) {
+    throw new CliError("E_QUERY_INVALID", "wait-timeout-ms must be a positive integer");
+  }
+  return value;
+}
+
+export function waitTimeoutError(opts: {
+  mode: "text" | "selector" | "network-idle";
+  value: string | null;
+  timeoutMs: number;
+  queryMode: "text" | "selector" | "handle";
+  query: string;
+  visibleOnly: boolean;
+  frameScope: "main" | "all";
+}): CliError {
+  const waitLabel = opts.mode === "network-idle" ? "network idle" : `${opts.mode} visibility`;
+  const hints: string[] = [
+    `Wait mode ${waitLabel} exceeded wait-timeout-ms=${opts.timeoutMs}`,
+    "Retry with a smaller, explicit wait target or a larger --wait-timeout-ms budget",
+  ];
+  if (opts.frameScope === "main") {
+    hints.push("If content is inside an iframe, retry with --frame-scope all");
+  }
+  return new CliError("E_WAIT_TIMEOUT", "wait condition did not complete before timeout", {
+    hints,
+    hintContext: {
+      waitMode: opts.mode,
+      waitValue: opts.value,
+      waitTimeoutMs: opts.timeoutMs,
+      queryMode: opts.queryMode,
+      query: opts.query,
+      visibleOnly: opts.visibleOnly,
+      frameScope: opts.frameScope,
+    },
+  });
+}
+
+export function queryMismatchError(opts: {
+  message: string;
+  reason: "no_match" | "no_visible_match" | "index_out_of_range" | "not_visible_at_index" | "click_resolution_failed";
+  queryMode: "text" | "selector";
+  query: string;
+  visibleOnly: boolean;
+  frameScope: "main" | "all";
+  frameCount: number;
+  matchCount: number;
+  requestedIndex: number | null;
+}): CliError {
+  const hints: string[] = [];
+  if (opts.frameScope === "main" && opts.frameCount > 1) {
+    hints.push("Retry with --frame-scope all to include iframe content");
+  }
+  if (opts.reason === "no_visible_match" || opts.reason === "not_visible_at_index") {
+    hints.push("Retry without --visible-only to inspect hidden matches");
+  }
+  if (opts.reason === "index_out_of_range") {
+    hints.push("Use --explain or target find first to inspect matchCount before choosing --index");
+  }
+  if (opts.reason === "no_match" || opts.reason === "click_resolution_failed") {
+    hints.push("Retry with --explain to inspect candidate/rejection evidence");
+  }
+  return new CliError("E_QUERY_INVALID", opts.message, {
+    hints: hints.slice(0, 3),
+    hintContext: {
+      reason: opts.reason,
+      queryMode: opts.queryMode,
+      query: opts.query,
+      visibleOnly: opts.visibleOnly,
+      frameScope: opts.frameScope,
+      frameCount: opts.frameCount,
+      matchCount: opts.matchCount,
+      requestedIndex: opts.requestedIndex,
+    },
+  });
+}
+
+export async function pollUntil(opts: { timeoutMs: number; intervalMs: number; check: () => Promise<boolean> }): Promise<number> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < opts.timeoutMs) {
+    if (await opts.check()) {
+      return Date.now() - startedAt;
+    }
+    await new Promise((resolve) => setTimeout(resolve, opts.intervalMs));
+  }
+  throw new CliError("E_WAIT_TIMEOUT", "wait condition did not complete before timeout");
+}
+
 export function parseWaitAfterClick(opts: {
   waitForText?: string;
   waitForSelector?: string;

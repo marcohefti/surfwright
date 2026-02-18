@@ -36,6 +36,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--wait-for-text <text>", "After click, wait until text becomes visible")
       .option("--wait-for-selector <query>", "After click, wait until selector becomes visible")
       .option("--wait-network-idle", "After click, wait for network idle")
+      .option("--wait-timeout-ms <ms>", "Post-click wait timeout budget in milliseconds", ctx.parseTimeoutMs)
       .option("--snapshot", "Include compact post-click text preview")
       .option("--delta", "Include bounded evidence-based delta after click", false)
       .option("--timeout-ms <ms>", "Click timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
@@ -56,6 +57,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             waitForText?: string;
             waitForSelector?: string;
             waitNetworkIdle?: boolean;
+            waitTimeoutMs?: number;
             snapshot?: boolean;
             delta?: boolean;
             timeoutMs: number;
@@ -83,6 +85,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               waitForText: options.waitForText,
               waitForSelector: options.waitForSelector,
               waitNetworkIdle: Boolean(options.waitNetworkIdle),
+              waitTimeoutMs: options.waitTimeoutMs,
               snapshot: Boolean(options.snapshot),
               delta: Boolean(options.delta),
               persistState: options.persist !== false,

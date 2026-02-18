@@ -2,25 +2,13 @@ import type { CDPSession, Page } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import type { SessionSource, TargetClickDeltaEvidence, TargetClickReport } from "../../types.js";
-import { CliError } from "../../errors.js";
-import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, type CdpEvaluator, type CdpFrameTree } from "../infra/cdp/index.js";
+import { type CdpEvaluator, type CdpFrameTree } from "../infra/cdp/index.js";
 import { safePageTitle } from "../infra/utils/safe-page-title.js";
 import { parseBackendNodeHandle } from "../infra/utils/element-handle.js";
 import { cdpClickBackendNodeId, cdpDescribeBackendNode } from "./cdp-click-backend-node.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
 import { readPostSnapshot } from "./click-utils.js";
-import { cdpQueryOp } from "./cdp-query-op.js";
-
-async function pollUntil(opts: { timeoutMs: number; intervalMs: number; check: () => Promise<boolean> }): Promise<void> {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < opts.timeoutMs) {
-    if (await opts.check()) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, opts.intervalMs));
-  }
-  throw new CliError("E_WAIT_TIMEOUT", "wait condition did not complete before timeout");
-}
+import { waitAfterClickWithBudget } from "./click-wait.js";
 
 export async function targetClickByHandle(opts: {
   startedAt: number;
@@ -36,6 +24,7 @@ export async function targetClickByHandle(opts: {
   mainEvaluator: CdpEvaluator;
   handleQuery: string;
   timeoutMs: number;
+  waitTimeoutMs: number;
   waitAfter: { mode: "text" | "selector" | "network-idle"; value: string | null } | null;
   snapshot: boolean;
   includeDelta: boolean;
@@ -77,41 +66,18 @@ export async function targetClickByHandle(opts: {
       // Not all clicks trigger navigation; this is best-effort only.
     });
 
-  const waited =
-    opts.waitAfter === null
-      ? null
-      : opts.waitAfter.mode === "network-idle"
-        ? (await opts.page.waitForLoadState("networkidle", { timeout: opts.timeoutMs }).then(() => opts.waitAfter))
-        : await (async () => {
-            const waitValue = opts.waitAfter?.value ?? "";
-            if (opts.waitAfter?.mode === "selector") {
-              await ensureValidSelectorSyntaxCdp({
-                cdp: opts.cdp,
-                frameCdpId: opts.frameTree.frame.id,
-                worldCache: opts.worldCache,
-                selectorQuery: waitValue,
-              });
-              await pollUntil({
-                timeoutMs: opts.timeoutMs,
-                intervalMs: 200,
-                check: async () => {
-                  const evaluator = createCdpEvaluator({ cdp: opts.cdp, frameCdpId: opts.frameTree.frame.id, worldCache: opts.worldCache });
-                  return (await evaluator.evaluate(cdpQueryOp, { op: "wait-selector-visible", waitSelector: waitValue })) as boolean;
-                },
-              });
-              return opts.waitAfter;
-            }
-
-            await pollUntil({
-              timeoutMs: opts.timeoutMs,
-              intervalMs: 200,
-              check: async () => {
-                const evaluator = createCdpEvaluator({ cdp: opts.cdp, frameCdpId: opts.frameTree.frame.id, worldCache: opts.worldCache });
-                return (await evaluator.evaluate(cdpQueryOp, { op: "wait-text-visible", waitText: waitValue })) as boolean;
-              },
-            });
-            return opts.waitAfter;
-          })();
+  const waited = await waitAfterClickWithBudget({
+    waitAfter: opts.waitAfter,
+    waitTimeoutMs: opts.waitTimeoutMs,
+    page: opts.page,
+    cdp: opts.cdp,
+    frameTree: opts.frameTree,
+    worldCache: opts.worldCache,
+    queryMode: "handle",
+    query: opts.handleQuery,
+    visibleOnly: false,
+    frameScope: "main",
+  });
 
   const postSnapshot = opts.snapshot ? await readPostSnapshot(opts.mainEvaluator) : null;
   const deltaAfter = opts.includeDelta ? await captureClickDeltaState(opts.page, opts.mainEvaluator, opts.timeoutMs) : null;
@@ -182,4 +148,3 @@ export async function targetClickByHandle(opts: {
 
   return report;
 }
-

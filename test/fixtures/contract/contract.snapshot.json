@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:603c46851ec70989adb2dda743572593459e8fc84e37097cd8d7ff32cfb7108b",
+  "contractFingerprint": "sha256:2cee9bf9c786a5d6c59568518d9ee7d26088f92936c05c787e42c8ffd60041c0",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -122,7 +122,7 @@
     },
     {
       "id": "target.click",
-      "usage": "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "click the first matching element in a target"
     },
     {
@@ -177,7 +177,7 @@
     },
     {
       "id": "target.extract",
-      "usage": "surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--include-actionable] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "extract structured content records (blog/news/docs/generic) from a target"
     },
     {
@@ -377,7 +377,7 @@
     },
     {
       "id": "target.wait",
-      "usage": "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--frame-scope <scope>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--frame-scope <scope>] [--wait-timeout-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "wait for deterministic readiness condition on a target"
     },
     {

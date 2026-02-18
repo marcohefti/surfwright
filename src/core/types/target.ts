@@ -167,6 +167,9 @@ export type TargetClickReport = {
   wait: {
     mode: "text" | "selector" | "network-idle";
     value: string | null;
+    timeoutMs: number;
+    elapsedMs: number;
+    satisfied: boolean;
   } | null;
   snapshot: {
     textPreview: string;
@@ -341,6 +344,12 @@ export type TargetExtractReport = {
     summary: string | null;
     publishedAt: string | null;
     frameUrl: string;
+    actionable?: {
+      handle: string | null;
+      selectorHint: string | null;
+      frameId: string | null;
+      href: string | null;
+    };
   }>;
   truncated: boolean;
   hints: string[];
@@ -387,6 +396,13 @@ export type TargetWaitReport = {
   title: string;
   mode: "text" | "selector" | "network-idle";
   value: string | null;
+  wait: {
+    mode: "text" | "selector" | "network-idle";
+    value: string | null;
+    timeoutMs: number;
+    elapsedMs: number;
+    satisfied: boolean;
+  };
   timingMs: ActionTimingMs;
 };
 

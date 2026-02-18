@@ -130,8 +130,8 @@ surfwright target eval <targetId> --frame-id f-1 --expr "document.title"
 Structured content and readiness checks:
 
 ```bash
-surfwright target extract <targetId> --kind blog --limit 10
-surfwright target wait <targetId> --for-selector "h1"
+surfwright target extract <targetId> --kind blog --include-actionable --limit 10
+surfwright target wait <targetId> --for-selector "h1" --wait-timeout-ms 2500
 surfwright target url-assert <targetId> --host github.com --path-prefix /pricing
 surfwright target hover <targetId> --text "Pricing" --visible-only
 ```

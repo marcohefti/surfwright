@@ -14,23 +14,22 @@ import {
   openCdpSession,
 } from "../infra/cdp/index.js";
 import type { TargetClickDeltaEvidence, TargetClickExplainReport, TargetClickReport } from "../../types.js";
-import { CLICK_EXPLAIN_MAX_REJECTED, parseMatchIndex, parseWaitAfterClick, readPostSnapshot } from "./click-utils.js";
+import {
+  CLICK_EXPLAIN_MAX_REJECTED,
+  parseMatchIndex,
+  parseWaitAfterClick,
+  queryMismatchError,
+  readPostSnapshot,
+  resolveWaitTimeoutMs,
+} from "./click-utils.js";
 import { cdpQueryOp } from "./cdp-query-op.js";
 import { buildClickExplainReport } from "./click-explain.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
 import { safePageTitle } from "../infra/utils/safe-page-title.js";
 import { targetClickByHandle } from "./target-click-handle.js";
+import { waitAfterClickWithBudget } from "./click-wait.js";
 
-async function pollUntil(opts: { timeoutMs: number; intervalMs: number; check: () => Promise<boolean> }): Promise<void> {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < opts.timeoutMs) {
-    if (await opts.check()) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, opts.intervalMs));
-  }
-  throw new CliError("E_WAIT_TIMEOUT", "wait condition did not complete before timeout");
-}
+type ClickWaitResult = NonNullable<TargetClickReport["wait"]>;
 
 export async function targetClick(opts: {
   targetId: string;
@@ -48,6 +47,7 @@ export async function targetClick(opts: {
   waitForText?: string;
   waitForSelector?: string;
   waitNetworkIdle?: boolean;
+  waitTimeoutMs?: number;
   snapshot?: boolean;
   delta?: boolean;
 }): Promise<TargetClickReport | TargetClickExplainReport> {
@@ -71,6 +71,7 @@ export async function targetClick(opts: {
     waitForSelector: opts.waitForSelector,
     waitNetworkIdle: opts.waitNetworkIdle,
   });
+  const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
 
   if (hasHandle) {
     const hasText = typeof opts.textQuery === "string" && opts.textQuery.trim().length > 0;
@@ -146,6 +147,7 @@ export async function targetClick(opts: {
         mainEvaluator,
         handleQuery,
         timeoutMs: opts.timeoutMs,
+        waitTimeoutMs,
         waitAfter,
         snapshot: Boolean(opts.snapshot),
         includeDelta,
@@ -217,7 +219,17 @@ export async function targetClick(opts: {
         index: resolved.localIndex,
       }) as { ok: boolean; visible?: boolean; text?: string; selectorHint?: string | null };
       if (!payload.ok) {
-        throw new CliError("E_QUERY_INVALID", visibleOnly ? "No visible element matched click query" : "No element matched click query");
+        throw queryMismatchError({
+          message: visibleOnly ? "No visible element matched click query" : "No element matched click query",
+          reason: "click_resolution_failed",
+          queryMode,
+          query,
+          visibleOnly,
+          frameScope,
+          frameCount: perFrameCounts.length,
+          matchCount,
+          requestedIndex,
+        });
       }
       return { visible: Boolean(payload.visible), text: payload.text ?? "", selectorHint: payload.selectorHint ?? null };
     };
@@ -278,17 +290,47 @@ export async function targetClick(opts: {
 
     // Execute click.
     if (matchCount < 1) {
-      throw new CliError("E_QUERY_INVALID", visibleOnly ? "No visible element matched click query" : "No element matched click query");
+      throw queryMismatchError({
+        message: visibleOnly ? "No visible element matched click query" : "No element matched click query",
+        reason: visibleOnly ? "no_visible_match" : "no_match",
+        queryMode,
+        query,
+        visibleOnly,
+        frameScope,
+        frameCount: perFrameCounts.length,
+        matchCount,
+        requestedIndex,
+      });
     }
 
     let pickedIndex: number;
     if (requestedIndex !== null) {
       if (requestedIndex >= matchCount) {
-        throw new CliError("E_QUERY_INVALID", `index out of range: requested ${requestedIndex}, matchCount ${matchCount}`);
+        throw queryMismatchError({
+          message: `index out of range: requested ${requestedIndex}, matchCount ${matchCount}`,
+          reason: "index_out_of_range",
+          queryMode,
+          query,
+          visibleOnly,
+          frameScope,
+          frameCount: perFrameCounts.length,
+          matchCount,
+          requestedIndex,
+        });
       }
       const preview = await previewAt(requestedIndex);
       if (visibleOnly && !preview.visible) {
-        throw new CliError("E_QUERY_INVALID", `matched element at index ${requestedIndex} is not visible`);
+        throw queryMismatchError({
+          message: `matched element at index ${requestedIndex} is not visible`,
+          reason: "not_visible_at_index",
+          queryMode,
+          query,
+          visibleOnly,
+          frameScope,
+          frameCount: perFrameCounts.length,
+          matchCount,
+          requestedIndex,
+        });
       }
       pickedIndex = requestedIndex;
     } else if (!visibleOnly) {
@@ -304,7 +346,17 @@ export async function targetClick(opts: {
         offset += entry.rawCount;
       }
       if (found === null) {
-        throw new CliError("E_QUERY_INVALID", "No visible element matched click query");
+        throw queryMismatchError({
+          message: "No visible element matched click query",
+          reason: "no_visible_match",
+          queryMode,
+          query,
+          visibleOnly,
+          frameScope,
+          frameCount: perFrameCounts.length,
+          matchCount,
+          requestedIndex,
+        });
       }
       pickedIndex = found;
     }
@@ -322,41 +374,18 @@ export async function targetClick(opts: {
         // Not all clicks trigger navigation; this is best-effort only.
       });
 
-    const waited =
-      waitAfter === null
-        ? null
-        : waitAfter.mode === "network-idle"
-          ? (await target.page.waitForLoadState("networkidle", { timeout: opts.timeoutMs }).then(() => waitAfter))
-          : await (async () => {
-              const waitValue = waitAfter.value ?? "";
-              if (waitAfter.mode === "selector") {
-                await ensureValidSelectorSyntaxCdp({
-                  cdp,
-                  frameCdpId: frameTree.frame.id,
-                  worldCache,
-                  selectorQuery: waitValue,
-                });
-                await pollUntil({
-                  timeoutMs: opts.timeoutMs,
-                  intervalMs: 200,
-                  check: async () => {
-                    const evaluator = createCdpEvaluator({ cdp, frameCdpId: frameTree.frame.id, worldCache });
-                    return (await evaluator.evaluate(cdpQueryOp, { op: "wait-selector-visible", waitSelector: waitValue })) as boolean;
-                  },
-                });
-                return waitAfter;
-              }
-
-              await pollUntil({
-                timeoutMs: opts.timeoutMs,
-                intervalMs: 200,
-                check: async () => {
-                  const evaluator = createCdpEvaluator({ cdp, frameCdpId: frameTree.frame.id, worldCache });
-                  return (await evaluator.evaluate(cdpQueryOp, { op: "wait-text-visible", waitText: waitValue })) as boolean;
-                },
-              });
-              return waitAfter;
-            })();
+    const waited: ClickWaitResult | null = await waitAfterClickWithBudget({
+      waitAfter,
+      waitTimeoutMs,
+      page: target.page,
+      cdp,
+      frameTree,
+      worldCache,
+      queryMode,
+      query,
+      visibleOnly,
+      frameScope,
+    });
 
     const postSnapshot = opts.snapshot ? await readPostSnapshot(mainEvaluator) : null;
     const deltaAfter = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;

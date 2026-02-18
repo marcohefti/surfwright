@@ -8,6 +8,12 @@ export type ExtractItemDraft = {
   summary: string | null;
   publishedAt: string | null;
   frameUrl: string;
+  actionable?: {
+    handle: string | null;
+    selectorHint: string | null;
+    frameId: string | null;
+    href: string | null;
+  };
 };
 
 export function normalizeExtractWhitespace(value: string): string {

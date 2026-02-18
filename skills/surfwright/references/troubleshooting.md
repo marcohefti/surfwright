@@ -21,10 +21,12 @@ Likely causes:
 Fix path:
 
 ```bash
-surfwright target wait <targetId> --for-selector "<stable-selector>"
+surfwright target wait <targetId> --for-selector "<stable-selector>" --wait-timeout-ms 2500
 surfwright target snapshot <targetId> --mode orient --visible-only
 surfwright target click <targetId> --text "<label>" --visible-only --explain
 ```
+
+If failure payload includes `hints`/`hintContext`, prioritize those before retrying.
 
 ## 2) `E_TARGET_*` or session mismatch errors
 

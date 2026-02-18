@@ -39,7 +39,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.click",
     usage:
-      "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "click the first matching element in a target",
   },
   {
@@ -129,7 +129,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.extract",
     usage:
-      "surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--include-actionable] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "extract structured content records (blog/news/docs/generic) from a target",
   },
   {
@@ -195,7 +195,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.wait",
     usage:
-      "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--frame-scope <scope>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--frame-scope <scope>] [--wait-timeout-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "wait for deterministic readiness condition on a target",
   },
   {

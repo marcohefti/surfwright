@@ -230,6 +230,8 @@ export type CliFailure = {
   ok: false;
   code: string;
   message: string;
+  hints?: string[];
+  hintContext?: Record<string, string | number | boolean | null>;
 };
 export type { SessionState, TargetState, SurfwrightState } from "./types/state.js";
 export type CliCommandContract = {

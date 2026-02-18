@@ -49,6 +49,7 @@ function parseWaitInput(opts: {
 export async function targetWait(opts: {
   targetId: string;
   timeoutMs: number;
+  waitTimeoutMs?: number;
   sessionId?: string;
   persistState?: boolean;
   forText?: string;
@@ -64,6 +65,13 @@ export async function targetWait(opts: {
     networkIdle: opts.networkIdle,
   });
   const frameScope = parseFrameScope(opts.frameScope);
+  const waitTimeoutMs =
+    typeof opts.waitTimeoutMs === "number"
+      ? opts.waitTimeoutMs
+      : opts.timeoutMs;
+  if (!Number.isFinite(waitTimeoutMs) || !Number.isInteger(waitTimeoutMs) || waitTimeoutMs <= 0) {
+    throw new CliError("E_QUERY_INVALID", "wait-timeout-ms must be a positive integer");
+  }
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -82,6 +90,7 @@ export async function targetWait(opts: {
       throw new CliError("E_WAIT_TIMEOUT", "wait condition did not complete before timeout");
     };
 
+    const waitStartedAt = Date.now();
     if (parsed.mode === "text") {
       const cdp = await openCdpSession(target.page);
       const frameTree = await getCdpFrameTree(cdp);
@@ -89,7 +98,7 @@ export async function targetWait(opts: {
       const worldCache = new Map<string, number>();
       const needle = parsed.value ?? "";
       const started = Date.now();
-      while (Date.now() - started < opts.timeoutMs) {
+      while (Date.now() - started < waitTimeoutMs) {
         let matched = false;
         for (const frameCdpId of frameIds) {
           const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
@@ -111,7 +120,7 @@ export async function targetWait(opts: {
         }
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
-      if (Date.now() - started >= opts.timeoutMs) {
+      if (Date.now() - started >= waitTimeoutMs) {
         throwWaitTimeout();
       }
     } else if (parsed.mode === "selector") {
@@ -127,7 +136,7 @@ export async function targetWait(opts: {
         selectorQuery,
       });
       const started = Date.now();
-      while (Date.now() - started < opts.timeoutMs) {
+      while (Date.now() - started < waitTimeoutMs) {
         let matched = false;
         for (const frameCdpId of frameIds) {
           const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
@@ -151,13 +160,13 @@ export async function targetWait(opts: {
         }
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
-      if (Date.now() - started >= opts.timeoutMs) {
+      if (Date.now() - started >= waitTimeoutMs) {
         throwWaitTimeout();
       }
     } else {
       try {
         await target.page.waitForLoadState("networkidle", {
-          timeout: opts.timeoutMs,
+          timeout: waitTimeoutMs,
         });
       } catch (error) {
         if (error instanceof Error && /timeout/i.test(error.message)) {
@@ -166,6 +175,7 @@ export async function targetWait(opts: {
         throw error;
       }
     }
+    const waitElapsedMs = Date.now() - waitStartedAt;
     const actionCompletedAt = Date.now();
 
     const report: TargetWaitReport = {
@@ -177,6 +187,13 @@ export async function targetWait(opts: {
       title: await target.page.title(),
       mode: parsed.mode,
       value: parsed.value,
+      wait: {
+        mode: parsed.mode,
+        value: parsed.value,
+        timeoutMs: waitTimeoutMs,
+        elapsedMs: waitElapsedMs,
+        satisfied: true,
+      },
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,

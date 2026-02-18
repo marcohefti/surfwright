@@ -21,6 +21,12 @@ Expected failure shape:
 {"ok":false,"code":"E_URL_INVALID","message":"URL must be absolute (e.g. https://example.com)"}
 ```
 
+Some typed failures now include bounded hint metadata:
+
+```json
+{"ok":false,"code":"E_QUERY_INVALID","message":"No visible element matched click query","hints":["Retry with --frame-scope all"],"hintContext":{"frameCount":2,"matchCount":0}}
+```
+
 ## Retry Envelope
 
 - Attempts: `3`

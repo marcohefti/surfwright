@@ -1,5 +1,12 @@
 # SurfWright
 
+[![npm version](https://img.shields.io/npm/v/%40marcohefti/surfwright?style=flat-square)](https://www.npmjs.com/package/@marcohefti/surfwright)
+[![npm downloads](https://img.shields.io/npm/dt/%40marcohefti/surfwright?style=flat-square&label=npm%20downloads)](https://www.npmjs.com/package/@marcohefti/surfwright)
+[![unpacked size](https://img.shields.io/npm/unpacked-size/%40marcohefti/surfwright?style=flat-square)](https://www.npmjs.com/package/@marcohefti/surfwright)
+[![install size](https://img.shields.io/packagephobia/install/%40marcohefti/surfwright?style=flat-square)](https://packagephobia.com/result?p=@marcohefti/surfwright)
+[![node](https://img.shields.io/node/v/%40marcohefti/surfwright?style=flat-square)](https://www.npmjs.com/package/@marcohefti/surfwright)
+[![license](https://img.shields.io/github/license/marcohefti/surfwright?style=flat-square)](https://github.com/marcohefti/surfwright/blob/main/LICENSE)
+
 You do not need a bigger browser tool.
 You need a sharper one.
 

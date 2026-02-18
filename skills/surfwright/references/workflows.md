@@ -1,50 +1,232 @@
 # Workflows
 
-## 1) Bootstrap and introspect surface
+## Preflight contract and health
 
 ```bash
-surfwright contract
+surfwright --json contract
 surfwright doctor
 ```
 
-Use `contract` output as source-of-truth for command ids, usage strings, and known error codes.
+Use the live contract as authoritative command/flag/error truth.
 
-## 2) Default navigation loop
+## Handle recovery
 
 ```bash
-surfwright open https://example.com
-surfwright target snapshot <targetId>
-surfwright target find <targetId> --selector a --contains "query" --first --visible-only
-surfwright target click <targetId> --text "query" --visible-only
-surfwright target download <targetId> --text "Export CSV" --visible-only
-surfwright target click-at <targetId> --x 120 --y 80
+surfwright session list
+surfwright target list --session <sessionId>
+surfwright target health <targetId>
+```
+
+Use this when you lost `targetId`/`sessionId` in agent state.
+
+## Session lifecycle patterns
+
+Ensure/reuse default managed session:
+
+```bash
+surfwright session ensure
+```
+
+Create pinned or ephemeral sessions:
+
+```bash
+surfwright session new --session-id s-checkout
+surfwright session fresh
+```
+
+Attach external Chrome and switch active pointer:
+
+```bash
+surfwright session attach --cdp http://127.0.0.1:9222 --session-id a-login
+surfwright session use a-login
+```
+
+Copy scoped cookies between sessions:
+
+```bash
+surfwright session cookie-copy --from-session a-login --to-session s-checkout --url https://dashboard.stripe.com --url https://access.stripe.com
+```
+
+## Workspace profile auth and lock handling
+
+Initialize/check workspace:
+
+```bash
+surfwright workspace init
+surfwright workspace info
+```
+
+Persist project login with profile:
+
+```bash
+surfwright open https://github.com/login --profile auth --browser-mode headed
+surfwright open https://github.com --profile auth
+```
+
+Inspect and clear stale profile locks:
+
+```bash
+surfwright workspace profile-locks
+surfwright workspace profile-lock-clear auth
+surfwright workspace profile-lock-clear auth --force
+```
+
+## Robust targeting and click strategies
+
+Count first, then click deterministically:
+
+```bash
+surfwright target count <targetId> --text "Delete" --visible-only
+surfwright target click <targetId> --text "Delete" --visible-only --index 1
+```
+
+Explain why a match was rejected (no click executed):
+
+```bash
+surfwright target click <targetId> --text "Delete" --visible-only --explain
+```
+
+Use accessibility handle inventory for precise actions:
+
+```bash
+SNAP=$(surfwright target snapshot <targetId> --mode a11y --max-ax-rows 60)
+HANDLE=$(printf '%s' "$SNAP" | jq -r '.a11y.rows[] | select(.role=="link") | .handle' | head -n 1)
+surfwright target click <targetId> --handle "$HANDLE"
+```
+
+Diff before/after state with bounded signal:
+
+```bash
+surfwright target snapshot <targetId> > ./artifacts/snap-a.json
+surfwright target click <targetId> --text "Next" --visible-only
+surfwright target snapshot <targetId> > ./artifacts/snap-b.json
+surfwright target snapshot-diff ./artifacts/snap-a.json ./artifacts/snap-b.json
+```
+
+## Form/file/input actions
+
+```bash
 surfwright target fill <targetId> --selector "#email" --value "agent@example.com"
 surfwright target form-fill <targetId> --field "#email=agent@example.com" --field "#agree=true"
 surfwright target upload <targetId> --selector "input[type=file]" --file ./assets/avatar.png
 surfwright target keypress <targetId> --key Enter --selector "input[name=search]"
 surfwright target drag-drop <targetId> --from "#card-a" --to "#column-done"
+surfwright target dialog <targetId> --action accept --trigger-selector "#confirm"
+surfwright target click-at <targetId> --x 120 --y 80
 surfwright target spawn <targetId> --selector "a[target=_blank]"
 surfwright target close <targetId>
-surfwright target dialog <targetId> --action accept --trigger-selector "#delete"
 surfwright target emulate <targetId> --width 390 --height 844 --color-scheme dark --touch --device-scale-factor 2
-surfwright target screenshot <targetId> --out ./artifacts/page.png --full-page
-surfwright target console-get <targetId> --contains "CONSOLE_SENTINEL_EXAMPLE" --capture-ms 1200
-surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1
-surfwright target eval <targetId> --js "console.log('hello from agent'); return document.title" --capture-console
-surfwright target wait <targetId> --for-selector "h1" --frame-scope main
-surfwright target network <targetId> --profile perf --view summary
-surfwright target network-tail <targetId> --profile api --capture-ms 3000 --max-events 200
-surfwright target network-query --capture-id <captureId> --preset slowest --limit 10
+```
+
+## Read/extract/eval/wait flows
+
+Frame-aware introspection:
+
+```bash
+surfwright target frames <targetId>
+surfwright target eval <targetId> --frame-id f-1 --expr "document.title"
+```
+
+Structured content and readiness checks:
+
+```bash
+surfwright target extract <targetId> --kind blog --limit 10
+surfwright target wait <targetId> --for-selector "h1"
+surfwright target url-assert <targetId> --host github.com --path-prefix /pricing
+surfwright target hover <targetId> --text "Pricing" --visible-only
+```
+
+## Evidence capture (console/network/trace/artifacts)
+
+Console evidence:
+
+```bash
+surfwright target console-get <targetId> --capture-ms 1200 --levels error,warn
+surfwright target console-tail <targetId> --capture-ms 3000 --max-events 200 --levels error,warn
+```
+
+Network capture around one click:
+
+```bash
 surfwright target network-around <targetId> --click-text "Checkout" --profile api --view summary
-surfwright target network-begin <targetId> --action-id checkout-click --profile api --max-runtime-ms 600000
+```
+
+Manual begin/end capture:
+
+```bash
+surfwright target network-begin <targetId> --action-id checkout --profile api
+surfwright target click <targetId> --text "Checkout" --visible-only
 surfwright target network-end <captureId> --view summary --status 5xx
-surfwright target trace begin <targetId> --profile perf --max-runtime-ms 300000
-surfwright target trace export --trace-id <traceId> --out ./artifacts/trace.json.gz --format json.gz
-surfwright target trace insight <targetId> --capture-ms 2000
-surfwright target network-export <targetId> --profile page --reload --capture-ms 3000 --out ./artifacts/capture.har
+```
+
+Export/query/check:
+
+```bash
+surfwright target network-query --capture-id <captureId> --preset slowest --limit 10
+surfwright target network-export <targetId> --out ./artifacts/capture.har --profile page --capture-ms 3000
 surfwright target network-export-list --limit 20
 surfwright target network-export-prune --max-age-hours 72 --max-count 100 --max-total-mb 256
-surfwright target network-check <targetId> --budget ./budgets/network.json --profile perf --capture-ms 5000 --fail-on-violation
+surfwright target network-check <targetId> --budget ./budgets/network.json --capture-ms 5000 --fail-on-violation
+```
+
+Trace capture:
+
+```bash
+surfwright target trace begin <targetId> --action-id checkout --profile perf
+surfwright target trace export --trace-id <traceId> --out ./artifacts/trace.json.gz --format json.gz
+surfwright target trace insight <targetId> --capture-ms 2000
+```
+
+Page artifacts:
+
+```bash
+surfwright target screenshot <targetId> --out ./artifacts/page.png --full-page
+surfwright target download <targetId> --text "Export CSV" --visible-only
+```
+
+## Effects and motion diagnostics
+
+Observe one property over time:
+
+```bash
+surfwright target observe <targetId> --selector ".card" --property opacity --duration-ms 1200 --interval-ms 100
+surfwright target motion-detect <targetId> --selector ".toast" --property transform --duration-ms 1500
+```
+
+Scroll-based diagnostics:
+
+```bash
+surfwright target scroll-plan <targetId> --steps 0,300,600 --settle-ms 150
+surfwright target scroll-sample <targetId> --selector ".hero" --property opacity --steps 0,300,600
+surfwright target scroll-watch <targetId> --selector ".sticky-nav" --steps 0,200,400 --properties position,top
+surfwright target scroll-reveal-scan <targetId> --max-candidates 20 --steps 0,400,800
+surfwright target sticky-check <targetId> --selector ".sticky-nav" --steps 0,200,400,800
+```
+
+Transition diagnostics:
+
+```bash
+surfwright target transition-trace <targetId> --click-text "Open modal" --capture-ms 1500
+surfwright target transition-assert <targetId> --click-text "Open modal" --cycles 3 --capture-ms 1500
+```
+
+Experimental coverage scaffold:
+
+```bash
+surfwright exp effects <targetId> --profile default
+```
+
+## Plan runner and NDJSON logs
+
+```bash
+surfwright run --plan ./plan.json --log-ndjson ./artifacts/run.ndjson --log-mode full
+```
+
+For tails, consume NDJSON until the final capture-end event.
+
+## Extension lifecycle
+
+```bash
 surfwright extension load ./assets/extensions/minimal-extension
 surfwright extension list
 surfwright extension reload "Minimal Example Extension"
@@ -52,114 +234,44 @@ surfwright extension uninstall "Minimal Example Extension"
 surfwright extension uninstall "missing-extension" --fail-if-missing
 ```
 
-- `open` without `--session` creates a new isolated ephemeral session and returns `sessionId`, `sessionSource`, and `targetId`.
-- `open --isolation shared` reuses shared managed session behavior when you need continuity across independent runs.
-- `target *` without `--session` infers session from `targetId`; no active-session fallback is used.
-- `target list` requires `--session` if no target-based inference is possible.
-- `target snapshot` returns bounded text/headings/buttons/links for one explicit target.
-- Save two snapshot JSON payloads and use `target snapshot-diff <a> <b>` for high-signal "what changed?" diffs (links/buttons/text blocks + URL/title deltas).
-- `target find` checks match counts and returns bounded match metadata for one explicit query.
-- `target click` executes one explicit click action from text/selector query semantics.
-- `target download` captures a click-triggered download deterministically (saves the file and returns `sha256`/`size`/`filename`, plus best-effort headers/status evidence).
-- `target click-at` executes one explicit coordinate click (`--x`, `--y`) for canvas/overlay workflows.
-- `target fill` executes one explicit form-control fill from text/selector query semantics.
-- `target form-fill` applies multiple selector/value entries in one deterministic action (`--fields-json`, `--fields-file`, or repeated `--field`).
-- `target upload` supports direct file-input upload with deterministic filechooser fallback.
-- `target keypress` sends one key input to page or a focused matched element.
-- `target drag-drop` executes one selector-to-selector drag operation.
-- `target spawn` returns a child `targetId` from a click that opens a new page/tab.
-- `target close` closes an explicit target handle and returns typed closure confirmation.
-- `target dialog` accepts/dismisses dialogs and can trigger the dialog source in one command.
-- `target emulate` applies bounded viewport/device/UA/media emulation on an existing target.
-- `target screenshot` captures deterministic artifact metadata (`path`, bytes, hash, dimensions).
-- `target console-get` retrieves one structured console/pageerror/requestfailed event for tight assertion loops.
-- `target read` returns deterministic chunks for long text extraction.
-- `target eval` executes bounded JavaScript in page context and returns typed result projection.
-- `target wait` blocks until text/selector/network-idle readiness is met.
-- `target network` captures bounded request/websocket diagnostics with profiles, projections, hints, and insights.
-- `target network-tail` streams NDJSON events for live request/socket observation.
-- `target network-query` answers common diagnostics directly from saved capture/HAR sources.
-- `target network-around` captures network-begin + click + network-end in one stable payload.
-- `target network-begin` / `target network-end` gives action-scoped handle capture around workflows.
-- `target trace begin` / `target trace export` / `target trace insight` provide discoverable trace-first perf flows.
-- `target network-export --out <path>` writes a compact HAR artifact for deep offline inspection.
-- `target network-export-list` / `target network-export-prune` manage indexed artifacts with retention policies.
-- `target network-check` compares runtime metrics against explicit budget files.
-- `extension reload/uninstall` are idempotent by default (`missing:true` when absent); use `--fail-if-missing` for strict failures.
-- `extension.*` commands provide deterministic extension lifecycle registry actions with typed capability/fallback metadata.
-
-## 3) Explicit session lifecycle
-
-Create and pin a named managed session:
+## Skill lifecycle commands
 
 ```bash
-surfwright session new --session-id s-checkout
-surfwright --session s-checkout open https://example.com
+surfwright skill install
+surfwright skill doctor
+surfwright skill update
 ```
 
-Create a fresh ephemeral managed session in one command:
+Use this when validating local skill/runtime compatibility after contract changes.
+
+## Runtime update lifecycle
 
 ```bash
-surfwright session fresh
+surfwright update check
+surfwright update run --dry-run
+surfwright update rollback --dry-run
 ```
 
-Attach to external Chrome endpoint:
+Use non-dry-run only when operator policy allows runtime mutation.
 
-```bash
-surfwright session attach --cdp http://127.0.0.1:9222 --session-id a-login
-surfwright session use a-login
-```
+## State hygiene and teardown
 
-If `/json/version` is slow to respond on your endpoint, add `--timeout-ms <ms>` to `session attach`.
-
-List known sessions:
-
-```bash
-surfwright session list
-```
-
-Copy scoped auth cookies from one explicit session to another:
-
-```bash
-surfwright session cookie-copy --from-session a-login --to-session s-checkout --url https://dashboard.stripe.com --url https://access.stripe.com
-```
-
-- `session cookie-copy` reads cookies visible for each provided `--url` from the source session, imports them into the destination session, and returns bounded metadata (counts + sampled names/domains only).
-- Use multiple `--url` flags for multi-domain auth flows (for example dashboard + access subdomains).
-
-## 4) Output rules
-
-- Always parse JSON from stdout.
-- Avoid `--pretty` in automated loops.
-- Treat non-zero process exit as failure and decode `code` from JSON.
-- Streaming tails (`target network-tail`, `target console-tail`) emit NDJSON lines to stdout; use `--no-json` only if you want a trailing human summary line.
-- Prefer `targetId` from `open` when taking snapshots; use `target list --session <id>` only when recovering from lost handles.
-- Contract ids are executable aliases: `target.find`, `target.click`, `session.ensure`, `state.reconcile`, etc.
-
-## 5) State hygiene after restart/crash
-
-Run this when the host restarts, Chrome dies unexpectedly, or `state.json` might contain stale entries:
+Targeted cleanup:
 
 ```bash
 surfwright session prune
 surfwright target prune --max-age-hours 168 --max-per-session 200
 ```
 
-Single-command equivalent:
+One-command recovery:
 
 ```bash
 surfwright state reconcile
 ```
 
-- `session prune` removes unreachable attached sessions and repairs stale managed `browserPid`.
-- `target prune` removes orphaned/aged targets and caps target history per session.
-- `state reconcile` combines both reports in one deterministic response payload.
-
-For explicit teardown where you want all session state cleared and associated browsers closed:
+Full teardown:
 
 ```bash
 surfwright session clear
+surfwright session clear --keep-processes
 ```
-
-- default behavior attempts browser shutdown for every tracked session before clearing state
-- use `--keep-processes` only when intentionally preserving running browsers

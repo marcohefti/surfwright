@@ -209,3 +209,49 @@ test("target find returns href and tag metadata for each match", () => {
   assert.equal(headingMatch.tag, "h2");
   assert.equal(headingMatch.href, null);
 });
+
+test("target find supports href host/path filtering for deterministic link narrowing", () => {
+  requireBrowser();
+  const html = `<!doctype html>
+    <html><head><meta charset="utf-8"><title>Find Href Filters</title></head>
+      <body>
+        <main>
+          <a id="good" href="https://github.com/marcohefti/surfwright">Repo Good</a>
+          <a id="other-host" href="https://gitlab.com/marcohefti/surfwright">Repo Other Host</a>
+          <a id="other-path" href="https://github.com/openai/codex">Repo Other Path</a>
+        </main>
+      </body>
+    </html>`;
+  const url = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const filtered = runCli([
+    "--json",
+    "target",
+    "find",
+    openPayload.targetId,
+    "--text",
+    "Repo",
+    "--href-host",
+    "github.com",
+    "--href-path-prefix",
+    "/marcohefti/",
+    "--visible-only",
+    "--limit",
+    "10",
+    "--timeout-ms",
+    "20000",
+  ]);
+  assert.equal(filtered.status, 0, filtered.stdout || filtered.stderr);
+  const payload = parseJson(filtered.stdout);
+
+  assert.equal(payload.ok, true);
+  assert.equal(payload.hrefHost, "github.com");
+  assert.equal(payload.hrefPathPrefix, "/marcohefti/");
+  assert.equal(payload.count, 1);
+  assert.equal(payload.matches.length, 1);
+  assert.equal(payload.matches[0].selectorHint, "a#good");
+  assert.equal(payload.matches[0].href, "https://github.com/marcohefti/surfwright");
+});

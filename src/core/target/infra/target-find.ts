@@ -20,6 +20,8 @@ type ParsedFindInput = {
   query: ReturnType<typeof parseTargetQueryInput>;
   limit: number;
   first: boolean;
+  hrefHost: string | null;
+  hrefPathPrefix: string | null;
 };
 
 export type FrameScope = "main" | "all";
@@ -54,6 +56,8 @@ function parseFindInput(opts: {
   textQuery?: string;
   selectorQuery?: string;
   containsQuery?: string;
+  hrefHost?: string;
+  hrefPathPrefix?: string;
   limit?: number;
   first?: boolean;
   visibleOnly?: boolean;
@@ -73,7 +77,45 @@ function parseFindInput(opts: {
     }),
     limit: limitRaw,
     first,
+    hrefHost: normalizeHrefHost(opts.hrefHost),
+    hrefPathPrefix: normalizeHrefPathPrefix(opts.hrefPathPrefix),
   };
+}
+
+function normalizeHrefHost(input: string | undefined): string | null {
+  if (typeof input !== "string") {
+    return null;
+  }
+  const value = input.trim();
+  if (value.length === 0) {
+    throw new CliError("E_QUERY_INVALID", "href-host must not be empty");
+  }
+  const candidate = value.includes("://") ? value : `https://${value}`;
+  let parsed: URL;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    throw new CliError("E_QUERY_INVALID", "href-host must be a valid hostname or URL");
+  }
+  const host = parsed.hostname.trim().toLowerCase();
+  if (host.length === 0) {
+    throw new CliError("E_QUERY_INVALID", "href-host must be a valid hostname or URL");
+  }
+  return host;
+}
+
+function normalizeHrefPathPrefix(input: string | undefined): string | null {
+  if (typeof input !== "string") {
+    return null;
+  }
+  const value = input.trim();
+  if (value.length === 0) {
+    throw new CliError("E_QUERY_INVALID", "href-path-prefix must not be empty");
+  }
+  if (!value.startsWith("/")) {
+    throw new CliError("E_QUERY_INVALID", "href-path-prefix must start with '/'");
+  }
+  return value;
 }
 
 export async function targetFind(opts: {
@@ -84,6 +126,8 @@ export async function targetFind(opts: {
   textQuery?: string;
   selectorQuery?: string;
   containsQuery?: string;
+  hrefHost?: string;
+  hrefPathPrefix?: string;
   limit?: number;
   first?: boolean;
   visibleOnly?: boolean;
@@ -95,6 +139,8 @@ export async function targetFind(opts: {
     textQuery: opts.textQuery,
     selectorQuery: opts.selectorQuery,
     containsQuery: opts.containsQuery,
+    hrefHost: opts.hrefHost,
+    hrefPathPrefix: opts.hrefPathPrefix,
     limit: opts.limit,
     first: opts.first,
     visibleOnly: opts.visibleOnly,
@@ -146,6 +192,8 @@ export async function targetFind(opts: {
           query,
           selector,
           contains,
+          hrefHost,
+          hrefPathPrefix,
           visibleOnly,
           take,
         }: {
@@ -153,6 +201,8 @@ export async function targetFind(opts: {
           query: string;
           selector: string | null;
           contains: string | null;
+          hrefHost: string | null;
+          hrefPathPrefix: string | null;
           visibleOnly: boolean;
           take: number;
         }) => {
@@ -214,6 +264,8 @@ export async function targetFind(opts: {
 
           const queryLower = normLower(query);
           const containsLower = typeof contains === "string" && contains.trim().length > 0 ? normLower(contains) : null;
+          const hrefHostLower = typeof hrefHost === "string" ? hrefHost.toLowerCase() : null;
+          const hrefPathPrefixNorm = typeof hrefPathPrefix === "string" ? hrefPathPrefix : null;
 
           const root = doc?.body ?? null;
           if (!root) {
@@ -249,6 +301,24 @@ export async function targetFind(opts: {
             if (visibleOnly && !visible) {
               continue;
             }
+            const href = hrefFor(node);
+            if (hrefHostLower || hrefPathPrefixNorm) {
+              if (!href) {
+                continue;
+              }
+              let hrefUrl: URL;
+              try {
+                hrefUrl = new URL(href, doc?.baseURI ?? undefined);
+              } catch {
+                continue;
+              }
+              if (hrefHostLower && hrefUrl.hostname.toLowerCase() !== hrefHostLower) {
+                continue;
+              }
+              if (hrefPathPrefixNorm && !hrefUrl.pathname.startsWith(hrefPathPrefixNorm)) {
+                continue;
+              }
+            }
             const filteredIndex = filteredCount;
             filteredCount += 1;
             if (out.length >= take) {
@@ -260,7 +330,7 @@ export async function targetFind(opts: {
               text,
               visible,
               selectorHint: selectorHintFor(node),
-              href: hrefFor(node),
+              href,
               tag: tagFor(node),
             });
           }
@@ -272,6 +342,8 @@ export async function targetFind(opts: {
           query: parsed.query.query,
           selector: parsed.query.selector,
           contains: parsed.query.contains,
+          hrefHost: parsed.hrefHost,
+          hrefPathPrefix: parsed.hrefPathPrefix,
           visibleOnly: parsed.query.visibleOnly,
           take: remaining,
         },
@@ -306,6 +378,8 @@ export async function targetFind(opts: {
       mode: parsed.query.mode,
       selector: parsed.query.selector,
       contains: parsed.query.contains,
+      hrefHost: parsed.hrefHost,
+      hrefPathPrefix: parsed.hrefPathPrefix,
       visibleOnly: parsed.query.visibleOnly,
       first: parsed.first,
       query: parsed.query.query,

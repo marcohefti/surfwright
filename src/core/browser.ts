@@ -196,6 +196,14 @@ function launchDetachedBrowser(opts: {
   }
 }
 
+function browserStartHints(userDataDir: string): string[] {
+  return [
+    "Run `surfwright doctor` to verify browser availability and candidates.",
+    `Check write access for profile directory: ${userDataDir}`,
+    "If parallel runs share state, isolate with SURFWRIGHT_STATE_DIR to avoid contention.",
+  ];
+}
+
 export function killManagedBrowserProcessTree(browserPid: number | null, signal: "SIGTERM" | "SIGKILL"): void {
   if (typeof browserPid !== "number" || !Number.isFinite(browserPid) || browserPid <= 0) {
     return;
@@ -248,13 +256,34 @@ export async function startManagedSession(
       browserMode,
     });
     if (browserPid === null) {
-      throw new CliError("E_BROWSER_START_FAILED", "Failed to spawn Chrome/Chromium process");
+      throw new CliError("E_BROWSER_START_FAILED", "Failed to spawn Chrome/Chromium process", {
+        hints: browserStartHints(opts.userDataDir),
+        hintContext: {
+          executablePath,
+          browserMode,
+          debugPort,
+          userDataDir: opts.userDataDir,
+        },
+      });
     }
     const cdpOrigin = `http://127.0.0.1:${debugPort}`;
     const isReady = await waitForCdpEndpoint(cdpOrigin, startupWaitMs);
     if (!isReady) {
       terminateBrowserProcess(browserPid);
-      throw new CliError("E_BROWSER_START_TIMEOUT", "Browser launched but CDP endpoint did not become ready in time");
+      throw new CliError("E_BROWSER_START_TIMEOUT", "Browser launched but CDP endpoint did not become ready in time", {
+        hints: [
+          "Run `surfwright doctor` and confirm the selected browser starts cleanly.",
+          "Clear stale session/browser state with `surfwright session clear --timeout-ms 8000` and retry.",
+          "If running multiple agents, isolate state per run via SURFWRIGHT_STATE_DIR.",
+        ],
+        hintContext: {
+          cdpOrigin,
+          debugPort,
+          startupWaitMs,
+          browserMode,
+          userDataDir: opts.userDataDir,
+        },
+      });
     }
     return { browserPid, debugPort, cdpOrigin };
   };

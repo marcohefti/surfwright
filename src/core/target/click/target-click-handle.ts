@@ -5,6 +5,7 @@ import type { SessionSource, TargetClickDeltaEvidence, TargetClickReport } from 
 import { type CdpEvaluator, type CdpFrameTree } from "../infra/cdp/index.js";
 import { safePageTitle } from "../infra/utils/safe-page-title.js";
 import { parseBackendNodeHandle } from "../infra/utils/element-handle.js";
+import { readPageTargetId } from "../infra/targets.js";
 import { cdpClickBackendNodeId, cdpDescribeBackendNode } from "./cdp-click-backend-node.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
 import { readPostSnapshot } from "./click-utils.js";
@@ -52,6 +53,8 @@ export async function targetClickByHandle(opts: {
     text: "",
     attributes: {},
   }));
+  const context = opts.page.context();
+  const pagesBeforeClick = context.pages();
 
   const deltaBefore = opts.includeDelta ? await captureClickDeltaState(opts.page, opts.mainEvaluator, opts.timeoutMs) : null;
   const clickedAriaBefore = opts.includeDelta ? await readAriaByHandle() : null;
@@ -82,6 +85,24 @@ export async function targetClickByHandle(opts: {
   const postSnapshot = opts.snapshot ? await readPostSnapshot(opts.mainEvaluator) : null;
   const deltaAfter = opts.includeDelta ? await captureClickDeltaState(opts.page, opts.mainEvaluator, opts.timeoutMs) : null;
   const clickedAriaAfter = opts.includeDelta ? await readAriaByHandle() : null;
+
+  const openedPage = context.pages().find((page) => !pagesBeforeClick.includes(page)) ?? null;
+  let openedTargetId: string | null = null;
+  let openedUrl: string | null = null;
+  let openedTitle: string | null = null;
+  if (openedPage) {
+    await openedPage
+      .waitForLoadState("domcontentloaded", {
+        timeout: Math.max(200, Math.min(1000, opts.timeoutMs)),
+      })
+      .catch(() => {
+        // Best-effort stabilization only.
+      });
+    openedUrl = openedPage.url();
+    openedTitle = await safePageTitle(openedPage, opts.timeoutMs).catch(() => "");
+    openedTargetId = await readPageTargetId(context, openedPage).catch(() => null);
+  }
+
   const actionCompletedAt = Date.now();
 
   let delta: TargetClickDeltaEvidence | null = null;
@@ -119,6 +140,12 @@ export async function targetClickByHandle(opts: {
     wait: waited,
     snapshot: postSnapshot,
     ...(delta ? { delta } : {}),
+    handoff: {
+      sameTarget: openedPage === null,
+      openedTargetId,
+      openedUrl,
+      openedTitle,
+    },
     timingMs: {
       total: 0,
       resolveSession: opts.resolvedSessionAt - opts.startedAt,

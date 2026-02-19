@@ -146,3 +146,21 @@ surfwright session clear
 ```
 
 Use `session clear --keep-processes` only when intentionally preserving running browsers.
+
+## 9) Startup or state-lock failures (`E_BROWSER_START_*`, `E_STATE_LOCK_*`)
+
+Failure payloads include bounded `hints` and `hintContext` (for example `lockPath`, `lockAgeMs`, `cdpOrigin`, `userDataDir`).
+Use those fields first before retry loops.
+
+Typical remediation:
+
+```bash
+surfwright doctor
+surfwright session clear --timeout-ms 8000
+```
+
+For parallel runners, isolate state:
+
+```bash
+export SURFWRIGHT_STATE_DIR=/tmp/surfwright-$(date +%s)
+```

@@ -140,6 +140,22 @@ For one-agent-per-mission discovery runs:
 
 Reporting is owned by ZCL. The key requirement for SurfWright is that reports remain trace-backed and comparable across runs.
 
+## Campaign Log (Mandatory)
+
+To keep runs reusable across sessions, maintain a single campaign ledger at:
+
+- `docs/zerocontext/run-log.md`
+
+For every campaign/rerun, append one entry with:
+
+- objective and suite id,
+- exact run command and runner used,
+- run ids and artifact paths,
+- summary metrics (attempts, success/failure, command counts, dominant failure codes),
+- canonical decision and next actions.
+
+Before starting a new ZeroContext campaign, read the latest ledger entry first.
+
 ## How To Evaluate Results
 
 Per mission/attempt:

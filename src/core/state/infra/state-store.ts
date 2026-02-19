@@ -344,7 +344,15 @@ function tryCreateLock(lockPath: string): boolean {
     if (err.code === "EEXIST") {
       return false;
     }
-    throw new CliError("E_STATE_LOCK_IO", `Failed to create state lock: ${err.message ?? "unknown error"}`);
+    throw new CliError("E_STATE_LOCK_IO", `Failed to create state lock: ${err.message ?? "unknown error"}`, {
+      hints: [
+        "Verify SURFWRIGHT_STATE_DIR is writable.",
+        "If no SurfWright process is active, remove stale lock and retry.",
+      ],
+      hintContext: {
+        lockPath,
+      },
+    });
   }
 }
 
@@ -375,7 +383,20 @@ async function withStateLock<T>(fn: () => Promise<T>): Promise<T> {
     }
     clearStaleLock(lockPath);
     if (Date.now() >= deadline) {
-      throw new CliError("E_STATE_LOCK_TIMEOUT", "Timed out waiting for state lock");
+      const lockCreatedMs = readLockTimestampMs(lockPath);
+      const lockAgeMs = typeof lockCreatedMs === "number" ? Math.max(0, Date.now() - lockCreatedMs) : null;
+      throw new CliError("E_STATE_LOCK_TIMEOUT", "Timed out waiting for state lock", {
+        hints: [
+          "If no SurfWright command is running, remove stale lock and retry.",
+          "For parallel runs, assign a dedicated SURFWRIGHT_STATE_DIR per process.",
+          "Run `surfwright doctor` to confirm environment health before retrying.",
+        ],
+        hintContext: {
+          lockPath,
+          lockAgeMs,
+          timeoutMs: STATE_LOCK_TIMEOUT_MS,
+        },
+      });
     }
     await sleep(STATE_LOCK_RETRY_MS);
   }
@@ -428,7 +449,6 @@ export function allocateSessionId(state: SurfwrightState, prefix: "s" | "a"): st
   state.nextSessionOrdinal = Math.floor(ordinal) + 1;
   return candidate;
 }
-
 export function allocateCaptureId(state: SurfwrightState): string {
   let ordinal = state.nextCaptureOrdinal;
   if (!Number.isFinite(ordinal) || ordinal <= 0) {
@@ -442,7 +462,6 @@ export function allocateCaptureId(state: SurfwrightState): string {
   state.nextCaptureOrdinal = Math.floor(ordinal) + 1;
   return candidate;
 }
-
 export function allocateArtifactId(state: SurfwrightState): string {
   let ordinal = state.nextArtifactOrdinal;
   if (!Number.isFinite(ordinal) || ordinal <= 0) {
@@ -479,4 +498,3 @@ export async function upsertTargetState(target: TargetState) {
     }
   });
 }
-

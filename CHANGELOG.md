@@ -8,6 +8,8 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target extract --include-actionable` with per-item actionable metadata (`handle`, `selectorHint`, `frameId`, `href`) for deterministic extract-to-action chaining.
 - [target] Added `--wait-timeout-ms <ms>` to `target click` and `target wait` so wait-stage budgets are explicit and independent from command timeout.
 - [target] Added additive `target find` per-match metadata fields: `href` (nearest actionable anchor URL when present) and `tag` (matched element tag).
+- [target] Added `target find` link-destination narrowing flags: `--href-host <host>` and `--href-path-prefix <prefix>` with echoed filter fields in the report.
+- [target] Added additive `target click.handoff` metadata (`sameTarget`, `openedTargetId`, `openedUrl`, `openedTitle`) for deterministic post-click target chaining.
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
@@ -16,6 +18,7 @@ All notable changes to SurfWright are documented here.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
+- [errors] `E_BROWSER_START_FAILED`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_IO`, and `E_STATE_LOCK_TIMEOUT` now include bounded hints/hintContext for faster operator triage.
 
 ### Deprecated
 - None.

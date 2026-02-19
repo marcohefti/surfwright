@@ -5,7 +5,7 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { parseTargetQueryInput } from "../infra/target-query.js";
 import { parseFrameScope } from "../infra/target-find.js";
-import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import { readPageTargetId, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import {
   createCdpEvaluator,
   ensureValidSelectorSyntaxCdp,
@@ -112,6 +112,8 @@ export async function targetClick(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    const context = target.page.context();
+    const pagesBeforeClick = context.pages();
     const cdp = await openCdpSession(target.page);
     const frameTree = await getCdpFrameTree(cdp);
     const worldCache = new Map<string, number>();
@@ -189,7 +191,6 @@ export async function targetClick(opts: {
       }
       throw new CliError("E_INTERNAL", "Unable to resolve global match index");
     };
-
     const previewAt = async (globalIndex: number) => {
       const resolved = resolveFrameForGlobalIndex(globalIndex);
       const evaluator = createCdpEvaluator({ cdp, frameCdpId: resolved.frameCdpId, worldCache });
@@ -206,10 +207,25 @@ export async function targetClick(opts: {
       }
       return { visible: Boolean(payload.visible), text: payload.text ?? "", selectorHint: payload.selectorHint ?? null };
     };
-
     const clickAt = async (globalIndex: number) => {
       const resolved = resolveFrameForGlobalIndex(globalIndex);
       const evaluator = createCdpEvaluator({ cdp, frameCdpId: resolved.frameCdpId, worldCache });
+      const clickPointPayload = await evaluator.evaluate(cdpQueryOp, {
+        op: "click-point",
+        mode: queryMode,
+        query,
+        selector,
+        contains,
+        index: resolved.localIndex,
+      }) as { ok: boolean; x?: number; y?: number; visible?: boolean; text?: string; selectorHint?: string | null };
+      if (clickPointPayload.ok && typeof clickPointPayload.x === "number" && typeof clickPointPayload.y === "number") {
+        try {
+          await target.page.mouse.click(clickPointPayload.x, clickPointPayload.y);
+          return { visible: Boolean(clickPointPayload.visible), text: clickPointPayload.text ?? "", selectorHint: clickPointPayload.selectorHint ?? null };
+        } catch {
+          // Fall through to DOM click fallback for edge cases (for example, cross-origin iframe coordinates).
+        }
+      }
       const payload = await evaluator.evaluate(cdpQueryOp, {
         op: "click",
         mode: queryMode,
@@ -233,7 +249,6 @@ export async function targetClick(opts: {
       }
       return { visible: Boolean(payload.visible), text: payload.text ?? "", selectorHint: payload.selectorHint ?? null };
     };
-
     const readAriaAt = async (globalIndex: number) => {
       const resolved = resolveFrameForGlobalIndex(globalIndex);
       const evaluator = createCdpEvaluator({ cdp, frameCdpId: resolved.frameCdpId, worldCache });
@@ -247,7 +262,6 @@ export async function targetClick(opts: {
         attrNames: [...CLICK_DELTA_ARIA_ATTRIBUTES],
       })) as { detached: boolean; values: Record<string, string | null> };
     };
-
     if (explain) {
       const url = target.page.url();
       const title = await safePageTitle(target.page, opts.timeoutMs);
@@ -390,6 +404,24 @@ export async function targetClick(opts: {
     const postSnapshot = opts.snapshot ? await readPostSnapshot(mainEvaluator) : null;
     const deltaAfter = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;
     const clickedAriaAfter = includeDelta ? await readAriaAt(pickedIndex) : null;
+
+    const openedPage = context.pages().find((page) => !pagesBeforeClick.includes(page)) ?? null;
+    let openedTargetId: string | null = null;
+    let openedUrl: string | null = null;
+    let openedTitle: string | null = null;
+    if (openedPage) {
+      await openedPage
+        .waitForLoadState("domcontentloaded", {
+          timeout: Math.max(200, Math.min(1000, opts.timeoutMs)),
+        })
+        .catch(() => {
+          // Best-effort stabilization only.
+        });
+      openedUrl = openedPage.url();
+      openedTitle = await safePageTitle(openedPage, opts.timeoutMs).catch(() => "");
+      openedTargetId = await readPageTargetId(context, openedPage).catch(() => null);
+    }
+
     const actionCompletedAt = Date.now();
 
     let delta: TargetClickDeltaEvidence | null = null;
@@ -426,6 +458,12 @@ export async function targetClick(opts: {
       wait: waited,
       snapshot: postSnapshot,
       ...(delta ? { delta } : {}),
+      handoff: {
+        sameTarget: openedPage === null,
+        openedTargetId,
+        openedUrl,
+        openedTitle,
+      },
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,

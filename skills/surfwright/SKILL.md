@@ -40,7 +40,7 @@ OPEN=$(surfwright open https://example.com)
 TARGET=$(printf '%s' "$OPEN" | jq -r '.targetId')
 
 surfwright target snapshot "$TARGET" --mode orient --visible-only
-surfwright target find "$TARGET" --text "Pricing" --first --visible-only
+surfwright target find "$TARGET" --text "Pricing" --first --visible-only --href-host example.com --href-path-prefix /pricing
 surfwright target click "$TARGET" --text "Pricing" --visible-only --delta
 surfwright target read "$TARGET" --selector main --chunk-size 1200 --chunk 1
 ```

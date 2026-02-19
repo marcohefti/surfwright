@@ -110,6 +110,7 @@ test("target click --delta returns bounded evidence-based delta", () => {
     "wait",
     "snapshot",
     "delta",
+    "handoff",
     "timingMs",
   ]);
 
@@ -153,4 +154,9 @@ test("target click --delta returns bounded evidence-based delta", () => {
     assert.ok(entry.before === null || typeof entry.before === "string");
     assert.ok(entry.after === null || typeof entry.after === "string");
   }
+
+  assert.equal(payload.handoff.sameTarget, true);
+  assert.equal(payload.handoff.openedTargetId, null);
+  assert.equal(payload.handoff.openedUrl, null);
+  assert.equal(payload.handoff.openedTitle, null);
 });

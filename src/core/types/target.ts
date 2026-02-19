@@ -112,6 +112,8 @@ export type TargetFindReport = {
   mode: "text" | "selector";
   selector: string | null;
   contains: string | null;
+  hrefHost: string | null;
+  hrefPathPrefix: string | null;
   visibleOnly: boolean;
   first: boolean;
   query: string;
@@ -177,6 +179,12 @@ export type TargetClickReport = {
     textPreview: string;
   } | null;
   delta?: TargetClickDeltaEvidence;
+  handoff: {
+    sameTarget: boolean;
+    openedTargetId: string | null;
+    openedUrl: string | null;
+    openedTitle: string | null;
+  };
   timingMs: ActionTimingMs;
 };
 

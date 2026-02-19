@@ -17,6 +17,8 @@ export const targetFindCommandSpec: TargetCommandSpec = {
       .option("--text <query>", "Text query for fuzzy text match")
       .option("--selector <query>", "CSS/Playwright selector query")
       .option("--contains <text>", "Text filter to apply with --selector")
+      .option("--href-host <host>", "Only keep matches whose href host matches (e.g. github.com)")
+      .option("--href-path-prefix <prefix>", "Only keep matches whose href path starts with prefix (e.g. /owner/)")
       .option("--visible-only", "Only return visible matches")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--first", "Return at most the first actionable match")
@@ -31,6 +33,8 @@ export const targetFindCommandSpec: TargetCommandSpec = {
             text?: string;
             selector?: string;
             contains?: string;
+            hrefHost?: string;
+            hrefPathPrefix?: string;
             visibleOnly?: boolean;
             frameScope?: string;
             first?: boolean;
@@ -53,6 +57,8 @@ export const targetFindCommandSpec: TargetCommandSpec = {
               textQuery: options.text,
               selectorQuery: options.selector,
               containsQuery: options.contains,
+              hrefHost: options.hrefHost,
+              hrefPathPrefix: options.hrefPathPrefix,
               visibleOnly: Boolean(options.visibleOnly),
               frameScope: options.frameScope,
               first: Boolean(options.first),

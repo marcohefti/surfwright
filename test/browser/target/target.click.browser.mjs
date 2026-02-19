@@ -179,6 +179,7 @@ test("target click returns deterministic shape for selector/text modes", () => {
     "title",
     "wait",
     "snapshot",
+    "handoff",
     "timingMs",
   ]);
   assert.equal(selectorPayload.ok, true);
@@ -192,6 +193,8 @@ test("target click returns deterministic shape for selector/text modes", () => {
   assert.equal(typeof selectorPayload.clicked.text, "string");
   assert.equal(selectorPayload.wait, null);
   assert.equal(selectorPayload.snapshot, null);
+  assert.equal(selectorPayload.handoff.sameTarget, true);
+  assert.equal(selectorPayload.handoff.openedTargetId, null);
   assert.equal(typeof selectorPayload.timingMs.total, "number");
 
   const textClick = runCli([
@@ -220,6 +223,7 @@ test("target click returns deterministic shape for selector/text modes", () => {
   assert.equal(textPayload.wait.mode, "text");
   assert.equal(textPayload.wait.value, "Blog");
   assert.equal(typeof textPayload.snapshot.textPreview, "string");
+  assert.equal(textPayload.handoff.sameTarget, true);
 });
 
 test("target click returns typed query failure when no match exists", () => {
@@ -250,6 +254,48 @@ test("target click returns typed query failure when no match exists", () => {
   const clickPayload = parseJson(clickResult.stdout);
   assert.equal(clickPayload.ok, false);
   assert.equal(clickPayload.code, "E_QUERY_INVALID");
+});
+test("target click reports handoff metadata consistently", () => {
+  requireBrowser();
+  const ensureResult = runCli(["--json", "session", "fresh", "--timeout-ms", "8000"]);
+  assert.equal(ensureResult.status, 0);
+  const ensurePayload = parseJson(ensureResult.stdout);
+  const html = `
+    <title>Click Handoff Test</title>
+    <main>
+      <button id="spawn" onclick="window.open('about:blank#child', '_blank')">Open child</button>
+    </main>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+  const clickResult = runCli([
+    "--json",
+    "--session",
+    ensurePayload.sessionId,
+    "target",
+    "click",
+    openPayload.targetId,
+    "--selector",
+    "#spawn",
+    "--visible-only",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(clickResult.status, 0);
+  const clickPayload = parseJson(clickResult.stdout);
+  assert.equal(typeof clickPayload.handoff.sameTarget, "boolean");
+  if (clickPayload.handoff.sameTarget) {
+    assert.equal(clickPayload.handoff.openedTargetId, null);
+    assert.equal(clickPayload.handoff.openedUrl, null);
+    assert.equal(clickPayload.handoff.openedTitle, null);
+  } else {
+    assert.equal(typeof clickPayload.handoff.openedTargetId, "string");
+    assert.equal(typeof clickPayload.handoff.openedUrl, "string");
+  }
+  const cleared = runCli(["--json", "session", "clear", "--timeout-ms", "8000"]);
+  assert.equal(cleared.status, 0);
 });
 
 test("target fill and form-fill return deterministic compact shapes", () => {

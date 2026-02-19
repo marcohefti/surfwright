@@ -80,6 +80,12 @@ surfwright target count <targetId> --text "Delete" --visible-only
 surfwright target click <targetId> --text "Delete" --visible-only --index 1
 ```
 
+Narrow link matches by destination host/path:
+
+```bash
+surfwright target find <targetId> --text "Repository" --href-host github.com --href-path-prefix /marcohefti/ --visible-only
+```
+
 Explain why a match was rejected (no click executed):
 
 ```bash
@@ -102,6 +108,8 @@ surfwright target click <targetId> --text "Next" --visible-only
 surfwright target snapshot <targetId> > ./artifacts/snap-b.json
 surfwright target snapshot-diff ./artifacts/snap-a.json ./artifacts/snap-b.json
 ```
+
+After any click, inspect `handoff` in the JSON output to detect whether a new target opened (`sameTarget=false`) and chain directly via `openedTargetId`.
 
 ## Form/file/input actions
 

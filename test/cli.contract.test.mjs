@@ -109,3 +109,22 @@ test("target eval accepts --js alias", () => {
   assert.equal(evalPayload.code, "E_TARGET_SESSION_UNKNOWN");
 });
 
+test("target find validates href-path-prefix before session resolution", () => {
+  const findResult = runCli([
+    "--json",
+    "target",
+    "find",
+    "ABCDEF123456",
+    "--text",
+    "Repo",
+    "--href-path-prefix",
+    "marcohefti/",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(findResult.status, 1);
+  const findPayload = parseJson(findResult.stdout);
+  assert.equal(findPayload.ok, false);
+  assert.equal(findPayload.code, "E_QUERY_INVALID");
+  assert.equal(findPayload.message, "href-path-prefix must start with '/'");
+});

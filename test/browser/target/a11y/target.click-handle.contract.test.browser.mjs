@@ -108,4 +108,6 @@ test("target click --handle clicks a snapshot-provided element handle", () => {
   assert.equal(typeof clickPayload.clicked, "object");
   assert.equal(clickPayload.clicked.handle, row.handle);
   assert.equal(clickPayload.title, "Clicked via Handle");
+  assert.equal(clickPayload.handoff.sameTarget, true);
+  assert.equal(clickPayload.handoff.openedTargetId, null);
 });

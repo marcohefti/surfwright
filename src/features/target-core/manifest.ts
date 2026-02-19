@@ -33,7 +33,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.find",
     usage:
-      "surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--href-host <host>] [--href-path-prefix <prefix>] [--visible-only] [--frame-scope <scope>] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "find matching elements by text or selector in a target",
   },
   {

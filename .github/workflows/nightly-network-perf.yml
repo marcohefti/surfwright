@@ -40,7 +40,7 @@ jobs:
 
       - name: Run network performance harness
         run: |
-          node scripts/network-perf-harness.mjs \
+          node scripts/harness/network-perf-harness.mjs \
             --url https://example.com \
             --url https://github.com \
             --runs 2 \

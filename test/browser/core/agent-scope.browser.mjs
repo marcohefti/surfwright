@@ -22,7 +22,21 @@ function requireBrowser() {
   assert.equal(doctor.status, 0, doctor.stdout || doctor.stderr);
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
-  const ensured = runCliSync(["--json", "session", "ensure", "--timeout-ms", "5000"]);
+
+  const ensure = (timeoutMs) => runCliSync(["--json", "session", "ensure", "--timeout-ms", String(timeoutMs)]);
+  let ensured = ensure(5000);
+  if (ensured.status !== 0) {
+    let code = "";
+    try {
+      code = String(parseJson(ensured.stdout)?.code ?? "");
+    } catch {
+      code = "";
+    }
+    if (code === "E_BROWSER_START_TIMEOUT" || code === "E_BROWSER_START_FAILED") {
+      runCliSync(["--json", "session", "clear", "--timeout-ms", "8000"]);
+      ensured = ensure(8000);
+    }
+  }
   assert.equal(ensured.status, 0, ensured.stdout || ensured.stderr);
 }
 

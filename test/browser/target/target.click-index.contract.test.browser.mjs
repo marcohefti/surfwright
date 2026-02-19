@@ -216,9 +216,9 @@ test("target find supports href host/path filtering for deterministic link narro
     <html><head><meta charset="utf-8"><title>Find Href Filters</title></head>
       <body>
         <main>
-          <a id="good" href="https://github.com/marcohefti/surfwright">Repo Good</a>
-          <a id="other-host" href="https://gitlab.com/marcohefti/surfwright">Repo Other Host</a>
-          <a id="other-path" href="https://github.com/openai/codex">Repo Other Path</a>
+          <a id="good" href="http://localhost/marcohefti/surfwright">Repo Good</a>
+          <a id="other-host" href="http://127.0.0.1/marcohefti/surfwright">Repo Other Host</a>
+          <a id="other-path" href="http://localhost/openai/codex">Repo Other Path</a>
         </main>
       </body>
     </html>`;
@@ -235,7 +235,7 @@ test("target find supports href host/path filtering for deterministic link narro
     "--text",
     "Repo",
     "--href-host",
-    "github.com",
+    "localhost",
     "--href-path-prefix",
     "/marcohefti/",
     "--visible-only",
@@ -248,10 +248,10 @@ test("target find supports href host/path filtering for deterministic link narro
   const payload = parseJson(filtered.stdout);
 
   assert.equal(payload.ok, true);
-  assert.equal(payload.hrefHost, "github.com");
+  assert.equal(payload.hrefHost, "localhost");
   assert.equal(payload.hrefPathPrefix, "/marcohefti/");
   assert.equal(payload.count, 1);
   assert.equal(payload.matches.length, 1);
   assert.equal(payload.matches[0].selectorHint, "a#good");
-  assert.equal(payload.matches[0].href, "https://github.com/marcohefti/surfwright");
+  assert.equal(payload.matches[0].href, "http://localhost/marcohefti/surfwright");
 });

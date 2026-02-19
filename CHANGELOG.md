@@ -7,6 +7,7 @@ All notable changes to SurfWright are documented here.
 ### Added
 - [target] Added `target extract --include-actionable` with per-item actionable metadata (`handle`, `selectorHint`, `frameId`, `href`) for deterministic extract-to-action chaining.
 - [target] Added `--wait-timeout-ms <ms>` to `target click` and `target wait` so wait-stage budgets are explicit and independent from command timeout.
+- [target] Added additive `target find` per-match metadata fields: `href` (nearest actionable anchor URL when present) and `tag` (matched element tag).
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.

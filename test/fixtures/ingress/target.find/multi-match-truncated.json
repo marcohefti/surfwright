@@ -28,13 +28,17 @@
         "index": 0,
         "text": "Start Checkout",
         "visible": false,
-        "selectorHint": "a.inline-flex.h-9"
+        "selectorHint": "a.inline-flex.h-9",
+        "href": "/checkout",
+        "tag": "a"
       },
       {
         "index": 1,
         "text": "Cross-chain crypto checkout, made simple",
         "visible": true,
-        "selectorHint": "h1.text-4xl.font-bold"
+        "selectorHint": "h1.text-4xl.font-bold",
+        "href": null,
+        "tag": "h1"
       }
     ],
     "truncated": true

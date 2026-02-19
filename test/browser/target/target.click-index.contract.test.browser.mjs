@@ -154,3 +154,58 @@ test("target click supports --index for deterministic multi-match selection", ()
   assert.equal(outPayload.ok, false);
   assert.equal(outPayload.code, "E_QUERY_INVALID");
 });
+
+test("target find returns href and tag metadata for each match", () => {
+  requireBrowser();
+  const html = `<!doctype html>
+    <html><head><meta charset="utf-8"><title>Find Metadata Contract</title></head>
+      <body>
+        <main>
+          <a id="repo-link" href="#repo">Repository</a>
+          <h2 id="repo-heading">Repository heading</h2>
+          <button id="repo-btn">Repository action</button>
+        </main>
+      </body>
+    </html>`;
+  const url = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const found = runCli([
+    "--json",
+    "target",
+    "find",
+    openPayload.targetId,
+    "--text",
+    "Repository",
+    "--visible-only",
+    "--limit",
+    "10",
+    "--timeout-ms",
+    "20000",
+  ]);
+  assert.equal(found.status, 0, found.stdout || found.stderr);
+  const payload = parseJson(found.stdout);
+
+  assert.equal(payload.ok, true);
+  assert.equal(Array.isArray(payload.matches), true);
+  assert.ok(payload.matches.length >= 3);
+  for (const match of payload.matches) {
+    assert.equal(Object.prototype.hasOwnProperty.call(match, "href"), true);
+    assert.equal(Object.prototype.hasOwnProperty.call(match, "tag"), true);
+    assert.ok(match.href === null || typeof match.href === "string");
+    assert.ok(match.tag === null || typeof match.tag === "string");
+  }
+
+  const linkMatch = payload.matches.find((entry) => entry.selectorHint === "a#repo-link");
+  assert.ok(linkMatch, "Expected link match");
+  assert.equal(linkMatch.tag, "a");
+  assert.equal(typeof linkMatch.href, "string");
+  assert.ok(linkMatch.href.includes("#repo"));
+
+  const headingMatch = payload.matches.find((entry) => entry.selectorHint === "h2#repo-heading");
+  assert.ok(headingMatch, "Expected heading match");
+  assert.equal(headingMatch.tag, "h2");
+  assert.equal(headingMatch.href, null);
+});

@@ -198,6 +198,19 @@ export async function targetFind(opts: {
             }
             return el?.innerText ?? el?.textContent ?? el?.getAttribute?.("aria-label") ?? el?.getAttribute?.("title") ?? "";
           };
+          const tagFor = (node: any): string | null => {
+            const tag = typeof node?.tagName === "string" ? node.tagName.toLowerCase() : "";
+            return tag.length > 0 ? tag : null;
+          };
+          const hrefFor = (node: any): string | null => {
+            if (!node) return null;
+            const anchor =
+              node?.matches?.("a[href]") === true
+                ? node
+                : (node?.closest?.("a[href]") ?? node?.querySelector?.("a[href]") ?? null);
+            const href = typeof anchor?.href === "string" ? anchor.href.trim() : "";
+            return href.length > 0 ? href : null;
+          };
 
           const queryLower = normLower(query);
           const containsLower = typeof contains === "string" && contains.trim().length > 0 ? normLower(contains) : null;
@@ -223,7 +236,14 @@ export async function targetFind(opts: {
           }
 
           let filteredCount = 0;
-          const out: Array<{ localIndex: number; text: string; visible: boolean; selectorHint: string | null }> = [];
+          const out: Array<{
+            localIndex: number;
+            text: string;
+            visible: boolean;
+            selectorHint: string | null;
+            href: string | null;
+            tag: string | null;
+          }> = [];
           for (const node of candidates) {
             const visible = isVisible(node);
             if (visibleOnly && !visible) {
@@ -240,6 +260,8 @@ export async function targetFind(opts: {
               text,
               visible,
               selectorHint: selectorHintFor(node),
+              href: hrefFor(node),
+              tag: tagFor(node),
             });
           }
 
@@ -262,6 +284,8 @@ export async function targetFind(opts: {
           text: match.text,
           visible: match.visible,
           selectorHint: match.selectorHint,
+          href: match.href,
+          tag: match.tag,
         });
       }
 

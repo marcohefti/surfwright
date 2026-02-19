@@ -136,6 +136,8 @@ surfwright target click <targetId> --text "Pricing"
 surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1
 ```
 
+`target find` match rows include `text`, `visible`, `selectorHint`, `href`, and `tag`.
+
 Use workspace profile for persistent login state:
 
 ```bash

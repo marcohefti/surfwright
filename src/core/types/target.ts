@@ -122,6 +122,8 @@ export type TargetFindReport = {
     text: string;
     visible: boolean;
     selectorHint: string | null;
+    href: string | null;
+    tag: string | null;
   }>;
   truncated: boolean;
   timingMs: ActionTimingMs;

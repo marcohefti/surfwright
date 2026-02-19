@@ -10,7 +10,7 @@ Capture a real edge case once, normalize it, and replay it in tests.
 
 Fixtures must store SurfWright-normalized contract behavior, not raw Playwright internals.
 
-- Good: `target.find` result shape (`count`, bounded `matches`, typed errors).
+- Good: `target.find` result shape (`count`, bounded `matches` including link/tag metadata, typed errors).
 - Bad: full raw CDP/Playwright payloads with volatile fields.
 
 ## When to Add a Fixture

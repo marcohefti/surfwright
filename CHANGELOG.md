@@ -34,7 +34,7 @@ All notable changes to SurfWright are documented here.
 - [session] Reduced repeat command overhead in tight loops with short-lived CDP reachability caching during session health checks.
 - [session] `session attach --cdp` now accepts `ws://`/`wss://` endpoints and supports HTTP(S) discovery URLs with path/query (resolved to websocket endpoints for runtime attach).
 - [session] CDP attach health checks now split discovery and websocket-connect stages for clearer remote endpoint handling under variable latency.
-- [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage`; optional `SURFWRIGHT_CHROME_NO_SANDBOX=1` enables explicit no-sandbox fallback when required.
+- [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage` to reduce startup flakes in constrained environments.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.

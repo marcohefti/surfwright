@@ -122,7 +122,7 @@ export function buildManagedBrowserArgs(opts: {
   noSandbox?: boolean;
 }): string[] {
   const platform = opts.platform ?? process.platform;
-  const noSandbox = opts.noSandbox ?? process.env.SURFWRIGHT_CHROME_NO_SANDBOX === "1";
+  const noSandbox = opts.noSandbox ?? false;
   const args = [
     `--remote-debugging-port=${opts.debugPort}`,
     `--user-data-dir=${opts.userDataDir}`,
@@ -165,15 +165,11 @@ function launchDetachedBrowser(opts: {
 }
 
 function browserStartHints(userDataDir: string): string[] {
-  const hints = [
+  return [
     "Run `surfwright doctor` to verify browser availability and candidates.",
     `Check write access for profile directory: ${userDataDir}`,
     "If parallel runs share state, isolate with SURFWRIGHT_STATE_DIR to avoid contention.",
   ];
-  if (process.platform === "linux") {
-    hints.push("For constrained CI containers, set SURFWRIGHT_CHROME_NO_SANDBOX=1 only when your environment requires it.");
-  }
-  return hints;
 }
 
 export function killManagedBrowserProcessTree(browserPid: number | null, signal: "SIGTERM" | "SIGKILL"): void {

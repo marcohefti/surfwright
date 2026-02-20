@@ -179,12 +179,6 @@ surfwright session attach --cdp https://browser.example.com/relay?token=abc123
 surfwright session attach --cdp wss://browser.example.com/devtools/browser/<id>?token=abc123
 ```
 
-For Linux/container startups with tight sandbox constraints, opt-in fallback:
-
-```bash
-SURFWRIGHT_CHROME_NO_SANDBOX=1 surfwright session ensure
-```
-
 Capture network evidence around an action:
 
 ```bash

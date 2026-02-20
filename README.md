@@ -1,16 +1,16 @@
 # SurfWright
 
-<p align="center">
-  <img src="assets/brand/surfwright-logo.png" width="320" style="max-width:100%;height:auto;" alt="SurfWright">
+<p align="left">
+  <a href="https://github.com/marcohefti/surfwright/releases"><img alt="Tag" src="https://img.shields.io/github/v/tag/marcohefti/surfwright?sort=semver&amp;style=flat-square"></a>
+  <a href="https://github.com/marcohefti/surfwright/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/marcohefti/surfwright/ci.yml?branch=main&amp;label=ci&amp;style=flat-square&amp;color=1f7a1f"></a>
+  <a href="https://www.npmjs.com/package/@marcohefti/surfwright"><img alt="npm" src="https://img.shields.io/npm/v/%40marcohefti/surfwright?style=flat-square"></a>
+  <a href="https://www.npmjs.com/package/@marcohefti/surfwright"><img alt="npm downloads" src="https://img.shields.io/npm/dm/%40marcohefti/surfwright?style=flat-square&amp;label=npm%20downloads&amp;color=1f7a1f"></a>
+  <a href="#cli-install-optional"><img alt="Homebrew" src="https://img.shields.io/badge/homebrew-available-2e7d32?style=flat-square&amp;logo=homebrew"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/marcohefti/surfwright?style=flat-square&amp;color=1f7a1f"></a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/marcohefti/surfwright/releases"><img alt="Release" src="https://img.shields.io/github/v/release/marcohefti/surfwright?sort=semver&amp;style=flat-square"></a>
-  <a href="https://github.com/marcohefti/surfwright/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/marcohefti/surfwright/ci.yml?branch=main&amp;label=ci&amp;style=flat-square"></a>
-  <a href="https://www.npmjs.com/package/@marcohefti/surfwright"><img alt="npm" src="https://img.shields.io/npm/v/%40marcohefti/surfwright?style=flat-square"></a>
-  <a href="https://www.npmjs.com/package/@marcohefti/surfwright"><img alt="npm downloads" src="https://img.shields.io/npm/dm/%40marcohefti/surfwright?style=flat-square&amp;label=npm%20downloads"></a>
-  <a href="#cli-install-optional"><img alt="Homebrew" src="https://img.shields.io/badge/homebrew-available-2e7d32?style=flat-square&amp;logo=homebrew"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/marcohefti/surfwright?style=flat-square"></a>
+<p align="left">
+  <img src="assets/brand/surfwright-logo.png" width="320" style="max-width:100%;height:auto;" alt="SurfWright">
 </p>
 
 SurfWright is a CLI-first browser control surface designed for agents:

@@ -3,15 +3,35 @@ import { newActionId } from "../../../action-id.js";
 import { CliError } from "../../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
+import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick } from "../../click/click-utils.js";
 
 type TargetDragDropReport = {
   ok: true;
   sessionId: string;
+  sessionSource?: "explicit" | "target-inferred" | "implicit-new";
   targetId: string;
   actionId: string;
   from: string;
   to: string;
   result: "dragged";
+  proof?: {
+    action: "drag-drop";
+    urlChanged: boolean;
+    waitSatisfied: boolean;
+    finalUrl: string;
+    finalTitle: string;
+    queryMode: "selector";
+    query: string;
+    selector: string;
+    countAfter: null;
+  };
+  wait?: {
+    mode: "text" | "selector" | "network-idle";
+    value: string | null;
+    timeoutMs: number;
+    elapsedMs: number;
+    satisfied: boolean;
+  } | null;
   timingMs: {
     total: number;
     resolveSession: number;
@@ -36,13 +56,24 @@ export async function targetDragDrop(opts: {
   persistState?: boolean;
   fromSelector?: string;
   toSelector?: string;
+  waitForText?: string;
+  waitForSelector?: string;
+  waitNetworkIdle?: boolean;
+  waitTimeoutMs?: number;
+  proof?: boolean;
 }): Promise<TargetDragDropReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const fromSelector = parseRequiredSelector(opts.fromSelector, "from");
   const toSelector = parseRequiredSelector(opts.toSelector, "to");
+  const waitAfter = parseWaitAfterClick({
+    waitForText: opts.waitForText,
+    waitForSelector: opts.waitForSelector,
+    waitNetworkIdle: opts.waitNetworkIdle,
+  });
+  const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
 
-  const { session } = await resolveSessionForAction({
+  const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
     timeoutMs: opts.timeoutMs,
     targetIdHint: requestedTargetId,
@@ -67,19 +98,55 @@ export async function targetDragDrop(opts: {
       throw new CliError("E_QUERY_INVALID", `No element matched destination selector: ${toSelector}`);
     }
 
+    const urlBeforeAction = target.page.url();
     await target.page.dragAndDrop(fromSelector, toSelector, {
       timeout: opts.timeoutMs,
     });
+    const waitStartedAt = Date.now();
+    const waitedMode = await waitAfterClick({
+      page: target.page,
+      waitAfter,
+      timeoutMs: waitTimeoutMs,
+    });
+    const waited =
+      waitedMode === null
+        ? null
+        : {
+            mode: waitedMode.mode,
+            value: waitedMode.value,
+            timeoutMs: waitTimeoutMs,
+            elapsedMs: Date.now() - waitStartedAt,
+            satisfied: true,
+          };
+    const finalUrl = target.page.url();
+    const finalTitle = await target.page.title();
     const actionCompletedAt = Date.now();
 
     const report: TargetDragDropReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       actionId: newActionId(),
       from: fromSelector,
       to: toSelector,
       result: "dragged",
+      wait: waited,
+      ...(opts.proof
+        ? {
+            proof: {
+              action: "drag-drop",
+              urlChanged: urlBeforeAction !== finalUrl,
+              waitSatisfied: waited ? waited.satisfied : true,
+              finalUrl,
+              finalTitle,
+              queryMode: "selector",
+              query: `${fromSelector} -> ${toSelector}`,
+              selector: fromSelector,
+              countAfter: null,
+            },
+          }
+        : {}),
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,
@@ -111,4 +178,3 @@ export async function targetDragDrop(opts: {
     await browser.close();
   }
 }
-

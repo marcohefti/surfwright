@@ -10,6 +10,26 @@ import type { TargetStyleReport } from "./types.js";
 
 const DEFAULT_STYLE_PROPERTIES = ["background-color", "color", "font-size", "border-radius"];
 const STYLE_CLASS_NAME_MAX_CHARS = 180;
+const STYLE_PRESETS = {
+  "button-primary": ["background-color", "color", "font-size", "border-radius", "padding", "border-color"],
+  "input-text": ["color", "font-size", "border-color", "border-radius", "background-color", "line-height"],
+  "link-primary": ["color", "text-decoration-line", "font-weight", "font-size"],
+} as const;
+type StylePreset = keyof typeof STYLE_PRESETS;
+
+function parseStylePreset(input: string | undefined): StylePreset | null {
+  const raw = typeof input === "string" ? input.trim().toLowerCase() : "";
+  if (raw.length === 0) {
+    return null;
+  }
+  if (raw in STYLE_PRESETS) {
+    return raw as StylePreset;
+  }
+  throw new CliError(
+    "E_QUERY_INVALID",
+    `kind must be one of: ${Object.keys(STYLE_PRESETS).join(", ")}`,
+  );
+}
 
 function parseRequestedIndex(input: number | undefined): number | null {
   if (typeof input === "undefined") {
@@ -31,6 +51,7 @@ export async function targetStyle(opts: {
   containsQuery?: string;
   visibleOnly?: boolean;
   propertiesCsv?: string;
+  kind?: string;
   index?: number;
 }): Promise<TargetStyleReport> {
   const startedAt = Date.now();
@@ -41,7 +62,11 @@ export async function targetStyle(opts: {
     containsQuery: opts.containsQuery,
     visibleOnly: opts.visibleOnly,
   });
-  const properties = parsePropertiesCsv(opts.propertiesCsv, DEFAULT_STYLE_PROPERTIES);
+  const preset = parseStylePreset(opts.kind);
+  const properties = parsePropertiesCsv(
+    opts.propertiesCsv,
+    preset ? [...STYLE_PRESETS[preset]] : DEFAULT_STYLE_PROPERTIES,
+  );
   const requestedIndex = parseRequestedIndex(opts.index);
 
   const { session, sessionSource } = await resolveSessionForAction({

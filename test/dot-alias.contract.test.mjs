@@ -79,6 +79,20 @@ test("dot-command alias supports network subcommands", () => {
   assert.equal(Array.isArray(extensionPayload.extensions), true);
 });
 
+test("target --target alias rewrites to positional targetId", () => {
+  const styleResult = runCli(["--json", "target", "style", "--target", "DEADBEEF", "--selector", "body"]);
+  assert.equal(styleResult.status, 1);
+  const stylePayload = parseJson(styleResult.stdout);
+  assert.equal(stylePayload.ok, false);
+  assert.equal(stylePayload.code, "E_TARGET_SESSION_UNKNOWN");
+
+  const styleTargetIdResult = runCli(["--json", "target", "style", "--target-id=DEADBEEF", "--selector", "body"]);
+  assert.equal(styleTargetIdResult.status, 1);
+  const styleTargetIdPayload = parseJson(styleTargetIdResult.stdout);
+  assert.equal(styleTargetIdPayload.ok, false);
+  assert.equal(styleTargetIdPayload.code, "E_TARGET_SESSION_UNKNOWN");
+});
+
 test("json shape lint for pure commands (keys only)", () => {
   const contractResult = runCli(["--json", "contract"]);
   assert.equal(contractResult.status, 0);
@@ -91,6 +105,7 @@ test("json shape lint for pure commands (keys only)", () => {
     "guarantees",
     "commands",
     "errors",
+    "guidance",
   ]);
 
   const doctorResult = runCli(["--json", "doctor"]);

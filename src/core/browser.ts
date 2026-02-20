@@ -21,6 +21,8 @@ export const CDP_HEALTHCHECK_TIMEOUT_MS = 600;
 const CDP_HEALTHCHECK_FALLBACK_MAX_TIMEOUT_MS = 3000;
 const CDP_STARTUP_MAX_WAIT_MS = 6000;
 const CDP_STARTUP_POLL_MS = 125;
+const CDP_REACHABILITY_CACHE_TTL_MS = 1200;
+const cdpReachabilityCache = new Map<string, number>();
 
 export function chromeCandidatesForPlatform(): string[] {
   if (process.platform === "darwin") {
@@ -103,15 +105,28 @@ function boundedHealthcheckTimeout(timeoutMs: number): number {
 }
 
 export async function isCdpEndpointReachable(cdpOrigin: string, timeoutMs: number): Promise<boolean> {
+  const cachedAt = cdpReachabilityCache.get(cdpOrigin) ?? 0;
+  if (Date.now() - cachedAt <= CDP_REACHABILITY_CACHE_TTL_MS) {
+    return true;
+  }
+
   if (await isCdpEndpointAlive(cdpOrigin, CDP_HEALTHCHECK_TIMEOUT_MS)) {
+    cdpReachabilityCache.set(cdpOrigin, Date.now());
     return true;
   }
 
   const fallbackTimeoutMs = boundedHealthcheckTimeout(timeoutMs);
   if (fallbackTimeoutMs <= CDP_HEALTHCHECK_TIMEOUT_MS) {
+    cdpReachabilityCache.delete(cdpOrigin);
     return false;
   }
-  return await isCdpEndpointAlive(cdpOrigin, fallbackTimeoutMs);
+  const reachable = await isCdpEndpointAlive(cdpOrigin, fallbackTimeoutMs);
+  if (reachable) {
+    cdpReachabilityCache.set(cdpOrigin, Date.now());
+  } else {
+    cdpReachabilityCache.delete(cdpOrigin);
+  }
+  return reachable;
 }
 
 async function waitForCdpEndpoint(cdpOrigin: string, timeoutMs: number): Promise<boolean> {
@@ -297,6 +312,7 @@ export async function startManagedSession(
   if (started === null) {
     started = await attemptStart(await allocateFreePort());
   }
+  cdpReachabilityCache.set(started.cdpOrigin, Date.now());
 
   const createdAt = opts.createdAt ?? nowIso();
   return withSessionHeartbeat(

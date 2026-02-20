@@ -256,4 +256,10 @@ export type CliContractReport = {
   guarantees: string[];
   commands: CliCommandContract[];
   errors: CliErrorContract[];
+  guidance?: Array<{
+    id: string;
+    signature: string;
+    examples: string[];
+    proofSchema?: Record<string, unknown> | null;
+  }>;
 };

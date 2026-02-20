@@ -32,11 +32,21 @@ export const targetStyleCommandSpec: TargetCommandSpec = {
       .option("--selector <query>", "Selector query to match target element")
       .option("--contains <text>", "Optional contains filter when using --selector")
       .option("--visible-only", "Require inspected target to be visible", false)
+      .option("--kind <kind>", "Style preset: button-primary|input-text|link-primary")
       .option("--properties <csv>", "Comma-separated computed style properties", "background-color,color,font-size,border-radius")
       .option("--index <n>", "Pick the Nth match (0-based) instead of first match")
       .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright target style <targetId> --selector '.btn.btn-primary' --kind button-primary",
+          "  surfwright target style <targetId> --text 'Sign in' --properties color,font-size,font-weight",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,
@@ -45,6 +55,7 @@ export const targetStyleCommandSpec: TargetCommandSpec = {
             selector?: string;
             contains?: string;
             visibleOnly?: boolean;
+            kind?: string;
             properties: string;
             index?: string;
             timeoutMs: number;
@@ -64,6 +75,7 @@ export const targetStyleCommandSpec: TargetCommandSpec = {
               selectorQuery: options.selector,
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
+              kind: options.kind,
               propertiesCsv: options.properties,
               index: typeof options.index === "string" ? Number.parseInt(options.index, 10) : undefined,
               persistState: options.persist !== false,

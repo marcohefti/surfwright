@@ -97,6 +97,8 @@ Optional: if you run the CLI manually, check the runtime contract:
 surfwright contract
 ```
 
+`contract` now includes additive `guidance` entries with command signatures, examples, and proof schemas for high-traffic workflows.
+
 ## CLI Install (Optional)
 
 ```bash
@@ -141,13 +143,17 @@ Fast first-pass flow with explicit reuse/readiness controls:
 ```bash
 surfwright open https://example.com --reuse active --wait-until commit
 surfwright target click <targetId> --text "Pricing" --visible-only --proof
+surfwright target fill <targetId> --selector "#email" --value "agent@example.com" --wait-network-idle --proof
+surfwright target keypress <targetId> --key Enter --selector "#search" --wait-for-selector ".results" --proof
 surfwright target style <targetId> --selector ".btn.btn-primary" --properties background-color,color,font-size,border-radius
 surfwright target extract <targetId> --kind docs-commands --selector main --limit 5
+surfwright target extract <targetId> --kind headings --selector main --limit 12
 ```
 
 `target find` match rows include `text`, `visible`, `selectorHint`, `href`, and `tag`.
 `target snapshot --mode orient` now includes additive counters (`headingsCount`, `buttonsCount`, `linksCount`, `navCount`).
 `target click --proof` now includes additive `proof.countAfter` for selector-mode clicks (when post-action counting is available).
+`target fill|keypress|upload|drag-drop|dialog` now support the same post-action wait controls (`--wait-for-text|--wait-for-selector|--wait-network-idle`, `--wait-timeout-ms`) and optional `--proof`.
 
 Use workspace profile for persistent login state:
 

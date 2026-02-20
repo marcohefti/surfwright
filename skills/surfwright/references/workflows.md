@@ -94,6 +94,7 @@ surfwright target click <targetId> --text "Pricing" --visible-only --proof
 ```
 
 For selector-mode clicks, proof includes additive `countAfter` (post-action selector cardinality when available).
+The same post-action wait switches also apply to `target fill`, `target keypress`, `target upload`, `target drag-drop`, and `target dialog`.
 
 Narrow link matches by destination host/path:
 
@@ -130,17 +131,19 @@ Inspect computed styles without `target eval`:
 
 ```bash
 surfwright target style <targetId> --selector ".btn.btn-primary" --properties background-color,color,font-size,border-radius
+surfwright target style <targetId> --selector ".btn.btn-primary" --kind button-primary
 ```
 
 ## Form/file/input actions
 
 ```bash
 surfwright target fill <targetId> --selector "#email" --value "agent@example.com"
+surfwright target fill <targetId> --selector "#email" --value "agent@example.com" --wait-network-idle --proof
 surfwright target form-fill <targetId> --field "#email=agent@example.com" --field "#agree=true"
-surfwright target upload <targetId> --selector "input[type=file]" --file ./assets/avatar.png
-surfwright target keypress <targetId> --key Enter --selector "input[name=search]"
-surfwright target drag-drop <targetId> --from "#card-a" --to "#column-done"
-surfwright target dialog <targetId> --action accept --trigger-selector "#confirm"
+surfwright target upload <targetId> --selector "input[type=file]" --file ./assets/avatar.png --proof
+surfwright target keypress <targetId> --key Enter --selector "input[name=search]" --wait-for-selector ".results" --proof
+surfwright target drag-drop <targetId> --from "#card-a" --to "#column-done" --proof
+surfwright target dialog <targetId> --action accept --trigger-selector "#confirm" --proof
 surfwright target click-at <targetId> --x 120 --y 80
 surfwright target spawn <targetId> --selector "a[target=_blank]"
 surfwright target close <targetId>
@@ -161,6 +164,11 @@ Structured content and readiness checks:
 ```bash
 surfwright target extract <targetId> --kind blog --include-actionable --limit 10
 surfwright target extract <targetId> --kind docs-commands --selector main --limit 10
+surfwright target extract <targetId> --kind headings --selector main --limit 20
+surfwright target extract <targetId> --kind links --selector main --limit 20
+surfwright target extract <targetId> --kind codeblocks --selector main --limit 10
+surfwright target extract <targetId> --kind forms --selector main --limit 10
+surfwright target extract <targetId> --kind tables --selector main --limit 10
 surfwright target wait <targetId> --for-selector "h1" --wait-timeout-ms 2500
 surfwright target url-assert <targetId> --host github.com --path-prefix /pricing
 surfwright target hover <targetId> --text "Pricing" --visible-only

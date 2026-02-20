@@ -22,6 +22,15 @@ export const targetWaitCommandSpec: TargetCommandSpec = {
       .option("--timeout-ms <ms>", "Wait timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright target wait <targetId> --for-selector '.loaded' --wait-timeout-ms 5000",
+          "  surfwright target wait <targetId> --for-text 'Pricing' --frame-scope all",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,

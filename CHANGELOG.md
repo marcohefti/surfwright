@@ -16,12 +16,19 @@ All notable changes to SurfWright are documented here.
 - [target] Added additive `target find` per-match metadata fields: `href` (nearest actionable anchor URL when present) and `tag` (matched element tag).
 - [target] Added `target find` link-destination narrowing flags: `--href-host <host>` and `--href-path-prefix <prefix>` with echoed filter fields in the report.
 - [target] Added additive `target click.handoff` metadata (`sameTarget`, `openedTargetId`, `openedUrl`, `openedTitle`) for deterministic post-click target chaining.
+- [contract] Added additive `contract.guidance[]` with command signatures, runnable examples, and proof schema hints for high-traffic flows.
+- [target] Added `--proof` support to `target fill`, `target keypress`, `target upload`, `target drag-drop`, and `target dialog` with a shared compact evidence shape.
+- [target] Added extraction kinds `headings`, `links`, `codeblocks`, `forms`, and `tables` to `target extract` for broader no-eval structured reads.
+- [target] Added `target style --kind <button-primary|input-text|link-primary>` preset shortcuts for common style validation flows.
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
 - [target] `target wait` now includes a structured `wait` payload (`mode`, `value`, `timeoutMs`, `elapsedMs`, `satisfied`) while keeping existing top-level `mode`/`value`.
 - [target] `target snapshot --mode orient|snapshot` now includes additive aggregate counters (`headingsCount`, `buttonsCount`, `linksCount`), plus `navCount` for orient mode.
 - [errors] Typed failures can now include optional bounded `hints` and `hintContext` fields (additive; `code` + `message` contract preserved).
+- [cli] Improved first-run discoverability: parse errors now show stronger suggestions/help and `target --target/--target-id` aliases rewrite to positional `targetId` where applicable.
+- [target] Unified post-action waits across interactive actions: `target fill|keypress|upload|drag-drop|dialog` now support `--wait-for-text|--wait-for-selector|--wait-network-idle` and `--wait-timeout-ms`.
+- [session] Reduced repeat command overhead in tight loops with short-lived CDP reachability caching during session health checks.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.

@@ -8,16 +8,44 @@ import { parseFrameScope } from "../infra/target-find.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import { cdpQueryOp } from "./cdp-query-op.js";
+import { parseWaitAfterClick, resolveWaitTimeoutMs } from "./click-utils.js";
+import { waitAfterClickWithBudget } from "./click-wait.js";
+import { readSelectorCountAfter } from "./click-proof.js";
 
 type TargetFillReport = {
   ok: true;
   sessionId: string;
+  sessionSource?: string;
   targetId: string;
   actionId: string;
+  mode?: "text" | "selector";
+  selector?: string | null;
+  contains?: string | null;
+  visibleOnly?: boolean;
+  matchCount?: number;
+  pickedIndex?: number;
   query: string;
   valueLength: number;
   url: string;
   title: string;
+  wait?: {
+    mode: "text" | "selector" | "network-idle";
+    value: string | null;
+    timeoutMs: number;
+    elapsedMs: number;
+    satisfied: boolean;
+  } | null;
+  proof?: {
+    action: "fill";
+    urlChanged: boolean;
+    waitSatisfied: boolean;
+    finalUrl: string;
+    finalTitle: string;
+    queryMode: "text" | "selector";
+    query: string;
+    selector: string | null;
+    countAfter: number | null;
+  };
   timingMs: {
     total: number;
     resolveSession: number;
@@ -43,6 +71,11 @@ export async function targetFill(opts: {
   visibleOnly?: boolean;
   frameScope?: string;
   value?: string;
+  waitForText?: string;
+  waitForSelector?: string;
+  waitNetworkIdle?: boolean;
+  waitTimeoutMs?: number;
+  proof?: boolean;
 }): Promise<TargetFillReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -54,8 +87,15 @@ export async function targetFill(opts: {
   });
   const value = parseFillValue(opts.value);
   const frameScope = parseFrameScope(opts.frameScope);
+  const waitAfter = parseWaitAfterClick({
+    waitForText: opts.waitForText,
+    waitForSelector: opts.waitForSelector,
+    waitNetworkIdle: opts.waitNetworkIdle,
+  });
+  const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
+  const includeProof = Boolean(opts.proof);
 
-  const { session } = await resolveSessionForAction({
+  const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
     timeoutMs: opts.timeoutMs,
     targetIdHint: requestedTargetId,
@@ -134,6 +174,7 @@ export async function targetFill(opts: {
     }
 
     const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
+    const urlBeforeFill = target.page.url();
     const filled = (await evaluator.evaluate(cdpQueryOp, {
       op: "fill",
       mode: parsed.mode,
@@ -148,18 +189,66 @@ export async function targetFill(opts: {
       throw new CliError("E_QUERY_INVALID", "matched element is not fillable");
     }
 
+    const waited = await waitAfterClickWithBudget({
+      waitAfter,
+      waitTimeoutMs,
+      page: target.page,
+      cdp,
+      frameTree,
+      worldCache,
+      queryMode: parsed.mode,
+      query: parsed.query,
+      visibleOnly: parsed.visibleOnly,
+      frameScope,
+    });
+
+    const countAfter = await readSelectorCountAfter({
+      enabled: includeProof,
+      cdp,
+      worldCache,
+      queryMode: parsed.mode,
+      frameScope,
+      query: parsed.query,
+      selector: parsed.selector,
+      contains: parsed.contains,
+    });
+
+    const finalUrl = target.page.url();
     const title = await target.page.title();
     const actionCompletedAt = Date.now();
 
     const report: TargetFillReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       actionId: newActionId(),
+      mode: parsed.mode,
+      selector: parsed.selector,
+      contains: parsed.contains,
+      visibleOnly: parsed.visibleOnly,
+      matchCount,
+      pickedIndex,
       query: parsed.query,
       valueLength: value.length,
-      url: target.page.url(),
+      url: finalUrl,
       title,
+      wait: waited,
+      ...(includeProof
+        ? {
+            proof: {
+              action: "fill",
+              urlChanged: urlBeforeFill !== finalUrl,
+              waitSatisfied: waited ? waited.satisfied : true,
+              finalUrl,
+              finalTitle: title,
+              queryMode: parsed.mode,
+              query: parsed.query,
+              selector: parsed.selector,
+              countAfter,
+            },
+          }
+        : {}),
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,
@@ -191,4 +280,3 @@ export async function targetFill(opts: {
     await browser.close();
   }
 }
-

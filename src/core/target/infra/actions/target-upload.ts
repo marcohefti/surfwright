@@ -4,10 +4,12 @@ import { CliError } from "../../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import { providers } from "../../../providers/index.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
+import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick } from "../../click/click-utils.js";
 
 type TargetUploadReport = {
   ok: true;
   sessionId: string;
+  sessionSource?: "explicit" | "target-inferred" | "implicit-new";
   targetId: string;
   actionId: string;
   selector: string;
@@ -18,6 +20,24 @@ type TargetUploadReport = {
   }>;
   fileCount: number;
   mode: "direct-input" | "filechooser";
+  proof?: {
+    action: "upload";
+    urlChanged: boolean;
+    waitSatisfied: boolean;
+    finalUrl: string;
+    finalTitle: string;
+    queryMode: "selector";
+    query: string;
+    selector: string;
+    countAfter: null;
+  };
+  wait?: {
+    mode: "text" | "selector" | "network-idle";
+    value: string | null;
+    timeoutMs: number;
+    elapsedMs: number;
+    satisfied: boolean;
+  } | null;
   timingMs: {
     total: number;
     resolveSession: number;
@@ -84,13 +104,24 @@ export async function targetUpload(opts: {
   persistState?: boolean;
   selectorQuery?: string;
   files?: string | string[];
+  waitForText?: string;
+  waitForSelector?: string;
+  waitNetworkIdle?: boolean;
+  waitTimeoutMs?: number;
+  proof?: boolean;
 }): Promise<TargetUploadReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const selector = parseRequiredSelector(opts.selectorQuery, "selector");
   const fileInputs = parseUploadFiles(opts.files);
+  const waitAfter = parseWaitAfterClick({
+    waitForText: opts.waitForText,
+    waitForSelector: opts.waitForSelector,
+    waitNetworkIdle: opts.waitNetworkIdle,
+  });
+  const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
 
-  const { session } = await resolveSessionForAction({
+  const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
     timeoutMs: opts.timeoutMs,
     targetIdHint: requestedTargetId,
@@ -118,6 +149,7 @@ export async function targetUpload(opts: {
     });
 
     let mode: TargetUploadReport["mode"] = "direct-input";
+    const urlBeforeAction = target.page.url();
     if (isFileInput) {
       await locator.setInputFiles(absolutePaths, {
         timeout: opts.timeoutMs,
@@ -141,16 +173,51 @@ export async function targetUpload(opts: {
       });
     }
 
+    const waitStartedAt = Date.now();
+    const waitedMode = await waitAfterClick({
+      page: target.page,
+      waitAfter,
+      timeoutMs: waitTimeoutMs,
+    });
+    const waited =
+      waitedMode === null
+        ? null
+        : {
+            mode: waitedMode.mode,
+            value: waitedMode.value,
+            timeoutMs: waitTimeoutMs,
+            elapsedMs: Date.now() - waitStartedAt,
+            satisfied: true,
+          };
+    const finalUrl = target.page.url();
+    const finalTitle = await target.page.title();
     const actionCompletedAt = Date.now();
     const report: TargetUploadReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       actionId: newActionId(),
       selector,
       files: fileInputs.map(({ name, size, type }) => ({ name, size, type })),
       fileCount: fileInputs.length,
       mode,
+      wait: waited,
+      ...(opts.proof
+        ? {
+            proof: {
+              action: "upload",
+              urlChanged: urlBeforeAction !== finalUrl,
+              waitSatisfied: waited ? waited.satisfied : true,
+              finalUrl,
+              finalTitle,
+              queryMode: "selector",
+              query: selector,
+              selector,
+              countAfter: null,
+            },
+          }
+        : {}),
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,
@@ -182,4 +249,3 @@ export async function targetUpload(opts: {
     await browser.close();
   }
 }
-

@@ -6,15 +6,41 @@ import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../cdp/inde
 import { resolveTargetQueryLocator } from "../target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { parseOptionalTargetQuery, resolveFirstQueryMatch } from "./target-input-query.js";
+import { parseWaitAfterClick, resolveWaitTimeoutMs } from "../../click/click-utils.js";
+import { waitAfterClickWithBudget } from "../../click/click-wait.js";
+import { readSelectorCountAfter } from "../../click/click-proof.js";
 
 type TargetKeypressReport = {
   ok: true;
   sessionId: string;
+  sessionSource?: "explicit" | "target-inferred" | "implicit-new";
   targetId: string;
   actionId: string;
   key: string;
   selector: string | null;
+  queryMode?: "text" | "selector" | "none";
+  query?: string | null;
+  matchCount?: number | null;
+  pickedIndex?: number | null;
   resultText: string;
+  wait?: {
+    mode: "text" | "selector" | "network-idle";
+    value: string | null;
+    timeoutMs: number;
+    elapsedMs: number;
+    satisfied: boolean;
+  } | null;
+  proof?: {
+    action: "keypress";
+    urlChanged: boolean;
+    waitSatisfied: boolean;
+    finalUrl: string;
+    finalTitle: string;
+    queryMode: "text" | "selector" | "none";
+    query: string | null;
+    selector: string | null;
+    countAfter: number | null;
+  };
   timingMs: {
     total: number;
     resolveSession: number;
@@ -42,6 +68,11 @@ export async function targetKeypress(opts: {
   selectorQuery?: string;
   containsQuery?: string;
   visibleOnly?: boolean;
+  waitForText?: string;
+  waitForSelector?: string;
+  waitNetworkIdle?: boolean;
+  waitTimeoutMs?: number;
+  proof?: boolean;
 }): Promise<TargetKeypressReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -52,8 +83,15 @@ export async function targetKeypress(opts: {
     containsQuery: opts.containsQuery,
     visibleOnly: opts.visibleOnly,
   });
+  const waitAfter = parseWaitAfterClick({
+    waitForText: opts.waitForText,
+    waitForSelector: opts.waitForSelector,
+    waitNetworkIdle: opts.waitNetworkIdle,
+  });
+  const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
+  const includeProof = Boolean(opts.proof);
 
-  const { session } = await resolveSessionForAction({
+  const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
     timeoutMs: opts.timeoutMs,
     targetIdHint: requestedTargetId,
@@ -67,17 +105,31 @@ export async function targetKeypress(opts: {
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
 
+    let matchCount: number | null = null;
+    let pickedIndex: number | null = null;
     if (parsedQuery) {
       const { locator, count } = await resolveTargetQueryLocator({
         page: target.page,
         parsed: parsedQuery,
         preferExactText: parsedQuery.mode === "text",
       });
+      matchCount = count;
       const selected = await resolveFirstQueryMatch({
         locator,
         count,
         visibleOnly: parsedQuery.visibleOnly,
       });
+      for (let idx = 0; idx < count; idx += 1) {
+        if (await locator.nth(idx).isVisible().catch(() => false) || !parsedQuery.visibleOnly) {
+          pickedIndex = idx;
+          if (!parsedQuery.visibleOnly) {
+            break;
+          }
+          if (pickedIndex !== null) {
+            break;
+          }
+        }
+      }
       await selected.focus({
         timeout: opts.timeoutMs,
       });
@@ -87,10 +139,23 @@ export async function targetKeypress(opts: {
       });
     }
 
+    const urlBeforeKeypress = target.page.url();
     await target.page.keyboard.press(key);
     const cdp = await openCdpSession(target.page);
     const frameTree = await getCdpFrameTree(cdp);
     const worldCache = new Map<string, number>();
+    const waited = await waitAfterClickWithBudget({
+      waitAfter,
+      waitTimeoutMs,
+      page: target.page,
+      cdp,
+      frameTree,
+      worldCache,
+      queryMode: parsedQuery?.mode ?? "handle",
+      query: parsedQuery?.query ?? "<page>",
+      visibleOnly: Boolean(parsedQuery?.visibleOnly),
+      frameScope: "main",
+    });
     const evaluator = createCdpEvaluator({
       cdp,
       frameCdpId: frameTree.frame.id,
@@ -116,16 +181,49 @@ export async function targetKeypress(opts: {
               : "";
       return normalize(raw).slice(0, 240);
     });
+    const countAfter = await readSelectorCountAfter({
+      enabled: includeProof && parsedQuery?.mode === "selector",
+      cdp,
+      worldCache,
+      queryMode: parsedQuery?.mode === "selector" ? "selector" : "text",
+      frameScope: "main",
+      query: parsedQuery?.query ?? "",
+      selector: parsedQuery?.selector ?? null,
+      contains: parsedQuery?.contains ?? null,
+    });
+    const finalUrl = target.page.url();
+    const finalTitle = await target.page.title();
     const actionCompletedAt = Date.now();
 
     const report: TargetKeypressReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       actionId: newActionId(),
       key,
       selector: parsedQuery?.selector ?? null,
+      queryMode: parsedQuery ? parsedQuery.mode : "none",
+      query: parsedQuery?.query ?? null,
+      matchCount,
+      pickedIndex,
       resultText,
+      wait: waited,
+      ...(includeProof
+        ? {
+            proof: {
+              action: "keypress",
+              urlChanged: urlBeforeKeypress !== finalUrl,
+              waitSatisfied: waited ? waited.satisfied : true,
+              finalUrl,
+              finalTitle,
+              queryMode: parsedQuery ? parsedQuery.mode : "none",
+              query: parsedQuery?.query ?? null,
+              selector: parsedQuery?.selector ?? null,
+              countAfter,
+            },
+          }
+        : {}),
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,
@@ -157,4 +255,3 @@ export async function targetKeypress(opts: {
     await browser.close();
   }
 }
-

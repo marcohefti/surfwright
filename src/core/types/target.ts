@@ -257,7 +257,6 @@ export type TargetSnapshotDiffReport = {
 };
 
 export type TargetClickDeltaRole = "dialog" | "alert" | "status" | "menu" | "listbox";
-
 export type TargetClickDeltaEvidence = {
   before: {
     url: string;
@@ -284,7 +283,6 @@ export type TargetClickDeltaEvidence = {
     attributes: Array<{ name: string; before: string | null; after: string | null }>;
   };
 };
-
 export type TargetClickExplainReport = {
   ok: true;
   sessionId: string;
@@ -317,7 +315,6 @@ export type TargetClickExplainReport = {
   title: string;
   timingMs: ActionTimingMs;
 };
-
 export type TargetReadReport = {
   ok: true;
   sessionId: string;
@@ -340,7 +337,6 @@ export type TargetReadReport = {
   hints?: string[];
   timingMs: ActionTimingMs;
 };
-
 export type TargetExtractReport = {
   ok: true;
   sessionId: string;
@@ -348,7 +344,7 @@ export type TargetExtractReport = {
   targetId: string;
   url: string;
   title: string;
-  kind: "generic" | "blog" | "news" | "docs" | "docs-commands";
+  kind: "generic" | "blog" | "news" | "docs" | "docs-commands" | "headings" | "links" | "codeblocks" | "forms" | "tables";
   source: "dom" | "api-feed";
   sourcesTried: string[];
   scope: {
@@ -380,7 +376,6 @@ export type TargetExtractReport = {
   hints: string[];
   timingMs: ActionTimingMs;
 };
-
 export type TargetEvalReport = {
   ok: true;
   sessionId: string;
@@ -411,7 +406,6 @@ export type TargetEvalReport = {
   };
   timingMs: ActionTimingMs;
 };
-
 export type TargetWaitReport = {
   ok: true;
   sessionId: string;
@@ -430,7 +424,6 @@ export type TargetWaitReport = {
   };
   timingMs: ActionTimingMs;
 };
-
 export type TargetUrlAssertReport = {
   ok: true;
   sessionId: string;
@@ -441,7 +434,6 @@ export type TargetUrlAssertReport = {
   assert: { host: string | null; origin: string | null; pathPrefix: string | null; urlPrefix: string | null };
   timingMs: ActionTimingMs;
 };
-
 export type TargetConsoleTailReport = {
   ok: true;
   sessionId: string;
@@ -455,7 +447,6 @@ export type TargetConsoleTailReport = {
   truncated: boolean;
   counts: { log: number; info: number; warn: number; error: number; debug: number; pageError: number; requestFailed: number };
 };
-
 export type TargetHealthReport = {
   ok: true;
   sessionId: string;
@@ -482,7 +473,6 @@ export type TargetHealthReport = {
   hints: string[];
   timingMs: { total: number; resolveSession: number; connectCdp: number; action: number };
 };
-
 export type TargetHudReport = {
   ok: true;
   sessionId: string;

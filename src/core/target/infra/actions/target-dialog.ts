@@ -4,16 +4,36 @@ import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import { resolveTargetQueryLocator } from "../target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { parseOptionalTargetQuery, resolveFirstQueryMatch } from "./target-input-query.js";
+import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick } from "../../click/click-utils.js";
 
 type TargetDialogReport = {
   ok: true;
   sessionId: string;
+  sessionSource?: "explicit" | "target-inferred" | "implicit-new";
   targetId: string;
   dialog: {
     type: string;
     message: string;
     action: "accept" | "dismiss";
   };
+  proof?: {
+    action: "dialog";
+    urlChanged: boolean;
+    waitSatisfied: boolean;
+    finalUrl: string;
+    finalTitle: string;
+    queryMode: "text" | "selector" | "none";
+    query: string | null;
+    selector: string | null;
+    countAfter: null;
+  };
+  wait?: {
+    mode: "text" | "selector" | "network-idle";
+    value: string | null;
+    timeoutMs: number;
+    elapsedMs: number;
+    satisfied: boolean;
+  } | null;
   timingMs: {
     total: number;
     resolveSession: number;
@@ -42,6 +62,11 @@ export async function targetDialog(opts: {
   triggerSelector?: string;
   containsQuery?: string;
   visibleOnly?: boolean;
+  waitForText?: string;
+  waitForSelector?: string;
+  waitNetworkIdle?: boolean;
+  waitTimeoutMs?: number;
+  proof?: boolean;
 }): Promise<TargetDialogReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -52,8 +77,14 @@ export async function targetDialog(opts: {
     containsQuery: opts.containsQuery,
     visibleOnly: opts.visibleOnly,
   });
+  const waitAfter = parseWaitAfterClick({
+    waitForText: opts.waitForText,
+    waitForSelector: opts.waitForSelector,
+    waitNetworkIdle: opts.waitNetworkIdle,
+  });
+  const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
 
-  const { session } = await resolveSessionForAction({
+  const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
     timeoutMs: opts.timeoutMs,
     targetIdHint: requestedTargetId,
@@ -66,6 +97,7 @@ export async function targetDialog(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    const urlBeforeDialog = target.page.url();
     const dialogPromise = target.page.waitForEvent("dialog", {
       timeout: opts.timeoutMs,
     });
@@ -108,16 +140,51 @@ export async function targetDialog(opts: {
       throw new CliError("E_WAIT_TIMEOUT", "dialog did not appear before timeout");
     }
     const actionCompletedAt = Date.now();
+    const waitStartedAt = Date.now();
+    const waitedMode = await waitAfterClick({
+      page: target.page,
+      waitAfter,
+      timeoutMs: waitTimeoutMs,
+    });
+    const waited =
+      waitedMode === null
+        ? null
+        : {
+            mode: waitedMode.mode,
+            value: waitedMode.value,
+            timeoutMs: waitTimeoutMs,
+            elapsedMs: Date.now() - waitStartedAt,
+            satisfied: true,
+          };
+    const finalUrl = target.page.url();
+    const finalTitle = await target.page.title();
 
     const report: TargetDialogReport = {
       ok: true,
       sessionId: session.sessionId,
+      sessionSource,
       targetId: requestedTargetId,
       dialog: {
         type: handledDialog.type,
         message: handledDialog.message,
         action,
       },
+      wait: waited,
+      ...(opts.proof
+        ? {
+            proof: {
+              action: "dialog",
+              urlChanged: urlBeforeDialog !== finalUrl,
+              waitSatisfied: waited ? waited.satisfied : true,
+              finalUrl,
+              finalTitle,
+              queryMode: triggerQuery ? triggerQuery.mode : "none",
+              query: triggerQuery ? triggerQuery.query : null,
+              selector: triggerQuery?.selector ?? null,
+              countAfter: null,
+            },
+          }
+        : {}),
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,
@@ -148,4 +215,3 @@ export async function targetDialog(opts: {
     await browser.close();
   }
 }
-

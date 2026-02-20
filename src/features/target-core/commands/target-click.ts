@@ -3,12 +3,9 @@ import {
   projectReportFields,
   targetClick,
   targetClickAt,
-  targetClose,
-  targetDialog,
   targetDragDrop,
   targetFill,
   targetKeypress,
-  targetSpawn,
   targetUpload,
 } from "../../../core/target/public.js";
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
@@ -156,9 +153,23 @@ export const targetFillCommandSpec: TargetCommandSpec = {
       .option("--visible-only", "Only match visible elements")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .requiredOption("--value <text>", "Value to fill into the matched control")
+      .option("--wait-for-text <text>", "After fill, wait until text becomes visible")
+      .option("--wait-for-selector <query>", "After fill, wait until selector becomes visible")
+      .option("--wait-network-idle", "After fill, wait for network idle")
+      .option("--wait-timeout-ms <ms>", "Post-fill wait timeout budget in milliseconds", ctx.parseTimeoutMs)
+      .option("--proof", "Include one-shot evidence payload for fill result", false)
       .option("--timeout-ms <ms>", "Fill timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright target fill <targetId> --selector '#email' --value 'agent@example.com' --proof",
+          "  surfwright target fill <targetId> --text 'Search' --value 'surfwright' --wait-network-idle",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,
@@ -169,6 +180,11 @@ export const targetFillCommandSpec: TargetCommandSpec = {
             visibleOnly?: boolean;
             frameScope?: string;
             value: string;
+            waitForText?: string;
+            waitForSelector?: string;
+            waitNetworkIdle?: boolean;
+            waitTimeoutMs?: number;
+            proof?: boolean;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -188,6 +204,11 @@ export const targetFillCommandSpec: TargetCommandSpec = {
               visibleOnly: Boolean(options.visibleOnly),
               frameScope: options.frameScope,
               value: options.value,
+              waitForText: options.waitForText,
+              waitForSelector: options.waitForSelector,
+              waitNetworkIdle: Boolean(options.waitNetworkIdle),
+              waitTimeoutMs: options.waitTimeoutMs,
+              proof: Boolean(options.proof),
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -210,15 +231,33 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
       .argument("<targetId>", "Target handle returned by open/target list")
       .requiredOption("--selector <query>", "CSS selector for file input/chooser trigger")
       .requiredOption("--file <path>", "File path to upload (repeat for multiple files)", collectRepeatedString, [])
+      .option("--wait-for-text <text>", "After upload, wait until text becomes visible")
+      .option("--wait-for-selector <query>", "After upload, wait until selector becomes visible")
+      .option("--wait-network-idle", "After upload, wait for network idle")
+      .option("--wait-timeout-ms <ms>", "Post-upload wait timeout budget in milliseconds", ctx.parseTimeoutMs)
+      .option("--proof", "Include one-shot evidence payload for upload result", false)
       .option("--timeout-ms <ms>", "Upload timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright target upload <targetId> --selector 'input[type=file]' --file ./avatar.png --proof",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,
           options: {
             selector: string;
             file: string[];
+            waitForText?: string;
+            waitForSelector?: string;
+            waitNetworkIdle?: boolean;
+            waitTimeoutMs?: number;
+            proof?: boolean;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -234,6 +273,11 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               selectorQuery: options.selector,
               files: options.file,
+              waitForText: options.waitForText,
+              waitForSelector: options.waitForSelector,
+              waitNetworkIdle: Boolean(options.waitNetworkIdle),
+              waitTimeoutMs: options.waitTimeoutMs,
+              proof: Boolean(options.proof),
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -259,9 +303,23 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
       .option("--selector <query>", "CSS/Playwright selector query")
       .option("--contains <text>", "Text filter to apply with --selector")
       .option("--visible-only", "Only match visible elements")
+      .option("--wait-for-text <text>", "After keypress, wait until text becomes visible")
+      .option("--wait-for-selector <query>", "After keypress, wait until selector becomes visible")
+      .option("--wait-network-idle", "After keypress, wait for network idle")
+      .option("--wait-timeout-ms <ms>", "Post-keypress wait timeout budget in milliseconds", ctx.parseTimeoutMs)
+      .option("--proof", "Include one-shot evidence payload for keypress result", false)
       .option("--timeout-ms <ms>", "Keypress timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright target keypress <targetId> --key Enter --selector '#search' --proof",
+          "  surfwright target keypress <targetId> --key Escape --wait-for-selector '.modal[hidden]'",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,
@@ -271,6 +329,11 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
             selector?: string;
             contains?: string;
             visibleOnly?: boolean;
+            waitForText?: string;
+            waitForSelector?: string;
+            waitNetworkIdle?: boolean;
+            waitTimeoutMs?: number;
+            proof?: boolean;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -289,6 +352,11 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
               selectorQuery: options.selector,
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
+              waitForText: options.waitForText,
+              waitForSelector: options.waitForSelector,
+              waitNetworkIdle: Boolean(options.waitNetworkIdle),
+              waitTimeoutMs: options.waitTimeoutMs,
+              proof: Boolean(options.proof),
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -311,15 +379,33 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
       .argument("<targetId>", "Target handle returned by open/target list")
       .requiredOption("--from <selector>", "Source selector for drag start")
       .requiredOption("--to <selector>", "Destination selector for drag end")
+      .option("--wait-for-text <text>", "After drag/drop, wait until text becomes visible")
+      .option("--wait-for-selector <query>", "After drag/drop, wait until selector becomes visible")
+      .option("--wait-network-idle", "After drag/drop, wait for network idle")
+      .option("--wait-timeout-ms <ms>", "Post-drag/drop wait timeout budget in milliseconds", ctx.parseTimeoutMs)
+      .option("--proof", "Include one-shot evidence payload for drag/drop result", false)
       .option("--timeout-ms <ms>", "Drag/drop timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright target drag-drop <targetId> --from '.source' --to '.target' --proof",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,
           options: {
             from: string;
             to: string;
+            waitForText?: string;
+            waitForSelector?: string;
+            waitNetworkIdle?: boolean;
+            waitTimeoutMs?: number;
+            proof?: boolean;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -335,159 +421,11 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               fromSelector: options.from,
               toSelector: options.to,
-              persistState: options.persist !== false,
-            });
-            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
-          } catch (error) {
-            ctx.handleFailure(error, output);
-          }
-        },
-      );
-  },
-};
-const spawnMeta = targetCommandMeta("target.spawn");
-export const targetSpawnCommandSpec: TargetCommandSpec = {
-  id: spawnMeta.id,
-  usage: spawnMeta.usage,
-  summary: spawnMeta.summary,
-  register: (ctx) => {
-    ctx.target
-      .command("spawn")
-      .description(spawnMeta.summary)
-      .argument("<targetId>", "Target handle returned by open/target list")
-      .option("--text <query>", "Text query for fuzzy text match")
-      .option("--selector <query>", "CSS/Playwright selector query")
-      .option("--contains <text>", "Text filter to apply with --selector")
-      .option("--visible-only", "Only match visible elements")
-      .option("--frame-scope <scope>", "Frame scope: main|all", "main")
-      .option("--timeout-ms <ms>", "Spawn timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state")
-      .option("--fields <csv>", "Return only selected top-level fields")
-      .action(
-        async (
-          targetId: string,
-          options: {
-            text?: string;
-            selector?: string;
-            contains?: string;
-            visibleOnly?: boolean;
-            frameScope?: string;
-            timeoutMs: number;
-            persist?: boolean;
-            fields?: string;
-          },
-        ) => {
-          const output = ctx.globalOutputOpts();
-          const globalOpts = ctx.program.opts<{ session?: string }>();
-          const fields = parseFieldsCsv(options.fields);
-          try {
-            const report = await targetSpawn({
-              targetId,
-              timeoutMs: options.timeoutMs,
-              sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
-              textQuery: options.text,
-              selectorQuery: options.selector,
-              containsQuery: options.contains,
-              visibleOnly: Boolean(options.visibleOnly),
-              frameScope: options.frameScope,
-              persistState: options.persist !== false,
-            });
-            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
-          } catch (error) {
-            ctx.handleFailure(error, output);
-          }
-        },
-      );
-  },
-};
-const closeMeta = targetCommandMeta("target.close");
-export const targetCloseCommandSpec: TargetCommandSpec = {
-  id: closeMeta.id,
-  usage: closeMeta.usage,
-  summary: closeMeta.summary,
-  register: (ctx) => {
-    ctx.target
-      .command("close")
-      .description(closeMeta.summary)
-      .argument("<targetId>", "Target handle returned by open/target list")
-      .option("--timeout-ms <ms>", "Close timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state")
-      .option("--fields <csv>", "Return only selected top-level fields")
-      .action(
-        async (
-          targetId: string,
-          options: {
-            timeoutMs: number;
-            persist?: boolean;
-            fields?: string;
-          },
-        ) => {
-          const output = ctx.globalOutputOpts();
-          const globalOpts = ctx.program.opts<{ session?: string }>();
-          const fields = parseFieldsCsv(options.fields);
-          try {
-            const report = await targetClose({
-              targetId,
-              timeoutMs: options.timeoutMs,
-              sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
-              persistState: options.persist !== false,
-            });
-            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
-          } catch (error) {
-            ctx.handleFailure(error, output);
-          }
-        },
-      );
-  },
-};
-const dialogMeta = targetCommandMeta("target.dialog");
-export const targetDialogCommandSpec: TargetCommandSpec = {
-  id: dialogMeta.id,
-  usage: dialogMeta.usage,
-  summary: dialogMeta.summary,
-  register: (ctx) => {
-    ctx.target
-      .command("dialog")
-      .description(dialogMeta.summary)
-      .argument("<targetId>", "Target handle returned by open/target list")
-      .option("--action <action>", "Dialog action: accept|dismiss", "accept")
-      .option("--prompt-text <text>", "Prompt text used when action=accept for prompt dialogs")
-      .option("--trigger-text <query>", "Optionally click a text-matched trigger before waiting for dialog")
-      .option("--trigger-selector <query>", "Optionally click a selector-matched trigger before waiting for dialog")
-      .option("--contains <text>", "Text filter to apply with --trigger-selector")
-      .option("--visible-only", "Only match visible trigger elements")
-      .option("--timeout-ms <ms>", "Dialog timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
-      .option("--no-persist", "Skip writing target metadata to local state")
-      .option("--fields <csv>", "Return only selected top-level fields")
-      .action(
-        async (
-          targetId: string,
-          options: {
-            action?: string;
-            promptText?: string;
-            triggerText?: string;
-            triggerSelector?: string;
-            contains?: string;
-            visibleOnly?: boolean;
-            timeoutMs: number;
-            persist?: boolean;
-            fields?: string;
-          },
-        ) => {
-          const output = ctx.globalOutputOpts();
-          const globalOpts = ctx.program.opts<{ session?: string }>();
-          const fields = parseFieldsCsv(options.fields);
-          try {
-            const report = await targetDialog({
-              targetId,
-              timeoutMs: options.timeoutMs,
-              sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
-              action: options.action,
-              promptText: options.promptText,
-              triggerText: options.triggerText,
-              triggerSelector: options.triggerSelector,
-              containsQuery: options.contains,
-              visibleOnly: Boolean(options.visibleOnly),
+              waitForText: options.waitForText,
+              waitForSelector: options.waitForSelector,
+              waitNetworkIdle: Boolean(options.waitNetworkIdle),
+              waitTimeoutMs: options.waitTimeoutMs,
+              proof: Boolean(options.proof),
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

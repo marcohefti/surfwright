@@ -15,6 +15,7 @@ import {
 import { type CliFailure } from "./core/types.js";
 import { parseWorkerArgv, runTargetNetworkWorker } from "./features/network/index.js";
 import { allCommandManifest, registerFeaturePlugins } from "./features/registry.js";
+import { rewriteTargetIdOptionAlias } from "./core/cli/target-id-alias.js";
 
 type OutputOpts = {
   json: boolean;
@@ -185,13 +186,11 @@ const DOT_COMMAND_ALIAS_MAP = (() => {
 function rewriteDotCommandAlias(argv: string[]): string[] {
   const out = [...argv];
   let commandIndex = 2;
-
   while (commandIndex < out.length) {
     const token = out[commandIndex];
     if (token === "--") {
       return out;
     }
-
     const sessionSpan = parseOptionTokenSpan(out, commandIndex, "--session");
     if (sessionSpan > 0) {
       commandIndex += sessionSpan;
@@ -212,12 +211,10 @@ function rewriteDotCommandAlias(argv: string[]): string[] {
       commandIndex += 1;
       continue;
     }
-
     if (token.startsWith("-")) {
       commandIndex += 1;
       continue;
     }
-
     const alias = DOT_COMMAND_ALIAS_MAP.get(token);
     if (alias) {
       out.splice(commandIndex, 1, ...alias);
@@ -233,7 +230,7 @@ function normalizeArgv(argv: string[]): string[] {
   if (out[2] === "--") {
     out.splice(2, 1);
   }
-  return rewriteDotCommandAlias(out);
+  return rewriteTargetIdOptionAlias(rewriteDotCommandAlias(out));
 }
 
 function parseCommandPath(argv: string[]): string[] {
@@ -343,6 +340,8 @@ function createProgram(): Command {
     .option("--agent-id <agentId>", "Agent scope id for isolated state/daemon namespace")
     .option("--workspace <dir>", "Workspace directory override for reusable profiles (default: auto-discover ./.surfwright)")
     .option("--session <sessionId>", "Use a specific session for this command")
+    .showSuggestionAfterError(true)
+    .showHelpAfterError("(run the command with --help for examples)")
     .exitOverride();
   registerFeaturePlugins({
     program,
@@ -371,7 +370,6 @@ async function runLocalCommand(argv: string[]): Promise<number> {
   applyWorkspaceDirOverrideFromArgv(argv);
   const program = createProgram();
   process.exitCode = 0;
-
   try {
     await program.parseAsync(normalizeArgv(argv));
   } catch (error) {

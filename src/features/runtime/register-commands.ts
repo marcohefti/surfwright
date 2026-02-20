@@ -152,6 +152,16 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Navigation timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
     .option("--fields <csv>", "Return only selected top-level fields")
+    .addHelpText(
+      "after",
+      [
+        "",
+        "Examples:",
+        "  surfwright open https://example.com",
+        "  surfwright open https://example.com --reuse active --wait-until domcontentloaded",
+        "  surfwright open https://example.com/login --profile auth --browser-mode headed",
+      ].join("\n"),
+    )
     .action(
       async (
         url: string,

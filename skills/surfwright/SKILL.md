@@ -20,6 +20,7 @@ surfwright --json contract
 ```
 
 Do not assume docs are fresher than the contract payload.
+For high-traffic commands, prefer `contract.guidance[]` examples/proof schemas over guesswork.
 
 ## Operating Protocol
 

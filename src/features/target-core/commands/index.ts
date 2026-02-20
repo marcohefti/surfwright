@@ -1,15 +1,13 @@
 import {
   targetClickCommandSpec,
   targetClickAtCommandSpec,
-  targetCloseCommandSpec,
-  targetDialogCommandSpec,
   targetDragDropCommandSpec,
   // click-related commands
   targetFillCommandSpec,
   targetKeypressCommandSpec,
-  targetSpawnCommandSpec,
   targetUploadCommandSpec,
 } from "./target-click.js";
+import { targetCloseCommandSpec, targetDialogCommandSpec, targetSpawnCommandSpec } from "./actions/target-window.js";
 import { targetDownloadCommandSpec } from "./actions/target-download.js";
 import {
   targetObserveCommandSpec,

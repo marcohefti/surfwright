@@ -136,7 +136,18 @@ surfwright target click <targetId> --text "Pricing"
 surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1
 ```
 
+Fast first-pass flow with explicit reuse/readiness controls:
+
+```bash
+surfwright open https://example.com --reuse active --wait-until commit
+surfwright target click <targetId> --text "Pricing" --visible-only --proof
+surfwright target style <targetId> --selector ".btn.btn-primary" --properties background-color,color,font-size,border-radius
+surfwright target extract <targetId> --kind docs-commands --selector main --limit 5
+```
+
 `target find` match rows include `text`, `visible`, `selectorHint`, `href`, and `tag`.
+`target snapshot --mode orient` now includes additive counters (`headingsCount`, `buttonsCount`, `linksCount`, `navCount`).
+`target click --proof` now includes additive `proof.countAfter` for selector-mode clicks (when post-action counting is available).
 
 Use workspace profile for persistent login state:
 

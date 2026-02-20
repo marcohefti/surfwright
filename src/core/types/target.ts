@@ -1,5 +1,4 @@
 import type { ActionTimingMs, DownloadCaptureReport, SessionSource } from "../types.js";
-
 export type TargetListReport = {
   ok: true;
   sessionId: string;
@@ -70,6 +69,7 @@ export type TargetSnapshotReport = {
     text: string;
     href: string;
   }>;
+  headingsCount?: number; buttonsCount?: number; linksCount?: number; navCount?: number;
   truncated: {
     text: boolean;
     headings: boolean;
@@ -178,6 +178,18 @@ export type TargetClickReport = {
   snapshot: {
     textPreview: string;
   } | null;
+  proof?: {
+    urlChanged: boolean;
+    targetChanged: boolean;
+    waitSatisfied: boolean;
+    snapshotCaptured: boolean;
+    deltaCaptured: boolean;
+    clickedText: string;
+    clickedSelectorHint: string | null;
+    finalUrl: string;
+    openedTargetId: string | null;
+    countAfter: number | null;
+  };
   delta?: TargetClickDeltaEvidence;
   handoff: {
     sameTarget: boolean;
@@ -336,7 +348,7 @@ export type TargetExtractReport = {
   targetId: string;
   url: string;
   title: string;
-  kind: "generic" | "blog" | "news" | "docs";
+  kind: "generic" | "blog" | "news" | "docs" | "docs-commands";
   source: "dom" | "api-feed";
   sourcesTried: string[];
   scope: {
@@ -354,6 +366,9 @@ export type TargetExtractReport = {
     summary: string | null;
     publishedAt: string | null;
     frameUrl: string;
+    language?: string | null;
+    command?: string | null;
+    section?: string | null;
     actionable?: {
       handle: string | null;
       selectorHint: string | null;

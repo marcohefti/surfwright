@@ -111,6 +111,9 @@ export type OpenReport = {
   status: number | null;
   title: string;
   download: DownloadCaptureReport | null;
+  waitUntil: "commit" | "domcontentloaded" | "load" | "networkidle";
+  reuseMode: "off" | "url" | "origin" | "active";
+  reusedTarget: boolean;
   timingMs: ActionTimingMs;
 };
 export type SessionReport = {

@@ -27,6 +27,13 @@ Ensure/reuse default managed session:
 surfwright session ensure
 ```
 
+Open with explicit tab reuse and readiness strategy:
+
+```bash
+surfwright open https://example.com --reuse active --wait-until commit
+surfwright open https://example.com/docs --reuse origin --wait-until domcontentloaded
+```
+
 Create pinned or ephemeral sessions:
 
 ```bash
@@ -80,6 +87,14 @@ surfwright target count <targetId> --text "Delete" --visible-only
 surfwright target click <targetId> --text "Delete" --visible-only --index 1
 ```
 
+One-shot click evidence payload (post-click proof):
+
+```bash
+surfwright target click <targetId> --text "Pricing" --visible-only --proof
+```
+
+For selector-mode clicks, proof includes additive `countAfter` (post-action selector cardinality when available).
+
 Narrow link matches by destination host/path:
 
 ```bash
@@ -111,6 +126,12 @@ surfwright target snapshot-diff ./artifacts/snap-a.json ./artifacts/snap-b.json
 
 After any click, inspect `handoff` in the JSON output to detect whether a new target opened (`sameTarget=false`) and chain directly via `openedTargetId`.
 
+Inspect computed styles without `target eval`:
+
+```bash
+surfwright target style <targetId> --selector ".btn.btn-primary" --properties background-color,color,font-size,border-radius
+```
+
 ## Form/file/input actions
 
 ```bash
@@ -139,10 +160,13 @@ Structured content and readiness checks:
 
 ```bash
 surfwright target extract <targetId> --kind blog --include-actionable --limit 10
+surfwright target extract <targetId> --kind docs-commands --selector main --limit 10
 surfwright target wait <targetId> --for-selector "h1" --wait-timeout-ms 2500
 surfwright target url-assert <targetId> --host github.com --path-prefix /pricing
 surfwright target hover <targetId> --text "Pricing" --visible-only
 ```
+
+`target snapshot --mode orient` includes additive aggregate counters: `headingsCount`, `buttonsCount`, `linksCount`, and `navCount`.
 
 ## Evidence capture (console/network/trace/artifacts)
 

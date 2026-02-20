@@ -23,6 +23,7 @@ import {
   targetMotionDetectCommandSpec,
   targetScrollRevealScanCommandSpec,
   targetStickyCheckCommandSpec,
+  targetStyleCommandSpec,
   targetTransitionAssertCommandSpec,
 } from "./effects/target-effect-assertions.js";
 import { targetEvalCommandSpec } from "./target-eval.js";
@@ -65,6 +66,7 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetFormFillCommandSpec,
   targetEmulateCommandSpec,
   targetScreenshotCommandSpec,
+  targetStyleCommandSpec,
   targetHoverCommandSpec,
   targetStickyCheckCommandSpec,
   targetMotionDetectCommandSpec,

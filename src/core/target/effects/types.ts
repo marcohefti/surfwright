@@ -188,6 +188,31 @@ export type TargetHoverReport = {
   timingMs: ActionTimingMs;
 };
 
+export type TargetStyleReport = {
+  ok: true;
+  sessionId: string;
+  sessionSource: SessionSource;
+  targetId: string;
+  actionId: string;
+  query: {
+    mode: "text" | "selector";
+    query: string;
+    selector: string | null;
+    contains: string | null;
+    visibleOnly: boolean;
+  };
+  matchCount: number;
+  pickedIndex: number;
+  inspected: TargetObservedElement & {
+    tagName: string | null;
+    id: string | null;
+    className: string | null;
+  };
+  properties: string[];
+  values: Record<string, string | null>;
+  timingMs: ActionTimingMs;
+};
+
 export type TargetStickyCheckReport = {
   ok: true;
   sessionId: string;

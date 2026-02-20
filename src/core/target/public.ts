@@ -29,6 +29,7 @@ export { targetUrlAssert } from "./url/url-assert.js";
 
 export { targetObserve } from "./effects/target-observe.js";
 export { targetHover, targetMotionDetect, targetStickyCheck } from "./effects/target-effect-assertions.js";
+export { targetStyle } from "./effects/target-style.js";
 export { targetScrollRevealScan, targetTransitionAssert } from "./effects/target-effect-assertions-advanced.js";
 export { targetScrollPlan } from "./effects/target-scroll-plan.js";
 export { targetScrollSample } from "./effects/target-scroll-sample.js";

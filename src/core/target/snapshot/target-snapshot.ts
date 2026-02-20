@@ -348,6 +348,9 @@ export async function targetSnapshot(opts: {
       headings,
       buttons,
       links,
+      headingsCount: totalHeadings,
+      buttonsCount: totalButtons,
+      linksCount: totalLinks,
       truncated,
       hints,
       timingMs: {
@@ -361,6 +364,7 @@ export async function targetSnapshot(opts: {
 
     if (mode === "orient") {
       report.h1 = h1;
+      report.navCount = totalLinks;
     }
 
     if (includeSelectorHints) {

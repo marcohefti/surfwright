@@ -39,7 +39,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.click",
     usage:
-      "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "click the first matching element in a target",
   },
   {
@@ -115,6 +115,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "capture deterministic screenshot artifact metadata for a target",
   },
   {
+    id: "target.style",
+    usage:
+      "surfwright target style <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--properties <csv>] [--index <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+    summary: "inspect computed styles of a matched element with bounded output",
+  },
+  {
     id: "target.hover",
     usage:
       "surfwright target hover <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--properties <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
@@ -130,7 +136,7 @@ export const targetCommandManifest: CliCommandContract[] = [
     id: "target.extract",
     usage:
       "surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--include-actionable] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
-    summary: "extract structured content records (blog/news/docs/generic) from a target",
+    summary: "extract structured records (blog/news/docs/generic/docs-commands) from a target",
   },
   {
     id: "target.eval",

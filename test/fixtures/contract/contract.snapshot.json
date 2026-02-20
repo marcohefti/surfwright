@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:838f5f5100d946c0a49190aa3f110887d7f78c1e3da21b81f5b9af61eab3fcc8",
+  "contractFingerprint": "sha256:896e17e2bd1d5617f0bdc28a64b026d6dff667faa76552ca7d1cd15c14d0c391",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -47,7 +47,7 @@
     },
     {
       "id": "open",
-      "usage": "surfwright open <url> [--profile <name>] [--reuse-url] [--allow-download] [--download-out-dir <path>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright open <url> [--profile <name>] [--reuse-url] [--reuse <off|url|origin|active>] [--allow-download] [--download-out-dir <path>] [--wait-until <commit|domcontentloaded|load|networkidle>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "open URL and return minimal page report with target handle"
     },
     {
@@ -122,7 +122,7 @@
     },
     {
       "id": "target.click",
-      "usage": "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "click the first matching element in a target"
     },
     {
@@ -178,7 +178,7 @@
     {
       "id": "target.extract",
       "usage": "surfwright target extract <targetId> [--kind <kind>] [--selector <query>] [--visible-only] [--include-actionable] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
-      "summary": "extract structured content records (blog/news/docs/generic) from a target"
+      "summary": "extract structured records (blog/news/docs/generic/docs-commands) from a target"
     },
     {
       "id": "target.fill",
@@ -339,6 +339,11 @@
       "id": "target.sticky-check",
       "usage": "surfwright target sticky-check <targetId> [--selector <query>] [--contains <text>] [--visible-only] [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "assert sticky behavior with deterministic scroll evidence"
+    },
+    {
+      "id": "target.style",
+      "usage": "surfwright target style <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--properties <csv>] [--index <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "summary": "inspect computed styles of a matched element with bounded output"
     },
     {
       "id": "target.trace.begin",

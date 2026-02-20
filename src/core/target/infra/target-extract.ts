@@ -23,10 +23,16 @@ function parseKind(input: string | undefined): TargetExtractReport["kind"] {
     return "generic";
   }
   const normalized = input.trim().toLowerCase();
-  if (normalized === "blog" || normalized === "news" || normalized === "docs" || normalized === "generic") {
+  if (
+    normalized === "blog" ||
+    normalized === "news" ||
+    normalized === "docs" ||
+    normalized === "docs-commands" ||
+    normalized === "generic"
+  ) {
     return normalized;
   }
-  throw new CliError("E_QUERY_INVALID", "kind must be one of: generic, blog, news, docs");
+  throw new CliError("E_QUERY_INVALID", "kind must be one of: generic, blog, news, docs, docs-commands");
 }
 
 async function extractFrameItems(opts: {
@@ -82,12 +88,116 @@ async function extractFrameItems(opts: {
         return { matched: false, items: [] };
       }
 
+      if (kind === "docs-commands") {
+        const shellCommandRegex =
+          /^(?:\$|#|>)?\s*(npm|pnpm|yarn|npx|bun|pip|pipx|poetry|uv|curl|wget|git|node|python|go|cargo|docker|kubectl|surfwright|zcl)\b/i;
+        const languageFromNode = (node: any): string | null => {
+          const classPool = [String(node?.className ?? ""), String(node?.parentElement?.className ?? "")]
+            .join(" ")
+            .trim();
+          if (classPool.length === 0) {
+            return null;
+          }
+          const languageMatch = classPool.match(/(?:^|\s)(?:lang|language)-([a-z0-9_+-]+)/i);
+          if (!languageMatch || typeof languageMatch[1] !== "string") {
+            return null;
+          }
+          return languageMatch[1].toLowerCase();
+        };
+        const sectionFromNode = (node: any): string | null => {
+          let current = node;
+          for (let depth = 0; depth < 10 && current; depth += 1) {
+            let sibling = current.previousElementSibling ?? null;
+            while (sibling) {
+              const directHeading = sibling.matches?.("h1,h2,h3,h4,h5,h6") ? sibling : sibling.querySelector?.("h1,h2,h3,h4,h5,h6");
+              if (directHeading) {
+                const headingText = normalize(directHeading.textContent ?? "");
+                if (headingText.length > 0) {
+                  return headingText;
+                }
+              }
+              sibling = sibling.previousElementSibling ?? null;
+            }
+            current = current.parentElement ?? null;
+          }
+          return null;
+        };
+        const commandFromSnippet = (snippet: string): string | null => {
+          const lines = snippet
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0);
+          for (const line of lines) {
+            const stripped = line.replace(/^(?:\$|#|>)\s*/, "");
+            if (shellCommandRegex.test(stripped)) {
+              return stripped;
+            }
+          }
+          return null;
+        };
+
+        const codeNodes: any[] = Array.from(rootNode.querySelectorAll?.("pre code,pre,code") ?? []);
+        const items: Array<{
+          title: string;
+          url: string | null;
+          summary: string | null;
+          publishedAt: string | null;
+          language: string | null;
+          command: string | null;
+          section: string | null;
+          actionable?: {
+            handle: string | null;
+            selectorHint: string | null;
+            frameId: string | null;
+            href: string | null;
+          };
+        }> = [];
+        for (const node of codeNodes) {
+          if (visibleOnly && !isVisible(node)) {
+            continue;
+          }
+          const snippetRaw = String(node?.innerText ?? node?.textContent ?? "").trim();
+          if (snippetRaw.length === 0) {
+            continue;
+          }
+          const command = commandFromSnippet(snippetRaw);
+          if (!command) {
+            continue;
+          }
+          const section = sectionFromNode(node);
+          const language = languageFromNode(node);
+          const actionable = includeActionable
+            ? {
+                handle: null,
+                selectorHint: selectorHintFor(node),
+                frameId,
+                href: null,
+              }
+            : undefined;
+          items.push({
+            title: section ?? command,
+            url: null,
+            summary: null,
+            publishedAt: null,
+            language,
+            command,
+            section,
+            actionable,
+          });
+          if (items.length >= Math.max(scanLimit * 3, scanLimit)) {
+            break;
+          }
+        }
+        return { matched: true, items };
+      }
+
       const primarySelectorByKind: Record<TargetExtractReport["kind"], string> = {
         // Heuristic presets should stay interface-shaped (semantic tags/ARIA), not site-shaped classes.
         generic: "article,[role=\"article\"],main a[href]",
         blog: "article,[role=\"article\"]",
         news: "article,[role=\"article\"]",
         docs: "main a[href],nav a[href],article a[href]",
+        "docs-commands": "pre code,pre,code",
       };
       const primarySelector = primarySelectorByKind[kind];
       const primaryNodes: any[] = Array.from(rootNode.querySelectorAll?.(primarySelector) ?? []);
@@ -98,6 +208,9 @@ async function extractFrameItems(opts: {
         url: string | null;
         summary: string | null;
         publishedAt: string | null;
+        language?: string | null;
+        command?: string | null;
+        section?: string | null;
         actionable?: {
           handle: string | null;
           selectorHint: string | null;
@@ -161,6 +274,9 @@ async function extractFrameItems(opts: {
       summary: item.summary,
       publishedAt: item.publishedAt,
       frameUrl,
+      language: typeof item.language === "string" ? normalizeExtractWhitespace(item.language) : item.language ?? null,
+      command: typeof item.command === "string" ? item.command.trim() : item.command ?? null,
+      section: typeof item.section === "string" ? normalizeExtractWhitespace(item.section) : item.section ?? null,
       actionable: item.actionable,
     })),
   };
@@ -248,6 +364,9 @@ export async function targetExtract(opts: {
         summary: item.summary,
         publishedAt: item.publishedAt,
         frameUrl: item.frameUrl,
+        ...(typeof item.language !== "undefined" ? { language: item.language ?? null } : {}),
+        ...(typeof item.command !== "undefined" ? { command: item.command ?? null } : {}),
+        ...(typeof item.section !== "undefined" ? { section: item.section ?? null } : {}),
         ...(includeActionable
           ? {
               actionable: {
@@ -284,7 +403,7 @@ export async function targetExtract(opts: {
       }
     }
 
-    if (merged.length === 0) {
+    if (kind !== "docs-commands" && merged.length === 0) {
       const assisted = await fetchAssistedExtractItems({
         pageUrl,
         kind,

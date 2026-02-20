@@ -39,6 +39,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--wait-timeout-ms <ms>", "Post-click wait timeout budget in milliseconds", ctx.parseTimeoutMs)
       .option("--snapshot", "Include compact post-click text preview")
       .option("--delta", "Include bounded evidence-based delta after click", false)
+      .option("--proof", "Include one-shot evidence payload (implies --snapshot and --delta)", false)
       .option("--timeout-ms <ms>", "Click timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -60,6 +61,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             waitTimeoutMs?: number;
             snapshot?: boolean;
             delta?: boolean;
+            proof?: boolean;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -88,6 +90,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               waitTimeoutMs: options.waitTimeoutMs,
               snapshot: Boolean(options.snapshot),
               delta: Boolean(options.delta),
+              proof: Boolean(options.proof),
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

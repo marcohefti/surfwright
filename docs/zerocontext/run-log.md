@@ -31,6 +31,70 @@ Append-only. Newest entry first.
   - `<concrete command/prompt/timeout/shim guardrails>`
 ```
 
+## 2026-02-20 - Social Compare Rerun (14 explorer agents, progressive rounds)
+
+- Objective: rerun 7 common browser-agent missions for SurfWright vs Chrome MCP with one fresh explorer agent per mission per flow, then regenerate social comparison artifacts.
+- Suite ID: `social-compare-surfwright-7` + `social-compare-chrome-mcp-7` (single-mission runs, 14 total attempts)
+- Run IDs: SurfWright `20260220-141001Z-1fcbd7`, `20260220-141018Z-18726c`, `20260220-141044Z-9c6d54`, `20260220-141119Z-8a2ab0`, `20260220-141139Z-7bef28`, `20260220-141203Z-06e29c`, `20260220-141245Z-b04c4f`; Chrome MCP `20260220-140955Z-0e2fae`, `20260220-141019Z-d41a88`, `20260220-141045Z-143809`, `20260220-141117Z-0352a4`, `20260220-141140Z-9f148a`, `20260220-141203Z-f2884e`, `20260220-141247Z-8519de`
+- Runner: per-mission wrappers `tmp/zcl/run_social_compare_surfwright_one.sh <mission-id>` and `tmp/zcl/run_social_compare_chrome_mcp_one.sh <mission-id>` invoked by explorer subagents
+- Model: `gpt-5.3-codex-spark` (Codex explorer agents)
+- Command:
+  - `tmp/zcl/run_social_compare_surfwright_one.sh <mission-id>`
+  - `tmp/zcl/run_social_compare_chrome_mcp_one.sh <mission-id>`
+- Artifacts:
+  - `tmp/zcl/SOCIAL_COMPARE_RESULTS_LATEST.md`
+  - `tmp/zcl/SOCIAL_COMPARE_EXECUTION_LATEST.md`
+  - `tmp/zcl/SOCIAL_COMPARE_X_POST_PACK_LATEST.md`
+  - `tmp/zcl/SOCIAL_COMPARE_14AGENTS_RUNMAP_20260220.md`
+  - `.zcl/runs/<run-id>/attempts/001-<mission>-r1/{attempt.report.json,feedback.json,tool.calls.jsonl}`
+- Outcome:
+  - Attempts started/finalized: `14/14`
+  - Successes: `14/14` (`7/7` per flow)
+  - Aggregate turns: SurfWright `21` vs Chrome MCP `48`
+  - Aggregate wall time: SurfWright `23.1s` vs Chrome MCP `32.3s`
+  - Aggregate token estimate: SurfWright `4549` vs Chrome MCP `40335`
+  - Notable behavior: first-pass orientation wall time was near parity in this rerun (`2.6s` SW vs `2.6s` CH), but token delta remained large (`615` vs `5729`).
+- Decision:
+  - Keep using these 7 missions as social-proof baseline; they map to recognizable daily use cases.
+  - Keep reporting all three efficiency axes together: turns, wall time, tokens.
+- Next run guardrails:
+  - Maintain progressive rounds (do not start next round until prior Chrome MCP mission is finished).
+  - Keep one mission per fresh agent per flow (no multi-mission carryover).
+  - Preserve trace-backed evidence paths in run map + per-attempt artifacts.
+
+## 2026-02-20 - SurfWright Qualitative Feedback Rerun (7 common missions)
+
+- Objective: rerun common web-agent missions on SurfWright-only and collect explicit qualitative improvement notes from each mission.
+- Suite ID: `surfwright-qual-feedback-<mission>` (one mission per run, 7 runs total)
+- Run IDs: `20260220-133201Z-72f4de`, `20260220-133201Z-7726ab`, `20260220-133201Z-3a5b38`, `20260220-133203Z-58b121`, `20260220-133202Z-57e119`, `20260220-133202Z-9a5a9f`, `20260220-133330Z-239178`
+- Runner: `tmp/zcl/runner-codex-zcl-v2.sh` (`gpt-5.3-codex-spark`) orchestrated via `tmp/zcl/run_surfwright_qual_feedback_one.sh <mission-id>`
+- Model: `gpt-5.3-codex-spark`
+- Command:
+  - `tmp/zcl/run_surfwright_qual_feedback_one.sh docs-install-command`
+  - `tmp/zcl/run_surfwright_qual_feedback_one.sh homepage-pricing`
+  - `tmp/zcl/run_surfwright_qual_feedback_one.sh redirect-evidence`
+  - `tmp/zcl/run_surfwright_qual_feedback_one.sh first-pass-orientation`
+  - `tmp/zcl/run_surfwright_qual_feedback_one.sh modal-lifecycle`
+  - `tmp/zcl/run_surfwright_qual_feedback_one.sh multimatch-disambiguation`
+  - `tmp/zcl/run_surfwright_qual_feedback_one.sh style-inspection`
+- Artifacts:
+  - `tmp/zcl/SURFWRIGHT_QUAL_FEEDBACK_RESULTS_20260220.md`
+  - `tmp/zcl/SURFWRIGHT_QUAL_FEEDBACK_RUNMAP_20260220.md`
+  - `.zcl/runs/<run-id>/attempts/*/{attempt.report.json,feedback.json,notes.jsonl,tool.calls.jsonl,runner.stderr.log}`
+- Outcome:
+  - Attempts started/finalized: `7/7`
+  - Successes: `7/7`
+  - Total tool calls: `75`
+  - Dominant decision tags from notes: `output_shape (5)`, `missing_primitive (2)`
+  - Notable behavior: style mission discovered and used the new `target style` command; most feedback requested additive output-shape ergonomics, not hard blockers.
+- Decision:
+  - Prioritize additive output-shape improvements next (`docs command/code extraction`, orient counters, optional click proof count-after evidence).
+  - Keep current generic command surface (avoid site-specific shortcuts).
+- Next run guardrails:
+  - Keep finish rule explicit: execute `zcl feedback` and `zcl note` as shell commands, not prose.
+  - Keep mission prompts generic and non-site-optimized for product decisions.
+  - Continue one-agent-per-mission isolation.
+
 ## 2026-02-19 - Pinned Repos Rerun (stability failure)
 
 - Objective: rerun 10-attempt pinned-repo extraction campaign with feedback/note capture.

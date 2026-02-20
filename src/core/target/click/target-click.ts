@@ -6,31 +6,17 @@ import { saveTargetSnapshot } from "../../state/index.js";
 import { parseTargetQueryInput } from "../infra/target-query.js";
 import { parseFrameScope } from "../infra/target-find.js";
 import { readPageTargetId, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
-import {
-  createCdpEvaluator,
-  ensureValidSelectorSyntaxCdp,
-  frameIdsForScope,
-  getCdpFrameTree,
-  openCdpSession,
-} from "../infra/cdp/index.js";
+import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import type { TargetClickDeltaEvidence, TargetClickExplainReport, TargetClickReport } from "../../types.js";
-import {
-  CLICK_EXPLAIN_MAX_REJECTED,
-  parseMatchIndex,
-  parseWaitAfterClick,
-  queryMismatchError,
-  readPostSnapshot,
-  resolveWaitTimeoutMs,
-} from "./click-utils.js";
+import { CLICK_EXPLAIN_MAX_REJECTED, parseMatchIndex, parseWaitAfterClick, queryMismatchError, readPostSnapshot, resolveWaitTimeoutMs } from "./click-utils.js";
 import { cdpQueryOp } from "./cdp-query-op.js";
 import { buildClickExplainReport } from "./click-explain.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
+import { buildClickProof, readSelectorCountAfter } from "./click-proof.js";
 import { safePageTitle } from "../infra/utils/safe-page-title.js";
 import { targetClickByHandle } from "./target-click-handle.js";
 import { waitAfterClickWithBudget } from "./click-wait.js";
-
 type ClickWaitResult = NonNullable<TargetClickReport["wait"]>;
-
 export async function targetClick(opts: {
   targetId: string;
   timeoutMs: number;
@@ -50,6 +36,7 @@ export async function targetClick(opts: {
   waitTimeoutMs?: number;
   snapshot?: boolean;
   delta?: boolean;
+  proof?: boolean;
 }): Promise<TargetClickReport | TargetClickExplainReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -65,14 +52,15 @@ export async function targetClick(opts: {
         visibleOnly: opts.visibleOnly,
       });
   const explain = Boolean(opts.explain);
-  const includeDelta = Boolean(opts.delta);
+  const includeProof = Boolean(opts.proof);
+  const includeDelta = Boolean(opts.delta) || includeProof;
+  const includeSnapshot = Boolean(opts.snapshot) || includeProof;
   const waitAfter = parseWaitAfterClick({
     waitForText: opts.waitForText,
     waitForSelector: opts.waitForSelector,
     waitNetworkIdle: opts.waitNetworkIdle,
   });
   const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
-
   if (hasHandle) {
     const hasText = typeof opts.textQuery === "string" && opts.textQuery.trim().length > 0;
     const hasSelector = typeof opts.selectorQuery === "string" && opts.selectorQuery.trim().length > 0;
@@ -87,17 +75,15 @@ export async function targetClick(opts: {
       throw new CliError("E_QUERY_INVALID", "--visible-only cannot be combined with --handle");
     }
   }
-
   if (explain) {
     if (hasHandle) {
       throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with --handle");
     }
-    const hasPostClickEvidence = Boolean(opts.snapshot) || includeDelta || waitAfter !== null;
+    const hasPostClickEvidence = includeSnapshot || includeDelta || waitAfter !== null || includeProof;
     if (hasPostClickEvidence) {
-      throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with post-click wait options, --snapshot, or --delta");
+      throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with post-click wait options, --snapshot, --delta, or --proof");
     }
   }
-
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
     timeoutMs: opts.timeoutMs,
@@ -109,7 +95,6 @@ export async function targetClick(opts: {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();
-
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
     const context = target.page.context();
@@ -118,7 +103,6 @@ export async function targetClick(opts: {
     const frameTree = await getCdpFrameTree(cdp);
     const worldCache = new Map<string, number>();
     const frameIds = frameIdsForScope({ frameTree, scope: frameScope });
-
     if (parsed && parsed.mode === "selector" && typeof parsed.selector === "string") {
       await ensureValidSelectorSyntaxCdp({
         cdp,
@@ -127,13 +111,11 @@ export async function targetClick(opts: {
         selectorQuery: parsed.selector,
       });
     }
-
     const mainEvaluator = createCdpEvaluator({
       cdp,
       frameCdpId: frameTree.frame.id,
       worldCache,
     });
-
     if (hasHandle) {
       return await targetClickByHandle({
         startedAt,
@@ -151,22 +133,20 @@ export async function targetClick(opts: {
         timeoutMs: opts.timeoutMs,
         waitTimeoutMs,
         waitAfter,
-        snapshot: Boolean(opts.snapshot),
+        snapshot: includeSnapshot,
         includeDelta,
+        includeProof,
         persistState: opts.persistState !== false,
       });
     }
-
     if (!parsed) {
       throw new CliError("E_INTERNAL", "Unable to parse click query");
     }
-
     const queryMode = parsed.mode;
     const query = parsed.query;
     const selector = parsed.selector;
     const contains = parsed.contains;
     const visibleOnly = parsed.visibleOnly;
-
     const perFrameCounts: Array<{ frameCdpId: string; rawCount: number; firstVisibleIndex: number | null }> = [];
     for (const frameCdpId of frameIds) {
       const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
@@ -179,7 +159,6 @@ export async function targetClick(opts: {
       }) as { rawCount: number; firstVisibleIndex: number | null };
       perFrameCounts.push({ frameCdpId, rawCount: summary.rawCount, firstVisibleIndex: summary.firstVisibleIndex });
     }
-
     const matchCount = perFrameCounts.reduce((sum, entry) => sum + entry.rawCount, 0);
     const resolveFrameForGlobalIndex = (globalIndex: number): { frameCdpId: string; localIndex: number; frameOffset: number } => {
       let offset = 0;
@@ -266,7 +245,6 @@ export async function targetClick(opts: {
       const url = target.page.url();
       const title = await safePageTitle(target.page, opts.timeoutMs);
       const actionCompletedAt = Date.now();
-
       const report = await buildClickExplainReport({
         startedAt,
         resolvedSessionAt,
@@ -301,7 +279,6 @@ export async function targetClick(opts: {
       });
       return report as TargetClickExplainReport;
     }
-
     // Execute click.
     if (matchCount < 1) {
       throw queryMismatchError({
@@ -316,7 +293,6 @@ export async function targetClick(opts: {
         requestedIndex,
       });
     }
-
     let pickedIndex: number;
     if (requestedIndex !== null) {
       if (requestedIndex >= matchCount) {
@@ -374,12 +350,10 @@ export async function targetClick(opts: {
       }
       pickedIndex = found;
     }
-
+    const urlBeforeClick = target.page.url();
     const deltaBefore = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;
     const clickedAriaBefore = includeDelta ? await readAriaAt(pickedIndex) : null;
-
     const clickedPreview = await clickAt(pickedIndex);
-
     await target.page
       .waitForLoadState("domcontentloaded", {
         timeout: Math.max(200, Math.min(1000, opts.timeoutMs)),
@@ -387,7 +361,6 @@ export async function targetClick(opts: {
       .catch(() => {
         // Not all clicks trigger navigation; this is best-effort only.
       });
-
     const waited: ClickWaitResult | null = await waitAfterClickWithBudget({
       waitAfter,
       waitTimeoutMs,
@@ -400,11 +373,9 @@ export async function targetClick(opts: {
       visibleOnly,
       frameScope,
     });
-
-    const postSnapshot = opts.snapshot ? await readPostSnapshot(mainEvaluator) : null;
+    const postSnapshot = includeSnapshot ? await readPostSnapshot(mainEvaluator) : null;
     const deltaAfter = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;
     const clickedAriaAfter = includeDelta ? await readAriaAt(pickedIndex) : null;
-
     const openedPage = context.pages().find((page) => !pagesBeforeClick.includes(page)) ?? null;
     let openedTargetId: string | null = null;
     let openedUrl: string | null = null;
@@ -421,9 +392,7 @@ export async function targetClick(opts: {
       openedTitle = await safePageTitle(openedPage, opts.timeoutMs).catch(() => "");
       openedTargetId = await readPageTargetId(context, openedPage).catch(() => null);
     }
-
     const actionCompletedAt = Date.now();
-
     let delta: TargetClickDeltaEvidence | null = null;
     if (includeDelta && deltaBefore && deltaAfter && clickedAriaBefore && clickedAriaAfter) {
       delta = buildClickDeltaEvidence({
@@ -433,7 +402,30 @@ export async function targetClick(opts: {
         clickedAriaAfter,
       });
     }
-
+    const countAfter = await readSelectorCountAfter({
+      enabled: includeProof,
+      cdp,
+      worldCache,
+      queryMode,
+      frameScope,
+      query,
+      selector,
+      contains,
+    });
+    const proof = includeProof
+      ? buildClickProof({
+          urlBeforeClick,
+          urlAfterClick: target.page.url(),
+          openedTargetId,
+          openedPageDetected: openedPage !== null,
+          waited,
+          postSnapshot,
+          delta,
+          clickedText: clickedPreview.text,
+          clickedSelectorHint: clickedPreview.selectorHint,
+          countAfter,
+        })
+      : null;
     const report: TargetClickReport = {
       ok: true,
       sessionId: session.sessionId,
@@ -457,6 +449,7 @@ export async function targetClick(opts: {
       title: await safePageTitle(target.page, opts.timeoutMs),
       wait: waited,
       snapshot: postSnapshot,
+      ...(proof ? { proof } : {}),
       ...(delta ? { delta } : {}),
       handoff: {
         sameTarget: openedPage === null,
@@ -472,7 +465,6 @@ export async function targetClick(opts: {
         persistState: 0,
       },
     };
-
     const persistStartedAt = Date.now();
     if (opts.persistState !== false) {
       await saveTargetSnapshot({
@@ -490,7 +482,6 @@ export async function targetClick(opts: {
     const persistedAt = Date.now();
     report.timingMs.persistState = persistedAt - persistStartedAt;
     report.timingMs.total = persistedAt - startedAt;
-
     return report;
   } finally {
     await browser.close();

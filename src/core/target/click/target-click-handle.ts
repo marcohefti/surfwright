@@ -8,6 +8,7 @@ import { parseBackendNodeHandle } from "../infra/utils/element-handle.js";
 import { readPageTargetId } from "../infra/targets.js";
 import { cdpClickBackendNodeId, cdpDescribeBackendNode } from "./cdp-click-backend-node.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
+import { buildClickProof } from "./click-proof.js";
 import { readPostSnapshot } from "./click-utils.js";
 import { waitAfterClickWithBudget } from "./click-wait.js";
 
@@ -29,6 +30,7 @@ export async function targetClickByHandle(opts: {
   waitAfter: { mode: "text" | "selector" | "network-idle"; value: string | null } | null;
   snapshot: boolean;
   includeDelta: boolean;
+  includeProof: boolean;
   persistState: boolean;
 }): Promise<TargetClickReport> {
   const backendNodeId = parseBackendNodeHandle(opts.handleQuery);
@@ -55,6 +57,7 @@ export async function targetClickByHandle(opts: {
   }));
   const context = opts.page.context();
   const pagesBeforeClick = context.pages();
+  const urlBeforeClick = opts.page.url();
 
   const deltaBefore = opts.includeDelta ? await captureClickDeltaState(opts.page, opts.mainEvaluator, opts.timeoutMs) : null;
   const clickedAriaBefore = opts.includeDelta ? await readAriaByHandle() : null;
@@ -115,6 +118,21 @@ export async function targetClickByHandle(opts: {
     });
   }
 
+  const proof = opts.includeProof
+    ? buildClickProof({
+        urlBeforeClick,
+        urlAfterClick: opts.page.url(),
+        openedTargetId,
+        openedPageDetected: openedPage !== null,
+        waited,
+        postSnapshot,
+      delta,
+      clickedText: clickedPreview.text,
+      clickedSelectorHint: clickedPreview.selectorHint,
+      countAfter: null,
+    })
+  : null;
+
   const report: TargetClickReport = {
     ok: true,
     sessionId: opts.sessionId,
@@ -139,6 +157,7 @@ export async function targetClickByHandle(opts: {
     title: await safePageTitle(opts.page, opts.timeoutMs),
     wait: waited,
     snapshot: postSnapshot,
+    ...(proof ? { proof } : {}),
     ...(delta ? { delta } : {}),
     handoff: {
       sameTarget: openedPage === null,

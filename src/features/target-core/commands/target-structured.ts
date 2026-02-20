@@ -44,7 +44,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
       .command("extract")
       .description(extractMeta.summary)
       .argument("<targetId>", "Target handle returned by open/target list")
-      .option("--kind <kind>", "Extraction profile: generic|blog|news|docs")
+      .option("--kind <kind>", "Extraction profile: generic|blog|news|docs|docs-commands")
       .option("--selector <query>", "Scope extraction to a selector")
       .option("--visible-only", "Only include visible content")
       .option("--include-actionable", "Include compact action refs on extracted items for deterministic chaining")
@@ -61,6 +61,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
           "  surfwright target extract <targetId> --kind blog --limit 5",
           "  surfwright target extract <targetId> --kind blog --frame-scope all --limit 10",
           "  surfwright target extract <targetId> --kind news --selector main --visible-only",
+          "  surfwright target extract <targetId> --kind docs-commands --selector main --limit 10",
         ].join("\n"),
       )
       .action(

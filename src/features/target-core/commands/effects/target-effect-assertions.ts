@@ -5,6 +5,7 @@ import {
   targetMotionDetect,
   targetScrollRevealScan,
   targetStickyCheck,
+  targetStyle,
   targetTransitionAssert,
 } from "../../../../core/target/public.js";
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../../core/types.js";
@@ -12,10 +13,69 @@ import { targetCommandMeta } from "../../manifest.js";
 import type { TargetCommandSpec } from "../types.js";
 
 const hoverMeta = targetCommandMeta("target.hover");
+const styleMeta = targetCommandMeta("target.style");
 const stickyCheckMeta = targetCommandMeta("target.sticky-check");
 const motionDetectMeta = targetCommandMeta("target.motion-detect");
 const transitionAssertMeta = targetCommandMeta("target.transition-assert");
 const scrollRevealScanMeta = targetCommandMeta("target.scroll-reveal-scan");
+
+export const targetStyleCommandSpec: TargetCommandSpec = {
+  id: styleMeta.id,
+  usage: styleMeta.usage,
+  summary: styleMeta.summary,
+  register: (ctx) => {
+    ctx.target
+      .command("style")
+      .description(styleMeta.summary)
+      .argument("<targetId>", "Target handle returned by open/target list")
+      .option("--text <query>", "Text query to match target element")
+      .option("--selector <query>", "Selector query to match target element")
+      .option("--contains <text>", "Optional contains filter when using --selector")
+      .option("--visible-only", "Require inspected target to be visible", false)
+      .option("--properties <csv>", "Comma-separated computed style properties", "background-color,color,font-size,border-radius")
+      .option("--index <n>", "Pick the Nth match (0-based) instead of first match")
+      .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
+      .option("--no-persist", "Skip writing target metadata to local state")
+      .option("--fields <csv>", "Return only selected top-level fields")
+      .action(
+        async (
+          targetId: string,
+          options: {
+            text?: string;
+            selector?: string;
+            contains?: string;
+            visibleOnly?: boolean;
+            properties: string;
+            index?: string;
+            timeoutMs: number;
+            persist?: boolean;
+            fields?: string;
+          },
+        ) => {
+          const output = ctx.globalOutputOpts();
+          const globalOpts = ctx.program.opts<{ session?: string }>();
+          const fields = parseFieldsCsv(options.fields);
+          try {
+            const report = await targetStyle({
+              targetId,
+              timeoutMs: options.timeoutMs,
+              sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+              textQuery: options.text,
+              selectorQuery: options.selector,
+              containsQuery: options.contains,
+              visibleOnly: Boolean(options.visibleOnly),
+              propertiesCsv: options.properties,
+              index: typeof options.index === "string" ? Number.parseInt(options.index, 10) : undefined,
+              persistState: options.persist !== false,
+            });
+            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
+          } catch (error) {
+            ctx.handleFailure(error, output);
+          }
+        },
+      );
+  },
+};
 
 export const targetHoverCommandSpec: TargetCommandSpec = {
   id: hoverMeta.id,

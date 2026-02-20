@@ -8,6 +8,9 @@ export type ExtractItemDraft = {
   summary: string | null;
   publishedAt: string | null;
   frameUrl: string;
+  language?: string | null;
+  command?: string | null;
+  section?: string | null;
   actionable?: {
     handle: string | null;
     selectorHint: string | null;

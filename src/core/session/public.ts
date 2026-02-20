@@ -42,6 +42,8 @@ export async function openUrl(opts: {
   sessionId?: string;
   profile?: string;
   reuseUrl?: boolean;
+  reuseModeInput?: string;
+  waitUntilInput?: string;
   isolation?: string;
   browserModeInput?: string;
   allowDownload?: boolean;

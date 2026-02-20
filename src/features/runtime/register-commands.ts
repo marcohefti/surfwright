@@ -144,8 +144,10 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .argument("<url>", "Absolute URL to open")
     .option("--profile <name>", "Use a project workspace profile for persisted auth (requires workspace init)")
     .option("--reuse-url", "Reuse existing tab for same URL if present", false)
+    .option("--reuse <mode>", "Tab reuse mode: off|url|origin|active")
     .option("--allow-download", "Treat download navigations as success and capture deterministic download artifact", false)
     .option("--download-out-dir <path>", "Directory to write captured downloads (default ./artifacts/downloads)")
+    .option("--wait-until <mode>", "Navigation readiness: commit|domcontentloaded|load|networkidle")
     .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Navigation timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
@@ -156,12 +158,14 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         options: {
           timeoutMs: number;
           reuseUrl?: boolean;
+          reuse?: string;
           browserMode?: string;
           isolation?: string;
           fields?: string;
           profile?: string;
           allowDownload?: boolean;
           downloadOutDir?: string;
+          waitUntil?: string;
         },
       ) => {
       const output = ctx.globalOutputOpts();
@@ -172,8 +176,10 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           inputUrl: url,
           timeoutMs: options.timeoutMs,
           reuseUrl: Boolean(options.reuseUrl),
+          reuseModeInput: options.reuse,
           allowDownload: Boolean(options.allowDownload),
           downloadOutDir: typeof options.downloadOutDir === "string" ? options.downloadOutDir : undefined,
+          waitUntilInput: typeof options.waitUntil === "string" ? options.waitUntil : undefined,
           browserModeInput: options.browserMode,
           isolation: options.isolation,
           profile: typeof options.profile === "string" ? options.profile : undefined,

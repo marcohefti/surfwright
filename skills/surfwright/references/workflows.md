@@ -21,15 +21,25 @@ Use this when you lost `targetId`/`sessionId` in agent state.
 
 ## Session lifecycle patterns
 
-Ensure/reuse default managed session:
+Default task-scoped headless lifecycle (recommended):
+
+```bash
+AID="task-$(date +%s)"
+SESSION=$(surfwright --agent-id "$AID" session fresh --browser-mode headless | jq -r '.sessionId')
+OPEN=$(surfwright --agent-id "$AID" open https://example.com --session "$SESSION" --reuse off --browser-mode headless)
+TARGET=$(printf '%s' "$OPEN" | jq -r '.targetId')
+surfwright --agent-id "$AID" target snapshot "$TARGET" --mode orient --visible-only
+surfwright --agent-id "$AID" session clear
+```
+
+`session clear` operates within the current `--agent-id` namespace. With a unique `AID` per task, teardown removes only that task's state/session/processes.
+
+Shared/continuity lifecycle (opt-in override only):
+
+Use this only when the prompt explicitly asks to continue in existing session state.
 
 ```bash
 surfwright session ensure
-```
-
-Open with explicit tab reuse and readiness strategy:
-
-```bash
 surfwright open https://example.com --reuse active --wait-until commit
 surfwright open https://example.com/docs --reuse origin --wait-until domcontentloaded
 ```
@@ -315,3 +325,5 @@ Full teardown:
 surfwright session clear
 surfwright session clear --keep-processes
 ```
+
+When following the default task-scoped lifecycle, always run `session clear` with the same `--agent-id` used for the task so teardown is isolated to that task namespace.

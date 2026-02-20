@@ -16,11 +16,10 @@ import type { CliFailure } from "./core/types.js";
 import { parseWorkerArgv, runTargetNetworkWorker } from "./features/network/index.js";
 import { allCommandManifest, registerFeaturePlugins } from "./features/registry.js";
 import { rewriteTargetIdOptionAlias } from "./core/cli/target-id-alias.js";
+import { setRuntimeOutputShapeInput } from "./core/report-fields.js";
 import {
-  applyAgentIdOverrideFromArgv,
-  applyOutputShapeOverrideFromArgv,
-  applyWorkspaceDirOverrideFromArgv,
   parseCommandPath,
+  parseGlobalOptionValue,
   parseOptionTokenSpan,
 } from "./cli/options.js";
 import { commanderExitCode, parseOutputOptsFromArgv, toCommanderFailure, type OutputOpts } from "./cli/commander-failure.js";
@@ -74,6 +73,60 @@ function parseTimeoutMs(input: string): number {
     throw new Error("timeout-ms must be a positive integer");
   }
   return value;
+}
+
+function applyAgentIdOverrideFromArgv(argv: string[]): void {
+  const parsed = parseGlobalOptionValue(argv, "--agent-id");
+  if (!parsed.found || !parsed.valid) {
+    if (INITIAL_AGENT_ID_ENV === null) {
+      delete process.env.SURFWRIGHT_AGENT_ID;
+    } else {
+      process.env.SURFWRIGHT_AGENT_ID = INITIAL_AGENT_ID_ENV;
+    }
+    return;
+  }
+  if (typeof parsed.value === "string") {
+    process.env.SURFWRIGHT_AGENT_ID = parsed.value;
+    return;
+  }
+  delete process.env.SURFWRIGHT_AGENT_ID;
+}
+
+function applyWorkspaceDirOverrideFromArgv(argv: string[]): void {
+  const parsed = parseGlobalOptionValue(argv, "--workspace");
+  if (!parsed.found || !parsed.valid) {
+    if (INITIAL_WORKSPACE_DIR_ENV === null) {
+      delete process.env.SURFWRIGHT_WORKSPACE_DIR;
+    } else {
+      process.env.SURFWRIGHT_WORKSPACE_DIR = INITIAL_WORKSPACE_DIR_ENV;
+    }
+    return;
+  }
+  if (typeof parsed.value === "string") {
+    process.env.SURFWRIGHT_WORKSPACE_DIR = parsed.value;
+    return;
+  }
+  delete process.env.SURFWRIGHT_WORKSPACE_DIR;
+}
+
+function applyOutputShapeOverrideFromArgv(argv: string[]): void {
+  const parsed = parseGlobalOptionValue(argv, "--output-shape");
+  if (!parsed.found || !parsed.valid) {
+    if (INITIAL_OUTPUT_SHAPE_ENV === null) {
+      delete process.env.SURFWRIGHT_OUTPUT_SHAPE;
+    } else {
+      process.env.SURFWRIGHT_OUTPUT_SHAPE = INITIAL_OUTPUT_SHAPE_ENV;
+    }
+    setRuntimeOutputShapeInput(process.env.SURFWRIGHT_OUTPUT_SHAPE);
+    return;
+  }
+  if (typeof parsed.value === "string") {
+    process.env.SURFWRIGHT_OUTPUT_SHAPE = parsed.value;
+    setRuntimeOutputShapeInput(process.env.SURFWRIGHT_OUTPUT_SHAPE);
+    return;
+  }
+  delete process.env.SURFWRIGHT_OUTPUT_SHAPE;
+  setRuntimeOutputShapeInput(process.env.SURFWRIGHT_OUTPUT_SHAPE);
 }
 
 
@@ -225,9 +278,9 @@ function createProgram(): Command {
 }
 
 async function runLocalCommand(argv: string[]): Promise<number> {
-  applyAgentIdOverrideFromArgv(argv, INITIAL_AGENT_ID_ENV);
-  applyWorkspaceDirOverrideFromArgv(argv, INITIAL_WORKSPACE_DIR_ENV);
-  applyOutputShapeOverrideFromArgv(argv, INITIAL_OUTPUT_SHAPE_ENV);
+  applyAgentIdOverrideFromArgv(argv);
+  applyWorkspaceDirOverrideFromArgv(argv);
+  applyOutputShapeOverrideFromArgv(argv);
   const program = createProgram();
   process.exitCode = 0;
   try {
@@ -336,9 +389,9 @@ async function maybeRunInternalWorker(argv: string[]): Promise<number | null> {
 
 async function main(argv: string[]): Promise<number> {
   const normalizedArgv = normalizeArgv(argv);
-  applyAgentIdOverrideFromArgv(normalizedArgv, INITIAL_AGENT_ID_ENV);
-  applyWorkspaceDirOverrideFromArgv(normalizedArgv, INITIAL_WORKSPACE_DIR_ENV);
-  applyOutputShapeOverrideFromArgv(normalizedArgv, INITIAL_OUTPUT_SHAPE_ENV);
+  applyAgentIdOverrideFromArgv(normalizedArgv);
+  applyWorkspaceDirOverrideFromArgv(normalizedArgv);
+  applyOutputShapeOverrideFromArgv(normalizedArgv);
 
   const workerExitCode = await maybeRunInternalWorker(normalizedArgv);
   if (workerExitCode !== null) {

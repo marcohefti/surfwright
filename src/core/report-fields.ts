@@ -1,6 +1,11 @@
 import { CliError } from "./errors.js";
 
 export type ReportOutputShape = "full" | "compact" | "proof";
+let runtimeOutputShapeInput: string | undefined;
+
+export function setRuntimeOutputShapeInput(input: string | undefined): void {
+  runtimeOutputShapeInput = input;
+}
 
 function parseOutputShape(input: string | undefined): ReportOutputShape {
   const value = typeof input === "string" ? input.trim().toLowerCase() : "";
@@ -107,7 +112,7 @@ export function parseFieldsCsv(input: string | undefined): string[] | null {
 }
 
 export function projectReportFields<T extends Record<string, unknown>>(report: T, fields: string[] | null): Record<string, unknown> {
-  const outputShape = parseOutputShape(process.env.SURFWRIGHT_OUTPUT_SHAPE);
+  const outputShape = parseOutputShape(runtimeOutputShapeInput);
   const shaped = applyOutputShape(report, outputShape);
   if (!fields || fields.length === 0) {
     return shaped;

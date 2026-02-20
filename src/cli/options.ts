@@ -1,5 +1,3 @@
-import process from "node:process";
-
 const GLOBAL_PATH_OPTIONS = ["--session", "--agent-id", "--workspace", "--output-shape"] as const;
 
 export function parseOptionTokenSpan(argv: string[], index: number, optionName: string): number {
@@ -67,55 +65,6 @@ export function parseGlobalOptionValue(
     valid: false,
     value: null,
   };
-}
-
-function applyEnvOverrideFromArgv(opts: {
-  argv: string[];
-  optionName: string;
-  envKey: string;
-  initialValue: string | null;
-}): void {
-  const parsed = parseGlobalOptionValue(opts.argv, opts.optionName);
-  if (!parsed.found || !parsed.valid) {
-    if (opts.initialValue === null) {
-      delete process.env[opts.envKey];
-    } else {
-      process.env[opts.envKey] = opts.initialValue;
-    }
-    return;
-  }
-  if (typeof parsed.value === "string") {
-    process.env[opts.envKey] = parsed.value;
-    return;
-  }
-  delete process.env[opts.envKey];
-}
-
-export function applyAgentIdOverrideFromArgv(argv: string[], initialValue: string | null): void {
-  applyEnvOverrideFromArgv({
-    argv,
-    optionName: "--agent-id",
-    envKey: "SURFWRIGHT_AGENT_ID",
-    initialValue,
-  });
-}
-
-export function applyWorkspaceDirOverrideFromArgv(argv: string[], initialValue: string | null): void {
-  applyEnvOverrideFromArgv({
-    argv,
-    optionName: "--workspace",
-    envKey: "SURFWRIGHT_WORKSPACE_DIR",
-    initialValue,
-  });
-}
-
-export function applyOutputShapeOverrideFromArgv(argv: string[], initialValue: string | null): void {
-  applyEnvOverrideFromArgv({
-    argv,
-    optionName: "--output-shape",
-    envKey: "SURFWRIGHT_OUTPUT_SHAPE",
-    initialValue,
-  });
 }
 
 export function parseCommandPath(argv: string[]): string[] {

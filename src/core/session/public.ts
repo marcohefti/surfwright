@@ -2,8 +2,9 @@ import {
   allocateFreePort,
   ensureDefaultManagedSession,
   ensureSessionReachable,
-  isCdpEndpointReachable,
   normalizeCdpOrigin,
+  redactCdpEndpointForDisplay,
+  resolveCdpEndpointForAttach,
   startManagedSession,
 } from "../browser.js";
 import { CliError } from "../errors.js";
@@ -178,11 +179,15 @@ export async function sessionAttach(opts: {
   leaseTtlMs?: number;
 }): Promise<SessionReport> {
   const requestedSessionId = opts.requestedSessionId ? sanitizeSessionId(opts.requestedSessionId) : undefined;
-  const cdpOrigin = normalizeCdpOrigin(opts.cdpOriginInput);
-  const isAlive = await isCdpEndpointReachable(cdpOrigin, opts.timeoutMs);
-  if (!isAlive) {
-    throw new CliError("E_CDP_UNREACHABLE", `CDP endpoint is not reachable at ${cdpOrigin}`);
+  const normalizedCdpInput = normalizeCdpOrigin(opts.cdpOriginInput);
+  const resolvedAttachEndpoint = await resolveCdpEndpointForAttach(normalizedCdpInput, opts.timeoutMs);
+  if (!resolvedAttachEndpoint) {
+    throw new CliError(
+      "E_CDP_UNREACHABLE",
+      `CDP endpoint is not reachable at ${redactCdpEndpointForDisplay(normalizedCdpInput)}`,
+    );
   }
+  const cdpOrigin = normalizedCdpInput;
   const policy = typeof opts.policyInput === "string" ? normalizeSessionPolicy(opts.policyInput) : null;
   if (typeof opts.policyInput === "string" && policy === null) {
     throw new CliError("E_QUERY_INVALID", "policy must be one of: ephemeral, persistent");

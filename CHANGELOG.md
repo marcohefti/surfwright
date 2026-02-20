@@ -32,12 +32,17 @@ All notable changes to SurfWright are documented here.
 - [cli] Improved first-run discoverability: parse errors now show stronger suggestions/help and `target --target/--target-id` aliases rewrite to positional `targetId` where applicable.
 - [target] Unified post-action waits across interactive actions: `target fill|keypress|upload|drag-drop|dialog` now support `--wait-for-text|--wait-for-selector|--wait-network-idle` and `--wait-timeout-ms`.
 - [session] Reduced repeat command overhead in tight loops with short-lived CDP reachability caching during session health checks.
+- [session] `session attach --cdp` now accepts `ws://`/`wss://` endpoints and supports HTTP(S) discovery URLs with path/query (resolved to websocket endpoints for runtime attach).
+- [session] CDP attach health checks now split discovery and websocket-connect stages for clearer remote endpoint handling under variable latency.
+- [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage`; optional `SURFWRIGHT_CHROME_NO_SANDBOX=1` enables explicit no-sandbox fallback when required.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
 - [errors] `E_BROWSER_START_FAILED`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_IO`, and `E_STATE_LOCK_TIMEOUT` now include bounded hints/hintContext for faster operator triage.
 - [target] Stale `targetId` errors now include stronger replacement-target hints and hint context to speed recovery in concurrent session flows.
 - [cli] Commander parse failures now map to typed JSON `E_QUERY_INVALID` responses (with bounded hints/hintContext) in JSON mode.
+- [target] `target eval` timeout handling now performs best-effort CDP termination/stop-loading recovery so follow-up commands remain stable after `E_EVAL_TIMEOUT`.
+- [session] `session attach` unreachable failures now redact sensitive CDP query credentials in error text.
 
 ### Deprecated
 - None.

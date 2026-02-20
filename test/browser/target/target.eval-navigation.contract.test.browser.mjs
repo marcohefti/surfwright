@@ -69,3 +69,45 @@ test("target eval tolerates navigation triggered by evaluation when persisting s
   assert.equal(hrefPayload.result.type, "string");
   assert.equal(hrefPayload.result.value, "about:blank");
 });
+
+test("target eval timeout performs recovery so follow-up eval remains usable", () => {
+  requireBrowser();
+
+  const html = "<title>Eval Timeout Recovery</title><main>ok</main>";
+  const pageUrl = `data:text/html,${encodeURIComponent(html)}`;
+
+  const openResult = runCli(["--json", "open", pageUrl, "--timeout-ms", "8000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const timeoutResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    openPayload.targetId,
+    "--expr",
+    "while(true) {}",
+    "--timeout-ms",
+    "350",
+  ]);
+  assert.equal(timeoutResult.status, 1);
+  const timeoutPayload = parseJson(timeoutResult.stdout);
+  assert.equal(timeoutPayload.ok, false);
+  assert.equal(["E_EVAL_TIMEOUT", "E_EVAL_RUNTIME"].includes(timeoutPayload.code), true);
+
+  const followupResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    openPayload.targetId,
+    "--expr",
+    "1 + 1",
+    "--timeout-ms",
+    "4000",
+  ]);
+  assert.equal(followupResult.status, 0);
+  const followupPayload = parseJson(followupResult.stdout);
+  assert.equal(followupPayload.ok, true);
+  assert.equal(followupPayload.result.type, "number");
+  assert.equal(followupPayload.result.value, 2);
+});

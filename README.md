@@ -172,6 +172,19 @@ surfwright open https://github.com/login --profile auth --browser-mode headed
 surfwright open https://github.com --profile auth
 ```
 
+Attach to remote CDP endpoints (HTTP(S) discovery URL or direct WS endpoint):
+
+```bash
+surfwright session attach --cdp https://browser.example.com/relay?token=abc123
+surfwright session attach --cdp wss://browser.example.com/devtools/browser/<id>?token=abc123
+```
+
+For Linux/container startups with tight sandbox constraints, opt-in fallback:
+
+```bash
+SURFWRIGHT_CHROME_NO_SANDBOX=1 surfwright session ensure
+```
+
 Capture network evidence around an action:
 
 ```bash

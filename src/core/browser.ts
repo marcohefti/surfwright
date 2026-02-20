@@ -3,6 +3,19 @@ import fs from "node:fs";
 import net, { AddressInfo } from "node:net";
 import { CliError } from "./errors.js";
 import {
+  CDP_HEALTHCHECK_TIMEOUT_MS,
+  isCdpEndpointAlive,
+  isCdpEndpointReachable,
+} from "./browser/infra/cdp-endpoint.js";
+export {
+  CDP_HEALTHCHECK_TIMEOUT_MS,
+  isCdpEndpointAlive,
+  isCdpEndpointReachable,
+  normalizeCdpOrigin,
+  redactCdpEndpointForDisplay,
+  resolveCdpEndpointForAttach,
+} from "./browser/infra/cdp-endpoint.js";
+import {
   currentAgentId,
   defaultSessionPolicyForKind,
   normalizeSessionPolicy,
@@ -17,12 +30,8 @@ import {
   type SurfwrightState,
 } from "./types.js";
 
-export const CDP_HEALTHCHECK_TIMEOUT_MS = 600;
-const CDP_HEALTHCHECK_FALLBACK_MAX_TIMEOUT_MS = 3000;
 const CDP_STARTUP_MAX_WAIT_MS = 6000;
 const CDP_STARTUP_POLL_MS = 125;
-const CDP_REACHABILITY_CACHE_TTL_MS = 1200;
-const cdpReachabilityCache = new Map<string, number>();
 
 export function chromeCandidatesForPlatform(): string[] {
   if (process.platform === "darwin") {
@@ -69,66 +78,6 @@ function firstChromeExecutablePath(): string | null {
   return null;
 }
 
-async function readJsonWithTimeout(url: string, timeoutMs: number): Promise<unknown | null> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      return null;
-    }
-    return await response.json();
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-export async function isCdpEndpointAlive(cdpOrigin: string, timeoutMs: number): Promise<boolean> {
-  const payload = await readJsonWithTimeout(`${cdpOrigin}/json/version`, timeoutMs);
-  if (typeof payload !== "object" || payload === null) {
-    return false;
-  }
-  const ws = (payload as { webSocketDebuggerUrl?: unknown }).webSocketDebuggerUrl;
-  return typeof ws === "string" && ws.length > 0;
-}
-
-function boundedHealthcheckTimeout(timeoutMs: number): number {
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-    return CDP_HEALTHCHECK_TIMEOUT_MS;
-  }
-  return Math.max(CDP_HEALTHCHECK_TIMEOUT_MS, Math.min(Math.floor(timeoutMs), CDP_HEALTHCHECK_FALLBACK_MAX_TIMEOUT_MS));
-}
-
-export async function isCdpEndpointReachable(cdpOrigin: string, timeoutMs: number): Promise<boolean> {
-  const cachedAt = cdpReachabilityCache.get(cdpOrigin) ?? 0;
-  if (Date.now() - cachedAt <= CDP_REACHABILITY_CACHE_TTL_MS) {
-    return true;
-  }
-
-  if (await isCdpEndpointAlive(cdpOrigin, CDP_HEALTHCHECK_TIMEOUT_MS)) {
-    cdpReachabilityCache.set(cdpOrigin, Date.now());
-    return true;
-  }
-
-  const fallbackTimeoutMs = boundedHealthcheckTimeout(timeoutMs);
-  if (fallbackTimeoutMs <= CDP_HEALTHCHECK_TIMEOUT_MS) {
-    cdpReachabilityCache.delete(cdpOrigin);
-    return false;
-  }
-  const reachable = await isCdpEndpointAlive(cdpOrigin, fallbackTimeoutMs);
-  if (reachable) {
-    cdpReachabilityCache.set(cdpOrigin, Date.now());
-  } else {
-    cdpReachabilityCache.delete(cdpOrigin);
-  }
-  return reachable;
-}
-
 async function waitForCdpEndpoint(cdpOrigin: string, timeoutMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -138,25 +87,6 @@ async function waitForCdpEndpoint(cdpOrigin: string, timeoutMs: number): Promise
     await new Promise((resolve) => setTimeout(resolve, CDP_STARTUP_POLL_MS));
   }
   return false;
-}
-
-export function normalizeCdpOrigin(input: string): string {
-  let parsed: URL;
-  try {
-    parsed = new URL(input);
-  } catch {
-    throw new CliError("E_CDP_INVALID", "CDP URL must be absolute (e.g. http://127.0.0.1:9222)");
-  }
-
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new CliError("E_CDP_INVALID", "CDP URL must use http:// or https://");
-  }
-
-  if (parsed.username || parsed.password) {
-    throw new CliError("E_CDP_INVALID", "CDP URL must not include credentials");
-  }
-
-  return parsed.origin;
 }
 
 export async function allocateFreePort(): Promise<number> {
@@ -184,20 +114,43 @@ export async function allocateFreePort(): Promise<number> {
   });
 }
 
-function launchDetachedBrowser(opts: {
-  executablePath: string;
+export function buildManagedBrowserArgs(opts: {
   debugPort: number;
   userDataDir: string;
   browserMode: ManagedBrowserMode;
-}): number | null {
+  platform?: NodeJS.Platform;
+  noSandbox?: boolean;
+}): string[] {
+  const platform = opts.platform ?? process.platform;
+  const noSandbox = opts.noSandbox ?? process.env.SURFWRIGHT_CHROME_NO_SANDBOX === "1";
   const args = [
     `--remote-debugging-port=${opts.debugPort}`,
     `--user-data-dir=${opts.userDataDir}`,
     ...(opts.browserMode === "headless" ? ["--headless=new"] : []),
     "--no-first-run",
     "--no-default-browser-check",
-    "about:blank",
   ];
+  if (platform === "linux") {
+    args.push("--disable-dev-shm-usage");
+    if (noSandbox) {
+      args.push("--no-sandbox", "--disable-setuid-sandbox");
+    }
+  }
+  args.push("about:blank");
+  return args;
+}
+
+function launchDetachedBrowser(opts: {
+  executablePath: string;
+  debugPort: number;
+  userDataDir: string;
+  browserMode: ManagedBrowserMode;
+}): number | null {
+  const args = buildManagedBrowserArgs({
+    debugPort: opts.debugPort,
+    userDataDir: opts.userDataDir,
+    browserMode: opts.browserMode,
+  });
 
   try {
     const child = spawn(opts.executablePath, args, {
@@ -212,11 +165,15 @@ function launchDetachedBrowser(opts: {
 }
 
 function browserStartHints(userDataDir: string): string[] {
-  return [
+  const hints = [
     "Run `surfwright doctor` to verify browser availability and candidates.",
     `Check write access for profile directory: ${userDataDir}`,
     "If parallel runs share state, isolate with SURFWRIGHT_STATE_DIR to avoid contention.",
   ];
+  if (process.platform === "linux") {
+    hints.push("For constrained CI containers, set SURFWRIGHT_CHROME_NO_SANDBOX=1 only when your environment requires it.");
+  }
+  return hints;
 }
 
 export function killManagedBrowserProcessTree(browserPid: number | null, signal: "SIGTERM" | "SIGKILL"): void {
@@ -312,7 +269,6 @@ export async function startManagedSession(
   if (started === null) {
     started = await attemptStart(await allocateFreePort());
   }
-  cdpReachabilityCache.set(started.cdpOrigin, Date.now());
 
   const createdAt = opts.createdAt ?? nowIso();
   return withSessionHeartbeat(

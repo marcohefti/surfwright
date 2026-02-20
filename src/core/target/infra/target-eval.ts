@@ -53,15 +53,20 @@ function parseMaxConsole(value: number | undefined): number {
   }
   return maxConsole;
 }
-async function runWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+async function runWithTimeout<T>(opts: {
+  promise: Promise<T>;
+  timeoutMs: number;
+  onTimeout?: () => Promise<void> | void;
+}): Promise<T> {
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
   try {
     return await Promise.race([
-      promise,
+      opts.promise,
       new Promise<T>((_resolve, reject) => {
         timeoutHandle = setTimeout(() => {
+          Promise.resolve(opts.onTimeout?.()).catch(() => {});
           reject(new CliError("E_EVAL_TIMEOUT", "evaluation did not complete before timeout"));
-        }, timeoutMs);
+        }, opts.timeoutMs);
       }),
     ]);
   } finally {
@@ -83,6 +88,14 @@ function normalizeEvalFailure(error: unknown): never {
     throw new CliError("E_EVAL_RUNTIME", message);
   }
   throw new CliError("E_EVAL_RUNTIME", "evaluation failed");
+}
+
+async function recoverTimedOutEvaluation(opts: {
+  cdp: { send: (...args: any[]) => Promise<unknown> };
+}): Promise<void> {
+  // Best-effort guardrail: terminate active execution and stop in-flight loads before disconnect.
+  await opts.cdp.send("Runtime.terminateExecution").catch(() => {});
+  await opts.cdp.send("Page.stopLoading").catch(() => {});
 }
 
 export async function targetEval(opts: {
@@ -168,9 +181,10 @@ export async function targetEval(opts: {
       errorMessage?: string;
       result?: TargetEvalReport["result"];
     };
+    let didTimeout = false;
     try {
-      evaluationPayload = await runWithTimeout(
-        evaluator.evaluate(
+      evaluationPayload = await runWithTimeout({
+        promise: evaluator.evaluate(
           async ({
             expression,
             arg,
@@ -314,9 +328,16 @@ export async function targetEval(opts: {
             maxDepth: EVAL_MAX_RESULT_DEPTH,
           },
         ),
-        opts.timeoutMs,
-      );
+        timeoutMs: opts.timeoutMs,
+        onTimeout: async () => {
+          didTimeout = true;
+          await recoverTimedOutEvaluation({ cdp });
+        },
+      });
     } catch (error) {
+      if (didTimeout) {
+        await recoverTimedOutEvaluation({ cdp });
+      }
       normalizeEvalFailure(error);
     } finally {
       if (captureConsole) {

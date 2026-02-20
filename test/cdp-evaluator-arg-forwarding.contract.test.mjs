@@ -60,3 +60,30 @@ test("CDP evaluator forwards arg payload into Runtime.evaluate expression (guard
   assert.equal(payload.expr.includes(JSON.stringify({ hello: "world", n: 1 })), true);
 });
 
+test("managed browser args include Linux resilience flags and optional no-sandbox mode", () => {
+  const result = runNodeModule(`
+    import { buildManagedBrowserArgs } from "./src/core/browser.ts";
+    const base = buildManagedBrowserArgs({
+      debugPort: 9222,
+      userDataDir: "/tmp/profile",
+      browserMode: "headless",
+      platform: "linux",
+      noSandbox: false,
+    });
+    const noSandbox = buildManagedBrowserArgs({
+      debugPort: 9222,
+      userDataDir: "/tmp/profile",
+      browserMode: "headless",
+      platform: "linux",
+      noSandbox: true,
+    });
+    console.log(JSON.stringify({ base, noSandbox }));
+  `);
+
+  assert.equal(result.status, 0, `Expected subprocess exit 0. stderr: ${result.stderr}`);
+  const payload = parseJsonLine(result.stdout);
+  assert.equal(payload.base.includes("--disable-dev-shm-usage"), true);
+  assert.equal(payload.base.includes("--no-sandbox"), false);
+  assert.equal(payload.noSandbox.includes("--no-sandbox"), true);
+  assert.equal(payload.noSandbox.includes("--disable-setuid-sandbox"), true);
+});

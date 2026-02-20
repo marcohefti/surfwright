@@ -80,6 +80,41 @@ async function withDelayedCdpServer(delayMs, fn) {
   }
 }
 
+async function withPathAndQueryCdpServer(fn) {
+  const server = http.createServer((req, res) => {
+    if (req.url === "/relay/json/version?token=abc123") {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({
+          webSocketDebuggerUrl: "ws://127.0.0.1:9222/devtools/browser/fake?token=abc123",
+        }),
+      );
+      return;
+    }
+
+    res.writeHead(404);
+    res.end();
+  });
+
+  const cdpInput = await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        reject(new Error("Failed to read custom CDP server address"));
+        return;
+      }
+      resolve(`http://127.0.0.1:${address.port}/relay?token=abc123`);
+    });
+  });
+
+  try {
+    return await fn(cdpInput);
+  } finally {
+    await new Promise((resolve) => server.close(() => resolve(undefined)));
+  }
+}
+
 process.on("exit", () => {
   try {
     fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
@@ -146,5 +181,30 @@ test("session attach returns typed unreachable failure when timeout window is to
     const payload = parseJson(result.stdout);
     assert.equal(payload.ok, false);
     assert.equal(payload.code, "E_CDP_UNREACHABLE");
+  });
+});
+
+test("session attach resolves CDP discovery URLs with path and query parameters", async () => {
+  await withPathAndQueryCdpServer(async (cdpInput) => {
+    const sessionId = `a-path-${Date.now()}`;
+    const attachResult = await runCliAsync([
+      "--json",
+      "session",
+      "attach",
+      "--cdp",
+      cdpInput,
+      "--session-id",
+      sessionId,
+      "--timeout-ms",
+      "1200",
+    ]);
+
+    assert.equal(attachResult.status, 0);
+    const attachPayload = parseJson(attachResult.stdout);
+    assert.equal(attachPayload.ok, true);
+    assert.equal(attachPayload.sessionId, sessionId);
+    assert.equal(attachPayload.kind, "attached");
+    assert.equal(typeof attachPayload.cdpOrigin, "string");
+    assert.equal(attachPayload.cdpOrigin.includes("/relay"), true);
   });
 });

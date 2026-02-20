@@ -58,6 +58,22 @@ test("session attach requires explicit valid CDP origin", () => {
   assert.equal(payload.code, "E_CDP_INVALID");
 });
 
+test("session attach accepts ws:// CDP endpoint format (returns typed unreachable if offline)", () => {
+  const result = runCli([
+    "--json",
+    "session",
+    "attach",
+    "--cdp",
+    "ws://127.0.0.1:9/devtools/browser/fake",
+    "--timeout-ms",
+    "300",
+  ]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_CDP_UNREACHABLE");
+});
+
 test("browser-mode rejects invalid values (typed)", () => {
   const ensureResult = runCli(["--json", "session", "ensure", "--browser-mode", "bogus"]);
   assert.equal(ensureResult.status, 1);

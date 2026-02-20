@@ -73,6 +73,9 @@ test("session ensure + open success returns contract shape", () => {
     "status",
     "title",
     "download",
+    "waitUntil",
+    "reuseMode",
+    "reusedTarget",
     "timingMs",
   ]);
   assert.equal(openPayload.ok, true);

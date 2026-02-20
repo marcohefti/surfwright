@@ -1,5 +1,6 @@
 import { chromium } from "playwright-core";
 import { CliError } from "../../errors.js";
+import { providers } from "../../providers/index.js";
 import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { fetchAssistedExtractItems, type ExtractItemDraft } from "./target-extract-assist.js";
@@ -7,9 +8,12 @@ import { frameScopeHints, parseFrameScope } from "./target-find.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "./cdp/index.js";
 import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { extractFrameItems } from "./query/target-extract-frame.js";
+import { parseJsonObjectText } from "./target-eval.js";
 import type { TargetExtractReport } from "../../types.js";
 
 const EXTRACT_MAX_LIMIT = 100;
+const EXTRACT_SCHEMA_MAX_FIELDS = 24;
+const EXTRACT_SCHEMA_MAX_DEDUPE_FIELDS = 8;
 
 function parseLimit(input: number | undefined): number {
   const value = input ?? 12;
@@ -34,14 +38,130 @@ function parseKind(input: string | undefined): TargetExtractReport["kind"] {
     normalized === "codeblocks" ||
     normalized === "forms" ||
     normalized === "tables" ||
+    normalized === "table-rows" ||
     normalized === "generic"
   ) {
     return normalized;
   }
   throw new CliError(
     "E_QUERY_INVALID",
-    "kind must be one of: generic, blog, news, docs, docs-commands, headings, links, codeblocks, forms, tables",
+    "kind must be one of: generic, blog, news, docs, docs-commands, headings, links, codeblocks, forms, tables, table-rows",
   );
+}
+
+type ParsedExtractSchema = {
+  fields: Record<string, string>;
+};
+
+function parseExtractSchema(opts: {
+  schemaJson?: string;
+  schemaFile?: string;
+}): ParsedExtractSchema | null {
+  const inline = typeof opts.schemaJson === "string" ? opts.schemaJson.trim() : "";
+  const file = typeof opts.schemaFile === "string" ? opts.schemaFile.trim() : "";
+  const selected = Number(inline.length > 0) + Number(file.length > 0);
+  if (selected === 0) {
+    return null;
+  }
+  if (selected > 1) {
+    throw new CliError("E_QUERY_INVALID", "Use either --schema-json or --schema-file, not both");
+  }
+  let text = inline;
+  if (file.length > 0) {
+    try {
+      text = providers().fs.readFileSync(providers().path.resolve(file), "utf8");
+    } catch {
+      throw new CliError("E_QUERY_INVALID", "schema-file is not readable");
+    }
+  }
+  const parsed = parseJsonObjectText({
+    text,
+    maxChars: 24 * 1024,
+    tooLargeMessage: "schema JSON must be at most 24576 characters",
+    invalidMessage: "schema JSON must be valid JSON object",
+    objectMessage: "schema JSON must be an object of outputField -> sourcePath",
+  });
+  const entries = Object.entries(parsed);
+  if (entries.length < 1 || entries.length > EXTRACT_SCHEMA_MAX_FIELDS) {
+    throw new CliError("E_QUERY_INVALID", `schema must contain 1..${EXTRACT_SCHEMA_MAX_FIELDS} field mappings`);
+  }
+  const fields: Record<string, string> = {};
+  for (const [rawKey, rawValue] of entries) {
+    const key = rawKey.trim();
+    const value = typeof rawValue === "string" ? rawValue.trim() : "";
+    if (key.length < 1) {
+      throw new CliError("E_QUERY_INVALID", "schema output field names must not be empty");
+    }
+    if (!/^[A-Za-z0-9_-]+$/.test(key)) {
+      throw new CliError("E_QUERY_INVALID", `schema output field "${key}" must match [A-Za-z0-9_-]+`);
+    }
+    if (value.length < 1) {
+      throw new CliError("E_QUERY_INVALID", `schema field "${key}" must map to a non-empty source path`);
+    }
+    fields[key] = value;
+  }
+  return { fields };
+}
+
+function parseDedupeBy(input: string | undefined): string[] {
+  const value = typeof input === "string" ? input.trim() : "";
+  if (value.length < 1) {
+    return [];
+  }
+  const keys = value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  if (keys.length > EXTRACT_SCHEMA_MAX_DEDUPE_FIELDS) {
+    throw new CliError("E_QUERY_INVALID", `dedupe-by supports at most ${EXTRACT_SCHEMA_MAX_DEDUPE_FIELDS} fields`);
+  }
+  const deduped: string[] = [];
+  for (const key of keys) {
+    if (!deduped.includes(key)) {
+      deduped.push(key);
+    }
+  }
+  return deduped;
+}
+
+function scalarString(value: unknown): string | null {
+  if (value === null || typeof value === "undefined") {
+    return null;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return null;
+}
+
+function resolveSchemaPath(item: TargetExtractReport["items"][number], path: string): string | null {
+  const trimmed = path.trim();
+  if (trimmed.length < 1) {
+    return null;
+  }
+  if (trimmed.startsWith("record.")) {
+    const key = trimmed.slice("record.".length).trim();
+    if (key.length < 1) {
+      return null;
+    }
+    return scalarString(item.record?.[key]);
+  }
+  const parts = trimmed.split(".").map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+  if (parts.length < 1) {
+    return null;
+  }
+  let current: unknown = item;
+  for (const part of parts) {
+    if (!current || typeof current !== "object" || Array.isArray(current)) {
+      return null;
+    }
+    current = (current as Record<string, unknown>)[part];
+  }
+  return scalarString(current);
 }
 
 export async function targetExtract(opts: {
@@ -55,6 +175,9 @@ export async function targetExtract(opts: {
   frameScope?: string;
   limit?: number;
   includeActionable?: boolean;
+  schemaJson?: string;
+  schemaFile?: string;
+  dedupeBy?: string;
 }): Promise<TargetExtractReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -64,6 +187,21 @@ export async function targetExtract(opts: {
   const kind = parseKind(opts.kind);
   const limit = parseLimit(opts.limit);
   const includeActionable = Boolean(opts.includeActionable);
+  const schema = parseExtractSchema({
+    schemaJson: opts.schemaJson,
+    schemaFile: opts.schemaFile,
+  });
+  const dedupeBy = parseDedupeBy(opts.dedupeBy);
+  if (!schema && dedupeBy.length > 0) {
+    throw new CliError("E_QUERY_INVALID", "dedupe-by requires --schema-json or --schema-file");
+  }
+  if (schema) {
+    for (const dedupeField of dedupeBy) {
+      if (!Object.prototype.hasOwnProperty.call(schema.fields, dedupeField)) {
+        throw new CliError("E_QUERY_INVALID", `dedupe-by field "${dedupeField}" is not present in schema output fields`);
+      }
+    }
+  }
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -129,6 +267,7 @@ export async function targetExtract(opts: {
         ...(typeof item.language !== "undefined" ? { language: item.language ?? null } : {}),
         ...(typeof item.command !== "undefined" ? { command: item.command ?? null } : {}),
         ...(typeof item.section !== "undefined" ? { section: item.section ?? null } : {}),
+        ...(typeof item.record !== "undefined" ? { record: item.record } : {}),
         ...(includeActionable
           ? {
               actionable: {
@@ -191,6 +330,31 @@ export async function targetExtract(opts: {
       hints.push(`Try: surfwright target health ${requestedTargetId}`);
     }
 
+    const mappedRecords = (() => {
+      if (!schema) {
+        return null;
+      }
+      const rows: Array<Record<string, string | null>> = [];
+      const seen = new Set<string>();
+      for (const item of merged) {
+        const row = Object.fromEntries(
+          Object.entries(schema.fields).map(([field, path]) => [field, resolveSchemaPath(item, path)]),
+        ) as Record<string, string | null>;
+        if (dedupeBy.length > 0) {
+          const dedupeKey = dedupeBy.map((field) => row[field] ?? "").join("||").toLowerCase();
+          if (seen.has(dedupeKey)) {
+            continue;
+          }
+          seen.add(dedupeKey);
+        }
+        rows.push(row);
+      }
+      return rows;
+    })();
+    if (schema) {
+      hints.push("Schema mapping enabled: use records[] for deterministic extraction without target.eval.");
+    }
+
     const actionCompletedAt = Date.now();
     const report: TargetExtractReport = {
       ok: true,
@@ -211,6 +375,15 @@ export async function targetExtract(opts: {
       limit,
       count: totalRawCount,
       items: merged,
+      ...(schema
+        ? {
+            schema: {
+              fields: schema.fields,
+              dedupeBy,
+            },
+            records: mappedRecords ?? [],
+          }
+        : {}),
       truncated: totalRawCount > merged.length,
       hints,
       timingMs: {

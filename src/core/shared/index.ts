@@ -3,3 +3,4 @@ export * from "./domain/redaction.js";
 export * from "./domain/semver.js";
 export * from "./infra/action-assertions.js";
 export * from "./infra/action-proof.js";
+export * from "./infra/navigation-block-classification.js";

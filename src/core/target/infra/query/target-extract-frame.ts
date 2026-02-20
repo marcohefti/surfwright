@@ -1,6 +1,7 @@
 import type { TargetExtractReport } from "../../../types.js";
 import { normalizeExtractWhitespace, type ExtractItemDraft } from "../target-extract-assist.js";
 import type { BrowserNodeLike, BrowserRuntimeLike } from "../types/browser-dom-types.js";
+import { targetExtractTableRowsOp } from "./target-extract-table-rows-op.js";
 
 type ExtractEvalItem = {
   title: string;
@@ -10,6 +11,7 @@ type ExtractEvalItem = {
   language?: string | null;
   command?: string | null;
   section?: string | null;
+  record?: Record<string, string | null>;
   actionable?: {
     handle: string | null;
     selectorHint: string | null;
@@ -36,18 +38,29 @@ export async function extractFrameItems(opts: {
   includeActionable: boolean;
 }): Promise<{ frameUrl: string; matched: boolean; items: ExtractItemDraft[] }> {
   const frameUrl = opts.frameUrl;
-  const payload = await opts.evaluator.evaluate<
-    ExtractFramePayload,
-    {
-      selectorQuery: string | null;
-      visibleOnly: boolean;
-      kind: TargetExtractReport["kind"];
-      scanLimit: number;
-      includeActionable: boolean;
-      frameId: string;
-    }
-  >(
-    ({ selectorQuery, visibleOnly, kind, scanLimit, includeActionable, frameId }) => {
+  const payload: ExtractFramePayload = opts.kind === "table-rows"
+    ? await opts.evaluator.evaluate(
+        targetExtractTableRowsOp,
+        {
+          selectorQuery: opts.selectorQuery,
+          visibleOnly: opts.visibleOnly,
+          scanLimit: opts.scanLimit,
+          includeActionable: opts.includeActionable,
+          frameId: opts.frameId,
+        },
+      ) as ExtractFramePayload
+    : await opts.evaluator.evaluate<
+        ExtractFramePayload,
+        {
+          selectorQuery: string | null;
+          visibleOnly: boolean;
+          kind: TargetExtractReport["kind"];
+          scanLimit: number;
+          includeActionable: boolean;
+          frameId: string;
+        }
+      >(
+      ({ selectorQuery, visibleOnly, kind, scanLimit, includeActionable, frameId }) => {
       const runtime = globalThis as unknown as BrowserRuntimeLike;
       const doc = runtime.document;
       const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
@@ -297,6 +310,7 @@ export async function extractFrameItems(opts: {
         return { matched: true, items };
       }
 
+
       if (kind === "docs-commands") {
         const shellCommandRegex =
           /^(?:\$|#|>)?\s*(npm|pnpm|yarn|npx|bun|pip|pipx|poetry|uv|curl|wget|git|node|python|go|cargo|docker|kubectl|surfwright|zcl)\b/i;
@@ -381,6 +395,7 @@ export async function extractFrameItems(opts: {
         codeblocks: "pre code,pre,code",
         forms: "form",
         tables: "table",
+        "table-rows": "table",
       };
       const primarySelector = primarySelectorByKind[kind];
       const primaryNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.(primarySelector) ?? []);
@@ -438,16 +453,16 @@ export async function extractFrameItems(opts: {
         items.push({ title, url: href, summary, publishedAt, actionable });
       }
       return { matched: true, items };
-    },
-    {
-      selectorQuery: opts.selectorQuery,
-      visibleOnly: opts.visibleOnly,
-      kind: opts.kind,
-      scanLimit: opts.scanLimit,
-      includeActionable: opts.includeActionable,
-      frameId: opts.frameId,
-    },
-  );
+      },
+      {
+        selectorQuery: opts.selectorQuery,
+        visibleOnly: opts.visibleOnly,
+        kind: opts.kind,
+        scanLimit: opts.scanLimit,
+        includeActionable: opts.includeActionable,
+        frameId: opts.frameId,
+      },
+    ) as ExtractFramePayload;
 
   return {
     frameUrl,
@@ -461,6 +476,15 @@ export async function extractFrameItems(opts: {
       language: typeof item.language === "string" ? normalizeExtractWhitespace(item.language) : item.language ?? null,
       command: typeof item.command === "string" ? item.command.trim() : item.command ?? null,
       section: typeof item.section === "string" ? normalizeExtractWhitespace(item.section) : item.section ?? null,
+      record:
+        item.record && typeof item.record === "object"
+          ? Object.fromEntries(
+              Object.entries(item.record).map(([key, value]) => [
+                normalizeExtractWhitespace(String(key)),
+                typeof value === "string" ? normalizeExtractWhitespace(value) : null,
+              ]),
+            )
+          : undefined,
       actionable: item.actionable,
     })),
   };

@@ -79,3 +79,111 @@ test("target click --explain returns bounded rejection reasons without clicking"
   assert.equal(payload.rejected[0].reason, "not_visible");
   assert.equal(typeof payload.rejectedTruncated, "boolean");
 });
+
+test("target click supports --within scope for deterministic disambiguation", () => {
+  requireBrowser();
+  const html = `
+    <title>Within Click Test</title>
+    <main>
+      <section id="left"><button id="left-sort">Sort</button></section>
+      <section id="right"><button id="right-sort">Sort</button></section>
+      <p id="picked">none</p>
+      <script>
+        document.getElementById('left-sort').addEventListener('click', () => { document.getElementById('picked').textContent = 'left'; });
+        document.getElementById('right-sort').addEventListener('click', () => { document.getElementById('picked').textContent = 'right'; });
+      </script>
+    </main>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const scopedClick = runCli([
+    "--json",
+    "target",
+    "click",
+    openPayload.targetId,
+    "--text",
+    "Sort",
+    "--within",
+    "#right",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(scopedClick.status, 0);
+  const scopedPayload = parseJson(scopedClick.stdout);
+  assert.equal(scopedPayload.withinSelector, "#right");
+
+  const verifyResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    openPayload.targetId,
+    "--expression",
+    "return document.querySelector('#picked').textContent",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(verifyResult.status, 0);
+  const verifyPayload = parseJson(verifyResult.stdout);
+  assert.equal(verifyPayload.result.value, "right");
+});
+
+test("target fill --event-mode realistic dispatches keyup-compatible events", () => {
+  requireBrowser();
+  const html = `
+    <title>Fill Event Mode</title>
+    <main>
+      <input id="email" />
+      <p id="keyup-counter">0</p>
+      <script>
+        const email = document.getElementById('email');
+        const counter = document.getElementById('keyup-counter');
+        if (email && counter) {
+          email.addEventListener('keyup', () => {
+            counter.textContent = String(Number(counter.textContent || '0') + 1);
+          });
+        }
+      </script>
+    </main>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const fillResult = runCli([
+    "--json",
+    "target",
+    "fill",
+    openPayload.targetId,
+    "--selector",
+    "#email",
+    "--value",
+    "keyup@example.com",
+    "--event-mode",
+    "realistic",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(fillResult.status, 0);
+  const fillPayload = parseJson(fillResult.stdout);
+  assert.equal(fillPayload.eventMode, "realistic");
+  assert.equal(Array.isArray(fillPayload.eventsDispatched), true);
+  assert.equal(fillPayload.eventsDispatched.includes("keyup"), true);
+
+  const verifyKeyupResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    openPayload.targetId,
+    "--expression",
+    "return Number(document.querySelector('#keyup-counter').textContent || '0')",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(verifyKeyupResult.status, 0);
+  const verifyKeyupPayload = parseJson(verifyKeyupResult.stdout);
+  assert.equal(Number(verifyKeyupPayload.result.value) >= 1, true);
+});

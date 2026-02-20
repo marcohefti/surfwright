@@ -11,7 +11,6 @@ export type TargetListReport = {
   }>;
   timingMs: ActionTimingMs;
 };
-
 export type TargetFramesReport = {
   ok: true;
   sessionId: string;
@@ -33,9 +32,7 @@ export type TargetFramesReport = {
   truncated: boolean;
   timingMs: ActionTimingMs;
 };
-
 export type TargetSnapshotMode = "snapshot" | "orient" | "a11y";
-
 export type TargetSnapshotA11yRow = {
   index: number;
   depth: number;
@@ -45,7 +42,6 @@ export type TargetSnapshotA11yRow = {
   value?: string | null;
   description?: string | null;
 };
-
 export type TargetSnapshotReport = {
   ok: true;
   sessionId: string;
@@ -90,7 +86,6 @@ export type TargetSnapshotReport = {
   hints?: string[];
   timingMs: ActionTimingMs;
 };
-
 export type TargetPruneReport = {
   ok: true;
   activeSessionId: string | null;
@@ -103,7 +98,6 @@ export type TargetPruneReport = {
   maxAgeHours: number;
   maxPerSession: number;
 };
-
 export type TargetFindReport = {
   ok: true;
   sessionId: string;
@@ -130,7 +124,6 @@ export type TargetFindReport = {
   truncated: boolean;
   timingMs: ActionTimingMs;
 };
-
 export type TargetCountReport = {
   ok: true;
   sessionId: string;
@@ -145,7 +138,6 @@ export type TargetCountReport = {
   count: number;
   timingMs: ActionTimingMs;
 };
-
 export type TargetClickReport = {
   ok: true;
   sessionId: string;
@@ -156,6 +148,7 @@ export type TargetClickReport = {
   selector: string | null;
   contains: string | null;
   visibleOnly: boolean;
+  withinSelector?: string | null;
   query: string;
   matchCount: number;
   pickedIndex: number;
@@ -201,7 +194,6 @@ export type TargetClickReport = {
   };
   timingMs: ActionTimingMs;
 };
-
 export type TargetDownloadReport = {
   ok: true;
   sessionId: string;
@@ -213,6 +205,7 @@ export type TargetDownloadReport = {
   contains: string | null;
   visibleOnly: boolean;
   query: string;
+  sourceUrl: string | null;
   matchCount: number;
   pickedIndex: number;
   clicked: {
@@ -224,11 +217,11 @@ export type TargetDownloadReport = {
   url: string;
   title: string;
   download: DownloadCaptureReport;
+  proof?: { downloadStarted: boolean; fileName: string; path: string; bytes: number; mime: string | null; sourceUrl: string | null };
   proofEnvelope?: ActionProofEnvelope;
   assertions?: ActionAssertionReport | null;
   timingMs: ActionTimingMs;
 };
-
 export type TargetSnapshotDiffReport = {
   ok: true;
   a: {
@@ -259,7 +252,6 @@ export type TargetSnapshotDiffReport = {
     links: { added: Array<{ text: string; href: string }>; removed: Array<{ text: string; href: string }>; truncated: boolean };
   };
 };
-
 export type TargetClickDeltaRole = "dialog" | "alert" | "status" | "menu" | "listbox";
 export type TargetClickDeltaEvidence = {
   before: {
@@ -296,6 +288,7 @@ export type TargetClickExplainReport = {
   selector: string | null;
   contains: string | null;
   visibleOnly: boolean;
+  withinSelector?: string | null;
   query: string;
   matchCount: number;
   requestedIndex: number | null;
@@ -348,7 +341,7 @@ export type TargetExtractReport = {
   targetId: string;
   url: string;
   title: string;
-  kind: "generic" | "blog" | "news" | "docs" | "docs-commands" | "headings" | "links" | "codeblocks" | "forms" | "tables";
+  kind: "generic" | "blog" | "news" | "docs" | "docs-commands" | "headings" | "links" | "codeblocks" | "forms" | "tables" | "table-rows";
   source: "dom" | "api-feed";
   sourcesTried: string[];
   scope: {
@@ -369,6 +362,7 @@ export type TargetExtractReport = {
     language?: string | null;
     command?: string | null;
     section?: string | null;
+    record?: Record<string, string | null>;
     actionable?: {
       handle: string | null;
       selectorHint: string | null;
@@ -376,6 +370,11 @@ export type TargetExtractReport = {
       href: string | null;
     };
   }>;
+  schema?: {
+    fields: Record<string, string>;
+    dedupeBy: string[];
+  };
+  records?: Array<Record<string, string | null>>;
   truncated: boolean;
   hints: string[];
   timingMs: ActionTimingMs;
@@ -436,6 +435,7 @@ export type TargetUrlAssertReport = {
   targetId: string;
   url: string;
   title: string;
+  blockType: "auth" | "captcha" | "consent" | "unknown";
   assert: { host: string | null; origin: string | null; pathPrefix: string | null; urlPrefix: string | null };
   timingMs: ActionTimingMs;
 };

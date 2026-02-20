@@ -15,6 +15,7 @@ export function cdpQueryOp(arg: {
   query?: string;
   selector?: string | null;
   contains?: string | null;
+  withinSelector?: string | null;
   index?: number;
   stopExclusive?: number;
   maxRejected?: number;
@@ -22,14 +23,15 @@ export function cdpQueryOp(arg: {
   waitSelector?: string;
   waitText?: string;
   fillValue?: string;
+  fillEvents?: string[];
 }):
   | { rawCount: number; firstVisibleIndex: number | null }
-  | { ok: true; visible: boolean; text: string; selectorHint: string | null }
-  | { ok: true; x: number; y: number; visible: boolean; text: string; selectorHint: string | null }
+  | { ok: true; visible: boolean; text: string; selectorHint: string | null; href?: string | null }
+  | { ok: true; x: number; y: number; visible: boolean; text: string; selectorHint: string | null; href?: string | null }
   | { ok: false }
   | { rejected: Array<{ index: number; visible: boolean; text: string; selectorHint: string | null }>; rejectedTruncated: boolean }
   | { detached: boolean; values: Record<string, string | null> }
-  | { filled: boolean; valueLength: number }
+  | { filled: boolean; valueLength: number; eventsDispatched: string[] }
   | boolean {
   const runtime = globalThis as unknown as BrowserRuntimeLike;
   const doc = runtime.document;
@@ -77,6 +79,13 @@ export function cdpQueryOp(arg: {
     return el?.innerText ?? el?.textContent ?? el?.getAttribute?.("aria-label") ?? el?.getAttribute?.("title") ?? "";
   };
 
+  const hrefFor = (node: BrowserNodeLike | null): string | null => {
+    const direct = node?.matches?.("a[href]") ? node : null;
+    const nearest = direct ?? node?.closest?.("a[href]") ?? node?.querySelector?.("a[href]") ?? null;
+    const href = nearest?.getAttribute?.("href") ?? nearest?.href ?? null;
+    return typeof href === "string" && href.trim().length > 0 ? href : null;
+  };
+
   if (arg.op === "wait-selector-visible") {
     const selector = typeof arg.waitSelector === "string" ? arg.waitSelector : "";
     const node = doc?.querySelector?.(selector) ?? null;
@@ -90,7 +99,17 @@ export function cdpQueryOp(arg: {
     return needle.length > 0 && hay.includes(needle);
   }
 
-  const root = doc?.body ?? null;
+  const withinSelector = typeof arg.withinSelector === "string" ? arg.withinSelector.trim() : "";
+  const root = (() => {
+    if (withinSelector.length < 1) {
+      return doc?.body ?? null;
+    }
+    try {
+      return doc?.querySelector?.(withinSelector) ?? null;
+    } catch {
+      return null;
+    }
+  })();
   if (!root) {
     if (arg.op === "summary") return { rawCount: 0, firstVisibleIndex: null };
     if (arg.op === "invisible") return { rejected: [], rejectedTruncated: false };
@@ -99,7 +118,7 @@ export function cdpQueryOp(arg: {
       for (const name of arg.attrNames ?? []) values[name] = null;
       return { detached: true, values };
     }
-    if (arg.op === "fill") return { filled: false, valueLength: 0 };
+    if (arg.op === "fill") return { filled: false, valueLength: 0, eventsDispatched: [] };
     return { ok: false };
   }
 
@@ -145,6 +164,7 @@ export function cdpQueryOp(arg: {
       visible: isVisible(node),
       text: normalize(String(textFor(node) ?? "")).slice(0, 180),
       selectorHint: selectorHintFor(node),
+      href: hrefFor(node),
     };
   }
 
@@ -163,6 +183,7 @@ export function cdpQueryOp(arg: {
       visible: isVisible(node),
       text: normalize(String(textFor(node) ?? "")).slice(0, 180),
       selectorHint: selectorHintFor(node),
+      href: hrefFor(node),
     };
   }
 
@@ -214,6 +235,7 @@ export function cdpQueryOp(arg: {
       visible: isVisible(node),
       text: normalize(String(textFor(node) ?? "")).slice(0, 180),
       selectorHint: selectorHintFor(node),
+      href: hrefFor(node),
     };
   }
 
@@ -262,8 +284,21 @@ export function cdpQueryOp(arg: {
     const index = typeof arg.index === "number" ? arg.index : -1;
     const node = index >= 0 ? (matches[index] ?? null) : null;
     const raw = typeof arg.fillValue === "string" ? arg.fillValue : "";
+    const eventsRequested = Array.isArray(arg.fillEvents) ? arg.fillEvents : [];
+    const dispatchEvents = (target: BrowserNodeLike, names: string[]) => {
+      const dispatched: string[] = [];
+      for (const name of names) {
+        try {
+          target.dispatchEvent?.(new Event(name, { bubbles: true }));
+          dispatched.push(name);
+        } catch {
+          // ignore invalid events in browser runtime
+        }
+      }
+      return dispatched;
+    };
     if (!node) {
-      return { filled: false, valueLength: raw.length };
+      return { filled: false, valueLength: raw.length, eventsDispatched: [] };
     }
     const tag = typeof node?.tagName === "string" ? node.tagName.toLowerCase() : "";
     if (tag === "input" || tag === "textarea" || tag === "select") {
@@ -277,13 +312,8 @@ export function cdpQueryOp(arg: {
       } catch {
         // ignore
       }
-      try {
-        node.dispatchEvent?.(new Event("input", { bubbles: true }));
-        node.dispatchEvent?.(new Event("change", { bubbles: true }));
-      } catch {
-        // ignore
-      }
-      return { filled: true, valueLength: raw.length };
+      const eventsDispatched = dispatchEvents(node, eventsRequested);
+      return { filled: true, valueLength: raw.length, eventsDispatched };
     }
     if (node?.isContentEditable) {
       try {
@@ -292,14 +322,10 @@ export function cdpQueryOp(arg: {
         // ignore
       }
       node.textContent = raw;
-      try {
-        node.dispatchEvent?.(new Event("input", { bubbles: true }));
-      } catch {
-        // ignore
-      }
-      return { filled: true, valueLength: raw.length };
+      const eventsDispatched = dispatchEvents(node, eventsRequested);
+      return { filled: true, valueLength: raw.length, eventsDispatched };
     }
-    return { filled: false, valueLength: raw.length };
+    return { filled: false, valueLength: raw.length, eventsDispatched: [] };
   }
 
   return { ok: false };

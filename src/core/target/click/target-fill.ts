@@ -28,6 +28,8 @@ type TargetFillReport = {
   pickedIndex?: number;
   query: string;
   valueLength: number;
+  eventMode?: "minimal" | "realistic" | "none" | "custom";
+  eventsDispatched?: string[];
   url: string;
   title: string;
   wait?: {
@@ -47,6 +49,8 @@ type TargetFillReport = {
     queryMode: "text" | "selector";
     query: string;
     selector: string | null;
+    eventMode?: "minimal" | "realistic" | "none" | "custom";
+    eventsDispatched?: string[];
     countAfter: number | null;
   };
   proofEnvelope?: import("../../types.js").ActionProofEnvelope;
@@ -64,6 +68,69 @@ function parseFillValue(input: string | undefined): string {
   return input;
 }
 
+const FILL_EVENT_PRESETS: Record<"minimal" | "realistic" | "none", string[]> = {
+  minimal: ["input", "change"],
+  realistic: ["keydown", "keypress", "input", "keyup", "change"],
+  none: [],
+};
+
+const SUPPORTED_FILL_EVENTS = new Set(["input", "change", "keyup", "keydown", "keypress", "blur"]);
+
+function parseFillEventPolicy(opts: {
+  eventsInput?: string;
+  eventModeInput?: string;
+}): { eventMode: "minimal" | "realistic" | "none" | "custom"; events: string[]; includeInReport: boolean } {
+  const rawEvents = typeof opts.eventsInput === "string" ? opts.eventsInput.trim() : "";
+  const rawMode = typeof opts.eventModeInput === "string" ? opts.eventModeInput.trim().toLowerCase() : "";
+  const hasEvents = rawEvents.length > 0;
+  const hasMode = rawMode.length > 0;
+  if (hasEvents && hasMode) {
+    throw new CliError("E_QUERY_INVALID", "Use either --events or --event-mode, not both");
+  }
+  if (!hasEvents && !hasMode) {
+    return {
+      eventMode: "minimal",
+      events: [...FILL_EVENT_PRESETS.minimal],
+      includeInReport: false,
+    };
+  }
+  if (hasMode) {
+    if (rawMode !== "minimal" && rawMode !== "realistic" && rawMode !== "none") {
+      throw new CliError("E_QUERY_INVALID", "event-mode must be one of: minimal, realistic, none");
+    }
+    return {
+      eventMode: rawMode,
+      events: [...FILL_EVENT_PRESETS[rawMode]],
+      includeInReport: true,
+    };
+  }
+
+  const requested = rawEvents
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry) => entry.length > 0);
+  if (requested.length < 1) {
+    throw new CliError("E_QUERY_INVALID", "events must contain at least one event name");
+  }
+  if (requested.length > 8) {
+    throw new CliError("E_QUERY_INVALID", "events supports at most 8 names");
+  }
+  const deduped: string[] = [];
+  for (const name of requested) {
+    if (!SUPPORTED_FILL_EVENTS.has(name)) {
+      throw new CliError("E_QUERY_INVALID", `unsupported fill event: ${name}`);
+    }
+    if (!deduped.includes(name)) {
+      deduped.push(name);
+    }
+  }
+  return {
+    eventMode: "custom",
+    events: deduped,
+    includeInReport: true,
+  };
+}
+
 export async function targetFill(opts: {
   targetId: string;
   timeoutMs: number;
@@ -75,6 +142,8 @@ export async function targetFill(opts: {
   visibleOnly?: boolean;
   frameScope?: string;
   value?: string;
+  eventsInput?: string;
+  eventModeInput?: string;
   waitForText?: string;
   waitForSelector?: string;
   waitNetworkIdle?: boolean;
@@ -93,6 +162,10 @@ export async function targetFill(opts: {
     visibleOnly: opts.visibleOnly,
   });
   const value = parseFillValue(opts.value);
+  const eventPolicy = parseFillEventPolicy({
+    eventsInput: opts.eventsInput,
+    eventModeInput: opts.eventModeInput,
+  });
   const frameScope = parseFrameScope(opts.frameScope);
   const waitAfter = parseWaitAfterClick({
     waitForText: opts.waitForText,
@@ -195,7 +268,8 @@ export async function targetFill(opts: {
       contains: parsed.contains,
       index: localIndex,
       fillValue: value,
-    })) as { filled: boolean; valueLength: number };
+      fillEvents: eventPolicy.events,
+    })) as { filled: boolean; valueLength: number; eventsDispatched: string[] };
 
     if (!filled.filled) {
       throw new CliError("E_QUERY_INVALID", "matched element is not fillable");
@@ -270,6 +344,12 @@ export async function targetFill(opts: {
       pickedIndex,
       query: parsed.query,
       valueLength: value.length,
+      ...(eventPolicy.includeInReport
+        ? {
+            eventMode: eventPolicy.eventMode,
+            eventsDispatched: filled.eventsDispatched,
+          }
+        : {}),
       url: finalUrl,
       title,
       wait: waited,
@@ -285,6 +365,8 @@ export async function targetFill(opts: {
               queryMode: parsed.mode,
               query: parsed.query,
               selector: parsed.selector,
+              eventMode: eventPolicy.eventMode,
+              eventsDispatched: filled.eventsDispatched,
               countAfter,
             },
             ...(proofEnvelope ? { proofEnvelope } : {}),

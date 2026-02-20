@@ -169,11 +169,11 @@ export async function targetDownload(opts: {
         selector,
         contains,
         index: resolved.localIndex,
-      })) as { ok: boolean; visible?: boolean; text?: string; selectorHint?: string | null };
+      })) as { ok: boolean; visible?: boolean; text?: string; selectorHint?: string | null; href?: string | null };
       if (!payload.ok) {
         throw new CliError("E_INTERNAL", "Unable to read match preview");
       }
-      return { visible: Boolean(payload.visible), text: payload.text ?? "", selectorHint: payload.selectorHint ?? null };
+      return { visible: Boolean(payload.visible), text: payload.text ?? "", selectorHint: payload.selectorHint ?? null, href: payload.href ?? null };
     };
 
     let pickedIndex: number;
@@ -224,11 +224,11 @@ export async function targetDownload(opts: {
         selector,
         contains,
         index: resolved.localIndex,
-      })) as { ok: boolean; visible?: boolean; text?: string; selectorHint?: string | null };
+      })) as { ok: boolean; visible?: boolean; text?: string; selectorHint?: string | null; href?: string | null };
       if (!payload.ok) {
         throw new CliError("E_QUERY_INVALID", visibleOnly ? "No visible element matched download query" : "No element matched download query");
       }
-      return { visible: Boolean(payload.visible), text: payload.text ?? "", selectorHint: payload.selectorHint ?? null };
+      return { visible: Boolean(payload.visible), text: payload.text ?? "", selectorHint: payload.selectorHint ?? null, href: payload.href ?? null };
     };
 
     const clickedPreview = await clickAt(pickedIndex);
@@ -247,6 +247,9 @@ export async function targetDownload(opts: {
     const response = pickDownloadResponse(responses, finalUrl);
     const status = response ? response.status() : null;
     const headers = response ? redactHeaders({ headers: await response.allHeaders(), redactors: [] }) : {};
+    const headerMime = headers["content-type"] ?? headers["Content-Type"] ?? null;
+    const mime = typeof headerMime === "string" && headerMime.trim().length > 0 ? headerMime : null;
+    const sourceUrl = clickedPreview.href ?? urlBeforeDownload;
     target.page.off("response", onResponse);
     const assertions = await evaluateActionAssertions({
       page: target.page,
@@ -290,6 +293,7 @@ export async function targetDownload(opts: {
       contains,
       visibleOnly,
       query,
+      sourceUrl,
       matchCount,
       pickedIndex,
       clicked: {
@@ -301,14 +305,31 @@ export async function targetDownload(opts: {
       url: currentUrl,
       title: currentTitle,
       download: {
+        downloadStarted: true,
+        sourceUrl,
         finalUrl,
         status,
+        mime,
         headers,
+        fileName: providers().path.basename(outPath),
         filename: providers().path.basename(outPath),
         path: outPath,
         sha256,
+        bytes: stat.size,
         size: stat.size,
       },
+      ...(includeProof
+        ? {
+            proof: {
+              downloadStarted: true,
+              fileName: providers().path.basename(outPath),
+              path: outPath,
+              bytes: stat.size,
+              mime,
+              sourceUrl,
+            },
+          }
+        : {}),
       ...(proofEnvelope ? { proofEnvelope } : {}),
       ...(assertions ? { assertions } : {}),
       timingMs: {

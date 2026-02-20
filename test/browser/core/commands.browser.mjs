@@ -72,6 +72,7 @@ test("session ensure + open success returns contract shape", () => {
     "url",
     "status",
     "title",
+    "blockType",
     "download",
     "waitUntil",
     "reuseMode",
@@ -82,4 +83,5 @@ test("session ensure + open success returns contract shape", () => {
   assert.equal(openPayload.sessionId, ensurePayload.sessionId);
   assert.equal(openPayload.sessionSource, "explicit");
   assert.equal(openPayload.browserMode, ensurePayload.browserMode);
+  assert.equal(typeof openPayload.blockType, "string");
 });

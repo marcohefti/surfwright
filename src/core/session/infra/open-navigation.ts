@@ -44,6 +44,7 @@ async function captureDownloadArtifact(opts: {
   download: import("playwright-core").Download;
   responses: Response[];
   outDir: string;
+  sourceUrl: string | null;
 }): Promise<OpenReport["download"]> {
   const { fs, path, crypto } = providers();
   fs.mkdirSync(opts.outDir, { recursive: true });
@@ -79,18 +80,26 @@ async function captureDownloadArtifact(opts: {
 
   let status: number | null = null;
   let headers: Record<string, string> = {};
+  let mime: string | null = null;
   if (response) {
     status = response.status();
     headers = redactHeaders({ headers: await response.allHeaders(), redactors: [] });
+    const headerMime = headers["content-type"] ?? headers["Content-Type"] ?? null;
+    mime = typeof headerMime === "string" && headerMime.trim().length > 0 ? headerMime : null;
   }
 
   return {
+    downloadStarted: true,
+    sourceUrl: opts.sourceUrl,
     finalUrl,
     status,
+    mime,
     headers,
+    fileName: path.basename(outPath),
     filename: path.basename(outPath),
     path: outPath,
     sha256,
+    bytes: size,
     size,
   };
 }
@@ -253,6 +262,7 @@ export async function navigatePageWithEvidence(opts: {
         download,
         responses,
         outDir: resolveDownloadOutDir(opts.downloadOutDir),
+        sourceUrl: opts.parsedUrl.toString(),
       });
     }
 

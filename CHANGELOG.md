@@ -23,6 +23,11 @@ All notable changes to SurfWright are documented here.
 - [actions] Added post-action assertions (`--assert-url-prefix`, `--assert-selector`, `--assert-text`) and additive `proofEnvelope` support across `open`, `target click`, `target fill`, `target keypress`, `target upload`, `target drag-drop`, `target dialog`, `target download`, and `target wait`.
 - [target] Added extraction kinds `headings`, `links`, `codeblocks`, `forms`, and `tables` to `target extract` for broader no-eval structured reads.
 - [target] Added `target style --kind <button-primary|input-text|link-primary>` preset shortcuts for common style validation flows.
+- [target] Added `target fill --event-mode <minimal|realistic|none>` and `target fill --events <csv>` for deterministic post-fill event dispatch (including keyup-sensitive UI flows).
+- [target] Added `target click --within <selector>` to scope text/selector matching for dense pages and reduce ambiguous click selection.
+- [target] Added `target extract --kind table-rows` with optional schema mapping (`--schema-json|--schema-file`) and deterministic record dedupe (`--dedupe-by`) to reduce `target eval` dependence.
+- [open] Added additive navigation classification field `blockType` (`auth|captcha|consent|unknown`) to `open` reports.
+- [target] Added additive `blockType` classification to `target url-assert` reports for auth/captcha/consent-aware URL assertions.
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
@@ -35,6 +40,8 @@ All notable changes to SurfWright are documented here.
 - [session] `session attach --cdp` now accepts `ws://`/`wss://` endpoints and supports HTTP(S) discovery URLs with path/query (resolved to websocket endpoints for runtime attach).
 - [session] CDP attach health checks now split discovery and websocket-connect stages for clearer remote endpoint handling under variable latency.
 - [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage` to reduce startup flakes in constrained environments.
+- [target] `target download` payload now includes first-class download proof fields: `downloadStarted`, `sourceUrl`, `fileName`, `bytes`, and `mime` (legacy `filename`/`size` retained).
+- [errors] `target click` mismatch failures now include stronger disambiguation context (`withinSelector`, bounded candidate sample) for faster recovery without blind retries.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.

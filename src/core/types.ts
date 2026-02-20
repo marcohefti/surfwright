@@ -121,12 +121,17 @@ export type WorkspaceProfileLockClearReport = {
 };
 
 export type DownloadCaptureReport = {
+  downloadStarted: boolean;
+  sourceUrl: string | null;
   finalUrl: string;
   status: number | null;
+  mime: string | null;
   headers: Record<string, string>;
+  fileName: string;
   filename: string;
   path: string;
   sha256: string;
+  bytes: number;
   size: number;
 };
 export type OpenReport = {
@@ -145,6 +150,7 @@ export type OpenReport = {
   url: string;
   status: number | null;
   title: string;
+  blockType: "auth" | "captcha" | "consent" | "unknown";
   download: DownloadCaptureReport | null;
   waitUntil: "commit" | "domcontentloaded" | "load" | "networkidle";
   reuseMode: "off" | "url" | "origin" | "active";

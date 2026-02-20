@@ -75,6 +75,7 @@ export function buildClickReport(opts: {
   selector: string | null;
   contains: string | null;
   visibleOnly: boolean;
+  withinSelector?: string | null;
   query: string;
   matchCount: number;
   pickedIndex: number;
@@ -102,6 +103,7 @@ export function buildClickReport(opts: {
     selector: opts.selector,
     contains: opts.contains,
     visibleOnly: opts.visibleOnly,
+    ...(typeof opts.withinSelector === "string" ? { withinSelector: opts.withinSelector } : {}),
     query: opts.query,
     matchCount: opts.matchCount,
     pickedIndex: opts.pickedIndex,

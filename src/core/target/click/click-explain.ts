@@ -13,6 +13,7 @@ export async function buildClickExplainReport(opts: {
   selector: string | null;
   contains: string | null;
   visibleOnly: boolean;
+  withinSelector?: string | null;
   query: string;
   matchCount: number;
   requestedIndex: number | null;
@@ -35,6 +36,7 @@ export async function buildClickExplainReport(opts: {
     selector: opts.selector,
     contains: opts.contains,
     visibleOnly: opts.visibleOnly,
+    ...(typeof opts.withinSelector === "string" ? { withinSelector: opts.withinSelector } : {}),
     query: opts.query,
     matchCount: opts.matchCount,
     requestedIndex: opts.requestedIndex,

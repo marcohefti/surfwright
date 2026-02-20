@@ -4,6 +4,7 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import type { TargetUrlAssertReport } from "../../types.js";
+import { classifyNavigationBlockType } from "../../shared/index.js";
 
 function parseOptionalString(input: string | undefined): string | null {
   const value = typeof input === "string" ? input.trim() : "";
@@ -97,6 +98,7 @@ export async function targetUrlAssert(opts: {
       throw new CliError("E_ASSERT_FAILED", `url-assert failed: url-prefix expected ${urlPrefix} got ${actualUrl}`);
     }
     const title = await target.page.title();
+    const block = await classifyNavigationBlockType(target.page);
     const actionCompletedAt = Date.now();
 
     const report: TargetUrlAssertReport = {
@@ -106,6 +108,7 @@ export async function targetUrlAssert(opts: {
       targetId: requestedTargetId,
       url: actualUrl,
       title,
+      blockType: block.blockType,
       assert: {
         host,
         origin,

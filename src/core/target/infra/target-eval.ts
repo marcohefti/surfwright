@@ -33,6 +33,28 @@ const EVAL_MAX_RESULT_STRING_CHARS = 4000;
 const EVAL_MAX_RESULT_ITEMS = 200;
 const EVAL_MAX_RESULT_DEPTH = 6;
 
+export function parseJsonObjectText(opts: {
+  text: string;
+  maxChars: number;
+  tooLargeMessage: string;
+  invalidMessage: string;
+  objectMessage: string;
+}): Record<string, unknown> {
+  if (opts.text.length > opts.maxChars) {
+    throw new CliError("E_QUERY_INVALID", opts.tooLargeMessage);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(opts.text);
+  } catch {
+    throw new CliError("E_QUERY_INVALID", opts.invalidMessage);
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new CliError("E_QUERY_INVALID", opts.objectMessage);
+  }
+  return parsed as Record<string, unknown>;
+}
+
 function parseArgJson(input: string | undefined): unknown {
   if (typeof input !== "string") {
     return null;

@@ -11,6 +11,7 @@ export type ExtractItemDraft = {
   language?: string | null;
   command?: string | null;
   section?: string | null;
+  record?: Record<string, string | null>;
   actionable?: {
     handle: string | null;
     selectorHint: string | null;

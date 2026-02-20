@@ -16,7 +16,7 @@ const guarantees = [
 const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
   {
     id: "open",
-    signature: "open(url) -> { sessionId, targetId, finalUrl, title }",
+    signature: "open(url) -> { sessionId, targetId, finalUrl, title, blockType }",
     examples: ["surfwright open https://example.com --reuse active --wait-until domcontentloaded"],
     proofSchema: {
       version: 1,
@@ -28,7 +28,7 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
       targetAfter: "string",
       wait: "{ requested, mode, timeoutMs, elapsedMs, satisfied }",
       assertions: "{ total, failed, checks[] } | null",
-      details: "{ waitUntil, reuseMode, reusedTarget, status, wasRedirected }",
+      details: "{ waitUntil, reuseMode, reusedTarget, status, wasRedirected, blockType }",
     },
   },
   {
@@ -53,8 +53,11 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
   },
   {
     id: "target.fill",
-    signature: "fill(targetId, query, value) -> { valueLength, wait?, proof? }",
-    examples: ["surfwright target fill <targetId> --selector '#email' --value 'agent@example.com' --proof"],
+    signature: "fill(targetId, query, value) -> { valueLength, eventMode?, eventsDispatched?, wait?, proof? }",
+    examples: [
+      "surfwright target fill <targetId> --selector '#email' --value 'agent@example.com' --proof",
+      "surfwright target fill <targetId> --selector '#search' --value 'surfwright' --event-mode realistic",
+    ],
     proofSchema: {
       action: "fill",
       urlChanged: "boolean",
@@ -79,10 +82,11 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
   },
   {
     id: "target.extract",
-    signature: "extract(targetId, kind) -> { items[], count, truncated }",
+    signature: "extract(targetId, kind) -> { items[], count, truncated, schema?, records? }",
     examples: [
       "surfwright target extract <targetId> --kind docs-commands --selector main --limit 10",
       "surfwright target extract <targetId> --kind headings --selector main --limit 20",
+      "surfwright target extract <targetId> --kind table-rows --schema-json '{\"company\":\"record.Company\"}' --dedupe-by company",
     ],
     proofSchema: null,
   },

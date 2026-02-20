@@ -46,11 +46,14 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
       .argument("<targetId>", "Target handle returned by open/target list")
       .option(
         "--kind <kind>",
-        "Extraction profile: generic|blog|news|docs|docs-commands|headings|links|codeblocks|forms|tables",
+        "Extraction profile: generic|blog|news|docs|docs-commands|headings|links|codeblocks|forms|tables|table-rows",
       )
       .option("--selector <query>", "Scope extraction to a selector")
       .option("--visible-only", "Only include visible content")
       .option("--include-actionable", "Include compact action refs on extracted items for deterministic chaining")
+      .option("--schema-json <json>", "Map extracted items into typed records (JSON object of outputField -> sourcePath)")
+      .option("--schema-file <path>", "Read schema mapping JSON from file")
+      .option("--dedupe-by <csv>", "Comma-separated schema output fields used for deterministic record dedupe")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--limit <n>", "Maximum extracted items to return")
       .option("--timeout-ms <ms>", "Extraction timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
@@ -68,6 +71,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
           "  surfwright target extract <targetId> --kind headings --selector main --limit 20",
           "  surfwright target extract <targetId> --kind links --selector main --limit 20",
           "  surfwright target extract <targetId> --kind tables --selector main --limit 10",
+          "  surfwright target extract <targetId> --kind table-rows --schema-json '{\"company\":\"record.Company\",\"price\":\"record.Price\"}' --dedupe-by company",
         ].join("\n"),
       )
       .action(
@@ -78,6 +82,9 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
             selector?: string;
             visibleOnly?: boolean;
             includeActionable?: boolean;
+            schemaJson?: string;
+            schemaFile?: string;
+            dedupeBy?: string;
             frameScope?: string;
             limit?: string;
             timeoutMs: number;
@@ -98,6 +105,9 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
               selectorQuery: options.selector,
               visibleOnly: Boolean(options.visibleOnly),
               includeActionable: Boolean(options.includeActionable),
+              schemaJson: options.schemaJson,
+              schemaFile: options.schemaFile,
+              dedupeBy: options.dedupeBy,
               frameScope: options.frameScope,
               limit,
               persistState: options.persist !== false,

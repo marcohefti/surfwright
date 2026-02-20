@@ -8,7 +8,7 @@ import { parseFrameScope } from "../infra/target-find.js";
 import { readPageTargetId, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import type { TargetClickDeltaEvidence, TargetClickExplainReport, TargetClickReport } from "../../types.js";
-import { CLICK_EXPLAIN_MAX_REJECTED, parseMatchIndex, parseWaitAfterClick, queryMismatchError, readPostSnapshot, resolveWaitTimeoutMs } from "./click-utils.js";
+import { CLICK_EXPLAIN_MAX_REJECTED, parseMatchIndex, parseWaitAfterClick, queryMismatchError, readPostSnapshot, resolveWaitTimeoutMs, summarizeCandidatePreviews } from "./click-utils.js";
 import { cdpQueryOp } from "./cdp-query-op.js";
 import { buildClickExplainReport } from "./click-explain.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
@@ -28,6 +28,7 @@ export async function targetClick(opts: {
   containsQuery?: string;
   handle?: string;
   visibleOnly?: boolean;
+  withinSelector?: string;
   frameScope?: string;
   index?: number;
   explain?: boolean;
@@ -47,6 +48,8 @@ export async function targetClick(opts: {
   const requestedIndex = parseMatchIndex(opts.index);
   const handleQuery = typeof opts.handle === "string" ? opts.handle.trim() : "";
   const hasHandle = handleQuery.length > 0;
+  const withinSelector = typeof opts.withinSelector === "string" ? opts.withinSelector.trim() : "";
+  const scopedWithinSelector = withinSelector.length > 0 ? withinSelector : null;
   const parsed = hasHandle
     ? null
     : parseTargetQueryInput({
@@ -77,6 +80,7 @@ export async function targetClick(opts: {
     if (hasText || hasSelector || hasContains) throw new CliError("E_QUERY_INVALID", "Use either --handle or a query via --text/--selector/--contains");
     if (requestedIndex !== null) throw new CliError("E_QUERY_INVALID", "--index cannot be combined with --handle");
     if (Boolean(opts.visibleOnly)) throw new CliError("E_QUERY_INVALID", "--visible-only cannot be combined with --handle");
+    if (withinSelector.length > 0) throw new CliError("E_QUERY_INVALID", "--within cannot be combined with --handle");
   }
   if (explain) {
     if (hasHandle) throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with --handle");
@@ -108,6 +112,14 @@ export async function targetClick(opts: {
         frameCdpId: frameTree.frame.id,
         worldCache,
         selectorQuery: parsed.selector,
+      });
+    }
+    if (scopedWithinSelector) {
+      await ensureValidSelectorSyntaxCdp({
+        cdp,
+        frameCdpId: frameTree.frame.id,
+        worldCache,
+        selectorQuery: scopedWithinSelector,
       });
     }
     const mainEvaluator = createCdpEvaluator({
@@ -147,6 +159,28 @@ export async function targetClick(opts: {
     const selector = parsed.selector;
     const contains = parsed.contains;
     const visibleOnly = parsed.visibleOnly;
+    const throwMismatch = (input: {
+      message: string;
+      reason: "no_match" | "no_visible_match" | "index_out_of_range" | "not_visible_at_index" | "click_resolution_failed";
+      frameCount: number;
+      matchCount: number;
+      requestedIndex: number | null;
+      candidateSummary?: string | null;
+    }): never => {
+      throw queryMismatchError({
+        message: input.message,
+        reason: input.reason,
+        queryMode,
+        query,
+        visibleOnly,
+        withinSelector: scopedWithinSelector,
+        frameScope,
+        frameCount: input.frameCount,
+        matchCount: input.matchCount,
+        requestedIndex: input.requestedIndex,
+        candidateSummary: input.candidateSummary ?? null,
+      });
+    };
     const perFrameCounts: Array<{ frameCdpId: string; rawCount: number; firstVisibleIndex: number | null }> = [];
     for (const frameCdpId of frameIds) {
       const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
@@ -156,6 +190,7 @@ export async function targetClick(opts: {
         query,
         selector,
         contains,
+        withinSelector: scopedWithinSelector,
       }) as { rawCount: number; firstVisibleIndex: number | null };
       perFrameCounts.push({ frameCdpId, rawCount: summary.rawCount, firstVisibleIndex: summary.firstVisibleIndex });
     }
@@ -173,30 +208,14 @@ export async function targetClick(opts: {
     const previewAt = async (globalIndex: number) => {
       const resolved = resolveFrameForGlobalIndex(globalIndex);
       const evaluator = createCdpEvaluator({ cdp, frameCdpId: resolved.frameCdpId, worldCache });
-      const payload = await evaluator.evaluate(cdpQueryOp, {
-        op: "preview",
-        mode: queryMode,
-        query,
-        selector,
-        contains,
-        index: resolved.localIndex,
-      }) as { ok: boolean; visible?: boolean; text?: string; selectorHint?: string | null };
-      if (!payload.ok) {
-        throw new CliError("E_INTERNAL", "Unable to read match preview");
-      }
+      const payload = await evaluator.evaluate(cdpQueryOp, { op: "preview", mode: queryMode, query, selector, contains, index: resolved.localIndex, withinSelector: scopedWithinSelector }) as { ok: boolean; visible?: boolean; text?: string; selectorHint?: string | null; href?: string | null };
+      if (!payload.ok) throw new CliError("E_INTERNAL", "Unable to read match preview");
       return { visible: Boolean(payload.visible), text: payload.text ?? "", selectorHint: payload.selectorHint ?? null };
     };
     const clickAt = async (globalIndex: number) => {
       const resolved = resolveFrameForGlobalIndex(globalIndex);
       const evaluator = createCdpEvaluator({ cdp, frameCdpId: resolved.frameCdpId, worldCache });
-      const clickPointPayload = await evaluator.evaluate(cdpQueryOp, {
-        op: "click-point",
-        mode: queryMode,
-        query,
-        selector,
-        contains,
-        index: resolved.localIndex,
-      }) as { ok: boolean; x?: number; y?: number; visible?: boolean; text?: string; selectorHint?: string | null };
+      const clickPointPayload = await evaluator.evaluate(cdpQueryOp, { op: "click-point", mode: queryMode, query, selector, contains, index: resolved.localIndex, withinSelector: scopedWithinSelector }) as { ok: boolean; x?: number; y?: number; visible?: boolean; text?: string; selectorHint?: string | null; href?: string | null };
       if (clickPointPayload.ok && typeof clickPointPayload.x === "number" && typeof clickPointPayload.y === "number") {
         try {
           await target.page.mouse.click(clickPointPayload.x, clickPointPayload.y);
@@ -205,22 +224,11 @@ export async function targetClick(opts: {
           // Fall through to DOM click fallback for edge cases (for example, cross-origin iframe coordinates).
         }
       }
-      const payload = await evaluator.evaluate(cdpQueryOp, {
-        op: "click",
-        mode: queryMode,
-        query,
-        selector,
-        contains,
-        index: resolved.localIndex,
-      }) as { ok: boolean; visible?: boolean; text?: string; selectorHint?: string | null };
+      const payload = await evaluator.evaluate(cdpQueryOp, { op: "click", mode: queryMode, query, selector, contains, index: resolved.localIndex, withinSelector: scopedWithinSelector }) as { ok: boolean; visible?: boolean; text?: string; selectorHint?: string | null; href?: string | null };
       if (!payload.ok) {
-        throw queryMismatchError({
+        throwMismatch({
           message: visibleOnly ? "No visible element matched click query" : "No element matched click query",
           reason: "click_resolution_failed",
-          queryMode,
-          query,
-          visibleOnly,
-          frameScope,
           frameCount: perFrameCounts.length,
           matchCount,
           requestedIndex,
@@ -231,15 +239,7 @@ export async function targetClick(opts: {
     const readAriaAt = async (globalIndex: number) => {
       const resolved = resolveFrameForGlobalIndex(globalIndex);
       const evaluator = createCdpEvaluator({ cdp, frameCdpId: resolved.frameCdpId, worldCache });
-      return (await evaluator.evaluate(cdpQueryOp, {
-        op: "aria",
-        mode: queryMode,
-        query,
-        selector,
-        contains,
-        index: resolved.localIndex,
-        attrNames: [...CLICK_DELTA_ARIA_ATTRIBUTES],
-      })) as { detached: boolean; values: Record<string, string | null> };
+      return (await evaluator.evaluate(cdpQueryOp, { op: "aria", mode: queryMode, query, selector, contains, index: resolved.localIndex, attrNames: [...CLICK_DELTA_ARIA_ATTRIBUTES], withinSelector: scopedWithinSelector })) as { detached: boolean; values: Record<string, string | null> };
     };
     if (explain) {
       const url = target.page.url();
@@ -257,6 +257,7 @@ export async function targetClick(opts: {
         selector,
         contains,
         visibleOnly,
+        withinSelector: scopedWithinSelector,
         query,
         matchCount,
         requestedIndex,
@@ -274,6 +275,7 @@ export async function targetClick(opts: {
             contains,
             stopExclusive,
             maxRejected,
+            withinSelector: scopedWithinSelector,
           })) as { rejected: Array<{ index: number; visible: boolean; text: string; selectorHint: string | null }>; rejectedTruncated: boolean };
         },
       });
@@ -281,13 +283,9 @@ export async function targetClick(opts: {
     }
     // Execute click.
     if (matchCount < 1) {
-      throw queryMismatchError({
+      throwMismatch({
         message: visibleOnly ? "No visible element matched click query" : "No element matched click query",
         reason: visibleOnly ? "no_visible_match" : "no_match",
-        queryMode,
-        query,
-        visibleOnly,
-        frameScope,
         frameCount: perFrameCounts.length,
         matchCount,
         requestedIndex,
@@ -296,30 +294,26 @@ export async function targetClick(opts: {
     let pickedIndex: number;
     if (requestedIndex !== null) {
       if (requestedIndex >= matchCount) {
-        throw queryMismatchError({
+        const candidateSummary = await summarizeCandidatePreviews({ matchCount, limit: 3, previewAt });
+        throwMismatch({
           message: `index out of range: requested ${requestedIndex}, matchCount ${matchCount}`,
           reason: "index_out_of_range",
-          queryMode,
-          query,
-          visibleOnly,
-          frameScope,
           frameCount: perFrameCounts.length,
           matchCount,
           requestedIndex,
+          candidateSummary,
         });
       }
       const preview = await previewAt(requestedIndex);
       if (visibleOnly && !preview.visible) {
-        throw queryMismatchError({
+        const candidateSummary = await summarizeCandidatePreviews({ matchCount, limit: 3, previewAt });
+        throwMismatch({
           message: `matched element at index ${requestedIndex} is not visible`,
           reason: "not_visible_at_index",
-          queryMode,
-          query,
-          visibleOnly,
-          frameScope,
           frameCount: perFrameCounts.length,
           matchCount,
           requestedIndex,
+          candidateSummary,
         });
       }
       pickedIndex = requestedIndex;
@@ -336,19 +330,17 @@ export async function targetClick(opts: {
         offset += entry.rawCount;
       }
       if (found === null) {
-        throw queryMismatchError({
+        const candidateSummary = await summarizeCandidatePreviews({ matchCount, limit: 3, previewAt });
+        throwMismatch({
           message: "No visible element matched click query",
           reason: "no_visible_match",
-          queryMode,
-          query,
-          visibleOnly,
-          frameScope,
           frameCount: perFrameCounts.length,
           matchCount,
           requestedIndex,
+          candidateSummary,
         });
       }
-      pickedIndex = found;
+      pickedIndex = found ?? 0;
     }
     const urlBeforeClick = target.page.url();
     const deltaBefore = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;
@@ -412,6 +404,7 @@ export async function targetClick(opts: {
       worldCache,
       queryMode,
       frameScope,
+      withinSelector: scopedWithinSelector,
       query,
       selector,
       contains,
@@ -445,6 +438,7 @@ export async function targetClick(opts: {
       selector,
       contains,
       visibleOnly,
+      ...(scopedWithinSelector ? { withinSelector: scopedWithinSelector } : {}),
       query,
       matchCount,
       pickedIndex,

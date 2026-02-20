@@ -11,6 +11,7 @@ export async function readSelectorCountAfter(opts: {
   worldCache: Map<string, number>;
   queryMode: "text" | "selector";
   frameScope: "main" | "all";
+  withinSelector?: string | null;
   query: string;
   selector: string | null;
   contains: string | null;
@@ -30,6 +31,7 @@ export async function readSelectorCountAfter(opts: {
         query: opts.query,
         selector: opts.selector,
         contains: opts.contains,
+        withinSelector: opts.withinSelector ?? null,
       })) as { rawCount: number; firstVisibleIndex: number | null };
       rawCount += summary.rawCount;
     }

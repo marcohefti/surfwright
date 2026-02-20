@@ -85,16 +85,22 @@ test("open --allow-download captures deterministic download artifact instead of 
     assert.equal(typeof payload.download, "object");
     assert.equal(payload.download !== null, true);
     assert.equal(payload.download.status, 200);
+    assert.equal(payload.download.downloadStarted, true);
+    assert.equal(typeof payload.download.sourceUrl, "string");
+    assert.equal(typeof payload.download.fileName, "string");
     assert.equal(typeof payload.download.finalUrl, "string");
     assert.equal(typeof payload.download.filename, "string");
     assert.equal(typeof payload.download.path, "string");
     assert.equal(typeof payload.download.sha256, "string");
+    assert.equal(typeof payload.download.bytes, "number");
+    assert.equal(typeof payload.download.mime, "string");
     assert.equal(typeof payload.download.size, "number");
     assert.equal(fs.existsSync(payload.download.path), true);
 
     const data = fs.readFileSync(payload.download.path);
     const expectedSha = crypto.createHash("sha256").update(data).digest("hex");
     assert.equal(payload.download.sha256, expectedSha);
+    assert.equal(payload.download.bytes, data.byteLength);
     assert.equal(payload.download.size, data.byteLength);
 
     const headers = payload.download.headers ?? {};

@@ -52,10 +52,12 @@ export function queryMismatchError(opts: {
   queryMode: "text" | "selector";
   query: string;
   visibleOnly: boolean;
+  withinSelector?: string | null;
   frameScope: "main" | "all";
   frameCount: number;
   matchCount: number;
   requestedIndex: number | null;
+  candidateSummary?: string | null;
 }): CliError {
   const hints: string[] = [];
   if (opts.frameScope === "main" && opts.frameCount > 1) {
@@ -70,6 +72,14 @@ export function queryMismatchError(opts: {
   if (opts.reason === "no_match" || opts.reason === "click_resolution_failed") {
     hints.push("Retry with --explain to inspect candidate/rejection evidence");
   }
+  if (typeof opts.withinSelector === "string" && opts.withinSelector.trim().length > 0) {
+    hints.push("Scope may be too narrow; retry without --within or adjust the scoping selector");
+  } else if (opts.reason === "no_match" || opts.reason === "click_resolution_failed") {
+    hints.push("Use --within <selector> to scope disambiguation on dense pages");
+  }
+  if (typeof opts.candidateSummary === "string" && opts.candidateSummary.trim().length > 0) {
+    hints.push(`Candidate sample: ${opts.candidateSummary}`);
+  }
   return new CliError("E_QUERY_INVALID", opts.message, {
     hints: hints.slice(0, 3),
     hintContext: {
@@ -77,10 +87,12 @@ export function queryMismatchError(opts: {
       queryMode: opts.queryMode,
       query: opts.query,
       visibleOnly: opts.visibleOnly,
+      withinSelector: opts.withinSelector ?? null,
       frameScope: opts.frameScope,
       frameCount: opts.frameCount,
       matchCount: opts.matchCount,
       requestedIndex: opts.requestedIndex,
+      candidateSummary: opts.candidateSummary ?? null,
     },
   });
 }
@@ -406,4 +418,26 @@ export async function explainSelection(opts: {
     rejectedTruncated: rejectedTruncated || matchCount > rejected.length,
     reason: "no_visible_match",
   };
+}
+
+export async function summarizeCandidatePreviews(opts: {
+  matchCount: number;
+  limit: number;
+  previewAt: (index: number) => Promise<{ visible: boolean; text: string; selectorHint: string | null }>;
+}): Promise<string | null> {
+  if (opts.matchCount < 1 || opts.limit < 1) {
+    return null;
+  }
+  const max = Math.min(opts.limit, opts.matchCount);
+  const rows: string[] = [];
+  for (let idx = 0; idx < max; idx += 1) {
+    const preview = await opts.previewAt(idx).catch(() => null);
+    if (!preview) {
+      continue;
+    }
+    const text = preview.text.trim().replace(/\s+/g, " ").slice(0, 40);
+    const selectorHint = preview.selectorHint ?? "?";
+    rows.push(`#${idx} ${preview.visible ? "visible" : "hidden"} ${selectorHint} "${text}"`);
+  }
+  return rows.length > 0 ? rows.join(" | ") : null;
 }

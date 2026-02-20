@@ -9,6 +9,7 @@ import type { OpenReport, SessionReport } from "../../types.js";
 import { parseManagedBrowserMode } from "../app/browser-mode.js";
 import { buildActionProofEnvelope, evaluateActionAssertions, parseActionAssertions, toActionWaitEvidence } from "../../shared/index.js";
 import { buildRedirectEvidence, navigatePageWithEvidence, parseOpenReuseMode, parseOpenWaitUntil } from "./open-navigation.js";
+import { classifyNavigationBlockType } from "../../shared/index.js";
 
 export async function openUrl(opts: {
   inputUrl: string;
@@ -84,6 +85,7 @@ export async function openUrl(opts: {
           page: existing,
           assertions: parsedAssertions,
         });
+        const block = await classifyNavigationBlockType(existing);
         const { redirectChain, redirectChainTruncated } = buildRedirectEvidence({
           response: null,
           requestedUrl,
@@ -106,6 +108,7 @@ export async function openUrl(opts: {
           url: finalUrl,
           status: null,
           title,
+          blockType: block.blockType,
           download: null,
           waitUntil,
           reuseMode,
@@ -130,6 +133,7 @@ export async function openUrl(opts: {
                     reusedTarget: true,
                     status: null,
                     wasRedirected: requestedUrl !== finalUrl,
+                    blockType: block.blockType,
                   },
                 }),
               }
@@ -201,6 +205,7 @@ export async function openUrl(opts: {
       page,
       assertions: parsedAssertions,
     });
+    const block = await classifyNavigationBlockType(page);
     const { redirectChain, redirectChainTruncated } = buildRedirectEvidence({
       response: navigation.response,
       requestedUrl,
@@ -223,6 +228,7 @@ export async function openUrl(opts: {
       url: finalUrl,
       status: navigation.status,
       title: navigation.title,
+      blockType: block.blockType,
       download: navigation.downloadReport,
       waitUntil,
       reuseMode,
@@ -247,6 +253,7 @@ export async function openUrl(opts: {
                 reusedTarget,
                 status: navigation.status,
                 wasRedirected: requestedUrl !== finalUrl,
+                blockType: block.blockType,
               },
             }),
           }

@@ -92,6 +92,7 @@ test("target url-assert returns deterministic shape and typed failures", async (
     assert.equal(assertHostPayload.assert.origin, null);
     assert.equal(assertHostPayload.assert.pathPrefix, null);
     assert.equal(assertHostPayload.assert.urlPrefix, null);
+    assert.equal(typeof assertHostPayload.blockType, "string");
 
     const assertAllResult = await runCliAsync([
       "--json",

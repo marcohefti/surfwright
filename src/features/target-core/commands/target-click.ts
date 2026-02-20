@@ -27,6 +27,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--contains <text>", "Text filter to apply with --selector")
       .option("--handle <handle>", "Element handle (from target snapshot --mode a11y)")
       .option("--visible-only", "Only match visible elements")
+      .option("--within <selector>", "Scope query resolution to descendants of selector")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--index <n>", "Pick the Nth match (0-based) instead of first match")
       .option("--explain", "Explain match selection/rejection without clicking", false)
@@ -52,6 +53,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             contains?: string;
             handle?: string;
             visibleOnly?: boolean;
+            within?: string;
             frameScope?: string;
             index?: string;
             explain?: boolean;
@@ -84,6 +86,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               containsQuery: options.contains,
               handle: options.handle,
               visibleOnly: Boolean(options.visibleOnly),
+              withinSelector: options.within,
               frameScope: options.frameScope,
               index,
               explain: Boolean(options.explain),
@@ -162,6 +165,8 @@ export const targetFillCommandSpec: TargetCommandSpec = {
       .option("--visible-only", "Only match visible elements")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .requiredOption("--value <text>", "Value to fill into the matched control")
+      .option("--events <csv>", "Dispatch additional events after fill (csv: input,change,keyup,keydown,keypress,blur)")
+      .option("--event-mode <mode>", "Fill event preset: minimal|realistic|none")
       .option("--wait-for-text <text>", "After fill, wait until text becomes visible")
       .option("--wait-for-selector <query>", "After fill, wait until selector becomes visible")
       .option("--wait-network-idle", "After fill, wait for network idle")
@@ -192,6 +197,8 @@ export const targetFillCommandSpec: TargetCommandSpec = {
             visibleOnly?: boolean;
             frameScope?: string;
             value: string;
+            events?: string;
+            eventMode?: string;
             waitForText?: string;
             waitForSelector?: string;
             waitNetworkIdle?: boolean;
@@ -219,6 +226,8 @@ export const targetFillCommandSpec: TargetCommandSpec = {
               visibleOnly: Boolean(options.visibleOnly),
               frameScope: options.frameScope,
               value: options.value,
+              eventsInput: options.events,
+              eventModeInput: options.eventMode,
               waitForText: options.waitForText,
               waitForSelector: options.waitForSelector,
               waitNetworkIdle: Boolean(options.waitNetworkIdle),

@@ -3,6 +3,24 @@
 ZeroContext Lab (ZCL) is the workflow we use to evaluate cold-start agent UX for SurfWright.
 ZCL itself is intentionally **external** to SurfWright runtime behavior; this repo does not ship a ZCL implementation.
 
+## Storage Policy (Mandatory)
+
+All ZCL campaign files must be stored in routine-scoped folders inside unversioned `tmp/`:
+
+- required root: `tmp/zcl/<routine-id>/`
+- never write campaign files directly under `tmp/zcl/`
+- keep routine root human-readable (top-level docs only)
+- store operational artifacts under `tmp/zcl/<routine-id>/data/`
+
+Recommended routine layout:
+
+- `tmp/zcl/<routine-id>/README.MD`
+- `tmp/zcl/<routine-id>/RUNBOOK.MD`
+- `tmp/zcl/<routine-id>/RESULTS.MD`
+- `tmp/zcl/<routine-id>/data/{scripts,config,state,logs,reports,archive}`
+
+`tmp/` is intentionally gitignored in this repository; keep all ephemeral ZCL artifacts there.
+
 ## Purpose
 
 Use this when you want to measure what a fresh agent does on first contact:
@@ -64,7 +82,7 @@ Use this when discovering missing CLI primitives/names/output shapes:
 This mode is intentionally qualitative + evidence-backed. It is designed to reveal
 natural command demand and where agents get stuck.
 
-Keep campaign prompts/assets in a temporary workspace (for example `tmp/zero-context-gap/`) and exclude them from version control.
+Keep campaign prompts/assets in a temporary workspace (for example `tmp/zcl/zero-context-gap/`) and exclude them from version control.
 
 Follow-up prompting (default):
 
@@ -142,19 +160,20 @@ Reporting is owned by ZCL. The key requirement for SurfWright is that reports re
 
 ## Campaign Log (Mandatory)
 
-To keep runs reusable across sessions, maintain a single campaign ledger at:
+To keep runs reusable across sessions without versioning routine details, maintain a per-routine campaign ledger at:
 
-- `docs/zerocontext/run-log.md`
+- `tmp/zcl/<routine-id>/RUN_LOG.MD` (unversioned)
 
 For every campaign/rerun, append one entry with:
 
 - objective and suite id,
+- routine path (`tmp/zcl/<routine-id>/`),
 - exact run command and runner used,
 - run ids and artifact paths,
 - summary metrics (attempts, success/failure, command counts, dominant failure codes),
 - canonical decision and next actions.
 
-Before starting a new ZeroContext campaign, read the latest ledger entry first.
+Use `docs/zerocontext/run-log.md` only as the template/reference for this log format.
 
 ## How To Evaluate Results
 

@@ -21,10 +21,9 @@ This repo exists for one thing: a stable browser control surface that agents can
 7. `docs/fixture-ingress-workflow.md` for adding regression fixtures when new edge cases appear.
 8. `docs/bugfix-tdd-workflow.md` for the reproduce-test-fix loop (TDD) when you hit regressions.
 9. `docs/zerocontext-lab.md` for unbiased cold-start subagent evaluation workflow.
-10. `docs/zerocontext-gap-workflow.md` for one-agent-per-mission capability-gap discovery and evaluation.
-11. `docs/release-governance.md` for locked release/update policy and required checks.
-12. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
-13. `docs/policy/feature-recommendation-groundrules.md` for mandatory recommendation/evaluation scope rules.
+10. `docs/release-governance.md` for locked release/update policy and required checks.
+11. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
+12. `docs/policy/feature-recommendation-groundrules.md` for mandatory recommendation/evaluation scope rules.
 
 ## Runtime Source of Truth
 
@@ -103,8 +102,8 @@ When the user asks for adjustments, new features, optimizations, evaluations, or
 When the user asks to "spawn agents", "zero context test", or evaluate fresh-agent intuition:
 
 - Use the ZeroContext Lab workflow in `docs/zerocontext-lab.md` (do not invent an ad-hoc process).
-- For capability-gap discovery, follow `docs/zerocontext-gap-workflow.md` (sparse mission prompts, 120s soft timeout, follow-up feedback, trace-first evaluation).
 - If running under Codex and the `zcl` skill is available, use it for orchestration (it keeps runner wiring and evidence paths consistent).
+- Store all ZeroContext campaign artifacts in unversioned routine-scoped paths under `tmp/zcl/<routine-id>/` and never write loose files directly under `tmp/zcl/`.
 - ZeroContext evaluation model baseline (unless the user overrides): `gpt-5.3-codex-spark` (locked as of 2026-02-16).
 - Keep task prompts short and unbiased; do not leak implementation hints or feature names unless explicitly requested.
 - Ensure runs are trace-backed (captured command artifacts/logs), then evaluate from those artifacts first.

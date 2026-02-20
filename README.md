@@ -1,23 +1,17 @@
 # SurfWright
 
-[![npm version](https://img.shields.io/npm/v/%40marcohefti/surfwright?style=flat-square)](https://www.npmjs.com/package/@marcohefti/surfwright)
-[![npm downloads](https://img.shields.io/npm/dt/%40marcohefti/surfwright?style=flat-square&label=npm%20downloads)](https://www.npmjs.com/package/@marcohefti/surfwright)
-[![unpacked size](https://img.shields.io/npm/unpacked-size/%40marcohefti/surfwright?style=flat-square)](https://www.npmjs.com/package/@marcohefti/surfwright)
-[![install size](https://img.shields.io/packagephobia/install/%40marcohefti/surfwright?style=flat-square)](https://packagephobia.com/result?p=@marcohefti/surfwright)
-[![node](https://img.shields.io/node/v/%40marcohefti/surfwright?style=flat-square)](https://www.npmjs.com/package/@marcohefti/surfwright)
-[![license](https://img.shields.io/github/license/marcohefti/surfwright?style=flat-square)](https://github.com/marcohefti/surfwright/blob/main/LICENSE)
+<p align="center">
+  <img src="assets/brand/surfwright-logo.png" width="320" style="max-width:100%;height:auto;" alt="SurfWright">
+</p>
 
-You do not need a bigger browser tool.
-You need a sharper one.
-
-```txt
-                      \o/
-                       |
-      ________________/ \___________________
-    /    s  u  r  f  w  r  i  g  h  t        \
-    \________________________________________/
-~      ~      ~      ~      ~      ~      ~      ~      
-```
+<p align="center">
+  <a href="https://github.com/marcohefti/surfwright/releases"><img alt="Release" src="https://img.shields.io/github/v/release/marcohefti/surfwright?sort=semver&amp;style=flat-square"></a>
+  <a href="https://github.com/marcohefti/surfwright/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/marcohefti/surfwright/ci.yml?branch=main&amp;label=ci&amp;style=flat-square"></a>
+  <a href="https://www.npmjs.com/package/@marcohefti/surfwright"><img alt="npm" src="https://img.shields.io/npm/v/%40marcohefti/surfwright?style=flat-square"></a>
+  <a href="https://www.npmjs.com/package/@marcohefti/surfwright"><img alt="npm downloads" src="https://img.shields.io/npm/dm/%40marcohefti/surfwright?style=flat-square&amp;label=npm%20downloads"></a>
+  <a href="#cli-install-optional"><img alt="Homebrew" src="https://img.shields.io/badge/homebrew-available-2e7d32?style=flat-square&amp;logo=homebrew"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/marcohefti/surfwright?style=flat-square"></a>
+</p>
 
 SurfWright is a CLI-first browser control surface designed for agents:
 
@@ -203,7 +197,7 @@ We celebrate this as the milestone where fresh agents, with near-zero guidance, 
 ```txt
   ┌─────────────────────────────────────────────┐
   │                                             │
-  │   Z E R O   C O N T E X T   D A Y          │
+  │   Z E R O   C O N T E X T   D A Y           │
   │                                             │
   │   the surface spoke for itself.             │
   │                                             │

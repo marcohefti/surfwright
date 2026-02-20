@@ -6,6 +6,7 @@ import { saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
+import type { BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetTransitionTraceReport } from "./types.js";
 
@@ -106,7 +107,7 @@ export async function targetTransitionTrace(opts: {
 
     await evaluator.evaluate(
       ({ maxEvents }: { maxEvents: number }) => {
-        const runtime = globalThis as unknown as {
+        const runtime = globalThis as unknown as BrowserRuntimeLike & {
           __surfwrightTransitionTrace?: {
             installed: boolean;
             maxEvents: number;
@@ -122,15 +123,6 @@ export async function targetTransitionTrace(opts: {
               timeMs: number;
             }>;
           };
-          document?: {
-            addEventListener?: (name: string, listener: (event: unknown) => void, options?: boolean) => void;
-          } | null;
-          performance?: {
-            now?: () => number;
-          } | null;
-          window?: {
-            scrollY?: number;
-          } | null;
         };
         const toSelector = (el: EventTarget | null): string | null => {
           if (!el || typeof el !== "object") {
@@ -199,7 +191,12 @@ export async function targetTransitionTrace(opts: {
               state.dropped += 1;
               return;
             }
-            const eventLike = event as any;
+            const eventLike = event as {
+              propertyName?: unknown;
+              animationName?: unknown;
+              elapsedTime?: unknown;
+              target?: EventTarget | null;
+            };
             state.events.push({
               kind,
               propertyName: typeof eventLike.propertyName === "string" && eventLike.propertyName.length > 0 ? eventLike.propertyName : null,

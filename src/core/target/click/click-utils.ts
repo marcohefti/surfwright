@@ -1,8 +1,9 @@
-import type { Locator } from "playwright-core";
+import type { Locator, Page } from "playwright-core";
 import { CliError } from "../../errors.js";
 import { extractTargetQueryPreview } from "../infra/target-query.js";
 import { ensureValidSelector } from "../infra/targets.js";
 import type { TargetClickExplainReport } from "../../types.js";
+import type { BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
 
 export const CLICK_EXPLAIN_MAX_REJECTED = 10;
 
@@ -194,11 +195,7 @@ export async function resolveMatchByIndex(opts: {
 }
 
 export async function waitAfterClick(opts: {
-  page: {
-    getByText(text: string, options: { exact: boolean }): Locator;
-    locator(query: string): Locator;
-    waitForLoadState(state: "networkidle" | "domcontentloaded", options: { timeout: number }): Promise<void>;
-  };
+  page: Page;
   waitAfter: { mode: "text" | "selector" | "network-idle"; value: string | null } | null;
   timeoutMs: number;
 }): Promise<{ mode: "text" | "selector" | "network-idle"; value: string | null } | null> {
@@ -216,7 +213,7 @@ export async function waitAfterClick(opts: {
 
   if (opts.waitAfter.mode === "selector") {
     const selector = opts.waitAfter.value ?? "";
-    await ensureValidSelector(opts.page as any, selector);
+    await ensureValidSelector(opts.page, selector);
     await opts.page.locator(selector).first().waitFor({
       state: "visible",
       timeout: opts.timeoutMs,
@@ -235,7 +232,7 @@ export async function readPostSnapshot(evaluator: {
 }): Promise<{ textPreview: string }> {
   return await evaluator.evaluate(
     ({ maxChars }: { maxChars: number }) => {
-      const runtime = globalThis as unknown as { document?: any };
+      const runtime = globalThis as unknown as BrowserRuntimeLike;
       const normalize = (value: string): string => value.replace(/\\s+/g, " ").trim();
       const body = runtime.document?.body ?? null;
       const textRaw = body?.innerText ?? "";

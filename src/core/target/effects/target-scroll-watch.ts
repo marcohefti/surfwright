@@ -6,6 +6,7 @@ import { saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
+import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
 import { parsePropertiesCsv, parseSettleMs, parseStepsCsv } from "./parse.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetScrollWatchReport } from "./types.js";
@@ -188,7 +189,12 @@ export async function targetScrollWatch(opts: {
               state.dropped += 1;
               return;
             }
-            const eventLike = event as any;
+            const eventLike = event as {
+              propertyName?: unknown;
+              animationName?: unknown;
+              elapsedTime?: unknown;
+              target?: EventTarget | null;
+            };
             state.events.push({
               kind,
               propertyName: typeof eventLike.propertyName === "string" && eventLike.propertyName.length > 0 ? eventLike.propertyName : null,
@@ -231,11 +237,8 @@ export async function targetScrollWatch(opts: {
       }
 
       const observed = await selected.locator.evaluate(
-        (node: any, { properties, maxChars }: { properties: string[]; maxChars: number }) => {
-          const runtime = globalThis as unknown as {
-            getComputedStyle?: (el: unknown) => { getPropertyValue?: (name: string) => string } | null;
-            window?: { scrollY?: number } | null;
-          };
+        (node: BrowserNodeLike, { properties, maxChars }: { properties: string[]; maxChars: number }) => {
+          const runtime = globalThis as unknown as BrowserRuntimeLike;
           const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
           const clipped = (value: string): string => value.slice(0, maxChars);
           const computed: Record<string, string | null> = {};

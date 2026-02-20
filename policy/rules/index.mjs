@@ -17,6 +17,10 @@ import { rule as coreLayerPurityRule } from "./core-layer-purity.mjs";
 import { rule as coreRootFreezeRule } from "./core-root-freeze.mjs";
 import { rule as coreDomainRootFreezeRule } from "./architecture/core-domain-root-freeze.mjs";
 import { rule as coreProvidersImportsRule } from "./architecture/core-providers-imports.mjs";
+import { rule as coreLayerDirectionRule } from "./architecture/core-layer-direction.mjs";
+import { rule as featureLayerDirectionRule } from "./architecture/feature-layer-direction.mjs";
+import { rule as publicSurfaceCurationRule } from "./architecture/public-surface-curation.mjs";
+import { rule as tsNoExplicitAnyRule } from "./typescript/no-explicit-any.mjs";
 
 export const ruleRegistry = new Map([
   [featureBoundariesRule.name, featureBoundariesRule],
@@ -33,9 +37,13 @@ export const ruleRegistry = new Map([
   [coreRootFreezeRule.name, coreRootFreezeRule],
   [coreDomainRootFreezeRule.name, coreDomainRootFreezeRule],
   [coreProvidersImportsRule.name, coreProvidersImportsRule],
+  [coreLayerDirectionRule.name, coreLayerDirectionRule],
+  [featureLayerDirectionRule.name, featureLayerDirectionRule],
+  [publicSurfaceCurationRule.name, publicSurfaceCurationRule],
   [maxFilesPerDirectoryRule.name, maxFilesPerDirectoryRule],
   [maxLocRule.name, maxLocRule],
   [coreLayerStructureBudgetRule.name, coreLayerStructureBudgetRule],
   [coreNodeImportsBudgetRule.name, coreNodeImportsBudgetRule],
   [coreProcessEnvBudgetRule.name, coreProcessEnvBudgetRule],
+  [tsNoExplicitAnyRule.name, tsNoExplicitAnyRule],
 ]);

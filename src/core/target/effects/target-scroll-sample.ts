@@ -6,6 +6,7 @@ import { saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
+import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
 import { parsePropertyName, parseSettleMs, parseStepsCsv } from "./parse.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetScrollSampleReport } from "./types.js";
@@ -102,11 +103,8 @@ export async function targetScrollSample(opts: {
       }
 
       const observed = await selected.locator.evaluate(
-        (node: any, { property, maxChars }: { property: string; maxChars: number }) => {
-          const runtime = globalThis as unknown as {
-            getComputedStyle?: (el: unknown) => { getPropertyValue?: (name: string) => string } | null;
-            window?: { scrollY?: number } | null;
-          };
+        (node: BrowserNodeLike, { property, maxChars }: { property: string; maxChars: number }) => {
+          const runtime = globalThis as unknown as BrowserRuntimeLike;
           const clipped = (value: string): string => value.slice(0, maxChars);
           const styleValue = runtime.getComputedStyle?.(node)?.getPropertyValue?.(property) ?? "";
           const normalized = typeof styleValue === "string" ? styleValue.trim() : "";

@@ -1,4 +1,4 @@
-import { chromium } from "playwright-core";
+import { chromium, type CDPSession } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
 import { nowIso } from "../../state/index.js";
@@ -91,7 +91,7 @@ function normalizeEvalFailure(error: unknown): never {
 }
 
 async function recoverTimedOutEvaluation(opts: {
-  cdp: { send: (...args: any[]) => Promise<unknown> };
+  cdp: Pick<CDPSession, "send">;
 }): Promise<void> {
   // Best-effort guardrail: terminate active execution and stop in-flight loads before disconnect.
   await opts.cdp.send("Runtime.terminateExecution").catch(() => {});

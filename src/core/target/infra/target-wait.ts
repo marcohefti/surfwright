@@ -7,6 +7,7 @@ import { parseFrameScope } from "./target-find.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "./cdp/index.js";
 import type { TargetWaitReport } from "../../types.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../shared/index.js";
+import type { BrowserRuntimeLike } from "./types/browser-dom-types.js";
 
 function parseWaitInput(opts: {
   forText?: string;
@@ -112,7 +113,7 @@ export async function targetWait(opts: {
         for (const frameCdpId of frameIds) {
           const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
           const ok = await evaluator.evaluate(({ text }: { text: string }) => {
-            const runtime = globalThis as unknown as { document?: any };
+            const runtime = globalThis as unknown as BrowserRuntimeLike;
             const body = runtime.document?.body ?? null;
             const normalize = (value: string): string => value.replace(/\s+/g, " ").trim().toLowerCase();
             const hay = normalize(String(body?.innerText ?? ""));
@@ -150,7 +151,7 @@ export async function targetWait(opts: {
         for (const frameCdpId of frameIds) {
           const evaluator = createCdpEvaluator({ cdp, frameCdpId, worldCache });
           const ok = await evaluator.evaluate(({ selector }: { selector: string }) => {
-            const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
+            const runtime = globalThis as unknown as BrowserRuntimeLike;
             const doc = runtime.document;
             const node = doc?.querySelector?.(selector) ?? null;
             if (!node) return false;

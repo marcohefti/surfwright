@@ -195,7 +195,11 @@ export async function runDaemonWorker(opts: {
     }, idleMs);
   };
 
-  const writeResponse = (socket: any, response: DaemonResponse, shutdownAfterWrite: boolean) => {
+  const writeResponse = (
+    socket: { end: (data: string, callback?: () => void) => void },
+    response: DaemonResponse,
+    shutdownAfterWrite: boolean,
+  ) => {
     socket.end(`${JSON.stringify(response)}\n`, () => {
       if (shutdownAfterWrite) {
         server.close();

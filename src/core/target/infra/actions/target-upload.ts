@@ -7,6 +7,7 @@ import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sani
 import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick } from "../../click/click-utils.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
 import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
+import type { BrowserNodeLike } from "../types/browser-dom-types.js";
 
 type TargetUploadReport = {
   ok: true;
@@ -155,7 +156,7 @@ export async function targetUpload(opts: {
     }
 
     const absolutePaths = fileInputs.map((entry) => entry.absolutePath);
-    const isFileInput = await locator.evaluate((node: any) => {
+    const isFileInput = await locator.evaluate((node: BrowserNodeLike) => {
       const tagName = typeof node?.tagName === "string" ? node.tagName.toLowerCase() : "";
       const inputType = typeof node?.type === "string" ? node.type.toLowerCase() : "";
       return tagName === "input" && inputType === "file";

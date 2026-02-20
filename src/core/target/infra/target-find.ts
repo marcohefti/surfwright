@@ -5,6 +5,7 @@ import { saveTargetSnapshot } from "../../state/index.js";
 import { parseTargetQueryInput } from "./target-query.js";
 import { DEFAULT_TARGET_FIND_LIMIT } from "../../types.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import type { BrowserNodeLike, BrowserRuntimeLike } from "./types/browser-dom-types.js";
 import type { TargetFindReport } from "../../types.js";
 import {
   createCdpEvaluator,
@@ -22,6 +23,17 @@ type ParsedFindInput = {
   first: boolean;
   hrefHost: string | null;
   hrefPathPrefix: string | null;
+};
+type FrameMatchPayload = {
+  filteredCount: number;
+  matches: Array<{
+    localIndex: number;
+    text: string;
+    visible: boolean;
+    selectorHint: string | null;
+    href: string | null;
+    tag: string | null;
+  }>;
 };
 
 export type FrameScope = "main" | "all";
@@ -186,7 +198,19 @@ export async function targetFind(opts: {
         worldCache,
       });
       const remaining = Math.max(0, parsed.limit - matches.length);
-      const framePayload = await evaluator.evaluate(
+      const framePayload = await evaluator.evaluate<
+        FrameMatchPayload,
+        {
+          mode: "text" | "selector";
+          query: string;
+          selector: string | null;
+          contains: string | null;
+          hrefHost: string | null;
+          hrefPathPrefix: string | null;
+          visibleOnly: boolean;
+          take: number;
+        }
+      >(
         ({
           mode,
           query,
@@ -206,11 +230,11 @@ export async function targetFind(opts: {
           visibleOnly: boolean;
           take: number;
         }) => {
-          const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
+          const runtime = globalThis as unknown as BrowserRuntimeLike;
           const doc = runtime.document;
           const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
           const normLower = (value: string): string => normalize(value).toLowerCase();
-          const selectorHintFor = (node: any): string | null => {
+          const selectorHintFor = (node: BrowserNodeLike | null): string | null => {
             const el = node;
             const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";
             const classSuffix =
@@ -226,14 +250,14 @@ export async function targetFind(opts: {
             const id = typeof el?.id === "string" && el.id.length > 0 ? `#${el.id}` : "";
             return tag.length > 0 ? `${tag}${id}${classSuffix}` : null;
           };
-          const isVisible = (node: any): boolean => {
+          const isVisible = (node: BrowserNodeLike | null): boolean => {
             if (!node) return false;
             if (node.hasAttribute?.("hidden")) return false;
             const style = runtime.getComputedStyle?.(node);
             if (style && (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")) return false;
             return (node.getClientRects?.().length ?? 0) > 0;
           };
-          const textFor = (node: any): string => {
+          const textFor = (node: BrowserNodeLike | null): string => {
             const el = node;
             const tag = typeof el?.tagName === "string" ? el.tagName.toLowerCase() : "";
             if (tag === "input" || tag === "textarea" || tag === "select") {
@@ -248,11 +272,11 @@ export async function targetFind(opts: {
             }
             return el?.innerText ?? el?.textContent ?? el?.getAttribute?.("aria-label") ?? el?.getAttribute?.("title") ?? "";
           };
-          const tagFor = (node: any): string | null => {
+          const tagFor = (node: BrowserNodeLike | null): string | null => {
             const tag = typeof node?.tagName === "string" ? node.tagName.toLowerCase() : "";
             return tag.length > 0 ? tag : null;
           };
-          const hrefFor = (node: any): string | null => {
+          const hrefFor = (node: BrowserNodeLike | null): string | null => {
             if (!node) return null;
             const anchor =
               node?.matches?.("a[href]") === true
@@ -269,10 +293,10 @@ export async function targetFind(opts: {
 
           const root = doc?.body ?? null;
           if (!root) {
-            return { filteredCount: 0, matches: [] as any[] };
+            return { filteredCount: 0, matches: [] };
           }
 
-          let candidates: any[] = [];
+          let candidates: BrowserNodeLike[] = [];
           if (mode === "selector") {
             const sel = selector ?? "";
             const nodes = Array.from(root.querySelectorAll?.(sel) ?? []);

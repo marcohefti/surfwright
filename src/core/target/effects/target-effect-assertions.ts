@@ -4,6 +4,7 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
 import { parseDurationMs, parseIntervalMs, parseMaxSamples, parsePropertiesCsv, parseSettleMs } from "./parse.js";
 import { resolveFirstMatch } from "./query-match.js";
 import { targetObserve } from "./target-observe.js";
@@ -102,10 +103,8 @@ export async function targetHover(opts: {
     const preview = await extractTargetQueryPreview(selected.locator);
     const measure = async (): Promise<Record<string, string | null>> =>
       await selected.locator.evaluate(
-        (node: any, input: { properties: string[] }) => {
-          const runtime = globalThis as unknown as {
-            getComputedStyle?: (el: unknown) => { getPropertyValue?: (name: string) => string } | null;
-          };
+        (node: BrowserNodeLike, input: { properties: string[] }) => {
+          const runtime = globalThis as unknown as BrowserRuntimeLike;
           const out: Record<string, string | null> = {};
           for (const property of input.properties) {
             const value = runtime.getComputedStyle?.(node)?.getPropertyValue?.(property) ?? "";

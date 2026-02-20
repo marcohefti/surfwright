@@ -4,6 +4,7 @@ import { CliError } from "../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
 import { parsePropertiesCsv } from "./parse.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetStyleReport } from "./types.js";
@@ -112,10 +113,8 @@ export async function targetStyle(opts: {
 
     const preview = await extractTargetQueryPreview(selected.locator);
     const measured = await selected.locator.evaluate(
-      (node: any, input: { properties: string[]; maxClassNameChars: number }) => {
-        const runtime = globalThis as unknown as {
-          getComputedStyle?: (el: unknown) => { getPropertyValue?: (name: string) => string } | null;
-        };
+      (node: BrowserNodeLike, input: { properties: string[]; maxClassNameChars: number }) => {
+        const runtime = globalThis as unknown as BrowserRuntimeLike;
         const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
         const styleValues: Record<string, string | null> = {};
         for (const property of input.properties) {

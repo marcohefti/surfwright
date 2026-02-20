@@ -5,6 +5,7 @@ import { parseTargetQueryInput } from "../target-query.js";
 import { parseFrameScope } from "../target-find.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../cdp/index.js";
+import type { BrowserNodeLike, BrowserRuntimeLike } from "../types/browser-dom-types.js";
 import type { TargetCountReport } from "../../../types.js";
 
 export async function targetCount(opts: {
@@ -72,18 +73,18 @@ export async function targetCount(opts: {
           selector: string | null;
           contains: string | null;
         }) => {
-          const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
+          const runtime = globalThis as unknown as BrowserRuntimeLike;
           const doc = runtime.document;
           const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
           const normLower = (value: string): string => normalize(value).toLowerCase();
-          const isVisible = (node: any): boolean => {
+          const isVisible = (node: BrowserNodeLike | null): boolean => {
             if (!node) return false;
             if (node.hasAttribute?.("hidden")) return false;
             const style = runtime.getComputedStyle?.(node);
             if (style && (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")) return false;
             return (node.getClientRects?.().length ?? 0) > 0;
           };
-          const textFor = (node: any): string => {
+          const textFor = (node: BrowserNodeLike | null): string => {
             const el = node;
             const tag = typeof el?.tagName === "string" ? el.tagName.toLowerCase() : "";
             if (tag === "input" || tag === "textarea" || tag === "select") {
@@ -106,7 +107,7 @@ export async function targetCount(opts: {
 
           const containsLower = typeof contains === "string" && contains.trim().length > 0 ? normLower(contains) : null;
           const queryLower = normLower(query);
-          let matches: any[] = [];
+          let matches: BrowserNodeLike[] = [];
           if (mode === "selector") {
             const nodes = Array.from(root.querySelectorAll?.(selector ?? "") ?? []);
             matches = containsLower

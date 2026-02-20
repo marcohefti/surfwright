@@ -83,7 +83,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           compact: Boolean(options.compact),
           search: options.search,
         });
-        printContractReport(outReport as any, output);
+        printContractReport(outReport as Record<string, unknown>, output);
       } catch (error) {
         ctx.handleFailure(error, output);
       }

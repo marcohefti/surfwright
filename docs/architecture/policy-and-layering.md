@@ -82,6 +82,34 @@ This is a navigation layer. For the full list, see `docs/policy-harness.md` and 
     - allowlist: `policy/config.json` (`core-root-freeze.allowlist`)
     - rule: `policy/rules/core-root-freeze.mjs`
 
+- `ARC012 core-domain-root-freeze` (bounded core domain roots keep only stable entrypoints)
+  - If you added a new file under `src/core/<domain>/` root:
+    - move implementation under `app/`, `domain/`, or `infra/`, then re-export through `index.ts`/`public.ts`.
+  - Where to look:
+    - config: `policy/config.json` (`core-domain-root-freeze`)
+    - rule: `policy/rules/architecture/core-domain-root-freeze.mjs`
+
+- `ARC013 core-layer-direction` (core layer flow)
+  - If `app`/`domain` imports `infra`:
+    - move adapter access to `infra` and pass normalized values inward.
+  - Where to look:
+    - config: `policy/config.json` (`core-layer-direction`)
+    - rule: `policy/rules/architecture/core-layer-direction.mjs`
+
+- `ARC014 feature-layer-direction` (feature layer flow)
+  - If commands/usecases/domain are importing in the wrong direction:
+    - route logic `commands -> usecases -> domain`; keep domain dependency-free.
+  - Where to look:
+    - config: `policy/config.json` (`feature-layer-direction`)
+    - rule: `policy/rules/architecture/feature-layer-direction.mjs`
+
+- `ARC015 public-surface-curation` (public facades should stay curated)
+  - If `src/core/**/public.ts` imports/re-exports `infra/**`:
+    - promote boundary-facing APIs to `app`/`domain` and expose those through `public.ts`.
+  - Where to look:
+    - config: `policy/config.json` (`public-surface-curation`)
+    - rule: `policy/rules/architecture/public-surface-curation.mjs`
+
 - Budgets (`BUDG*`)
   - If you hit a budget failure, it’s a ratchet:
     - fix the underlying drift rather than bumping the number by default.
@@ -100,4 +128,3 @@ This is a navigation layer. For the full list, see `docs/policy-harness.md` and 
 
 - Policy checks must remain fast (filesystem-based) and deterministic.
 - New architectural constraints should be added as policy rules, not as “tribal knowledge” in PR comments.
-

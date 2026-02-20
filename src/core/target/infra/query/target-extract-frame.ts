@@ -1,5 +1,27 @@
 import type { TargetExtractReport } from "../../../types.js";
 import { normalizeExtractWhitespace, type ExtractItemDraft } from "../target-extract-assist.js";
+import type { BrowserNodeLike, BrowserRuntimeLike } from "../types/browser-dom-types.js";
+
+type ExtractEvalItem = {
+  title: string;
+  url: string | null;
+  summary: string | null;
+  publishedAt: string | null;
+  language?: string | null;
+  command?: string | null;
+  section?: string | null;
+  actionable?: {
+    handle: string | null;
+    selectorHint: string | null;
+    frameId: string | null;
+    href: string | null;
+  };
+};
+
+type ExtractFramePayload = {
+  matched: boolean;
+  items: ExtractEvalItem[];
+};
 
 export async function extractFrameItems(opts: {
   evaluator: {
@@ -14,12 +36,22 @@ export async function extractFrameItems(opts: {
   includeActionable: boolean;
 }): Promise<{ frameUrl: string; matched: boolean; items: ExtractItemDraft[] }> {
   const frameUrl = opts.frameUrl;
-  const payload = await opts.evaluator.evaluate(
+  const payload = await opts.evaluator.evaluate<
+    ExtractFramePayload,
+    {
+      selectorQuery: string | null;
+      visibleOnly: boolean;
+      kind: TargetExtractReport["kind"];
+      scanLimit: number;
+      includeActionable: boolean;
+      frameId: string;
+    }
+  >(
     ({ selectorQuery, visibleOnly, kind, scanLimit, includeActionable, frameId }) => {
-      const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
+      const runtime = globalThis as unknown as BrowserRuntimeLike;
       const doc = runtime.document;
       const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
-      const isVisible = (node: any): boolean => {
+      const isVisible = (node: BrowserNodeLike | null): boolean => {
         if (!node) {
           return false;
         }
@@ -32,7 +64,7 @@ export async function extractFrameItems(opts: {
         }
         return (node.getClientRects?.().length ?? 0) > 0;
       };
-      const selectorHintFor = (node: any): string | null => {
+      const selectorHintFor = (node: BrowserNodeLike | null): string | null => {
         const el = node;
         const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";
         const classSuffix =
@@ -54,7 +86,7 @@ export async function extractFrameItems(opts: {
         return { matched: false, items: [] };
       }
 
-      const languageFromNode = (node: any): string | null => {
+      const languageFromNode = (node: BrowserNodeLike | null): string | null => {
         const classPool = [String(node?.className ?? ""), String(node?.parentElement?.className ?? "")]
           .join(" ")
           .trim();
@@ -67,7 +99,7 @@ export async function extractFrameItems(opts: {
         }
         return languageMatch[1].toLowerCase();
       };
-      const sectionFromNode = (node: any): string | null => {
+      const sectionFromNode = (node: BrowserNodeLike | null): string | null => {
         let current = node;
         for (let depth = 0; depth < 10 && current; depth += 1) {
           let sibling = current.previousElementSibling ?? null;
@@ -89,8 +121,8 @@ export async function extractFrameItems(opts: {
       };
 
       if (kind === "headings") {
-        const headingNodes: any[] = Array.from(rootNode.querySelectorAll?.("h1,h2,h3,h4,h5,h6") ?? []);
-        const items: any[] = [];
+        const headingNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.("h1,h2,h3,h4,h5,h6") ?? []);
+        const items: ExtractEvalItem[] = [];
         for (const node of headingNodes) {
           if (visibleOnly && !isVisible(node)) {
             continue;
@@ -125,8 +157,8 @@ export async function extractFrameItems(opts: {
       }
 
       if (kind === "links") {
-        const linkNodes: any[] = Array.from(rootNode.querySelectorAll?.("a[href]") ?? []);
-        const items: any[] = [];
+        const linkNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.("a[href]") ?? []);
+        const items: ExtractEvalItem[] = [];
         for (const node of linkNodes) {
           if (visibleOnly && !isVisible(node)) {
             continue;
@@ -160,8 +192,8 @@ export async function extractFrameItems(opts: {
       }
 
       if (kind === "codeblocks") {
-        const codeNodes: any[] = Array.from(rootNode.querySelectorAll?.("pre code,pre,code") ?? []);
-        const items: any[] = [];
+        const codeNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.("pre code,pre,code") ?? []);
+        const items: ExtractEvalItem[] = [];
         for (const node of codeNodes) {
           if (visibleOnly && !isVisible(node)) {
             continue;
@@ -197,8 +229,8 @@ export async function extractFrameItems(opts: {
       }
 
       if (kind === "forms") {
-        const formNodes: any[] = Array.from(rootNode.querySelectorAll?.("form") ?? []);
-        const items: any[] = [];
+        const formNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.("form") ?? []);
+        const items: ExtractEvalItem[] = [];
         for (const node of formNodes) {
           if (visibleOnly && !isVisible(node)) {
             continue;
@@ -233,8 +265,8 @@ export async function extractFrameItems(opts: {
       }
 
       if (kind === "tables") {
-        const tableNodes: any[] = Array.from(rootNode.querySelectorAll?.("table") ?? []);
-        const items: any[] = [];
+        const tableNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.("table") ?? []);
+        const items: ExtractEvalItem[] = [];
         for (const node of tableNodes) {
           if (visibleOnly && !isVisible(node)) {
             continue;
@@ -282,7 +314,7 @@ export async function extractFrameItems(opts: {
           return null;
         };
 
-        const codeNodes: any[] = Array.from(rootNode.querySelectorAll?.("pre code,pre,code") ?? []);
+        const codeNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.("pre code,pre,code") ?? []);
         const items: Array<{
           title: string;
           url: string | null;
@@ -351,9 +383,10 @@ export async function extractFrameItems(opts: {
         tables: "table",
       };
       const primarySelector = primarySelectorByKind[kind];
-      const primaryNodes: any[] = Array.from(rootNode.querySelectorAll?.(primarySelector) ?? []);
-      const fallbackNodes: any[] = primaryNodes.length > 0 ? [] : Array.from(rootNode.querySelectorAll?.("a[href]") ?? []);
-      const nodes: any[] = [...primaryNodes, ...fallbackNodes].slice(0, Math.max(scanLimit * 3, scanLimit));
+      const primaryNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.(primarySelector) ?? []);
+      const fallbackNodes: BrowserNodeLike[] =
+        primaryNodes.length > 0 ? [] : Array.from(rootNode.querySelectorAll?.("a[href]") ?? []);
+      const nodes: BrowserNodeLike[] = [...primaryNodes, ...fallbackNodes].slice(0, Math.max(scanLimit * 3, scanLimit));
       const items: Array<{
         title: string;
         url: string | null;

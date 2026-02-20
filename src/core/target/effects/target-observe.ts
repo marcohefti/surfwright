@@ -5,6 +5,7 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
+import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
 import { parseDurationMs, parseIntervalMs, parseMaxSamples, parsePropertyName } from "./parse.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetObserveReport } from "./types.js";
@@ -83,11 +84,8 @@ export async function targetObserve(opts: {
 
       const measuredAt = Date.now();
       const measured = await selected.locator.evaluate(
-        (node: any, { property, maxChars }: { property: string; maxChars: number }) => {
-          const runtime = globalThis as unknown as {
-            getComputedStyle?: (el: unknown) => { getPropertyValue?: (name: string) => string } | null;
-            window?: { scrollY?: number } | null;
-          };
+        (node: BrowserNodeLike, { property, maxChars }: { property: string; maxChars: number }) => {
+          const runtime = globalThis as unknown as BrowserRuntimeLike;
           const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
           const clipped = (value: string): string => value.slice(0, maxChars);
           const read = (): string | null => {

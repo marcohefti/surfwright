@@ -1,3 +1,5 @@
+import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
+
 export async function extractScopedSnapshotSample(opts: {
   evaluator: {
     evaluate<T, Arg>(pageFunction: (arg: Arg) => T, arg: Arg): Promise<T>;
@@ -46,10 +48,10 @@ export async function extractScopedSnapshotSample(opts: {
       skipLinks,
       includeSelectorHints,
     }) => {
-      const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
+      const runtime = globalThis as unknown as BrowserRuntimeLike;
       const doc = runtime.document;
       const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
-      const selectorHintFor = (node: any): string | null => {
+      const selectorHintFor = (node: BrowserNodeLike | null): string | null => {
         const el = node;
         const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";
         const classSuffix =
@@ -65,7 +67,7 @@ export async function extractScopedSnapshotSample(opts: {
         const id = typeof el?.id === "string" && el.id.length > 0 ? `#${el.id}` : "";
         return tag.length > 0 ? `${tag}${id}${classSuffix}` : null;
       };
-      const isVisible = (node: any): boolean => {
+      const isVisible = (node: BrowserNodeLike | null): boolean => {
         if (!node) {
           return false;
         }
@@ -112,8 +114,8 @@ export async function extractScopedSnapshotSample(opts: {
       const h1 = h1Text.length > 0 ? h1Text : null;
 
       const headingEntries = Array.from(rootNode.querySelectorAll?.("h1,h2,h3") ?? [])
-        .filter((node: any) => (visibleOnly ? isVisible(node) : true))
-        .map((node: any) => ({
+        .filter((node: BrowserNodeLike) => (visibleOnly ? isVisible(node) : true))
+        .map((node: BrowserNodeLike) => ({
           text: normalize(node?.textContent ?? ""),
           selectorHint: includeSelectorHints ? selectorHintFor(node) : null,
         }))
@@ -122,8 +124,8 @@ export async function extractScopedSnapshotSample(opts: {
       const buttonEntries = Array.from(
         rootNode.querySelectorAll?.("button,[role=button],input[type=button],input[type=submit],input[type=reset]") ?? [],
       )
-        .filter((node: any) => (visibleOnly ? isVisible(node) : true))
-        .map((node: any) => {
+        .filter((node: BrowserNodeLike) => (visibleOnly ? isVisible(node) : true))
+        .map((node: BrowserNodeLike) => {
           const fromText = node?.innerText ?? "";
           const fromAria = node?.getAttribute?.("aria-label") ?? "";
           const fromValue = node?.getAttribute?.("value") ?? "";
@@ -137,8 +139,8 @@ export async function extractScopedSnapshotSample(opts: {
       const linkRoot =
         mode === "orient" ? rootNode.querySelector?.("header") ?? rootNode.querySelector?.("nav") ?? rootNode : rootNode;
       const rawLinkEntries = Array.from(linkRoot?.querySelectorAll?.("a[href]") ?? [])
-        .filter((node: any) => (visibleOnly ? isVisible(node) : true))
-        .map((node: any) => ({
+        .filter((node: BrowserNodeLike) => (visibleOnly ? isVisible(node) : true))
+        .map((node: BrowserNodeLike) => ({
           text: normalize(node?.textContent ?? ""),
           href: node?.getAttribute?.("href") ?? "",
           selectorHint: includeSelectorHints ? selectorHintFor(node) : null,

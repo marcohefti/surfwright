@@ -15,6 +15,16 @@ export type RuntimeOutputOpts = {
   pretty: boolean;
 };
 
+type ContractCommandLike = {
+  id?: unknown;
+  usage?: unknown;
+};
+
+type ContractErrorLike = {
+  code?: unknown;
+  retryable?: unknown;
+};
+
 function writeJson(value: unknown, opts: { pretty: boolean }) {
   process.stdout.write(`${JSON.stringify(value, null, opts.pretty ? 2 : 0)}\n`);
 }
@@ -64,11 +74,23 @@ export function printContractReport(report: Record<string, unknown>, opts: Runti
     "",
     ...(commandIds
       ? ["commandIds:", ...commandIds.map((id) => `- ${String(id)}`)]
-      : ["commands:", ...commands.map((command) => `- ${String((command as any).id)}: ${String((command as any).usage)}`)]),
+      : [
+          "commands:",
+          ...commands.map((command) => {
+            const entry = (command ?? {}) as ContractCommandLike;
+            return `- ${String(entry.id)}: ${String(entry.usage)}`;
+          }),
+        ]),
     "",
     ...(errorCodes
       ? ["errorCodes:", ...errorCodes.map((code) => `- ${String(code)}`)]
-      : ["typed errors:", ...errors.map((error) => `- ${String((error as any).code)} (retryable=${(error as any).retryable ? "true" : "false"})`)]),
+      : [
+          "typed errors:",
+          ...errors.map((error) => {
+            const entry = (error ?? {}) as ContractErrorLike;
+            return `- ${String(entry.code)} (retryable=${entry.retryable ? "true" : "false"})`;
+          }),
+        ]),
   ];
   if (guarantees.length > 0) {
     lines.push("", "guarantees:", ...guarantees.map((entry) => `- ${String(entry)}`));

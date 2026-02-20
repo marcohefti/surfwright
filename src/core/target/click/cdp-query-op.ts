@@ -1,3 +1,5 @@
+import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
+
 export function cdpQueryOp(arg: {
   op:
     | "summary"
@@ -29,12 +31,12 @@ export function cdpQueryOp(arg: {
   | { detached: boolean; values: Record<string, string | null> }
   | { filled: boolean; valueLength: number }
   | boolean {
-  const runtime = globalThis as unknown as { document?: any; getComputedStyle?: any };
+  const runtime = globalThis as unknown as BrowserRuntimeLike;
   const doc = runtime.document;
   const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
   const normLower = (value: string): string => normalize(value).toLowerCase();
 
-  const selectorHintFor = (node: any): string | null => {
+  const selectorHintFor = (node: BrowserNodeLike | null): string | null => {
     const el = node;
     const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";
     const classSuffix =
@@ -51,7 +53,7 @@ export function cdpQueryOp(arg: {
     return tag.length > 0 ? `${tag}${id}${classSuffix}` : null;
   };
 
-  const isVisible = (node: any): boolean => {
+  const isVisible = (node: BrowserNodeLike | null): boolean => {
     if (!node) return false;
     if (node.hasAttribute?.("hidden")) return false;
     const style = runtime.getComputedStyle?.(node);
@@ -59,7 +61,7 @@ export function cdpQueryOp(arg: {
     return (node.getClientRects?.().length ?? 0) > 0;
   };
 
-  const textFor = (node: any): string => {
+  const textFor = (node: BrowserNodeLike | null): string => {
     const el = node;
     const tag = typeof el?.tagName === "string" ? el.tagName.toLowerCase() : "";
     if (tag === "input" || tag === "textarea" || tag === "select") {
@@ -107,7 +109,7 @@ export function cdpQueryOp(arg: {
   const containsLower = typeof arg.contains === "string" && arg.contains.trim().length > 0 ? normLower(arg.contains) : null;
   const queryLower = normLower(query);
 
-  const buildMatches = (): any[] => {
+  const buildMatches = (): BrowserNodeLike[] => {
     if (mode === "selector") {
       const nodes = Array.from(root.querySelectorAll?.(selector) ?? []);
       return containsLower ? nodes.filter((node) => normLower(textFor(node)).includes(containsLower)) : nodes;
@@ -181,7 +183,10 @@ export function cdpQueryOp(arg: {
 
     // Best-effort: translate iframe-relative coordinates into top-level viewport coordinates for same-origin frames.
     try {
-      let win: any = globalThis;
+      let win = globalThis as unknown as {
+        frameElement?: BrowserNodeLike | null;
+        parent?: unknown;
+      };
       for (let i = 0; i < 16; i += 1) {
         const frameEl = win?.frameElement ?? null;
         if (!frameEl) break;
@@ -190,7 +195,10 @@ export function cdpQueryOp(arg: {
         y += (fr?.top ?? 0);
         const parent = win?.parent ?? null;
         if (!parent || parent === win) break;
-        win = parent;
+        win = parent as {
+          frameElement?: BrowserNodeLike | null;
+          parent?: unknown;
+        };
       }
     } catch {
       // ignore

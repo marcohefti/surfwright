@@ -19,7 +19,7 @@ function normalizeOptions(options) {
 }
 
 export const rule = {
-  id: "ARC010",
+  id: "ARC012",
   name: "core-domain-root-freeze",
   description: "Core domain roots may only contain stable entrypoints (index.ts/public.ts); move implementation into app/domain/infra",
   defaultOptions: DEFAULT_OPTIONS,
@@ -55,4 +55,3 @@ export const rule = {
     return violations;
   },
 };
-

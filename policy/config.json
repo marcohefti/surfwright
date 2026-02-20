@@ -170,6 +170,41 @@
       }
     },
     {
+      "name": "core-layer-direction",
+      "enabled": true,
+      "options": {
+        "include": ["src/core/**/app/**/*.ts", "src/core/**/domain/**/*.ts", "src/core/**/infra/**/*.ts"],
+        "exclude": [],
+        "allowlist": [
+          "src/core/session/app/hygiene.ts::../infra/session-env.js"
+        ]
+      }
+    },
+    {
+      "name": "feature-layer-direction",
+      "enabled": true,
+      "options": {
+        "include": ["src/features/**/*.ts"],
+        "exclude": [],
+        "allowlist": []
+      }
+    },
+    {
+      "name": "public-surface-curation",
+      "enabled": true,
+      "options": {
+        "include": ["src/core/**/public.ts"],
+        "exclude": [],
+        "allowInfraInFiles": [
+          "src/core/session/public.ts",
+          "src/core/skills/public.ts",
+          "src/core/target/public.ts",
+          "src/core/update/public.ts",
+          "src/core/workspace/public.ts"
+        ]
+      }
+    },
+    {
       "name": "core-providers-imports",
       "enabled": true,
       "options": {
@@ -269,6 +304,15 @@
         "exclude": [],
         "allowPatterns": ["src/core/providers/**/*.ts", "src/cli.ts", "src/core/state/infra/state-store.ts"],
         "maxViolations": 6
+      }
+    },
+    {
+      "name": "typescript-no-explicit-any",
+      "enabled": true,
+      "options": {
+        "include": ["src/**/*.ts"],
+        "exclude": [],
+        "allowlist": []
       }
     }
   ]

@@ -86,6 +86,10 @@ Policy rules are intentionally simple and file-system based. The names below map
 - `ARC009 core-root-freeze`: adding new `src/core/*.ts` modules requires an explicit decision (freeze core-root growth).
 - `ARC010 feature-layer-purity`: feature `domain/**` and `usecases/**` must not import Node built-ins or Playwright (keeps feature layers pure and testable).
 - `ARC011 core-root-state-imports`: code outside the state domain must not import a core-root state facade (use `src/core/state/index` for core internals and `src/core/state/public` for feature access).
+- `ARC012 core-domain-root-freeze`: bounded core domain roots only keep stable entrypoints (`index.ts`, `public.ts`).
+- `ARC013 core-layer-direction`: core layer imports follow direction; `app`/`domain` must not depend on `infra`.
+- `ARC014 feature-layer-direction`: feature flow is `commands -> usecases -> domain`; reverse/sideways imports are blocked.
+- `ARC015 public-surface-curation`: `src/core/**/public.ts` should avoid direct `infra/**` coupling unless explicitly allowlisted.
 - `BUDG001 core-layer-structure-budget`: budget for how many bounded core domains are still missing `app/domain/infra` structure (ratchet to 0).
 - `BUDG002 core-node-imports-budget`: budget for `node:` imports outside `infra/**` and `providers/**` (ratchet to 0).
 - `BUDG003 core-process-env-budget`: budget for `process.env` usage outside `providers/**` and explicit boundaries (ratchet to 0).

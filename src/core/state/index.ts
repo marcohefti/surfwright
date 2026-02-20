@@ -16,3 +16,4 @@ export {
 export { assertSessionDoesNotExist } from "./infra/state-store.js";
 
 export { pruneNetworkArtifacts } from "./infra/network-artifact-service.js";
+export { sessionClear, sessionPrune, stateReconcile, targetPrune } from "./infra/maintenance.js";

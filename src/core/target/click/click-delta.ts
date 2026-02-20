@@ -1,5 +1,6 @@
 import type { TargetClickDeltaEvidence } from "../../types.js";
 import { safePageTitle } from "../infra/utils/safe-page-title.js";
+import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
 
 const CLICK_DELTA_FOCUS_TEXT_MAX_CHARS = 120;
 const CLICK_DELTA_ROLES = ["dialog", "alert", "status", "menu", "listbox"] as const;
@@ -31,11 +32,11 @@ async function captureDeltaProbe(evaluator: {
 }> {
   return await evaluator.evaluate(
     ({ focusTextMaxChars, roles }: { focusTextMaxChars: number; roles: ClickDeltaRole[] }) => {
-      const runtime = globalThis as unknown as { document?: any };
+      const runtime = globalThis as unknown as BrowserRuntimeLike;
       const doc = runtime.document;
       const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
 
-      const selectorHintFor = (node: any): string | null => {
+      const selectorHintFor = (node: BrowserNodeLike | null): string | null => {
         const el = node;
         const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";
         const classSuffix =

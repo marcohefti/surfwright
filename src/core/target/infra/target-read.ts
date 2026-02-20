@@ -1,13 +1,13 @@
 import { chromium, type Locator } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { DEFAULT_TARGET_READ_CHUNK_SIZE } from "../../types.js";
 import { providers } from "../../providers/index.js";
 import { frameScopeHints, parseFrameScope } from "./target-find.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "./cdp/index.js";
 import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
+import type { BrowserNodeLike, BrowserRuntimeLike } from "./types/browser-dom-types.js";
 import type { TargetReadReport } from "../../types.js";
 const READ_MAX_CHUNK_SIZE = 10000;
 const READ_MAX_CHUNK_INDEX = 100000;
@@ -179,7 +179,7 @@ async function applyFormValue(opts: {
   value: FormFieldValue;
   timeoutMs: number;
 }): Promise<{ action: "fill" | "select" | "check" | "uncheck"; valueLength: number }> {
-  const descriptor = await opts.locator.evaluate((node: any) => {
+  const descriptor = await opts.locator.evaluate((node: BrowserNodeLike) => {
     const tagName = typeof node?.tagName === "string" ? node.tagName.toLowerCase() : "";
     const inputType = typeof node?.type === "string" ? node.type.toLowerCase() : "";
     return {
@@ -255,7 +255,7 @@ async function extractScopedText(opts: {
 }): Promise<{ matched: boolean; text: string }> {
   return await opts.evaluator.evaluate(
     ({ selectorQuery, visibleOnly }: { selectorQuery: string | null; visibleOnly: boolean }) => {
-      const runtime = globalThis as unknown as { document?: any };
+      const runtime = globalThis as unknown as BrowserRuntimeLike;
       const doc = runtime.document;
       const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
       const rootNode = selectorQuery ? doc?.querySelector?.(selectorQuery) ?? null : doc?.body ?? null;

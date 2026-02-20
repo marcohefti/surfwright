@@ -6,6 +6,17 @@ import { safePageTitle } from "../infra/utils/safe-page-title.js";
 import { encodeBackendNodeHandle } from "../infra/utils/element-handle.js";
 
 type SnapshotCursor = { ax: number };
+type AxNodeLike = {
+  [key: string]: unknown;
+  nodeId?: string;
+  role?: { value?: unknown } | unknown;
+  name?: { value?: unknown } | unknown;
+  value?: { value?: unknown } | unknown;
+  description?: { value?: unknown } | unknown;
+  backendDOMNodeId?: number;
+  ignored?: boolean;
+  childIds?: unknown[];
+};
 
 function formatA11yCursor(cursor: SnapshotCursor): string {
   return `ax=${cursor.ax}`;
@@ -51,14 +62,14 @@ export async function targetSnapshotA11y(opts: {
     }
   }
 
-  let axNodes: any[] = [];
+  let axNodes: AxNodeLike[] = [];
   let usedPartial = false;
   if (scopeNodeId !== null) {
     try {
       const partial = (await opts.cdp.send("Accessibility.getPartialAXTree", {
         nodeId: scopeNodeId,
         fetchRelatives: false,
-      })) as { nodes?: any[] };
+      })) as { nodes?: AxNodeLike[] };
       if (Array.isArray(partial?.nodes)) {
         axNodes = partial.nodes;
         usedPartial = true;
@@ -68,7 +79,7 @@ export async function targetSnapshotA11y(opts: {
     }
   }
   if (axNodes.length === 0) {
-    const full = (await opts.cdp.send("Accessibility.getFullAXTree").catch(() => ({ nodes: [] }))) as { nodes?: any[] };
+    const full = (await opts.cdp.send("Accessibility.getFullAXTree").catch(() => ({ nodes: [] }))) as { nodes?: AxNodeLike[] };
     axNodes = Array.isArray(full?.nodes) ? full.nodes : [];
     if (scopeNodeId !== null && !usedPartial) {
       opts.hints.push("a11y selector scoping unavailable; returned full accessibility tree");
@@ -76,11 +87,17 @@ export async function targetSnapshotA11y(opts: {
   }
 
   const normalize = (value: string): string => value.replace(/\\s+/g, " ").trim();
-  const roleOf = (node: any): string => normalize(String(node?.role?.value ?? node?.role ?? "")).toLowerCase();
-  const nameOf = (node: any): string => normalize(String(node?.name?.value ?? node?.name ?? ""));
-  const valueOf = (node: any): string => normalize(String(node?.value?.value ?? node?.value ?? ""));
-  const descOf = (node: any): string => normalize(String(node?.description?.value ?? node?.description ?? ""));
-  const backendIdOf = (node: any): number | null =>
+  const axValue = (value: unknown): unknown => {
+    if (value && typeof value === "object" && "value" in value) {
+      return (value as { value?: unknown }).value;
+    }
+    return value;
+  };
+  const roleOf = (node: AxNodeLike | null | undefined): string => normalize(String(axValue(node?.role) ?? "")).toLowerCase();
+  const nameOf = (node: AxNodeLike | null | undefined): string => normalize(String(axValue(node?.name) ?? ""));
+  const valueOf = (node: AxNodeLike | null | undefined): string => normalize(String(axValue(node?.value) ?? ""));
+  const descOf = (node: AxNodeLike | null | undefined): string => normalize(String(axValue(node?.description) ?? ""));
+  const backendIdOf = (node: AxNodeLike | null | undefined): number | null =>
     typeof node?.backendDOMNodeId === "number" && node.backendDOMNodeId > 0 ? node.backendDOMNodeId : null;
 
   const includeRoles = new Set([
@@ -97,7 +114,7 @@ export async function targetSnapshotA11y(opts: {
     "option",
   ]);
 
-  const byId = new Map<string, any>();
+  const byId = new Map<string, AxNodeLike>();
   const childIdSet = new Set<string>();
   for (const node of axNodes) {
     const id = typeof node?.nodeId === "string" ? node.nodeId : "";
@@ -144,7 +161,7 @@ export async function targetSnapshotA11y(opts: {
     }
     const childIds = Array.isArray(node?.childIds) ? node.childIds : [];
     const sortedChildren = childIds
-      .filter((cid: any) => typeof cid === "string")
+      .filter((cid: unknown): cid is string => typeof cid === "string")
       .sort((a: string, b: string) => a.localeCompare(b));
     for (const childId of sortedChildren) {
       walk(childId, depth + 1);

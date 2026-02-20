@@ -11,6 +11,7 @@ import { waitAfterClickWithBudget } from "../../click/click-wait.js";
 import { readSelectorCountAfter } from "../../click/click-proof.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
 import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
+import type { BrowserRuntimeLike } from "../types/browser-dom-types.js";
 
 type TargetKeypressReport = {
   ok: true;
@@ -174,7 +175,7 @@ export async function targetKeypress(opts: {
       worldCache,
     });
     const resultText = await evaluator.evaluate(() => {
-      const runtime = globalThis as unknown as { document?: any };
+      const runtime = globalThis as unknown as BrowserRuntimeLike;
       const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
       const active = runtime.document?.activeElement as
         | null

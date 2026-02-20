@@ -1,5 +1,6 @@
 import { type Locator, type Page } from "playwright-core";
 import { CliError } from "../../errors.js";
+import type { BrowserNodeLike } from "./types/browser-dom-types.js";
 
 const TARGET_QUERY_TEXT_MAX_CHARS = 180;
 
@@ -98,7 +99,7 @@ export async function resolveTargetQueryLocator(opts: {
 export async function extractTargetQueryPreview(locator: Locator): Promise<{ text: string; selectorHint: string | null }> {
   try {
     return (await locator.evaluate(
-      (node: any, { textMaxChars }: { textMaxChars: number }) => {
+      (node: BrowserNodeLike, { textMaxChars }: { textMaxChars: number }) => {
         const el = node;
         const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
         const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";

@@ -3,6 +3,7 @@ import { CliError } from "../../errors.js";
 import { readRecentTargetAction } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { createCdpEvaluator, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "./cdp/index.js";
+import type { BrowserRuntimeLike } from "./types/browser-dom-types.js";
 import type { SessionSource, TargetConsoleTailReport, TargetHealthReport, TargetHudReport } from "../../types.js";
 
 type TargetConsoleGetEvent = {
@@ -309,7 +310,7 @@ export async function targetHealth(opts: {
       worldCache,
     });
     const pageMetrics = await evaluator.evaluate(() => {
-      const runtime = globalThis as unknown as { document?: any };
+      const runtime = globalThis as unknown as BrowserRuntimeLike;
       const doc = runtime.document;
       return {
         readyState: doc?.readyState ?? "unknown",

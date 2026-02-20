@@ -5,6 +5,7 @@ import { nowIso } from "../../state/index.js";
 import { saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
+import type { BrowserRuntimeLike, BrowserNodeLike } from "../infra/types/browser-dom-types.js";
 import { parseSettleMs, parseStepsCsv } from "./parse.js";
 import { targetScrollWatch } from "./target-scroll-watch.js";
 import { targetTransitionTrace } from "./target-transition-trace.js";
@@ -199,9 +200,9 @@ async function discoverRevealSelectors(opts: {
 
     const selectors = await evaluator.evaluate(
       ({ maxCandidates, selectorQuery }: { maxCandidates: number; selectorQuery: string }) => {
-        const runtime = globalThis as unknown as {
+        const runtime = globalThis as unknown as BrowserRuntimeLike & {
           document?: {
-            querySelectorAll?: (query: string) => ArrayLike<any>;
+            querySelectorAll?: (query: string) => ArrayLike<BrowserNodeLike>;
           } | null;
         };
         const nodes = Array.from(runtime.document?.querySelectorAll?.(selectorQuery) ?? []);

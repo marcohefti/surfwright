@@ -223,8 +223,8 @@ function parseReportFromCapture(path: string): TargetNetworkReport {
     typeof limitsRaw.bodySampleBytes === "number" && Number.isFinite(limitsRaw.bodySampleBytes) ? limitsRaw.bodySampleBytes : 512;
 
   const redactionRaw = typeof raw.redaction === "object" && raw.redaction !== null ? (raw.redaction as Record<string, unknown>) : {};
-  const regex =
-    Array.isArray((redactionRaw as any).regex) ? (redactionRaw as any).regex.filter((v: unknown) => typeof v === "string") : [];
+  const regexRaw = redactionRaw.regex;
+  const regex = Array.isArray(regexRaw) ? regexRaw.filter((v: unknown): v is string => typeof v === "string") : [];
   return {
     ...raw,
     redaction: {

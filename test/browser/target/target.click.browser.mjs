@@ -340,12 +340,20 @@ test("target fill and form-fill return deterministic compact shapes", () => {
   assert.deepEqual(Object.keys(fillPayload), [
     "ok",
     "sessionId",
+    "sessionSource",
     "targetId",
     "actionId",
+    "mode",
+    "selector",
+    "contains",
+    "visibleOnly",
+    "matchCount",
+    "pickedIndex",
     "query",
     "valueLength",
     "url",
     "title",
+    "wait",
     "timingMs",
   ]);
   assert.equal(fillPayload.ok, true);

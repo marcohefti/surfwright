@@ -21,6 +21,10 @@ export const targetDownloadCommandSpec: TargetCommandSpec = {
       .option("--frame-scope <scope>", "Frame scope: main|all (default main)")
       .option("--index <n>", "Match index (default picks first visible match)", (value) => Number.parseInt(value, 10))
       .option("--download-out-dir <path>", "Directory to write captured downloads (default ./artifacts/downloads)")
+      .option("--proof", "Include standardized proof envelope for download result", false)
+      .option("--assert-url-prefix <prefix>", "Post-download assertion: final URL must start with prefix")
+      .option("--assert-selector <query>", "Post-download assertion: selector must be visible")
+      .option("--assert-text <text>", "Post-download assertion: text must be present in page body")
       .option("--timeout-ms <ms>", "Click/download timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -35,6 +39,10 @@ export const targetDownloadCommandSpec: TargetCommandSpec = {
             frameScope?: string;
             index?: number;
             downloadOutDir?: string;
+            proof?: boolean;
+            assertUrlPrefix?: string;
+            assertSelector?: string;
+            assertText?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -55,6 +63,10 @@ export const targetDownloadCommandSpec: TargetCommandSpec = {
               frameScope: options.frameScope,
               index: typeof options.index === "number" ? options.index : undefined,
               downloadOutDir: typeof options.downloadOutDir === "string" ? options.downloadOutDir : undefined,
+              proof: Boolean(options.proof),
+              assertUrlPrefix: options.assertUrlPrefix,
+              assertSelector: options.assertSelector,
+              assertText: options.assertText,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

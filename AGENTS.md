@@ -24,6 +24,7 @@ This repo exists for one thing: a stable browser control surface that agents can
 10. `docs/zerocontext-gap-workflow.md` for one-agent-per-mission capability-gap discovery and evaluation.
 11. `docs/release-governance.md` for locked release/update policy and required checks.
 12. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
+13. `docs/policy/feature-recommendation-groundrules.md` for mandatory recommendation/evaluation scope rules.
 
 ## Runtime Source of Truth
 
@@ -49,6 +50,8 @@ surfwright --json contract
   update `docs/lifecycle/update-lifecycle.md` plus `README.md` update section.
 - Changing skill compatibility/update flow:
   update `docs/skills-lifecycle.md`, `skills/surfwright/skill.json`, and `skills/surfwright.lock.json`.
+- Changing recommendation/evaluation guardrails:
+  update `docs/policy/feature-recommendation-groundrules.md` and this `AGENTS.md` trigger section together.
 
 ## Validation Baseline
 
@@ -81,6 +84,19 @@ Treat all feature work, refactors, and optimizations as agent-operator surface d
   - agent comfort (composability + deterministic parsing),
   - operational speed (runtime/iteration latency),
   - quality of answers the agent can generate from CLI output.
+
+## Recommendation Trigger (Mandatory)
+
+When the user asks for adjustments, new features, optimizations, evaluations, or recommendations about what to change:
+
+- Load and apply `docs/policy/feature-recommendation-groundrules.md` before proposing changes.
+- Treat that file as a blocking scope gate (not optional guidance).
+- Reject page-specific and "kind-of-page" optimizations; replace with generic surface proposals.
+- In the response, include a short "groundrules compliance check" that confirms:
+  - page-specific optimization avoided,
+  - kind-of-page optimization avoided,
+  - cross-site benefit explained,
+  - evidence cited.
 
 ## ZeroContext Trigger
 

@@ -9,6 +9,8 @@ import { parseOptionalTargetQuery, resolveFirstQueryMatch } from "./target-input
 import { parseWaitAfterClick, resolveWaitTimeoutMs } from "../../click/click-utils.js";
 import { waitAfterClickWithBudget } from "../../click/click-wait.js";
 import { readSelectorCountAfter } from "../../click/click-proof.js";
+import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
+import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 
 type TargetKeypressReport = {
   ok: true;
@@ -30,6 +32,7 @@ type TargetKeypressReport = {
     elapsedMs: number;
     satisfied: boolean;
   } | null;
+  assertions?: import("../../../types.js").ActionAssertionReport | null;
   proof?: {
     action: "keypress";
     urlChanged: boolean;
@@ -41,6 +44,7 @@ type TargetKeypressReport = {
     selector: string | null;
     countAfter: number | null;
   };
+  proofEnvelope?: import("../../../types.js").ActionProofEnvelope;
   timingMs: {
     total: number;
     resolveSession: number;
@@ -73,6 +77,9 @@ export async function targetKeypress(opts: {
   waitNetworkIdle?: boolean;
   waitTimeoutMs?: number;
   proof?: boolean;
+  assertUrlPrefix?: string;
+  assertSelector?: string;
+  assertText?: string;
 }): Promise<TargetKeypressReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -90,6 +97,11 @@ export async function targetKeypress(opts: {
   });
   const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
   const includeProof = Boolean(opts.proof);
+  const parsedAssertions = parseActionAssertions({
+    assertUrlPrefix: opts.assertUrlPrefix,
+    assertSelector: opts.assertSelector,
+    assertText: opts.assertText,
+  });
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -192,8 +204,36 @@ export async function targetKeypress(opts: {
       contains: parsedQuery?.contains ?? null,
     });
     const finalUrl = target.page.url();
+    const assertions = await evaluateActionAssertions({
+      page: target.page,
+      assertions: parsedAssertions,
+    });
     const finalTitle = await target.page.title();
     const actionCompletedAt = Date.now();
+    const proofEnvelope = includeProof
+      ? buildActionProofEnvelope({
+          action: "keypress",
+          urlBefore: urlBeforeKeypress,
+          urlAfter: finalUrl,
+          targetBefore: requestedTargetId,
+          targetAfter: requestedTargetId,
+          matchCount,
+          pickedIndex,
+          wait: toActionWaitEvidence({
+            requested: waitAfter ? { ...waitAfter, timeoutMs: waitTimeoutMs } : null,
+            observed: waited,
+          }),
+          assertions,
+          countAfter,
+          details: {
+            key,
+            queryMode: parsedQuery ? parsedQuery.mode : "none",
+            query: parsedQuery?.query ?? null,
+            selector: parsedQuery?.selector ?? null,
+            finalTitle,
+          },
+        })
+      : null;
 
     const report: TargetKeypressReport = {
       ok: true,
@@ -209,6 +249,7 @@ export async function targetKeypress(opts: {
       pickedIndex,
       resultText,
       wait: waited,
+      ...(assertions ? { assertions } : {}),
       ...(includeProof
         ? {
             proof: {
@@ -222,6 +263,7 @@ export async function targetKeypress(opts: {
               selector: parsedQuery?.selector ?? null,
               countAfter,
             },
+            ...(proofEnvelope ? { proofEnvelope } : {}),
           }
         : {}),
       timingMs: {

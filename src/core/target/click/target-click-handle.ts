@@ -11,6 +11,8 @@ import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRI
 import { buildClickProof } from "./click-proof.js";
 import { readPostSnapshot } from "./click-utils.js";
 import { waitAfterClickWithBudget } from "./click-wait.js";
+import { evaluateActionAssertions, type ParsedActionAssertions } from "../../shared/index.js";
+import { buildActionProofEnvelope, toActionWaitEvidence } from "../../shared/index.js";
 
 export async function targetClickByHandle(opts: {
   startedAt: number;
@@ -31,6 +33,7 @@ export async function targetClickByHandle(opts: {
   snapshot: boolean;
   includeDelta: boolean;
   includeProof: boolean;
+  parsedAssertions: ParsedActionAssertions;
   persistState: boolean;
 }): Promise<TargetClickReport> {
   const backendNodeId = parseBackendNodeHandle(opts.handleQuery);
@@ -86,6 +89,10 @@ export async function targetClickByHandle(opts: {
   });
 
   const postSnapshot = opts.snapshot ? await readPostSnapshot(opts.mainEvaluator) : null;
+  const assertions = await evaluateActionAssertions({
+    page: opts.page,
+    assertions: opts.parsedAssertions,
+  });
   const deltaAfter = opts.includeDelta ? await captureClickDeltaState(opts.page, opts.mainEvaluator, opts.timeoutMs) : null;
   const clickedAriaAfter = opts.includeDelta ? await readAriaByHandle() : null;
 
@@ -132,6 +139,24 @@ export async function targetClickByHandle(opts: {
       countAfter: null,
     })
   : null;
+  const proofEnvelope = opts.includeProof
+    ? buildActionProofEnvelope({
+        action: "click",
+        urlBefore: urlBeforeClick,
+        urlAfter: opts.page.url(),
+        targetBefore: opts.targetId,
+        targetAfter: openedTargetId ?? opts.targetId,
+        matchCount: 1,
+        pickedIndex: 0,
+        wait: toActionWaitEvidence({
+          requested: opts.waitAfter ? { ...opts.waitAfter, timeoutMs: opts.waitTimeoutMs } : null,
+          observed: waited,
+        }),
+        assertions,
+        countAfter: null,
+        details: proof ? (proof as unknown as Record<string, unknown>) : null,
+      })
+    : null;
 
   const report: TargetClickReport = {
     ok: true,
@@ -158,6 +183,8 @@ export async function targetClickByHandle(opts: {
     wait: waited,
     snapshot: postSnapshot,
     ...(proof ? { proof } : {}),
+    ...(proofEnvelope ? { proofEnvelope } : {}),
+    ...(assertions ? { assertions } : {}),
     ...(delta ? { delta } : {}),
     handoff: {
       sameTarget: openedPage === null,

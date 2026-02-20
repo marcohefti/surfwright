@@ -12,19 +12,24 @@ import {
   runViaDaemon,
   type DaemonRunResult,
 } from "./core/daemon/index.js";
-import { type CliFailure } from "./core/types.js";
+import type { CliFailure } from "./core/types.js";
 import { parseWorkerArgv, runTargetNetworkWorker } from "./features/network/index.js";
 import { allCommandManifest, registerFeaturePlugins } from "./features/registry.js";
 import { rewriteTargetIdOptionAlias } from "./core/cli/target-id-alias.js";
-
-type OutputOpts = {
-  json: boolean;
-  pretty: boolean;
-};
+import {
+  applyAgentIdOverrideFromArgv,
+  applyOutputShapeOverrideFromArgv,
+  applyWorkspaceDirOverrideFromArgv,
+  parseCommandPath,
+  parseOptionTokenSpan,
+} from "./cli/options.js";
+import { commanderExitCode, parseOutputOptsFromArgv, toCommanderFailure, type OutputOpts } from "./cli/commander-failure.js";
 
 const INITIAL_AGENT_ID_ENV = typeof process.env.SURFWRIGHT_AGENT_ID === "string" ? process.env.SURFWRIGHT_AGENT_ID : null;
 const INITIAL_WORKSPACE_DIR_ENV =
   typeof process.env.SURFWRIGHT_WORKSPACE_DIR === "string" ? process.env.SURFWRIGHT_WORKSPACE_DIR : null;
+const INITIAL_OUTPUT_SHAPE_ENV =
+  typeof process.env.SURFWRIGHT_OUTPUT_SHAPE === "string" ? process.env.SURFWRIGHT_OUTPUT_SHAPE : null;
 
 function resolveRepoRoot(): string {
   const __filename = fileURLToPath(import.meta.url);
@@ -71,106 +76,6 @@ function parseTimeoutMs(input: string): number {
   return value;
 }
 
-function parseOptionTokenSpan(argv: string[], index: number, optionName: string): number {
-  const token = argv[index];
-  if (token === "--") {
-    return 0;
-  }
-  if (token === optionName) {
-    const next = index + 1 < argv.length ? argv[index + 1] : null;
-    if (typeof next === "string" && next !== "--" && !next.startsWith("-")) {
-      return 2;
-    }
-    return 1;
-  }
-  const prefix = `${optionName}=`;
-  if (token.startsWith(prefix)) {
-    return 1;
-  }
-  return 0;
-}
-
-function parseGlobalOptionValue(
-  argv: string[],
-  optionName: string,
-): { found: boolean; valid: boolean; value: string | null } {
-  for (let index = 2; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (token === "--") {
-      break;
-    }
-    if (token === optionName) {
-      const next = index + 1 < argv.length ? argv[index + 1] : null;
-      if (typeof next !== "string" || next === "--" || next.startsWith("-")) {
-        return {
-          found: true,
-          valid: false,
-          value: null,
-        };
-      }
-      return {
-        found: true,
-        valid: true,
-        value: next,
-      };
-    }
-    const prefix = `${optionName}=`;
-    if (token.startsWith(prefix)) {
-      const value = token.slice(prefix.length);
-      if (value.length === 0) {
-        return {
-          found: true,
-          valid: false,
-          value: null,
-        };
-      }
-      return {
-        found: true,
-        valid: true,
-        value,
-      };
-    }
-  }
-  return {
-    found: false,
-    valid: false,
-    value: null,
-  };
-}
-
-function applyAgentIdOverrideFromArgv(argv: string[]): void {
-  const parsed = parseGlobalOptionValue(argv, "--agent-id");
-  if (!parsed.found || !parsed.valid) {
-    if (INITIAL_AGENT_ID_ENV === null) {
-      delete process.env.SURFWRIGHT_AGENT_ID;
-    } else {
-      process.env.SURFWRIGHT_AGENT_ID = INITIAL_AGENT_ID_ENV;
-    }
-    return;
-  }
-  if (typeof parsed.value === "string") {
-    process.env.SURFWRIGHT_AGENT_ID = parsed.value;
-    return;
-  }
-  delete process.env.SURFWRIGHT_AGENT_ID;
-}
-
-function applyWorkspaceDirOverrideFromArgv(argv: string[]): void {
-  const parsed = parseGlobalOptionValue(argv, "--workspace");
-  if (!parsed.found || !parsed.valid) {
-    if (INITIAL_WORKSPACE_DIR_ENV === null) {
-      delete process.env.SURFWRIGHT_WORKSPACE_DIR;
-    } else {
-      process.env.SURFWRIGHT_WORKSPACE_DIR = INITIAL_WORKSPACE_DIR_ENV;
-    }
-    return;
-  }
-  if (typeof parsed.value === "string") {
-    process.env.SURFWRIGHT_WORKSPACE_DIR = parsed.value;
-    return;
-  }
-  delete process.env.SURFWRIGHT_WORKSPACE_DIR;
-}
 
 const DOT_COMMAND_ALIAS_MAP = (() => {
   const map = new Map<string, string[]>();
@@ -206,6 +111,11 @@ function rewriteDotCommandAlias(argv: string[]): string[] {
       commandIndex += workspaceSpan;
       continue;
     }
+    const outputShapeSpan = parseOptionTokenSpan(out, commandIndex, "--output-shape");
+    if (outputShapeSpan > 0) {
+      commandIndex += outputShapeSpan;
+      continue;
+    }
 
     if (token === "--json" || token === "--no-json" || token === "--pretty") {
       commandIndex += 1;
@@ -233,49 +143,6 @@ function normalizeArgv(argv: string[]): string[] {
   return rewriteTargetIdOptionAlias(rewriteDotCommandAlias(out));
 }
 
-function parseCommandPath(argv: string[]): string[] {
-  const out: string[] = [];
-  let index = 2;
-
-  while (index < argv.length) {
-    const token = argv[index];
-    if (token === "--") {
-      break;
-    }
-    const sessionSpan = parseOptionTokenSpan(argv, index, "--session");
-    if (sessionSpan > 0) {
-      index += sessionSpan;
-      continue;
-    }
-    const agentIdSpan = parseOptionTokenSpan(argv, index, "--agent-id");
-    if (agentIdSpan > 0) {
-      index += agentIdSpan;
-      continue;
-    }
-    const workspaceSpan = parseOptionTokenSpan(argv, index, "--workspace");
-    if (workspaceSpan > 0) {
-      index += workspaceSpan;
-      continue;
-    }
-    if (token === "--json" || token === "--no-json" || token === "--pretty") {
-      index += 1;
-      continue;
-    }
-    if (token.startsWith("-")) {
-      break;
-    }
-    out.push(token);
-    index += 1;
-    if (out.length >= 2) {
-      break;
-    }
-    if (out.length === 1 && out[0] !== "target" && out[0] !== "session" && out[0] !== "state" && out[0] !== "workspace") {
-      break;
-    }
-  }
-
-  return out;
-}
 function shouldBypassDaemon(argv: string[]): boolean {
   const [first, second] = parseCommandPath(argv);
   if (!first) {
@@ -340,6 +207,9 @@ function createProgram(): Command {
     .option("--agent-id <agentId>", "Agent scope id for isolated state/daemon namespace")
     .option("--workspace <dir>", "Workspace directory override for reusable profiles (default: auto-discover ./.surfwright)")
     .option("--session <sessionId>", "Use a specific session for this command")
+    .addOption(
+      new Option("--output-shape <shape>", "Output shape preset: full|compact|proof").choices(["full", "compact", "proof"]),
+    )
     .showSuggestionAfterError(true)
     .showHelpAfterError("(run the command with --help for examples)")
     .exitOverride();
@@ -354,20 +224,10 @@ function createProgram(): Command {
   return program;
 }
 
-function commanderExitCode(error: unknown): number | null {
-  if (typeof error !== "object" || error === null) {
-    return null;
-  }
-  const maybe = error as { exitCode?: unknown };
-  if (typeof maybe.exitCode !== "number" || !Number.isFinite(maybe.exitCode)) {
-    return null;
-  }
-  return Math.max(0, Math.floor(maybe.exitCode));
-}
-
 async function runLocalCommand(argv: string[]): Promise<number> {
-  applyAgentIdOverrideFromArgv(argv);
-  applyWorkspaceDirOverrideFromArgv(argv);
+  applyAgentIdOverrideFromArgv(argv, INITIAL_AGENT_ID_ENV);
+  applyWorkspaceDirOverrideFromArgv(argv, INITIAL_WORKSPACE_DIR_ENV);
+  applyOutputShapeOverrideFromArgv(argv, INITIAL_OUTPUT_SHAPE_ENV);
   const program = createProgram();
   process.exitCode = 0;
   try {
@@ -375,6 +235,13 @@ async function runLocalCommand(argv: string[]): Promise<number> {
   } catch (error) {
     const exitCode = commanderExitCode(error);
     if (exitCode !== null) {
+      if (exitCode > 0) {
+        const output = parseOutputOptsFromArgv(argv);
+        const failure = toCommanderFailure(error);
+        if (output.json && failure) {
+          printFailure(failure, output);
+        }
+      }
       process.exitCode = exitCode;
       return exitCode;
     }
@@ -469,8 +336,9 @@ async function maybeRunInternalWorker(argv: string[]): Promise<number | null> {
 
 async function main(argv: string[]): Promise<number> {
   const normalizedArgv = normalizeArgv(argv);
-  applyAgentIdOverrideFromArgv(normalizedArgv);
-  applyWorkspaceDirOverrideFromArgv(normalizedArgv);
+  applyAgentIdOverrideFromArgv(normalizedArgv, INITIAL_AGENT_ID_ENV);
+  applyWorkspaceDirOverrideFromArgv(normalizedArgv, INITIAL_WORKSPACE_DIR_ENV);
+  applyOutputShapeOverrideFromArgv(normalizedArgv, INITIAL_OUTPUT_SHAPE_ENV);
 
   const workerExitCode = await maybeRunInternalWorker(normalizedArgv);
   if (workerExitCode !== null) {

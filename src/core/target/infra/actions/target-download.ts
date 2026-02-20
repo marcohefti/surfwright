@@ -10,6 +10,8 @@ import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "
 import { createCdpEvaluator, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../cdp/index.js";
 import { cdpQueryOp } from "../../click/cdp-query-op.js";
 import type { TargetDownloadReport } from "../../../types.js";
+import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
+import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 
 const DOWNLOAD_OUT_DIR_DEFAULT = "artifacts/downloads";
 const DOWNLOAD_FILENAME_MAX = 180;
@@ -82,6 +84,10 @@ export async function targetDownload(opts: {
   frameScope?: string;
   index?: number;
   downloadOutDir?: string;
+  proof?: boolean;
+  assertUrlPrefix?: string;
+  assertSelector?: string;
+  assertText?: string;
 }): Promise<TargetDownloadReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -95,6 +101,12 @@ export async function targetDownload(opts: {
   if (requestedIndex !== null && (!Number.isInteger(requestedIndex) || requestedIndex < 0)) {
     throw new CliError("E_QUERY_INVALID", "index must be a non-negative integer");
   }
+  const includeProof = Boolean(opts.proof);
+  const parsedAssertions = parseActionAssertions({
+    assertUrlPrefix: opts.assertUrlPrefix,
+    assertSelector: opts.assertSelector,
+    assertText: opts.assertText,
+  });
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -220,6 +232,7 @@ export async function targetDownload(opts: {
     };
 
     const clickedPreview = await clickAt(pickedIndex);
+    const urlBeforeDownload = target.page.url();
     let download: import("playwright-core").Download;
     download = await downloadPromise;
 
@@ -235,7 +248,36 @@ export async function targetDownload(opts: {
     const status = response ? response.status() : null;
     const headers = response ? redactHeaders({ headers: await response.allHeaders(), redactors: [] }) : {};
     target.page.off("response", onResponse);
+    const assertions = await evaluateActionAssertions({
+      page: target.page,
+      assertions: parsedAssertions,
+    });
     const actionCompletedAt = Date.now();
+    const currentUrl = target.page.url();
+    const currentTitle = await target.page.title();
+    const proofEnvelope = includeProof
+      ? buildActionProofEnvelope({
+          action: "download",
+          urlBefore: urlBeforeDownload,
+          urlAfter: currentUrl,
+          targetBefore: requestedTargetId,
+          targetAfter: requestedTargetId,
+          matchCount,
+          pickedIndex,
+          wait: toActionWaitEvidence({
+            requested: null,
+            observed: null,
+          }),
+          assertions,
+          countAfter: null,
+          details: {
+            downloadUrl: finalUrl,
+            downloadStatus: status,
+            filename: providers().path.basename(outPath),
+            size: stat.size,
+          },
+        })
+      : null;
 
     const report: TargetDownloadReport = {
       ok: true,
@@ -256,8 +298,8 @@ export async function targetDownload(opts: {
         visible: clickedPreview.visible,
         selectorHint: clickedPreview.selectorHint,
       },
-      url: target.page.url(),
-      title: await target.page.title(),
+      url: currentUrl,
+      title: currentTitle,
       download: {
         finalUrl,
         status,
@@ -267,6 +309,8 @@ export async function targetDownload(opts: {
         sha256,
         size: stat.size,
       },
+      ...(proofEnvelope ? { proofEnvelope } : {}),
+      ...(assertions ? { assertions } : {}),
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,

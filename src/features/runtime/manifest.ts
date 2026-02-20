@@ -8,7 +8,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   },
   {
     id: "contract",
-    usage: "surfwright contract [--no-json] [--pretty]",
+    usage: "surfwright contract [--compact] [--search <term>] [--no-json] [--pretty]",
     summary: "emit machine-readable CLI contract, guidance, and error codes",
   },
   {
@@ -83,7 +83,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   {
     id: "open",
     usage:
-      "surfwright open <url> [--profile <name>] [--reuse-url] [--reuse <off|url|origin|active>] [--allow-download] [--download-out-dir <path>] [--wait-until <commit|domcontentloaded|load|networkidle>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright open <url> [--profile <name>] [--reuse-url] [--reuse <off|url|origin|active>] [--allow-download] [--download-out-dir <path>] [--wait-until <commit|domcontentloaded|load|networkidle>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "open URL and return minimal page report with target handle",
   },
   {

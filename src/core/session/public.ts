@@ -48,6 +48,10 @@ export async function openUrl(opts: {
   browserModeInput?: string;
   allowDownload?: boolean;
   downloadOutDir?: string;
+  includeProof?: boolean;
+  assertUrlPrefix?: string;
+  assertSelector?: string;
+  assertText?: string;
 }): Promise<OpenReport> {
   return await openUrlInternal({
     ...opts,

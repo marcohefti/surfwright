@@ -1,5 +1,85 @@
 import { CliError } from "./errors.js";
 
+export type ReportOutputShape = "full" | "compact" | "proof";
+
+function parseOutputShape(input: string | undefined): ReportOutputShape {
+  const value = typeof input === "string" ? input.trim().toLowerCase() : "";
+  if (value.length === 0 || value === "full") {
+    return "full";
+  }
+  if (value === "compact" || value === "proof") {
+    return value;
+  }
+  throw new CliError("E_QUERY_INVALID", "output-shape must be one of: full, compact, proof");
+}
+
+function compactKeys(): string[] {
+  return [
+    "ok",
+    "sessionId",
+    "targetId",
+    "actionId",
+    "requestedUrl",
+    "finalUrl",
+    "url",
+    "title",
+    "status",
+    "mode",
+    "query",
+    "selector",
+    "matchCount",
+    "pickedIndex",
+    "wait",
+    "proofEnvelope",
+    "proof",
+    "timingMs",
+  ];
+}
+
+function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputShape): Record<string, unknown> {
+  if (shape === "full") {
+    return report;
+  }
+  const out: Record<string, unknown> = {};
+  if (Object.prototype.hasOwnProperty.call(report, "ok")) {
+    out.ok = report.ok;
+  }
+  if (shape === "compact") {
+    for (const key of compactKeys()) {
+      if (key === "ok") {
+        continue;
+      }
+      if (Object.prototype.hasOwnProperty.call(report, key)) {
+        out[key] = report[key];
+      }
+    }
+    return out;
+  }
+  // proof shape
+  const proof = Object.prototype.hasOwnProperty.call(report, "proofEnvelope")
+    ? report.proofEnvelope
+    : Object.prototype.hasOwnProperty.call(report, "proof")
+      ? report.proof
+      : null;
+  if (Object.prototype.hasOwnProperty.call(report, "sessionId")) {
+    out.sessionId = report.sessionId;
+  }
+  if (Object.prototype.hasOwnProperty.call(report, "targetId")) {
+    out.targetId = report.targetId;
+  }
+  if (Object.prototype.hasOwnProperty.call(report, "actionId")) {
+    out.actionId = report.actionId;
+  }
+  if (Object.prototype.hasOwnProperty.call(report, "url")) {
+    out.url = report.url;
+  }
+  if (Object.prototype.hasOwnProperty.call(report, "finalUrl")) {
+    out.finalUrl = report.finalUrl;
+  }
+  out.proof = proof;
+  return out;
+}
+
 export function parseFieldsCsv(input: string | undefined): string[] | null {
   if (typeof input !== "string") {
     return null;
@@ -27,20 +107,22 @@ export function parseFieldsCsv(input: string | undefined): string[] | null {
 }
 
 export function projectReportFields<T extends Record<string, unknown>>(report: T, fields: string[] | null): Record<string, unknown> {
+  const outputShape = parseOutputShape(process.env.SURFWRIGHT_OUTPUT_SHAPE);
+  const shaped = applyOutputShape(report, outputShape);
   if (!fields || fields.length === 0) {
-    return report;
+    return shaped;
   }
 
   const projected: Record<string, unknown> = {};
-  if (Object.prototype.hasOwnProperty.call(report, "ok")) {
-    projected.ok = report.ok;
+  if (Object.prototype.hasOwnProperty.call(shaped, "ok")) {
+    projected.ok = shaped.ok;
   }
 
   for (const field of fields) {
-    if (!Object.prototype.hasOwnProperty.call(report, field)) {
+    if (!Object.prototype.hasOwnProperty.call(shaped, field)) {
       continue;
     }
-    projected[field] = report[field];
+    projected[field] = shaped[field];
   }
 
   return projected;

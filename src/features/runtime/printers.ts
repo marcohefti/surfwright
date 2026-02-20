@@ -1,5 +1,4 @@
 import type {
-  CliContractReport,
   DoctorReport,
   SessionListReport,
   SessionPruneReport,
@@ -42,22 +41,38 @@ export function printDoctorReport(report: DoctorReport, opts: RuntimeOutputOpts)
   process.stdout.write(`${lines.join("\n")}\n`);
 }
 
-export function printContractReport(report: CliContractReport, opts: RuntimeOutputOpts) {
+export function printContractReport(report: Record<string, unknown>, opts: RuntimeOutputOpts) {
   if (opts.json) {
     writeJson(report, { pretty: opts.pretty });
     return;
   }
+  const name = typeof report.name === "string" ? report.name : "surfwright";
+  const version = typeof report.version === "string" ? report.version : "unknown";
+  const schemaVersion =
+    typeof report.contractSchemaVersion === "number" ? report.contractSchemaVersion : "unknown";
+  const fingerprint =
+    typeof report.contractFingerprint === "string" ? report.contractFingerprint : "unknown";
+  const commands = Array.isArray(report.commands) ? report.commands : [];
+  const errors = Array.isArray(report.errors) ? report.errors : [];
+  const guarantees = Array.isArray(report.guarantees) ? report.guarantees : [];
+  const commandIds = Array.isArray(report.commandIds) ? report.commandIds : null;
+  const errorCodes = Array.isArray(report.errorCodes) ? report.errorCodes : null;
   const lines = [
-    `${report.name} contract v${report.version}`,
-    `schema: ${report.contractSchemaVersion}`,
-    `fingerprint: ${report.contractFingerprint}`,
+    `${name} contract v${version}`,
+    `schema: ${schemaVersion}`,
+    `fingerprint: ${fingerprint}`,
     "",
-    "commands:",
-    ...report.commands.map((command) => `- ${command.id}: ${command.usage}`),
+    ...(commandIds
+      ? ["commandIds:", ...commandIds.map((id) => `- ${String(id)}`)]
+      : ["commands:", ...commands.map((command) => `- ${String((command as any).id)}: ${String((command as any).usage)}`)]),
     "",
-    "typed errors:",
-    ...report.errors.map((error) => `- ${error.code} (retryable=${error.retryable ? "true" : "false"})`),
+    ...(errorCodes
+      ? ["errorCodes:", ...errorCodes.map((code) => `- ${String(code)}`)]
+      : ["typed errors:", ...errors.map((error) => `- ${String((error as any).code)} (retryable=${(error as any).retryable ? "true" : "false"})`)]),
   ];
+  if (guarantees.length > 0) {
+    lines.push("", "guarantees:", ...guarantees.map((entry) => `- ${String(entry)}`));
+  }
   process.stdout.write(`${lines.join("\n")}\n`);
 }
 

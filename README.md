@@ -98,6 +98,14 @@ surfwright contract
 ```
 
 `contract` now includes additive `guidance` entries with command signatures, examples, and proof schemas for high-traffic workflows.
+Use `surfwright contract --compact` for summary-only output, and `surfwright contract --search <term>` to filter commands/errors/guidance.
+
+Set global output shaping when you want smaller payloads without changing command behavior:
+
+```bash
+surfwright --output-shape compact open https://example.com
+SURFWRIGHT_OUTPUT_SHAPE=proof surfwright target click <targetId> --text "Pricing" --proof
+```
 
 ## CLI Install (Optional)
 
@@ -154,6 +162,7 @@ surfwright target extract <targetId> --kind headings --selector main --limit 12
 `target snapshot --mode orient` now includes additive counters (`headingsCount`, `buttonsCount`, `linksCount`, `navCount`).
 `target click --proof` now includes additive `proof.countAfter` for selector-mode clicks (when post-action counting is available).
 `target fill|keypress|upload|drag-drop|dialog` now support the same post-action wait controls (`--wait-for-text|--wait-for-selector|--wait-network-idle`, `--wait-timeout-ms`) and optional `--proof`.
+`open|target click|target fill|target keypress|target upload|target drag-drop|target dialog|target download|target wait` support additive post-action assertions: `--assert-url-prefix`, `--assert-selector`, `--assert-text`.
 
 Use workspace profile for persistent login state:
 

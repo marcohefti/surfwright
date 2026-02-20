@@ -37,6 +37,9 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--snapshot", "Include compact post-click text preview")
       .option("--delta", "Include bounded evidence-based delta after click", false)
       .option("--proof", "Include one-shot evidence payload (implies --snapshot and --delta)", false)
+      .option("--assert-url-prefix <prefix>", "Post-click assertion: final URL must start with prefix")
+      .option("--assert-selector <query>", "Post-click assertion: selector must be visible")
+      .option("--assert-text <text>", "Post-click assertion: text must be present in page body")
       .option("--timeout-ms <ms>", "Click timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -59,6 +62,9 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             snapshot?: boolean;
             delta?: boolean;
             proof?: boolean;
+            assertUrlPrefix?: string;
+            assertSelector?: string;
+            assertText?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -88,6 +94,9 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               snapshot: Boolean(options.snapshot),
               delta: Boolean(options.delta),
               proof: Boolean(options.proof),
+              assertUrlPrefix: options.assertUrlPrefix,
+              assertSelector: options.assertSelector,
+              assertText: options.assertText,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -158,6 +167,9 @@ export const targetFillCommandSpec: TargetCommandSpec = {
       .option("--wait-network-idle", "After fill, wait for network idle")
       .option("--wait-timeout-ms <ms>", "Post-fill wait timeout budget in milliseconds", ctx.parseTimeoutMs)
       .option("--proof", "Include one-shot evidence payload for fill result", false)
+      .option("--assert-url-prefix <prefix>", "Post-fill assertion: final URL must start with prefix")
+      .option("--assert-selector <query>", "Post-fill assertion: selector must be visible")
+      .option("--assert-text <text>", "Post-fill assertion: text must be present in page body")
       .option("--timeout-ms <ms>", "Fill timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -185,6 +197,9 @@ export const targetFillCommandSpec: TargetCommandSpec = {
             waitNetworkIdle?: boolean;
             waitTimeoutMs?: number;
             proof?: boolean;
+            assertUrlPrefix?: string;
+            assertSelector?: string;
+            assertText?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -209,6 +224,9 @@ export const targetFillCommandSpec: TargetCommandSpec = {
               waitNetworkIdle: Boolean(options.waitNetworkIdle),
               waitTimeoutMs: options.waitTimeoutMs,
               proof: Boolean(options.proof),
+              assertUrlPrefix: options.assertUrlPrefix,
+              assertSelector: options.assertSelector,
+              assertText: options.assertText,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -236,6 +254,9 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
       .option("--wait-network-idle", "After upload, wait for network idle")
       .option("--wait-timeout-ms <ms>", "Post-upload wait timeout budget in milliseconds", ctx.parseTimeoutMs)
       .option("--proof", "Include one-shot evidence payload for upload result", false)
+      .option("--assert-url-prefix <prefix>", "Post-upload assertion: final URL must start with prefix")
+      .option("--assert-selector <query>", "Post-upload assertion: selector must be visible")
+      .option("--assert-text <text>", "Post-upload assertion: text must be present in page body")
       .option("--timeout-ms <ms>", "Upload timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -258,6 +279,9 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
             waitNetworkIdle?: boolean;
             waitTimeoutMs?: number;
             proof?: boolean;
+            assertUrlPrefix?: string;
+            assertSelector?: string;
+            assertText?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -278,6 +302,9 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
               waitNetworkIdle: Boolean(options.waitNetworkIdle),
               waitTimeoutMs: options.waitTimeoutMs,
               proof: Boolean(options.proof),
+              assertUrlPrefix: options.assertUrlPrefix,
+              assertSelector: options.assertSelector,
+              assertText: options.assertText,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -308,6 +335,9 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
       .option("--wait-network-idle", "After keypress, wait for network idle")
       .option("--wait-timeout-ms <ms>", "Post-keypress wait timeout budget in milliseconds", ctx.parseTimeoutMs)
       .option("--proof", "Include one-shot evidence payload for keypress result", false)
+      .option("--assert-url-prefix <prefix>", "Post-keypress assertion: final URL must start with prefix")
+      .option("--assert-selector <query>", "Post-keypress assertion: selector must be visible")
+      .option("--assert-text <text>", "Post-keypress assertion: text must be present in page body")
       .option("--timeout-ms <ms>", "Keypress timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -334,6 +364,9 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
             waitNetworkIdle?: boolean;
             waitTimeoutMs?: number;
             proof?: boolean;
+            assertUrlPrefix?: string;
+            assertSelector?: string;
+            assertText?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -357,6 +390,9 @@ export const targetKeypressCommandSpec: TargetCommandSpec = {
               waitNetworkIdle: Boolean(options.waitNetworkIdle),
               waitTimeoutMs: options.waitTimeoutMs,
               proof: Boolean(options.proof),
+              assertUrlPrefix: options.assertUrlPrefix,
+              assertSelector: options.assertSelector,
+              assertText: options.assertText,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
@@ -384,6 +420,9 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
       .option("--wait-network-idle", "After drag/drop, wait for network idle")
       .option("--wait-timeout-ms <ms>", "Post-drag/drop wait timeout budget in milliseconds", ctx.parseTimeoutMs)
       .option("--proof", "Include one-shot evidence payload for drag/drop result", false)
+      .option("--assert-url-prefix <prefix>", "Post-drag/drop assertion: final URL must start with prefix")
+      .option("--assert-selector <query>", "Post-drag/drop assertion: selector must be visible")
+      .option("--assert-text <text>", "Post-drag/drop assertion: text must be present in page body")
       .option("--timeout-ms <ms>", "Drag/drop timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -406,6 +445,9 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
             waitNetworkIdle?: boolean;
             waitTimeoutMs?: number;
             proof?: boolean;
+            assertUrlPrefix?: string;
+            assertSelector?: string;
+            assertText?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -426,6 +468,9 @@ export const targetDragDropCommandSpec: TargetCommandSpec = {
               waitNetworkIdle: Boolean(options.waitNetworkIdle),
               waitTimeoutMs: options.waitTimeoutMs,
               proof: Boolean(options.proof),
+              assertUrlPrefix: options.assertUrlPrefix,
+              assertSelector: options.assertSelector,
+              assertText: options.assertText,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

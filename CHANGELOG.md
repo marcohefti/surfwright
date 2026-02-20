@@ -17,7 +17,10 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target find` link-destination narrowing flags: `--href-host <host>` and `--href-path-prefix <prefix>` with echoed filter fields in the report.
 - [target] Added additive `target click.handoff` metadata (`sameTarget`, `openedTargetId`, `openedUrl`, `openedTitle`) for deterministic post-click target chaining.
 - [contract] Added additive `contract.guidance[]` with command signatures, runnable examples, and proof schema hints for high-traffic flows.
+- [contract] Added `contract --compact` and `contract --search <term>` for low-token contract introspection and focused lookups.
+- [cli] Added global `--output-shape <full|compact|proof>` (and `SURFWRIGHT_OUTPUT_SHAPE`) to project JSON outputs without changing command semantics.
 - [target] Added `--proof` support to `target fill`, `target keypress`, `target upload`, `target drag-drop`, and `target dialog` with a shared compact evidence shape.
+- [actions] Added post-action assertions (`--assert-url-prefix`, `--assert-selector`, `--assert-text`) and additive `proofEnvelope` support across `open`, `target click`, `target fill`, `target keypress`, `target upload`, `target drag-drop`, `target dialog`, `target download`, and `target wait`.
 - [target] Added extraction kinds `headings`, `links`, `codeblocks`, `forms`, and `tables` to `target extract` for broader no-eval structured reads.
 - [target] Added `target style --kind <button-primary|input-text|link-primary>` preset shortcuts for common style validation flows.
 
@@ -33,6 +36,8 @@ All notable changes to SurfWright are documented here.
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
 - [errors] `E_BROWSER_START_FAILED`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_IO`, and `E_STATE_LOCK_TIMEOUT` now include bounded hints/hintContext for faster operator triage.
+- [target] Stale `targetId` errors now include stronger replacement-target hints and hint context to speed recovery in concurrent session flows.
+- [cli] Commander parse failures now map to typed JSON `E_QUERY_INVALID` responses (with bounded hints/hintContext) in JSON mode.
 
 ### Deprecated
 - None.

@@ -5,6 +5,8 @@ import { resolveTargetQueryLocator } from "../target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { parseOptionalTargetQuery, resolveFirstQueryMatch } from "./target-input-query.js";
 import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick } from "../../click/click-utils.js";
+import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
+import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 
 type TargetDialogReport = {
   ok: true;
@@ -27,6 +29,8 @@ type TargetDialogReport = {
     selector: string | null;
     countAfter: null;
   };
+  proofEnvelope?: import("../../../types.js").ActionProofEnvelope;
+  assertions?: import("../../../types.js").ActionAssertionReport | null;
   wait?: {
     mode: "text" | "selector" | "network-idle";
     value: string | null;
@@ -67,6 +71,9 @@ export async function targetDialog(opts: {
   waitNetworkIdle?: boolean;
   waitTimeoutMs?: number;
   proof?: boolean;
+  assertUrlPrefix?: string;
+  assertSelector?: string;
+  assertText?: string;
 }): Promise<TargetDialogReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -83,6 +90,12 @@ export async function targetDialog(opts: {
     waitNetworkIdle: opts.waitNetworkIdle,
   });
   const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
+  const includeProof = Boolean(opts.proof);
+  const parsedAssertions = parseActionAssertions({
+    assertUrlPrefix: opts.assertUrlPrefix,
+    assertSelector: opts.assertSelector,
+    assertText: opts.assertText,
+  });
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -157,7 +170,33 @@ export async function targetDialog(opts: {
             satisfied: true,
           };
     const finalUrl = target.page.url();
+    const assertions = await evaluateActionAssertions({
+      page: target.page,
+      assertions: parsedAssertions,
+    });
     const finalTitle = await target.page.title();
+    const proofEnvelope = includeProof
+      ? buildActionProofEnvelope({
+          action: "dialog",
+          urlBefore: urlBeforeDialog,
+          urlAfter: finalUrl,
+          targetBefore: requestedTargetId,
+          targetAfter: requestedTargetId,
+          matchCount: triggerQuery ? null : 0,
+          pickedIndex: null,
+          wait: toActionWaitEvidence({
+            requested: waitAfter ? { ...waitAfter, timeoutMs: waitTimeoutMs } : null,
+            observed: waited,
+          }),
+          assertions,
+          countAfter: null,
+          details: {
+            dialogType: handledDialog.type,
+            action,
+            finalTitle,
+          },
+        })
+      : null;
 
     const report: TargetDialogReport = {
       ok: true,
@@ -170,7 +209,8 @@ export async function targetDialog(opts: {
         action,
       },
       wait: waited,
-      ...(opts.proof
+      ...(assertions ? { assertions } : {}),
+      ...(includeProof
         ? {
             proof: {
               action: "dialog",
@@ -183,6 +223,7 @@ export async function targetDialog(opts: {
               selector: triggerQuery?.selector ?? null,
               countAfter: null,
             },
+            ...(proofEnvelope ? { proofEnvelope } : {}),
           }
         : {}),
       timingMs: {

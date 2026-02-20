@@ -229,9 +229,33 @@ export async function resolveTargetHandle(
   page: Page;
   targetId: string;
 }> {
-  const target = (await listPageTargetHandles(browser)).find((handle) => handle.targetId === targetId);
+  const handles = await listPageTargetHandles(browser);
+  const target = handles.find((handle) => handle.targetId === targetId);
   if (!target) {
-    throw new CliError("E_TARGET_NOT_FOUND", `Target ${targetId} not found in session`);
+    const snapshot = readState();
+    const known = snapshot.targets[targetId];
+    const replacementByUrl =
+      known && typeof known.url === "string" && known.url.length > 0
+        ? handles.filter((entry) => entry.page.url() === known.url)
+        : [];
+    const replacement = replacementByUrl.length === 1 ? replacementByUrl[0] : null;
+    const hints: string[] = [
+      "Target handle can change after navigation/new tab/reload; reacquire with `target list`",
+      replacement ? `Possible replacement targetId: ${replacement.targetId}` : "Retry by reopening the page with `open <url>`",
+    ];
+    if (replacement) {
+      hints.push(`Retry original command with --target ${replacement.targetId} (or positional targetId)`);
+    }
+    throw new CliError("E_TARGET_NOT_FOUND", `Target ${targetId} not found in session`, {
+      hints,
+      hintContext: {
+        requestedTargetId: targetId,
+        knownUrl: known?.url ?? null,
+        activeTargets: handles.length,
+        sampleTargetIds: handles.slice(0, 6).map((entry) => entry.targetId).join(","),
+        replacementTargetId: replacement?.targetId ?? null,
+      },
+    });
   }
   return target;
 }

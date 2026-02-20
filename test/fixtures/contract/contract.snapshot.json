@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:99f5305c33a9f77ea2656e7bc61959d15b9fd074cb392984cadd68142a569a5b",
+  "contractFingerprint": "sha256:9837f6b523a3b308e386840f9adc8adce898d1688e9501fec87fedcb3d70a61d",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -12,7 +12,7 @@
   "commands": [
     {
       "id": "contract",
-      "usage": "surfwright contract [--no-json] [--pretty]",
+      "usage": "surfwright contract [--compact] [--search <term>] [--no-json] [--pretty]",
       "summary": "emit machine-readable CLI contract, guidance, and error codes"
     },
     {
@@ -47,7 +47,7 @@
     },
     {
       "id": "open",
-      "usage": "surfwright open <url> [--profile <name>] [--reuse-url] [--reuse <off|url|origin|active>] [--allow-download] [--download-out-dir <path>] [--wait-until <commit|domcontentloaded|load|networkidle>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright open <url> [--profile <name>] [--reuse-url] [--reuse <off|url|origin|active>] [--allow-download] [--download-out-dir <path>] [--wait-until <commit|domcontentloaded|load|networkidle>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "open URL and return minimal page report with target handle"
     },
     {
@@ -122,7 +122,7 @@
     },
     {
       "id": "target.click",
-      "usage": "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "click the first matching element in a target"
     },
     {
@@ -152,17 +152,17 @@
     },
     {
       "id": "target.dialog",
-      "usage": "surfwright target dialog <targetId> [--action <accept|dismiss>] [--prompt-text <text>] [--trigger-text <query> | --trigger-selector <query>] [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target dialog <targetId> [--action <accept|dismiss>] [--prompt-text <text>] [--trigger-text <query> | --trigger-selector <query>] [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "accept or dismiss the next dialog, optionally with trigger click"
     },
     {
       "id": "target.download",
-      "usage": "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "click a deterministic element and capture a download artifact"
     },
     {
       "id": "target.drag-drop",
-      "usage": "surfwright target drag-drop <targetId> --from <selector> --to <selector> [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target drag-drop <targetId> --from <selector> --to <selector> [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "perform deterministic drag and drop between selectors"
     },
     {
@@ -182,7 +182,7 @@
     },
     {
       "id": "target.fill",
-      "usage": "surfwright target fill <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] --value <text> [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target fill <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] --value <text> [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "fill the first matching form control in a target"
     },
     {
@@ -217,7 +217,7 @@
     },
     {
       "id": "target.keypress",
-      "usage": "surfwright target keypress <targetId> --key <key> [--text <query> | --selector <query>] [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target keypress <targetId> --key <key> [--text <query> | --selector <query>] [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "send a deterministic keypress to page or focused matched element"
     },
     {
@@ -372,7 +372,7 @@
     },
     {
       "id": "target.upload",
-      "usage": "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "upload one or more files via input or file chooser fallback"
     },
     {
@@ -382,7 +382,7 @@
     },
     {
       "id": "target.wait",
-      "usage": "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--frame-scope <scope>] [--wait-timeout-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--frame-scope <scope>] [--wait-timeout-ms <ms>] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "wait for deterministic readiness condition on a target"
     },
     {

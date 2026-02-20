@@ -6,6 +6,7 @@ import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "
 import { parseFrameScope } from "./target-find.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "./cdp/index.js";
 import type { TargetWaitReport } from "../../types.js";
+import { evaluateActionAssertions, parseActionAssertions } from "../../shared/index.js";
 
 function parseWaitInput(opts: {
   forText?: string;
@@ -56,6 +57,9 @@ export async function targetWait(opts: {
   forSelector?: string;
   networkIdle?: boolean;
   frameScope?: string;
+  assertUrlPrefix?: string;
+  assertSelector?: string;
+  assertText?: string;
 }): Promise<TargetWaitReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -65,6 +69,11 @@ export async function targetWait(opts: {
     networkIdle: opts.networkIdle,
   });
   const frameScope = parseFrameScope(opts.frameScope);
+  const parsedAssertions = parseActionAssertions({
+    assertUrlPrefix: opts.assertUrlPrefix,
+    assertSelector: opts.assertSelector,
+    assertText: opts.assertText,
+  });
   const waitTimeoutMs =
     typeof opts.waitTimeoutMs === "number"
       ? opts.waitTimeoutMs
@@ -176,6 +185,10 @@ export async function targetWait(opts: {
       }
     }
     const waitElapsedMs = Date.now() - waitStartedAt;
+    const assertions = await evaluateActionAssertions({
+      page: target.page,
+      assertions: parsedAssertions,
+    });
     const actionCompletedAt = Date.now();
 
     const report: TargetWaitReport = {
@@ -194,6 +207,7 @@ export async function targetWait(opts: {
         elapsedMs: waitElapsedMs,
         satisfied: true,
       },
+      ...(assertions ? { assertions } : {}),
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,

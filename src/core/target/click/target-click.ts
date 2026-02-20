@@ -12,11 +12,12 @@ import { CLICK_EXPLAIN_MAX_REJECTED, parseMatchIndex, parseWaitAfterClick, query
 import { cdpQueryOp } from "./cdp-query-op.js";
 import { buildClickExplainReport } from "./click-explain.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
-import { buildClickProof, readSelectorCountAfter } from "./click-proof.js";
+import { readSelectorCountAfter } from "./click-proof.js";
 import { safePageTitle } from "../infra/utils/safe-page-title.js";
 import { targetClickByHandle } from "./target-click-handle.js";
 import { waitAfterClickWithBudget } from "./click-wait.js";
-type ClickWaitResult = NonNullable<TargetClickReport["wait"]>;
+import { evaluateActionAssertions, parseActionAssertions } from "../../shared/index.js";
+import { buildClickProofArtifacts, buildClickReport } from "./click-report.js";
 export async function targetClick(opts: {
   targetId: string;
   timeoutMs: number;
@@ -37,6 +38,9 @@ export async function targetClick(opts: {
   snapshot?: boolean;
   delta?: boolean;
   proof?: boolean;
+  assertUrlPrefix?: string;
+  assertSelector?: string;
+  assertText?: string;
 }): Promise<TargetClickReport | TargetClickExplainReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -53,6 +57,11 @@ export async function targetClick(opts: {
       });
   const explain = Boolean(opts.explain);
   const includeProof = Boolean(opts.proof);
+  const parsedAssertions = parseActionAssertions({
+    assertUrlPrefix: opts.assertUrlPrefix,
+    assertSelector: opts.assertSelector,
+    assertText: opts.assertText,
+  });
   const includeDelta = Boolean(opts.delta) || includeProof;
   const includeSnapshot = Boolean(opts.snapshot) || includeProof;
   const waitAfter = parseWaitAfterClick({
@@ -65,24 +74,14 @@ export async function targetClick(opts: {
     const hasText = typeof opts.textQuery === "string" && opts.textQuery.trim().length > 0;
     const hasSelector = typeof opts.selectorQuery === "string" && opts.selectorQuery.trim().length > 0;
     const hasContains = typeof opts.containsQuery === "string" && opts.containsQuery.trim().length > 0;
-    if (hasText || hasSelector || hasContains) {
-      throw new CliError("E_QUERY_INVALID", "Use either --handle or a query via --text/--selector/--contains");
-    }
-    if (requestedIndex !== null) {
-      throw new CliError("E_QUERY_INVALID", "--index cannot be combined with --handle");
-    }
-    if (Boolean(opts.visibleOnly)) {
-      throw new CliError("E_QUERY_INVALID", "--visible-only cannot be combined with --handle");
-    }
+    if (hasText || hasSelector || hasContains) throw new CliError("E_QUERY_INVALID", "Use either --handle or a query via --text/--selector/--contains");
+    if (requestedIndex !== null) throw new CliError("E_QUERY_INVALID", "--index cannot be combined with --handle");
+    if (Boolean(opts.visibleOnly)) throw new CliError("E_QUERY_INVALID", "--visible-only cannot be combined with --handle");
   }
   if (explain) {
-    if (hasHandle) {
-      throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with --handle");
-    }
+    if (hasHandle) throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with --handle");
     const hasPostClickEvidence = includeSnapshot || includeDelta || waitAfter !== null || includeProof;
-    if (hasPostClickEvidence) {
-      throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with post-click wait options, --snapshot, --delta, or --proof");
-    }
+    if (hasPostClickEvidence) throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with post-click wait options, --snapshot, --delta, or --proof");
   }
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -136,6 +135,7 @@ export async function targetClick(opts: {
         snapshot: includeSnapshot,
         includeDelta,
         includeProof,
+        parsedAssertions,
         persistState: opts.persistState !== false,
       });
     }
@@ -361,7 +361,7 @@ export async function targetClick(opts: {
       .catch(() => {
         // Not all clicks trigger navigation; this is best-effort only.
       });
-    const waited: ClickWaitResult | null = await waitAfterClickWithBudget({
+    const waited: NonNullable<TargetClickReport["wait"]> | null = await waitAfterClickWithBudget({
       waitAfter,
       waitTimeoutMs,
       page: target.page,
@@ -374,6 +374,10 @@ export async function targetClick(opts: {
       frameScope,
     });
     const postSnapshot = includeSnapshot ? await readPostSnapshot(mainEvaluator) : null;
+    const assertions = await evaluateActionAssertions({
+      page: target.page,
+      assertions: parsedAssertions,
+    });
     const deltaAfter = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;
     const clickedAriaAfter = includeDelta ? await readAriaAt(pickedIndex) : null;
     const openedPage = context.pages().find((page) => !pagesBeforeClick.includes(page)) ?? null;
@@ -412,22 +416,27 @@ export async function targetClick(opts: {
       selector,
       contains,
     });
-    const proof = includeProof
-      ? buildClickProof({
-          urlBeforeClick,
-          urlAfterClick: target.page.url(),
-          openedTargetId,
-          openedPageDetected: openedPage !== null,
-          waited,
-          postSnapshot,
-          delta,
-          clickedText: clickedPreview.text,
-          clickedSelectorHint: clickedPreview.selectorHint,
-          countAfter,
-        })
-      : null;
-    const report: TargetClickReport = {
-      ok: true,
+    const urlAfterClick = target.page.url();
+    const { proof, proofEnvelope } = buildClickProofArtifacts({
+      includeProof,
+      requestedTargetId,
+      urlBeforeClick,
+      urlAfterClick,
+      openedTargetId,
+      openedPageDetected: openedPage !== null,
+      matchCount,
+      pickedIndex,
+      waitAfter,
+      waitTimeoutMs,
+      waited,
+      assertions,
+      countAfter,
+      postSnapshot,
+      delta,
+      clickedText: clickedPreview.text,
+      clickedSelectorHint: clickedPreview.selectorHint,
+    });
+    const report: TargetClickReport = buildClickReport({
       sessionId: session.sessionId,
       sessionSource,
       targetId: requestedTargetId,
@@ -445,26 +454,24 @@ export async function targetClick(opts: {
         visible: clickedPreview.visible,
         selectorHint: clickedPreview.selectorHint,
       },
-      url: target.page.url(),
+      url: urlAfterClick,
       title: await safePageTitle(target.page, opts.timeoutMs),
       wait: waited,
       snapshot: postSnapshot,
-      ...(proof ? { proof } : {}),
-      ...(delta ? { delta } : {}),
+      proof,
+      proofEnvelope,
+      assertions,
+      delta,
       handoff: {
         sameTarget: openedPage === null,
         openedTargetId,
         openedUrl,
         openedTitle,
       },
-      timingMs: {
-        total: 0,
-        resolveSession: resolvedSessionAt - startedAt,
-        connectCdp: connectedAt - resolvedSessionAt,
-        action: actionCompletedAt - connectedAt,
-        persistState: 0,
-      },
-    };
+      resolvedSessionMs: resolvedSessionAt - startedAt,
+      connectCdpMs: connectedAt - resolvedSessionAt,
+      actionMs: actionCompletedAt - connectedAt,
+    });
     const persistStartedAt = Date.now();
     if (opts.persistState !== false) {
       await saveTargetSnapshot({

@@ -11,6 +11,8 @@ import { cdpQueryOp } from "./cdp-query-op.js";
 import { parseWaitAfterClick, resolveWaitTimeoutMs } from "./click-utils.js";
 import { waitAfterClickWithBudget } from "./click-wait.js";
 import { readSelectorCountAfter } from "./click-proof.js";
+import { evaluateActionAssertions, parseActionAssertions } from "../../shared/index.js";
+import { buildActionProofEnvelope, toActionWaitEvidence } from "../../shared/index.js";
 
 type TargetFillReport = {
   ok: true;
@@ -35,6 +37,7 @@ type TargetFillReport = {
     elapsedMs: number;
     satisfied: boolean;
   } | null;
+  assertions?: import("../../types.js").ActionAssertionReport | null;
   proof?: {
     action: "fill";
     urlChanged: boolean;
@@ -46,6 +49,7 @@ type TargetFillReport = {
     selector: string | null;
     countAfter: number | null;
   };
+  proofEnvelope?: import("../../types.js").ActionProofEnvelope;
   timingMs: {
     total: number;
     resolveSession: number;
@@ -76,6 +80,9 @@ export async function targetFill(opts: {
   waitNetworkIdle?: boolean;
   waitTimeoutMs?: number;
   proof?: boolean;
+  assertUrlPrefix?: string;
+  assertSelector?: string;
+  assertText?: string;
 }): Promise<TargetFillReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -94,6 +101,11 @@ export async function targetFill(opts: {
   });
   const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
   const includeProof = Boolean(opts.proof);
+  const parsedAssertions = parseActionAssertions({
+    assertUrlPrefix: opts.assertUrlPrefix,
+    assertSelector: opts.assertSelector,
+    assertText: opts.assertText,
+  });
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -214,8 +226,35 @@ export async function targetFill(opts: {
     });
 
     const finalUrl = target.page.url();
+    const assertions = await evaluateActionAssertions({
+      page: target.page,
+      assertions: parsedAssertions,
+    });
     const title = await target.page.title();
     const actionCompletedAt = Date.now();
+    const proofEnvelope = includeProof
+      ? buildActionProofEnvelope({
+          action: "fill",
+          urlBefore: urlBeforeFill,
+          urlAfter: finalUrl,
+          targetBefore: requestedTargetId,
+          targetAfter: requestedTargetId,
+          matchCount,
+          pickedIndex,
+          wait: toActionWaitEvidence({
+            requested: waitAfter ? { ...waitAfter, timeoutMs: waitTimeoutMs } : null,
+            observed: waited,
+          }),
+          assertions,
+          countAfter,
+          details: {
+            queryMode: parsed.mode,
+            query: parsed.query,
+            selector: parsed.selector,
+            finalTitle: title,
+          },
+        })
+      : null;
 
     const report: TargetFillReport = {
       ok: true,
@@ -234,6 +273,7 @@ export async function targetFill(opts: {
       url: finalUrl,
       title,
       wait: waited,
+      ...(assertions ? { assertions } : {}),
       ...(includeProof
         ? {
             proof: {
@@ -247,6 +287,7 @@ export async function targetFill(opts: {
               selector: parsed.selector,
               countAfter,
             },
+            ...(proofEnvelope ? { proofEnvelope } : {}),
           }
         : {}),
       timingMs: {

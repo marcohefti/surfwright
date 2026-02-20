@@ -24,6 +24,7 @@ import { registerSkillLifecycleCommands } from "./commands/skill-lifecycle.js";
 import { registerSessionCookieCopyCommand } from "./commands/session-cookie-copy.js";
 import { registerSessionClearCommand } from "./commands/session-clear.js";
 import { registerUpdateLifecycleCommands } from "./commands/update-lifecycle.js";
+import { buildContractOutput } from "./contract-output.js";
 import {
   printContractReport,
   printDoctorReport,
@@ -71,11 +72,18 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
   ctx.program
     .command("contract")
     .description(contractMeta.summary)
-    .action(() => {
+    .option("--compact", "Return compact contract metadata optimized for cold-start checks", false)
+    .option("--search <term>", "Filter contract commands/errors/guidance by id/code/usage text")
+    .action((options: { compact?: boolean; search?: string }) => {
       const output = ctx.globalOutputOpts();
       try {
         const report = getCliContractReport(ctx.readPackageVersion());
-        printContractReport(report, output);
+        const outReport = buildContractOutput({
+          report,
+          compact: Boolean(options.compact),
+          search: options.search,
+        });
+        printContractReport(outReport as any, output);
       } catch (error) {
         ctx.handleFailure(error, output);
       }
@@ -148,6 +156,10 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .option("--allow-download", "Treat download navigations as success and capture deterministic download artifact", false)
     .option("--download-out-dir <path>", "Directory to write captured downloads (default ./artifacts/downloads)")
     .option("--wait-until <mode>", "Navigation readiness: commit|domcontentloaded|load|networkidle")
+    .option("--proof", "Include standardized proof envelope for open result", false)
+    .option("--assert-url-prefix <prefix>", "Post-open assertion: final URL must start with prefix")
+    .option("--assert-selector <query>", "Post-open assertion: selector must be visible")
+    .option("--assert-text <text>", "Post-open assertion: text must be present in page body")
     .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
     .option("--timeout-ms <ms>", "Navigation timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
@@ -176,6 +188,10 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           allowDownload?: boolean;
           downloadOutDir?: string;
           waitUntil?: string;
+          proof?: boolean;
+          assertUrlPrefix?: string;
+          assertSelector?: string;
+          assertText?: string;
         },
       ) => {
       const output = ctx.globalOutputOpts();
@@ -190,6 +206,10 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           allowDownload: Boolean(options.allowDownload),
           downloadOutDir: typeof options.downloadOutDir === "string" ? options.downloadOutDir : undefined,
           waitUntilInput: typeof options.waitUntil === "string" ? options.waitUntil : undefined,
+          includeProof: Boolean(options.proof),
+          assertUrlPrefix: options.assertUrlPrefix,
+          assertSelector: options.assertSelector,
+          assertText: options.assertText,
           browserModeInput: options.browserMode,
           isolation: options.isolation,
           profile: typeof options.profile === "string" ? options.profile : undefined,

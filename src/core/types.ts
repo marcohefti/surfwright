@@ -23,6 +23,41 @@ export type ActionTimingMs = {
   action: number;
   persistState: number;
 };
+export type ActionWaitEvidence = {
+  requested: boolean;
+  mode: "text" | "selector" | "network-idle" | null;
+  value: string | null;
+  timeoutMs: number | null;
+  elapsedMs: number | null;
+  satisfied: boolean;
+};
+export type ActionAssertionCheck = {
+  id: "url-prefix" | "selector" | "text";
+  ok: boolean;
+  expected: string;
+  actual: string;
+};
+export type ActionAssertionReport = {
+  total: number;
+  failed: number;
+  checks: ActionAssertionCheck[];
+};
+export type ActionProofEnvelope = {
+  version: 1;
+  action: string;
+  urlBefore: string | null;
+  urlAfter: string | null;
+  urlChanged: boolean;
+  targetBefore: string | null;
+  targetAfter: string | null;
+  targetChanged: boolean;
+  matchCount: number | null;
+  pickedIndex: number | null;
+  wait: ActionWaitEvidence;
+  assertions: ActionAssertionReport | null;
+  countAfter: number | null;
+  details: Record<string, unknown> | null;
+};
 export type DoctorReport = {
   ok: boolean;
   node: {
@@ -114,6 +149,8 @@ export type OpenReport = {
   waitUntil: "commit" | "domcontentloaded" | "load" | "networkidle";
   reuseMode: "off" | "url" | "origin" | "active";
   reusedTarget: boolean;
+  assertions?: ActionAssertionReport | null;
+  proofEnvelope?: ActionProofEnvelope;
   timingMs: ActionTimingMs;
 };
 export type SessionReport = {

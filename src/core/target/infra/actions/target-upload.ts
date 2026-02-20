@@ -5,6 +5,8 @@ import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import { providers } from "../../../providers/index.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick } from "../../click/click-utils.js";
+import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
+import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 
 type TargetUploadReport = {
   ok: true;
@@ -31,6 +33,8 @@ type TargetUploadReport = {
     selector: string;
     countAfter: null;
   };
+  proofEnvelope?: import("../../../types.js").ActionProofEnvelope;
+  assertions?: import("../../../types.js").ActionAssertionReport | null;
   wait?: {
     mode: "text" | "selector" | "network-idle";
     value: string | null;
@@ -109,6 +113,9 @@ export async function targetUpload(opts: {
   waitNetworkIdle?: boolean;
   waitTimeoutMs?: number;
   proof?: boolean;
+  assertUrlPrefix?: string;
+  assertSelector?: string;
+  assertText?: string;
 }): Promise<TargetUploadReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -120,6 +127,12 @@ export async function targetUpload(opts: {
     waitNetworkIdle: opts.waitNetworkIdle,
   });
   const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
+  const includeProof = Boolean(opts.proof);
+  const parsedAssertions = parseActionAssertions({
+    assertUrlPrefix: opts.assertUrlPrefix,
+    assertSelector: opts.assertSelector,
+    assertText: opts.assertText,
+  });
 
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -190,8 +203,35 @@ export async function targetUpload(opts: {
             satisfied: true,
           };
     const finalUrl = target.page.url();
+    const assertions = await evaluateActionAssertions({
+      page: target.page,
+      assertions: parsedAssertions,
+    });
     const finalTitle = await target.page.title();
     const actionCompletedAt = Date.now();
+    const proofEnvelope = includeProof
+      ? buildActionProofEnvelope({
+          action: "upload",
+          urlBefore: urlBeforeAction,
+          urlAfter: finalUrl,
+          targetBefore: requestedTargetId,
+          targetAfter: requestedTargetId,
+          matchCount: count,
+          pickedIndex: 0,
+          wait: toActionWaitEvidence({
+            requested: waitAfter ? { ...waitAfter, timeoutMs: waitTimeoutMs } : null,
+            observed: waited,
+          }),
+          assertions,
+          countAfter: null,
+          details: {
+            selector,
+            mode,
+            fileCount: fileInputs.length,
+            finalTitle,
+          },
+        })
+      : null;
     const report: TargetUploadReport = {
       ok: true,
       sessionId: session.sessionId,
@@ -202,8 +242,9 @@ export async function targetUpload(opts: {
       files: fileInputs.map(({ name, size, type }) => ({ name, size, type })),
       fileCount: fileInputs.length,
       mode,
+      ...(assertions ? { assertions } : {}),
       wait: waited,
-      ...(opts.proof
+      ...(includeProof
         ? {
             proof: {
               action: "upload",
@@ -216,6 +257,7 @@ export async function targetUpload(opts: {
               selector,
               countAfter: null,
             },
+            ...(proofEnvelope ? { proofEnvelope } : {}),
           }
         : {}),
       timingMs: {

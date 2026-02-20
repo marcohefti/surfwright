@@ -1,4 +1,4 @@
-import type { ActionTimingMs, DownloadCaptureReport, SessionSource } from "../types.js";
+import type { ActionAssertionReport, ActionProofEnvelope, ActionTimingMs, DownloadCaptureReport, SessionSource } from "../types.js";
 export type TargetListReport = {
   ok: true;
   sessionId: string;
@@ -190,6 +190,8 @@ export type TargetClickReport = {
     openedTargetId: string | null;
     countAfter: number | null;
   };
+  proofEnvelope?: ActionProofEnvelope;
+  assertions?: ActionAssertionReport | null;
   delta?: TargetClickDeltaEvidence;
   handoff: {
     sameTarget: boolean;
@@ -222,6 +224,8 @@ export type TargetDownloadReport = {
   url: string;
   title: string;
   download: DownloadCaptureReport;
+  proofEnvelope?: ActionProofEnvelope;
+  assertions?: ActionAssertionReport | null;
   timingMs: ActionTimingMs;
 };
 
@@ -422,6 +426,7 @@ export type TargetWaitReport = {
     elapsedMs: number;
     satisfied: boolean;
   };
+  assertions?: ActionAssertionReport | null;
   timingMs: ActionTimingMs;
 };
 export type TargetUrlAssertReport = {

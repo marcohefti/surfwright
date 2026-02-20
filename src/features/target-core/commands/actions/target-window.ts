@@ -119,6 +119,9 @@ export const targetDialogCommandSpec: TargetCommandSpec = {
       .option("--wait-network-idle", "After dialog action, wait for network idle")
       .option("--wait-timeout-ms <ms>", "Post-dialog wait timeout budget in milliseconds", ctx.parseTimeoutMs)
       .option("--proof", "Include one-shot evidence payload for dialog result", false)
+      .option("--assert-url-prefix <prefix>", "Post-dialog assertion: final URL must start with prefix")
+      .option("--assert-selector <query>", "Post-dialog assertion: selector must be visible")
+      .option("--assert-text <text>", "Post-dialog assertion: text must be present in page body")
       .option("--timeout-ms <ms>", "Dialog timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
@@ -145,6 +148,9 @@ export const targetDialogCommandSpec: TargetCommandSpec = {
             waitNetworkIdle?: boolean;
             waitTimeoutMs?: number;
             proof?: boolean;
+            assertUrlPrefix?: string;
+            assertSelector?: string;
+            assertText?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -169,6 +175,9 @@ export const targetDialogCommandSpec: TargetCommandSpec = {
               waitNetworkIdle: Boolean(options.waitNetworkIdle),
               waitTimeoutMs: options.waitTimeoutMs,
               proof: Boolean(options.proof),
+              assertUrlPrefix: options.assertUrlPrefix,
+              assertSelector: options.assertSelector,
+              assertText: options.assertText,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

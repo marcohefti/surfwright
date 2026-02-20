@@ -39,13 +39,13 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.click",
     usage:
-      "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "click the first matching element in a target",
   },
   {
     id: "target.download",
     usage:
-      "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "click a deterministic element and capture a download artifact",
   },
   {
@@ -57,7 +57,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.fill",
     usage:
-      "surfwright target fill <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] --value <text> [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target fill <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] --value <text> [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "fill the first matching form control in a target",
   },
   {
@@ -69,19 +69,19 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.upload",
     usage:
-      "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "upload one or more files via input or file chooser fallback",
   },
   {
     id: "target.keypress",
     usage:
-      "surfwright target keypress <targetId> --key <key> [--text <query> | --selector <query>] [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target keypress <targetId> --key <key> [--text <query> | --selector <query>] [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "send a deterministic keypress to page or focused matched element",
   },
   {
     id: "target.drag-drop",
     usage:
-      "surfwright target drag-drop <targetId> --from <selector> --to <selector> [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target drag-drop <targetId> --from <selector> --to <selector> [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "perform deterministic drag and drop between selectors",
   },
   {
@@ -99,7 +99,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.dialog",
     usage:
-      "surfwright target dialog <targetId> [--action <accept|dismiss>] [--prompt-text <text>] [--trigger-text <query> | --trigger-selector <query>] [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target dialog <targetId> [--action <accept|dismiss>] [--prompt-text <text>] [--trigger-text <query> | --trigger-selector <query>] [--contains <text>] [--visible-only] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "accept or dismiss the next dialog, optionally with trigger click",
   },
   {
@@ -201,7 +201,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.wait",
     usage:
-      "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--frame-scope <scope>] [--wait-timeout-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target wait <targetId> (--for-text <text> | --for-selector <query> | --network-idle) [--frame-scope <scope>] [--wait-timeout-ms <ms>] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "wait for deterministic readiness condition on a target",
   },
   {

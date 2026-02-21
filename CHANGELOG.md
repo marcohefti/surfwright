@@ -29,6 +29,9 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target extract --kind table-rows` with optional schema mapping (`--schema-json|--schema-file`) and deterministic record dedupe (`--dedupe-by`) to reduce `target eval` dependence.
 - [open] Added additive navigation classification field `blockType` (`auth|captcha|consent|unknown`) to `open` reports.
 - [target] Added additive `blockType` classification to `target url-assert` reports for auth/captcha/consent-aware URL assertions.
+- [run] Added `run` plan-step support for `fill` and `upload` so multi-step plans can execute full form workflows without eval glue.
+- [target] Added `target click-read` as a composed primitive to click and then read bounded text in one deterministic command.
+- [target] Added `target extract --summary` for compact summary/proof fields (`itemCount`, `totalRawCount`, `firstTitle`, `firstUrl`, `firstCommand`, `source`).
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
@@ -44,6 +47,8 @@ All notable changes to SurfWright are documented here.
 - [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage` to reduce startup flakes in constrained environments.
 - [target] `target download` payload now includes first-class download proof fields: `downloadStarted`, `sourceUrl`, `fileName`, `bytes`, and `mime` (legacy `filename`/`size` retained).
 - [errors] `target click` mismatch failures now include stronger disambiguation context (`withinSelector`, bounded candidate sample) for faster recovery without blind retries.
+- [target] `target download` now also emits additive top-level fields (`downloadStarted`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`) while preserving nested `download.*`.
+- [target] `target style` now emits a compact additive `proof` payload so `--output-shape proof` is directly actionable without extra parsing.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
@@ -52,6 +57,7 @@ All notable changes to SurfWright are documented here.
 - [cli] Commander parse failures now map to typed JSON `E_QUERY_INVALID` responses (with bounded hints/hintContext) in JSON mode.
 - [target] `target eval` timeout handling now performs best-effort CDP termination/stop-loading recovery so follow-up commands remain stable after `E_EVAL_TIMEOUT`.
 - [session] `session attach` unreachable failures now redact sensitive CDP query credentials in error text.
+- [errors] `E_SESSION_NOT_FOUND` and `E_TARGET_SESSION_UNKNOWN` now include bounded continuity hints/hintContext for faster recovery after stale session/target mappings.
 
 ### Deprecated
 - None.

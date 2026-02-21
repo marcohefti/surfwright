@@ -178,6 +178,7 @@ export async function targetExtract(opts: {
   schemaJson?: string;
   schemaFile?: string;
   dedupeBy?: string;
+  summary?: boolean;
 }): Promise<TargetExtractReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -187,6 +188,7 @@ export async function targetExtract(opts: {
   const kind = parseKind(opts.kind);
   const limit = parseLimit(opts.limit);
   const includeActionable = Boolean(opts.includeActionable);
+  const includeSummary = Boolean(opts.summary);
   const schema = parseExtractSchema({
     schemaJson: opts.schemaJson,
     schemaFile: opts.schemaFile,
@@ -356,6 +358,18 @@ export async function targetExtract(opts: {
     }
 
     const actionCompletedAt = Date.now();
+    const firstItem = merged[0] ?? null;
+    const summary = includeSummary
+      ? {
+          itemCount: merged.length,
+          totalRawCount,
+          truncated: totalRawCount > merged.length,
+          firstTitle: firstItem?.title ?? null,
+          firstUrl: firstItem?.url ?? null,
+          firstCommand: firstItem?.command ?? null,
+          source,
+        }
+      : null;
     const report: TargetExtractReport = {
       ok: true,
       sessionId: session.sessionId,
@@ -384,6 +398,7 @@ export async function targetExtract(opts: {
             records: mappedRecords ?? [],
           }
         : {}),
+      ...(summary ? { summary, proof: summary } : {}),
       truncated: totalRawCount > merged.length,
       hints,
       timingMs: {

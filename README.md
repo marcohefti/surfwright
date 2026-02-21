@@ -149,9 +149,12 @@ surfwright --output-shape compact target click <targetId> --text "Delete" --visi
 surfwright target fill <targetId> --selector "#email" --value "agent@example.com" --wait-network-idle --proof
 surfwright target fill <targetId> --selector "#search" --value "surfwright" --event-mode realistic
 surfwright target click <targetId> --text "Sort" --within "#results-table" --proof
+surfwright target click-read <targetId> --text "Pricing" --read-selector main --chunk-size 1200 --chunk 1
 surfwright target keypress <targetId> --key Enter --selector "#search" --wait-for-selector ".results" --proof
 surfwright target style <targetId> --selector ".btn.btn-primary" --properties background-color,color,font-size,border-radius
+surfwright --output-shape proof target style <targetId> --selector ".btn.btn-primary"
 surfwright target extract <targetId> --kind docs-commands --selector main --limit 5
+surfwright --output-shape proof target extract <targetId> --kind docs-commands --selector main --limit 5 --summary
 surfwright target extract <targetId> --kind table-rows --schema-json '{"name":"record.Name","price":"record.Price"}' --dedupe-by name
 surfwright target extract <targetId> --kind headings --selector main --limit 12
 ```
@@ -164,7 +167,9 @@ surfwright target extract <targetId> --kind headings --selector main --limit 12
 `target fill|keypress|upload|drag-drop|dialog` now support the same post-action wait controls (`--wait-for-text|--wait-for-selector|--wait-network-idle`, `--wait-timeout-ms`) and optional `--proof`.
 `open|target click|target fill|target keypress|target upload|target drag-drop|target dialog|target download|target wait` support additive post-action assertions: `--assert-url-prefix`, `--assert-selector`, `--assert-text`.
 `open` and `target url-assert` include additive `blockType` (`auth|captcha|consent|unknown`) for navigation gating triage.
-`target download` includes additive artifact-proof fields (`downloadStarted`, `sourceUrl`, `fileName`, `bytes`, `mime`) while keeping `filename`/`size` for compatibility.
+`target download` includes additive top-level fields (`downloadStarted`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`) while keeping nested `download.*` (`fileName`/`filename`, `bytes`/`size`) for compatibility.
+`target extract --summary` adds compact summary/proof fields (`itemCount`, `totalRawCount`, `firstTitle`, `firstUrl`, `firstCommand`) for direct proof collection.
+`run` pipeline step coverage includes `fill` and `upload` (not just read/click/eval/snapshot), so plans can execute full form workflows without `target eval` glue.
 Prefer `target extract`, `target style`, and `target read` before `target eval`; when you need eval, `--output-shape compact` keeps payloads lean.
 
 Use workspace profile for persistent login state:

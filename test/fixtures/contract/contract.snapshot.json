@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:8dfaf35211e15137a1575321888544186ae6fbddef78fc554d22f1cb9066582a",
+  "contractFingerprint": "sha256:c73d56b44834fa2d2a8246fd8aa28d8b56906e007f6ef233eca7064fdd6282f8",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -131,6 +131,11 @@
       "summary": "click explicit viewport coordinates on a target"
     },
     {
+      "id": "target.click-read",
+      "usage": "surfwright target click-read <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--within <selector>] [--frame-scope <scope>] [--index <n>] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--read-selector <query>] [--read-visible-only] [--read-frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "summary": "click then immediately read bounded text in one deterministic command"
+    },
+    {
       "id": "target.close",
       "usage": "surfwright target close <targetId> [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "close a target by handle with deterministic confirmation payload"
@@ -177,7 +182,7 @@
     },
     {
       "id": "target.extract",
-      "usage": "surfwright target extract <targetId> [--kind <generic|blog|news|docs|docs-commands|headings|links|codeblocks|forms|tables|table-rows>] [--selector <query>] [--visible-only] [--include-actionable] [--schema-json <json> | --schema-file <path>] [--dedupe-by <csv>] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target extract <targetId> [--kind <generic|blog|news|docs|docs-commands|headings|links|codeblocks|forms|tables|table-rows>] [--selector <query>] [--visible-only] [--include-actionable] [--schema-json <json> | --schema-file <path>] [--dedupe-by <csv>] [--summary] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "extract structured records from a target using generic content kinds"
     },
     {

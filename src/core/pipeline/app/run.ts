@@ -7,10 +7,12 @@ import {
   targetClick,
   targetEval,
   targetExtract,
+  targetFill,
   targetFind,
   targetList,
   targetRead,
   targetSnapshot,
+  targetUpload,
   targetWait,
 } from "../../target/public.js";
 import type { SessionReport } from "../../types.js";
@@ -132,6 +134,82 @@ export async function runPipeline(opts: {
         waitForSelector: input.waitForSelector,
         waitNetworkIdle: input.waitNetworkIdle,
         snapshot: input.snapshot,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    fill: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      textQuery?: string;
+      selectorQuery?: string;
+      containsQuery?: string;
+      visibleOnly: boolean;
+      frameScope?: string;
+      value: string;
+      eventsInput?: string;
+      eventModeInput?: string;
+      waitForText?: string;
+      waitForSelector?: string;
+      waitNetworkIdle: boolean;
+      waitTimeoutMs?: number;
+      proof: boolean;
+      assertUrlPrefix?: string;
+      assertSelector?: string;
+      assertText?: string;
+      persistState: boolean;
+    }) =>
+      (await targetFill({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        textQuery: input.textQuery,
+        selectorQuery: input.selectorQuery,
+        containsQuery: input.containsQuery,
+        visibleOnly: input.visibleOnly,
+        frameScope: input.frameScope,
+        value: input.value,
+        eventsInput: input.eventsInput,
+        eventModeInput: input.eventModeInput,
+        waitForText: input.waitForText,
+        waitForSelector: input.waitForSelector,
+        waitNetworkIdle: input.waitNetworkIdle,
+        waitTimeoutMs: input.waitTimeoutMs,
+        proof: input.proof,
+        assertUrlPrefix: input.assertUrlPrefix,
+        assertSelector: input.assertSelector,
+        assertText: input.assertText,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    upload: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      selectorQuery: string;
+      files: string[];
+      waitForText?: string;
+      waitForSelector?: string;
+      waitNetworkIdle: boolean;
+      waitTimeoutMs?: number;
+      proof: boolean;
+      assertUrlPrefix?: string;
+      assertSelector?: string;
+      assertText?: string;
+      persistState: boolean;
+    }) =>
+      (await targetUpload({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        selectorQuery: input.selectorQuery,
+        files: input.files,
+        waitForText: input.waitForText,
+        waitForSelector: input.waitForSelector,
+        waitNetworkIdle: input.waitNetworkIdle,
+        waitTimeoutMs: input.waitTimeoutMs,
+        proof: input.proof,
+        assertUrlPrefix: input.assertUrlPrefix,
+        assertSelector: input.assertSelector,
+        assertText: input.assertText,
         persistState: input.persistState,
       })) as unknown as Record<string, unknown>,
     read: async (input: {

@@ -95,6 +95,11 @@ test("target download captures deterministic download artifact", async () => {
     assert.equal(dlResult.status, 0, dlResult.stdout || dlResult.stderr);
     const payload = parseJson(dlResult.stdout);
     assert.equal(payload.ok, true);
+    assert.equal(payload.downloadStarted, true);
+    assert.equal(payload.downloadStatus, 200);
+    assert.equal(typeof payload.downloadFinalUrl, "string");
+    assert.equal(typeof payload.downloadFileName, "string");
+    assert.equal(typeof payload.downloadBytes, "number");
     assert.equal(typeof payload.download, "object");
     assert.equal(payload.download !== null, true);
     assert.equal(payload.download.downloadStarted, true);

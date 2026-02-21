@@ -2,7 +2,6 @@ import type { TargetExtractReport } from "../../../types.js";
 import { normalizeExtractWhitespace, type ExtractItemDraft } from "../target-extract-assist.js";
 import type { BrowserNodeLike, BrowserRuntimeLike } from "../types/browser-dom-types.js";
 import { targetExtractTableRowsOp } from "./target-extract-table-rows-op.js";
-
 type ExtractEvalItem = {
   title: string;
   url: string | null;
@@ -12,14 +11,8 @@ type ExtractEvalItem = {
   command?: string | null;
   section?: string | null;
   record?: Record<string, string | null>;
-  actionable?: {
-    handle: string | null;
-    selectorHint: string | null;
-    frameId: string | null;
-    href: string | null;
-  };
+  actionable?: { handle: string | null; selectorHint: string | null; frameId: string | null; href: string | null };
 };
-
 type ExtractFramePayload = {
   matched: boolean;
   items: ExtractEvalItem[];

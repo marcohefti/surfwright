@@ -56,6 +56,7 @@ test("target extract supports table-rows schema mapping and deterministic dedupe
     "{\"name\":\"record.Company\",\"score\":\"record.Score\"}",
     "--dedupe-by",
     "name,score",
+    "--summary",
     "--timeout-ms",
     "5000",
   ]);
@@ -67,6 +68,12 @@ test("target extract supports table-rows schema mapping and deterministic dedupe
   assert.equal(typeof payload.schema, "object");
   assert.equal(Array.isArray(payload.records), true);
   assert.equal(payload.records.length, 2);
+  assert.equal(typeof payload.summary, "object");
+  assert.equal(payload.summary.itemCount, 2);
+  assert.equal(payload.summary.totalRawCount, 3);
+  assert.equal(payload.summary.firstTitle, "SurfWright");
+  assert.equal(payload.summary.firstCommand, null);
+  assert.equal(typeof payload.proof, "object");
   assert.deepEqual(payload.records[0], { name: "SurfWright", score: "99" });
   assert.deepEqual(payload.records[1], { name: "Chrome MCP", score: "72" });
 });

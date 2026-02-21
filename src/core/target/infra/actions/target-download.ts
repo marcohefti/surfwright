@@ -304,6 +304,11 @@ export async function targetDownload(opts: {
       },
       url: currentUrl,
       title: currentTitle,
+      downloadStarted: true,
+      downloadStatus: status,
+      downloadFinalUrl: finalUrl,
+      downloadFileName: providers().path.basename(outPath),
+      downloadBytes: stat.size,
       download: {
         downloadStarted: true,
         sourceUrl,

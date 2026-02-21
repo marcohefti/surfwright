@@ -87,6 +87,38 @@ export async function resolveSessionForAction(opts: {
 }> {
   const targetIdHint = typeof opts.targetIdHint === "string" && opts.targetIdHint.length > 0 ? sanitizeTargetId(opts.targetIdHint) : null;
 
+  const buildSessionNotFoundError = (sessionId: string): CliError => {
+    const snapshot = readState();
+    return new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`, {
+      hints: [
+        "Run `surfwright session list` to inspect active/known sessions",
+        "If no suitable session exists, run `surfwright session ensure` (or `session new`)",
+        "If this came from a stale target, reacquire targetId via `surfwright target list --session <id>`",
+      ],
+      hintContext: {
+        requestedSessionId: sessionId,
+        activeSessionId: snapshot.activeSessionId ?? null,
+        knownSessionCount: Object.keys(snapshot.sessions).length,
+        targetHint: targetIdHint ?? null,
+      },
+    });
+  };
+
+  const buildTargetSessionUnknownError = (targetId: string): CliError => {
+    const snapshot = readState();
+    return new CliError("E_TARGET_SESSION_UNKNOWN", `Target ${targetId} has no recorded session mapping`, {
+      hints: [
+        "Reacquire a live targetId with `surfwright target list --session <id>`",
+        "If needed, open/reopen the page first with `surfwright open <url>`",
+      ],
+      hintContext: {
+        requestedTargetId: targetId,
+        activeSessionId: snapshot.activeSessionId ?? null,
+        knownTargetCount: Object.keys(snapshot.targets).length,
+      },
+    });
+  };
+
   if (typeof opts.profileHint === "string" && opts.profileHint.trim().length > 0) {
     if (typeof opts.sessionHint === "string" && opts.sessionHint.trim().length > 0) {
       throw new CliError("E_QUERY_INVALID", "Use either --session or --profile (not both)");
@@ -116,12 +148,12 @@ export async function resolveSessionForAction(opts: {
     const snapshot = readState();
     const existing = snapshot.sessions[sessionId];
     if (!existing) {
-      throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
+      throw buildSessionNotFoundError(sessionId);
     }
     if (targetIdHint) {
       const targetRecord = snapshot.targets[targetIdHint];
       if (!targetRecord) {
-        throw new CliError("E_TARGET_SESSION_UNKNOWN", `Target ${targetIdHint} has no recorded session mapping`);
+        throw buildTargetSessionUnknownError(targetIdHint);
       }
       if (targetRecord.sessionId !== sessionId) {
         throw new CliError("E_TARGET_SESSION_MISMATCH", `Target ${targetIdHint} belongs to session ${targetRecord.sessionId}`);
@@ -134,7 +166,7 @@ export async function resolveSessionForAction(opts: {
     );
     await mutateState(async (state) => {
       if (!state.sessions[sessionId]) {
-        throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);
+        throw buildSessionNotFoundError(sessionId);
       }
       state.sessions[sessionId] = ensured.session;
       state.activeSessionId = sessionId;
@@ -154,7 +186,7 @@ export async function resolveSessionForAction(opts: {
     const snapshot = readState();
     const targetRecord = snapshot.targets[targetIdHint];
     if (!targetRecord) {
-      throw new CliError("E_TARGET_SESSION_UNKNOWN", `Target ${targetIdHint} has no recorded session mapping`);
+      throw buildTargetSessionUnknownError(targetIdHint);
     }
     const sessionId = targetRecord.sessionId;
     return await resolveExplicitSession(sessionId).then((resolved) => ({

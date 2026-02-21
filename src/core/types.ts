@@ -211,13 +211,10 @@ export type {
   TargetClickExplainReport,
   TargetClickReport,
   TargetDownloadReport,
-  TargetConsoleTailReport,
   TargetEvalReport,
   TargetExtractReport,
   TargetFindReport,
   TargetFramesReport,
-  TargetHealthReport,
-  TargetHudReport,
   TargetListReport,
   TargetPruneReport,
   TargetReadReport,
@@ -227,6 +224,7 @@ export type {
   TargetUrlAssertReport,
   TargetWaitReport,
 } from "./types/target.js";
+export type { TargetConsoleTailReport, TargetHealthReport, TargetHudReport } from "./types/target-observability.js";
 export type {
   TargetNetworkArtifactListReport,
   TargetNetworkArtifactPruneReport,

@@ -5,7 +5,19 @@ const TEMPLATE_EXACT_RE = /^\{\{\s*([^{}]+?)\s*\}\}$/;
 const TEMPLATE_EMBEDDED_RE = /\{\{\s*([^{}]+?)\s*\}\}/g;
 const STEP_ALIAS_RE = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
 
-export const SUPPORTED_STEP_IDS = new Set(["open", "list", "snapshot", "find", "click", "read", "eval", "wait", "extract"]);
+export const SUPPORTED_STEP_IDS = new Set([
+  "open",
+  "list",
+  "snapshot",
+  "find",
+  "click",
+  "fill",
+  "upload",
+  "read",
+  "eval",
+  "wait",
+  "extract",
+]);
 
 export type PipelineStepInput = {
   id: string;
@@ -30,6 +42,16 @@ export type PipelineStepInput = {
   limit?: number;
   chunkSize?: number;
   chunk?: number;
+  value?: string;
+  events?: string;
+  eventMode?: string;
+  files?: string | string[];
+  file?: string | string[];
+  waitTimeoutMs?: number;
+  proof?: boolean;
+  assertUrlPrefix?: string;
+  assertSelector?: string;
+  assertText?: string;
   expression?: string;
   argJson?: string;
   captureConsole?: boolean;
@@ -80,6 +102,44 @@ export type PipelineOps = {
     waitForSelector?: string;
     waitNetworkIdle: boolean;
     snapshot: boolean;
+    persistState: boolean;
+  }) => Promise<Record<string, unknown>>;
+  fill: (opts: {
+    targetId: string;
+    timeoutMs: number;
+    sessionId?: string;
+    textQuery?: string;
+    selectorQuery?: string;
+    containsQuery?: string;
+    visibleOnly: boolean;
+    frameScope?: string;
+    value: string;
+    eventsInput?: string;
+    eventModeInput?: string;
+    waitForText?: string;
+    waitForSelector?: string;
+    waitNetworkIdle: boolean;
+    waitTimeoutMs?: number;
+    proof: boolean;
+    assertUrlPrefix?: string;
+    assertSelector?: string;
+    assertText?: string;
+    persistState: boolean;
+  }) => Promise<Record<string, unknown>>;
+  upload: (opts: {
+    targetId: string;
+    timeoutMs: number;
+    sessionId?: string;
+    selectorQuery: string;
+    files: string[];
+    waitForText?: string;
+    waitForSelector?: string;
+    waitNetworkIdle: boolean;
+    waitTimeoutMs?: number;
+    proof: boolean;
+    assertUrlPrefix?: string;
+    assertSelector?: string;
+    assertText?: string;
     persistState: boolean;
   }) => Promise<Record<string, unknown>>;
   read: (opts: {
@@ -261,6 +321,27 @@ export function parseOptionalInteger(input: unknown, pathLabel: string): number 
   return input;
 }
 
+export function parseOptionalStringOrStringArray(input: unknown, pathLabel: string): string[] | undefined {
+  if (typeof input === "undefined") {
+    return undefined;
+  }
+  if (typeof input === "string") {
+    return [input];
+  }
+  if (!Array.isArray(input)) {
+    throw new CliError("E_QUERY_INVALID", `${pathLabel} must be a string or string[]`);
+  }
+  const out: string[] = [];
+  for (let index = 0; index < input.length; index += 1) {
+    const value = input[index];
+    if (typeof value !== "string") {
+      throw new CliError("E_QUERY_INVALID", `${pathLabel}[${index}] must be a string`);
+    }
+    out.push(value);
+  }
+  return out;
+}
+
 export function lintPlan(input: { steps: PipelineStepInput[] }): PipelineLintIssue[] {
   const issues: PipelineLintIssue[] = [];
   const aliases = new Set<string>();
@@ -291,8 +372,33 @@ export function lintPlan(input: { steps: PipelineStepInput[] }): PipelineLintIss
     if (step.id === "open" && (typeof step.url !== "string" || step.url.trim().length === 0)) {
       issues.push({ level: "error", path: `steps[${index}].url`, message: "url is required for open" });
     }
-    if ((step.id === "click" || step.id === "find") && (!step.text || typeof step.text !== "string") && (!step.selector || typeof step.selector !== "string")) {
+    if (
+      (step.id === "click" || step.id === "find" || step.id === "fill") &&
+      (!step.text || (typeof step.text !== "string" && !isTemplateString(step.text))) &&
+      (!step.selector || (typeof step.selector !== "string" && !isTemplateString(step.selector)))
+    ) {
       issues.push({ level: "error", path: `steps[${index}]`, message: `${step.id} requires text or selector` });
+    }
+    if (step.id === "fill" && typeof step.value !== "string" && !isTemplateString(step.value)) {
+      issues.push({ level: "error", path: `steps[${index}].value`, message: "value is required for fill" });
+    }
+    if (step.id === "upload") {
+      const selectorValid = typeof step.selector === "string" || isTemplateString(step.selector);
+      if (!selectorValid) {
+        issues.push({ level: "error", path: `steps[${index}].selector`, message: "selector is required for upload" });
+      }
+      const filesInput = typeof step.files !== "undefined" ? step.files : step.file;
+      if (typeof filesInput === "undefined") {
+        issues.push({ level: "error", path: `steps[${index}].files`, message: "files (or file) is required for upload" });
+      } else if (typeof filesInput !== "string" && !Array.isArray(filesInput) && !isTemplateString(filesInput)) {
+        issues.push({
+          level: "error",
+          path: `steps[${index}].files`,
+          message: "files (or file) must be a string or string[]",
+        });
+      } else if (Array.isArray(filesInput) && filesInput.length < 1) {
+        issues.push({ level: "error", path: `steps[${index}].files`, message: "files must include at least one path" });
+      }
     }
     if (step.id === "extract" && typeof step.kind !== "undefined" && typeof step.kind !== "string") {
       issues.push({ level: "error", path: `steps[${index}].kind`, message: "kind must be a string" });
@@ -384,42 +490,4 @@ export function resolvePlanSource(opts: {
     },
     plan: parsePlanObject(replayRecord.plan, "replay artifact plan"),
   };
-}
-
-export function evaluateAssertions(step: PipelineStepInput, report: Record<string, unknown>) {
-  const assert = step.assert;
-  const checks: Array<{ kind: string; path: string; ok: boolean; message: string }> = [];
-  if (!assert || typeof assert !== "object") {
-    return { total: 0, failed: 0, checks };
-  }
-  const equals = typeof assert.equals === "object" && assert.equals !== null ? assert.equals : {};
-  for (const [pathExpr, expected] of Object.entries(equals)) {
-    const actual = readPathValue(report, pathExpr);
-    const ok = Object.is(actual, expected);
-    checks.push({ kind: "equals", path: pathExpr, ok, message: ok ? "ok" : `expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}` });
-  }
-  const contains = typeof assert.contains === "object" && assert.contains !== null ? assert.contains : {};
-  for (const [pathExpr, needle] of Object.entries(contains)) {
-    const actual = readPathValue(report, pathExpr);
-    const text = typeof actual === "string" ? actual : "";
-    const expectedText = typeof needle === "string" ? needle : JSON.stringify(needle);
-    checks.push({ kind: "contains", path: pathExpr, ok: text.includes(expectedText), message: text.includes(expectedText) ? "ok" : `expected string to include ${JSON.stringify(expectedText)}` });
-  }
-  const truthy = Array.isArray(assert.truthy) ? assert.truthy : [];
-  for (const pathExpr of truthy) {
-    if (typeof pathExpr !== "string") {
-      continue;
-    }
-    const ok = Boolean(readPathValue(report, pathExpr));
-    checks.push({ kind: "truthy", path: pathExpr, ok, message: ok ? "ok" : "expected truthy value" });
-  }
-  const exists = Array.isArray(assert.exists) ? assert.exists : [];
-  for (const pathExpr of exists) {
-    if (typeof pathExpr !== "string") {
-      continue;
-    }
-    const ok = typeof readPathValue(report, pathExpr) !== "undefined";
-    checks.push({ kind: "exists", path: pathExpr, ok, message: ok ? "ok" : "expected path to exist" });
-  }
-  return { total: checks.length, failed: checks.filter((entry) => !entry.ok).length, checks };
 }

@@ -43,6 +43,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "click the first matching element in a target",
   },
   {
+    id: "target.click-read",
+    usage:
+      "surfwright target click-read <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--within <selector>] [--frame-scope <scope>] [--index <n>] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--read-selector <query>] [--read-visible-only] [--read-frame-scope <scope>] [--chunk-size <n>] [--chunk <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+    summary: "click then immediately read bounded text in one deterministic command",
+  },
+  {
     id: "target.download",
     usage:
       "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
@@ -135,7 +141,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.extract",
     usage:
-      "surfwright target extract <targetId> [--kind <generic|blog|news|docs|docs-commands|headings|links|codeblocks|forms|tables|table-rows>] [--selector <query>] [--visible-only] [--include-actionable] [--schema-json <json> | --schema-file <path>] [--dedupe-by <csv>] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target extract <targetId> [--kind <generic|blog|news|docs|docs-commands|headings|links|codeblocks|forms|tables|table-rows>] [--selector <query>] [--visible-only] [--include-actionable] [--schema-json <json> | --schema-file <path>] [--dedupe-by <csv>] [--summary] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "extract structured records from a target using generic content kinds",
   },
   {

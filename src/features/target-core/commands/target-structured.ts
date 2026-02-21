@@ -54,6 +54,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
       .option("--schema-json <json>", "Map extracted items into typed records (JSON object of outputField -> sourcePath)")
       .option("--schema-file <path>", "Read schema mapping JSON from file")
       .option("--dedupe-by <csv>", "Comma-separated schema output fields used for deterministic record dedupe")
+      .option("--summary", "Include compact summary/proof fields (count + first item hints)")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--limit <n>", "Maximum extracted items to return")
       .option("--timeout-ms <ms>", "Extraction timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
@@ -85,6 +86,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
             schemaJson?: string;
             schemaFile?: string;
             dedupeBy?: string;
+            summary?: boolean;
             frameScope?: string;
             limit?: string;
             timeoutMs: number;
@@ -108,6 +110,7 @@ export const targetExtractCommandSpec: TargetCommandSpec = {
               schemaJson: options.schemaJson,
               schemaFile: options.schemaFile,
               dedupeBy: options.dedupeBy,
+              summary: Boolean(options.summary),
               frameScope: options.frameScope,
               limit,
               persistState: options.persist !== false,

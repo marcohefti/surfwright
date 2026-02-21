@@ -170,6 +170,16 @@ export async function targetStyle(opts: {
       values,
       // Compatibility alias for evaluators that expect element/computed keys.
       computed: values,
+      proof: {
+        action: "style",
+        queryMode: parsed.mode,
+        query: parsed.query,
+        selector: parsed.selector,
+        pickedIndex: selected.index,
+        inspectedText: inspected.text,
+        inspectedSelectorHint: inspected.selectorHint,
+        values,
+      },
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,

@@ -29,6 +29,11 @@ function compactKeys(): string[] {
     "url",
     "title",
     "status",
+    "downloadStarted",
+    "downloadStatus",
+    "downloadFinalUrl",
+    "downloadFileName",
+    "downloadBytes",
     "mode",
     "query",
     "selector",
@@ -38,6 +43,9 @@ function compactKeys(): string[] {
     "wait",
     "proofEnvelope",
     "proof",
+    "summary",
+    "click",
+    "read",
     "timingMs",
   ];
 }
@@ -67,6 +75,18 @@ function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputSh
     : Object.prototype.hasOwnProperty.call(report, "proof")
       ? report.proof
       : null;
+  const derivedProof =
+    proof ??
+    (Object.prototype.hasOwnProperty.call(report, "summary") ? report.summary : null) ??
+    (Object.prototype.hasOwnProperty.call(report, "downloadStarted")
+      ? {
+          downloadStarted: report.downloadStarted,
+          downloadStatus: report.downloadStatus,
+          downloadFinalUrl: report.downloadFinalUrl,
+          downloadFileName: report.downloadFileName,
+          downloadBytes: report.downloadBytes,
+        }
+      : null);
   if (Object.prototype.hasOwnProperty.call(report, "sessionId")) {
     out.sessionId = report.sessionId;
   }
@@ -85,7 +105,7 @@ function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputSh
   if (Object.prototype.hasOwnProperty.call(report, "repeat")) {
     out.repeat = report.repeat;
   }
-  out.proof = proof;
+  out.proof = derivedProof;
   return out;
 }
 

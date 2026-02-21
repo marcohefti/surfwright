@@ -1,12 +1,14 @@
 import {
   targetClickCommandSpec,
   targetClickAtCommandSpec,
+} from "./target-click.js";
+import {
+  targetClickReadCommandSpec,
   targetDragDropCommandSpec,
-  // click-related commands
   targetFillCommandSpec,
   targetKeypressCommandSpec,
   targetUploadCommandSpec,
-} from "./target-click.js";
+} from "./actions/target-interaction-commands.js";
 import { targetCloseCommandSpec, targetDialogCommandSpec, targetSpawnCommandSpec } from "./actions/target-window.js";
 import { targetDownloadCommandSpec } from "./actions/target-download.js";
 import {
@@ -52,6 +54,7 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetCountCommandSpec,
   targetFindCommandSpec,
   targetClickCommandSpec,
+  targetClickReadCommandSpec,
   targetDownloadCommandSpec,
   targetClickAtCommandSpec,
   targetFillCommandSpec,

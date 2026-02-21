@@ -6,6 +6,7 @@ import {
   parseOptionalBoolean,
   parseOptionalInteger,
   parseOptionalString,
+  parseOptionalStringOrStringArray,
   parseStepAlias,
   parseStepTimeoutMs,
   resolvePlanSource,
@@ -215,6 +216,69 @@ export async function executePipelinePlan(opts: {
           waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
           waitNetworkIdle: Boolean(step.waitNetworkIdle),
           snapshot: Boolean(step.snapshot),
+          persistState: !Boolean(step.noPersist),
+        });
+        break;
+      }
+      case "fill": {
+        if (!stepTargetId) {
+          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
+        }
+        const value = parseOptionalString(step.value, `steps[${index}].value`);
+        if (typeof value !== "string") {
+          throw new CliError("E_QUERY_INVALID", `steps[${index}].value is required for fill`);
+        }
+        report = await opts.ops.fill({
+          targetId: stepTargetId,
+          timeoutMs: stepTimeoutMs,
+          sessionId: ctx.sessionId,
+          textQuery: parseOptionalString(step.text, `steps[${index}].text`),
+          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+          containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
+          visibleOnly: Boolean(step.visibleOnly),
+          frameScope: stepFrameScope,
+          value,
+          eventsInput: parseOptionalString(step.events, `steps[${index}].events`),
+          eventModeInput: parseOptionalString(step.eventMode, `steps[${index}].eventMode`),
+          waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
+          waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
+          waitNetworkIdle: Boolean(step.waitNetworkIdle),
+          waitTimeoutMs: parseOptionalInteger(step.waitTimeoutMs, `steps[${index}].waitTimeoutMs`),
+          proof: Boolean(step.proof),
+          assertUrlPrefix: parseOptionalString(step.assertUrlPrefix, `steps[${index}].assertUrlPrefix`),
+          assertSelector: parseOptionalString(step.assertSelector, `steps[${index}].assertSelector`),
+          assertText: parseOptionalString(step.assertText, `steps[${index}].assertText`),
+          persistState: !Boolean(step.noPersist),
+        });
+        break;
+      }
+      case "upload": {
+        if (!stepTargetId) {
+          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
+        }
+        const selectorQuery = parseOptionalString(step.selector, `steps[${index}].selector`);
+        if (typeof selectorQuery !== "string" || selectorQuery.length === 0) {
+          throw new CliError("E_QUERY_INVALID", `steps[${index}].selector is required for upload`);
+        }
+        const filesInput = typeof step.files !== "undefined" ? step.files : step.file;
+        const files = parseOptionalStringOrStringArray(filesInput, `steps[${index}].files`);
+        if (!files || files.length < 1) {
+          throw new CliError("E_QUERY_INVALID", `steps[${index}].files (or file) must include at least one path`);
+        }
+        report = await opts.ops.upload({
+          targetId: stepTargetId,
+          timeoutMs: stepTimeoutMs,
+          sessionId: ctx.sessionId,
+          selectorQuery,
+          files,
+          waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
+          waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
+          waitNetworkIdle: Boolean(step.waitNetworkIdle),
+          waitTimeoutMs: parseOptionalInteger(step.waitTimeoutMs, `steps[${index}].waitTimeoutMs`),
+          proof: Boolean(step.proof),
+          assertUrlPrefix: parseOptionalString(step.assertUrlPrefix, `steps[${index}].assertUrlPrefix`),
+          assertSelector: parseOptionalString(step.assertSelector, `steps[${index}].assertSelector`),
+          assertText: parseOptionalString(step.assertText, `steps[${index}].assertText`),
           persistState: !Boolean(step.noPersist),
         });
         break;

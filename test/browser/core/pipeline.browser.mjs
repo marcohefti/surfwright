@@ -114,3 +114,54 @@ test("run --log-ndjson writes compact append-only run log", () => {
   assert.equal(lines.some((line) => JSON.parse(line).phase === "run.start"), true);
   assert.equal(lines.some((line) => JSON.parse(line).phase === "run.end"), true);
 });
+
+test("run executes fill and upload steps with deterministic step reports", () => {
+  requireBrowser();
+
+  const fixturePath = path.join(TEST_STATE_DIR, "pipeline-upload.txt");
+  fs.writeFileSync(fixturePath, "pipeline upload fixture\n", "utf8");
+  const html = `
+    <title>Pipeline Fill Upload</title>
+    <main>
+      <input id="email" />
+      <input id="upload" type="file" />
+      <p id="status">ready</p>
+      <script>
+        const email = document.getElementById("email");
+        const upload = document.getElementById("upload");
+        const status = document.getElementById("status");
+        email.addEventListener("input", () => {
+          status.textContent = "filled:" + email.value;
+        });
+        upload.addEventListener("change", () => {
+          const count = upload.files ? upload.files.length : 0;
+          status.textContent = "uploaded:" + count;
+        });
+      </script>
+    </main>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+
+  const planPath = path.join(TEST_STATE_DIR, "plan-fill-upload.json");
+  const plan = {
+    steps: [
+      { id: "open", url: dataUrl, timeoutMs: 5000 },
+      { id: "fill", selector: "#email", value: "agent@example.com", waitForText: "filled:agent@example.com", timeoutMs: 5000, noPersist: true },
+      { id: "upload", selector: "#upload", files: [fixturePath], waitForText: "uploaded:1", timeoutMs: 5000, noPersist: true },
+      { id: "read", selector: "#status", timeoutMs: 5000, noPersist: true },
+    ],
+  };
+  fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
+
+  const result = runCli(["--json", "run", "--plan", planPath, "--timeout-ms", "5000"]);
+  assert.equal(result.status, 0, result.stdout || result.stderr);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(Array.isArray(payload.steps), true);
+  assert.equal(payload.steps.length, 4);
+  assert.equal(payload.steps[1].id, "fill");
+  assert.equal(payload.steps[2].id, "upload");
+  assert.equal(payload.steps[2].report.fileCount, 1);
+  assert.equal(typeof payload.steps[3].report.text, "string");
+  assert.equal(payload.steps[3].report.text.includes("uploaded:1"), true);
+});

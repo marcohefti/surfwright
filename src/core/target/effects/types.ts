@@ -216,6 +216,16 @@ export type TargetStyleReport = {
   properties: string[];
   values: Record<string, string | null>;
   computed: Record<string, string | null>;
+  proof?: {
+    action: "style";
+    queryMode: "text" | "selector";
+    query: string;
+    selector: string | null;
+    pickedIndex: number;
+    inspectedText: string;
+    inspectedSelectorHint: string | null;
+    values: Record<string, string | null>;
+  };
   timingMs: ActionTimingMs;
 };
 

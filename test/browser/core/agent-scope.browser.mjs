@@ -172,6 +172,9 @@ test("target style returns compatibility aliases for element/computed", () => {
   assert.equal(payload.element.text, "Primary");
   assert.equal(payload.values["background-color"], "rgb(13, 110, 253)");
   assert.equal(payload.computed["background-color"], "rgb(13, 110, 253)");
+  assert.equal(payload.proof.action, "style");
+  assert.equal(payload.proof.queryMode, "text");
+  assert.equal(payload.proof.inspectedText, "Primary");
 });
 
 test("target spawn close and dialog return typed failures", () => {

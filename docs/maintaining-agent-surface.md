@@ -29,7 +29,7 @@ Notes:
 - `pnpm validate` is the main gate. It runs policy, docs, perf budgets, contract snapshot checks, and knowledge-store drift checks.
 - Browser-dependent contract tests live under `test/browser/` and are not part of `pnpm test`. Run `pnpm test:browser` locally when changing browser-executing commands.
 - For a fast operator-surface sanity pass across core browser commands, run `pnpm smoke` (deterministic `data:` pages + minimal network probes).
-- If `surfwright contract` changes intentionally, update the snapshot (`pnpm contract:snapshot:update`) and keep skill pins aligned (`skills/surfwright/skill.json` and `skills/surfwright.lock.json`).
+- If `surfwright contract` changes intentionally, update the snapshot with `pnpm contract:snapshot:update` (this also auto-syncs skill `requires.contractFingerprint` in `skills/surfwright/skill.json` and `skills/surfwright.lock.json`).
 
 ## 3) Install/update local skill
 
@@ -87,6 +87,7 @@ Expect non-zero exit and `{"ok":false,"code":...}` payload.
 
 - If docs and code disagree, code + contract command win.
 - Fix docs/skill in the same change window; do not defer drift cleanup.
+- Do not ship deprecated compatibility aliases in output shapes/flags/commands. Remove obsolete surface area outright and update tests/docs/skill references atomically.
 
 ## 6) Edge-case fixture policy
 

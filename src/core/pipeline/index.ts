@@ -33,6 +33,182 @@ export function loadPipelinePlan(input: {
   return { loaded, issues, lintErrors };
 }
 
+type PipelineStepExecutorInput = {
+  step: PipelineStepInput;
+  index: number;
+  timeoutMs: number;
+  stepTargetId: string | undefined;
+  stepFrameScope: string | undefined;
+  sessionId: string | undefined;
+  ops: PipelineOps;
+};
+
+function requireStepTargetId(stepTargetId: string | undefined, stepIndex: number): string {
+  if (!stepTargetId) {
+    throw new CliError("E_QUERY_INVALID", `steps[${stepIndex}] requires targetId (or previous step must set one)`);
+  }
+  return stepTargetId;
+}
+
+const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput) => Promise<Record<string, unknown>>> = {
+  open: async ({ step, index, timeoutMs, sessionId, ops }) => {
+    const url = parseOptionalString(step.url, `steps[${index}].url`);
+    if (typeof url !== "string" || url.length === 0) {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].url is required for open`);
+    }
+    return await ops.open({
+      url,
+      timeoutMs,
+      sessionId,
+      reuseUrl: Boolean(step.reuseUrl),
+    });
+  },
+  list: async ({ step, timeoutMs, sessionId, ops }) =>
+    await ops.list({
+      timeoutMs,
+      sessionId,
+      persistState: !Boolean(step.noPersist),
+    }),
+  snapshot: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
+    await ops.snapshot({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+      visibleOnly: Boolean(step.visibleOnly),
+      frameScope: stepFrameScope,
+      persistState: !Boolean(step.noPersist),
+    }),
+  find: async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) =>
+    await ops.find({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      textQuery: parseOptionalString(step.text, `steps[${index}].text`),
+      selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+      containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
+      visibleOnly: Boolean(step.visibleOnly),
+      first: Boolean(step.first),
+      limit: parseOptionalInteger(step.limit, `steps[${index}].limit`),
+      persistState: !Boolean(step.noPersist),
+    }),
+  click: async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) =>
+    await ops.click({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      textQuery: parseOptionalString(step.text, `steps[${index}].text`),
+      selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+      containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
+      visibleOnly: Boolean(step.visibleOnly),
+      waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
+      waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
+      waitNetworkIdle: Boolean(step.waitNetworkIdle),
+      snapshot: Boolean(step.snapshot),
+      persistState: !Boolean(step.noPersist),
+    }),
+  fill: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) => {
+    const value = parseOptionalString(step.value, `steps[${index}].value`);
+    if (typeof value !== "string") {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].value is required for fill`);
+    }
+    return await ops.fill({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      textQuery: parseOptionalString(step.text, `steps[${index}].text`),
+      selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+      containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
+      visibleOnly: Boolean(step.visibleOnly),
+      frameScope: stepFrameScope,
+      value,
+      eventsInput: parseOptionalString(step.events, `steps[${index}].events`),
+      eventModeInput: parseOptionalString(step.eventMode, `steps[${index}].eventMode`),
+      waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
+      waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
+      waitNetworkIdle: Boolean(step.waitNetworkIdle),
+      waitTimeoutMs: parseOptionalInteger(step.waitTimeoutMs, `steps[${index}].waitTimeoutMs`),
+      proof: Boolean(step.proof),
+      assertUrlPrefix: parseOptionalString(step.assertUrlPrefix, `steps[${index}].assertUrlPrefix`),
+      assertSelector: parseOptionalString(step.assertSelector, `steps[${index}].assertSelector`),
+      assertText: parseOptionalString(step.assertText, `steps[${index}].assertText`),
+      persistState: !Boolean(step.noPersist),
+    });
+  },
+  upload: async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) => {
+    const selectorQuery = parseOptionalString(step.selector, `steps[${index}].selector`);
+    if (typeof selectorQuery !== "string" || selectorQuery.length === 0) {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].selector is required for upload`);
+    }
+    const filesInput = typeof step.files !== "undefined" ? step.files : step.file;
+    const files = parseOptionalStringOrStringArray(filesInput, `steps[${index}].files`);
+    if (!files || files.length < 1) {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].files (or file) must include at least one path`);
+    }
+    return await ops.upload({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      selectorQuery,
+      files,
+      waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
+      waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
+      waitNetworkIdle: Boolean(step.waitNetworkIdle),
+      waitTimeoutMs: parseOptionalInteger(step.waitTimeoutMs, `steps[${index}].waitTimeoutMs`),
+      proof: Boolean(step.proof),
+      assertUrlPrefix: parseOptionalString(step.assertUrlPrefix, `steps[${index}].assertUrlPrefix`),
+      assertSelector: parseOptionalString(step.assertSelector, `steps[${index}].assertSelector`),
+      assertText: parseOptionalString(step.assertText, `steps[${index}].assertText`),
+      persistState: !Boolean(step.noPersist),
+    });
+  },
+  read: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
+    await ops.read({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+      visibleOnly: Boolean(step.visibleOnly),
+      frameScope: stepFrameScope,
+      chunkSize: parseOptionalInteger(step.chunkSize, `steps[${index}].chunkSize`),
+      chunkIndex: parseOptionalInteger(step.chunk, `steps[${index}].chunk`),
+      persistState: !Boolean(step.noPersist),
+    }),
+  wait: async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) =>
+    await ops.wait({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      forText: parseOptionalString(step.forText, `steps[${index}].forText`),
+      forSelector: parseOptionalString(step.forSelector, `steps[${index}].forSelector`),
+      networkIdle: Boolean(step.networkIdle),
+      persistState: !Boolean(step.noPersist),
+    }),
+  eval: async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) =>
+    await ops.eval({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      expression: parseOptionalString(step.expression, `steps[${index}].expression`),
+      argJson: parseOptionalString(step.argJson, `steps[${index}].argJson`),
+      captureConsole: parseOptionalBoolean(step.captureConsole, `steps[${index}].captureConsole`),
+      maxConsole: parseOptionalInteger(step.maxConsole, `steps[${index}].maxConsole`),
+      persistState: !Boolean(step.noPersist),
+    }),
+  extract: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
+    await ops.extract({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      kind: parseOptionalString(step.kind, `steps[${index}].kind`),
+      selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+      visibleOnly: Boolean(step.visibleOnly),
+      frameScope: stepFrameScope,
+      limit: parseOptionalInteger(step.limit, `steps[${index}].limit`),
+      persistState: !Boolean(step.noPersist),
+    }),
+};
+
 export async function executePipelinePlan(opts: {
   planPath?: string;
   planJson?: string;
@@ -144,213 +320,19 @@ export async function executePipelinePlan(opts: {
       targetId: stepTargetId ?? null,
     });
 
-    let report: Record<string, unknown>;
-    switch (step.id) {
-      case "open": {
-        const url = parseOptionalString(step.url, `steps[${index}].url`);
-        if (typeof url !== "string" || url.length === 0) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}].url is required for open`);
-        }
-        report = await opts.ops.open({
-          url,
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          reuseUrl: Boolean(step.reuseUrl),
-        });
-        break;
-      }
-      case "list": {
-        report = await opts.ops.list({
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          persistState: !Boolean(step.noPersist),
-        });
-        break;
-      }
-      case "snapshot": {
-        if (!stepTargetId) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
-        }
-        report = await opts.ops.snapshot({
-          targetId: stepTargetId,
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
-          visibleOnly: Boolean(step.visibleOnly),
-          frameScope: stepFrameScope,
-          persistState: !Boolean(step.noPersist),
-        });
-        break;
-      }
-      case "find": {
-        if (!stepTargetId) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
-        }
-        report = await opts.ops.find({
-          targetId: stepTargetId,
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          textQuery: parseOptionalString(step.text, `steps[${index}].text`),
-          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
-          containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
-          visibleOnly: Boolean(step.visibleOnly),
-          first: Boolean(step.first),
-          limit: parseOptionalInteger(step.limit, `steps[${index}].limit`),
-          persistState: !Boolean(step.noPersist),
-        });
-        break;
-      }
-      case "click": {
-        if (!stepTargetId) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
-        }
-        report = await opts.ops.click({
-          targetId: stepTargetId,
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          textQuery: parseOptionalString(step.text, `steps[${index}].text`),
-          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
-          containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
-          visibleOnly: Boolean(step.visibleOnly),
-          waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
-          waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
-          waitNetworkIdle: Boolean(step.waitNetworkIdle),
-          snapshot: Boolean(step.snapshot),
-          persistState: !Boolean(step.noPersist),
-        });
-        break;
-      }
-      case "fill": {
-        if (!stepTargetId) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
-        }
-        const value = parseOptionalString(step.value, `steps[${index}].value`);
-        if (typeof value !== "string") {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}].value is required for fill`);
-        }
-        report = await opts.ops.fill({
-          targetId: stepTargetId,
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          textQuery: parseOptionalString(step.text, `steps[${index}].text`),
-          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
-          containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
-          visibleOnly: Boolean(step.visibleOnly),
-          frameScope: stepFrameScope,
-          value,
-          eventsInput: parseOptionalString(step.events, `steps[${index}].events`),
-          eventModeInput: parseOptionalString(step.eventMode, `steps[${index}].eventMode`),
-          waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
-          waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
-          waitNetworkIdle: Boolean(step.waitNetworkIdle),
-          waitTimeoutMs: parseOptionalInteger(step.waitTimeoutMs, `steps[${index}].waitTimeoutMs`),
-          proof: Boolean(step.proof),
-          assertUrlPrefix: parseOptionalString(step.assertUrlPrefix, `steps[${index}].assertUrlPrefix`),
-          assertSelector: parseOptionalString(step.assertSelector, `steps[${index}].assertSelector`),
-          assertText: parseOptionalString(step.assertText, `steps[${index}].assertText`),
-          persistState: !Boolean(step.noPersist),
-        });
-        break;
-      }
-      case "upload": {
-        if (!stepTargetId) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
-        }
-        const selectorQuery = parseOptionalString(step.selector, `steps[${index}].selector`);
-        if (typeof selectorQuery !== "string" || selectorQuery.length === 0) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}].selector is required for upload`);
-        }
-        const filesInput = typeof step.files !== "undefined" ? step.files : step.file;
-        const files = parseOptionalStringOrStringArray(filesInput, `steps[${index}].files`);
-        if (!files || files.length < 1) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}].files (or file) must include at least one path`);
-        }
-        report = await opts.ops.upload({
-          targetId: stepTargetId,
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          selectorQuery,
-          files,
-          waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
-          waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
-          waitNetworkIdle: Boolean(step.waitNetworkIdle),
-          waitTimeoutMs: parseOptionalInteger(step.waitTimeoutMs, `steps[${index}].waitTimeoutMs`),
-          proof: Boolean(step.proof),
-          assertUrlPrefix: parseOptionalString(step.assertUrlPrefix, `steps[${index}].assertUrlPrefix`),
-          assertSelector: parseOptionalString(step.assertSelector, `steps[${index}].assertSelector`),
-          assertText: parseOptionalString(step.assertText, `steps[${index}].assertText`),
-          persistState: !Boolean(step.noPersist),
-        });
-        break;
-      }
-      case "read": {
-        if (!stepTargetId) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
-        }
-        report = await opts.ops.read({
-          targetId: stepTargetId,
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
-          visibleOnly: Boolean(step.visibleOnly),
-          frameScope: stepFrameScope,
-          chunkSize: parseOptionalInteger(step.chunkSize, `steps[${index}].chunkSize`),
-          chunkIndex: parseOptionalInteger(step.chunk, `steps[${index}].chunk`),
-          persistState: !Boolean(step.noPersist),
-        });
-        break;
-      }
-      case "wait": {
-        if (!stepTargetId) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
-        }
-        report = await opts.ops.wait({
-          targetId: stepTargetId,
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          forText: parseOptionalString(step.forText, `steps[${index}].forText`),
-          forSelector: parseOptionalString(step.forSelector, `steps[${index}].forSelector`),
-          networkIdle: Boolean(step.networkIdle),
-          persistState: !Boolean(step.noPersist),
-        });
-        break;
-      }
-      case "eval": {
-        if (!stepTargetId) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
-        }
-        report = await opts.ops.eval({
-          targetId: stepTargetId,
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          expression: parseOptionalString(step.expression, `steps[${index}].expression`),
-          argJson: parseOptionalString(step.argJson, `steps[${index}].argJson`),
-          captureConsole: parseOptionalBoolean(step.captureConsole, `steps[${index}].captureConsole`),
-          maxConsole: parseOptionalInteger(step.maxConsole, `steps[${index}].maxConsole`),
-          persistState: !Boolean(step.noPersist),
-        });
-        break;
-      }
-      case "extract": {
-        if (!stepTargetId) {
-          throw new CliError("E_QUERY_INVALID", `steps[${index}] requires targetId (or previous step must set one)`);
-        }
-        report = await opts.ops.extract({
-          targetId: stepTargetId,
-          timeoutMs: stepTimeoutMs,
-          sessionId: ctx.sessionId,
-          kind: parseOptionalString(step.kind, `steps[${index}].kind`),
-          selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
-          visibleOnly: Boolean(step.visibleOnly),
-          frameScope: stepFrameScope,
-          limit: parseOptionalInteger(step.limit, `steps[${index}].limit`),
-          persistState: !Boolean(step.noPersist),
-        });
-        break;
-      }
-      default:
-        throw new CliError("E_QUERY_INVALID", `Unsupported step id: ${step.id}`);
+    const stepExecutor = PIPELINE_STEP_EXECUTORS[step.id];
+    if (!stepExecutor) {
+      throw new CliError("E_QUERY_INVALID", `Unsupported step id: ${step.id}`);
     }
+    const report = await stepExecutor({
+      step,
+      index,
+      timeoutMs: stepTimeoutMs,
+      stepTargetId,
+      stepFrameScope,
+      sessionId: ctx.sessionId,
+      ops: opts.ops,
+    });
 
     if (stepAlias) {
       aliases[stepAlias] = report;

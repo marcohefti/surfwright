@@ -115,6 +115,5 @@ test("target download captures deterministic download artifact", async () => {
     const expectedSha = crypto.createHash("sha256").update(data).digest("hex");
     assert.equal(payload.download.sha256, expectedSha);
     assert.equal(payload.download.bytes, data.byteLength);
-    assert.equal(payload.download.size, data.byteLength);
   });
 });

@@ -276,8 +276,8 @@ export async function targetDownload(opts: {
           details: {
             downloadUrl: finalUrl,
             downloadStatus: status,
-            filename: providers().path.basename(outPath),
-            size: stat.size,
+            fileName: providers().path.basename(outPath),
+            bytes: stat.size,
           },
         })
       : null;
@@ -317,11 +317,9 @@ export async function targetDownload(opts: {
         mime,
         headers,
         fileName: providers().path.basename(outPath),
-        filename: providers().path.basename(outPath),
         path: outPath,
         sha256,
         bytes: stat.size,
-        size: stat.size,
       },
       ...(includeProof
         ? {

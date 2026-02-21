@@ -45,9 +45,9 @@ All notable changes to SurfWright are documented here.
 - [session] `session attach --cdp` now accepts `ws://`/`wss://` endpoints and supports HTTP(S) discovery URLs with path/query (resolved to websocket endpoints for runtime attach).
 - [session] CDP attach health checks now split discovery and websocket-connect stages for clearer remote endpoint handling under variable latency.
 - [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage` to reduce startup flakes in constrained environments.
-- [target] `target download` payload now includes first-class download proof fields: `downloadStarted`, `sourceUrl`, `fileName`, `bytes`, and `mime` (legacy `filename`/`size` retained).
+- [target] `target download` payload now uses canonical nested proof fields (`fileName`, `bytes`) plus additive top-level projection fields (`downloadStarted`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`).
 - [errors] `target click` mismatch failures now include stronger disambiguation context (`withinSelector`, bounded candidate sample) for faster recovery without blind retries.
-- [target] `target download` now also emits additive top-level fields (`downloadStarted`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`) while preserving nested `download.*`.
+- [run] Pipeline step execution is now table-driven to keep step parsing/dispatch behavior centralized and reduce drift risk as steps are added.
 - [target] `target style` now emits a compact additive `proof` payload so `--output-shape proof` is directly actionable without extra parsing.
 
 ### Fixed
@@ -58,12 +58,14 @@ All notable changes to SurfWright are documented here.
 - [target] `target eval` timeout handling now performs best-effort CDP termination/stop-loading recovery so follow-up commands remain stable after `E_EVAL_TIMEOUT`.
 - [session] `session attach` unreachable failures now redact sensitive CDP query credentials in error text.
 - [errors] `E_SESSION_NOT_FOUND` and `E_TARGET_SESSION_UNKNOWN` now include bounded continuity hints/hintContext for faster recovery after stale session/target mappings.
+- [run] Fixed deterministic plan template resolution for object payloads by removing duplicate nested assignment in `resolveTemplateInValue`.
 
 ### Deprecated
 - None.
 
 ### Removed
 - [docs] Removed campaign planning docs under `docs/campaigns/`.
+- [target] Removed legacy download aliases `download.filename` and `download.size`; use canonical `download.fileName` and `download.bytes`.
 
 ## [0.1.2] - 2026-02-17
 

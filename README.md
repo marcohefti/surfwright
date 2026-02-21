@@ -167,7 +167,7 @@ surfwright target extract <targetId> --kind headings --selector main --limit 12
 `target fill|keypress|upload|drag-drop|dialog` now support the same post-action wait controls (`--wait-for-text|--wait-for-selector|--wait-network-idle`, `--wait-timeout-ms`) and optional `--proof`.
 `open|target click|target fill|target keypress|target upload|target drag-drop|target dialog|target download|target wait` support additive post-action assertions: `--assert-url-prefix`, `--assert-selector`, `--assert-text`.
 `open` and `target url-assert` include additive `blockType` (`auth|captcha|consent|unknown`) for navigation gating triage.
-`target download` includes additive top-level fields (`downloadStarted`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`) while keeping nested `download.*` (`fileName`/`filename`, `bytes`/`size`) for compatibility.
+`target download` includes additive top-level fields (`downloadStarted`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`) and canonical nested `download.*` fields (`fileName`, `bytes`).
 `target extract --summary` adds compact summary/proof fields (`itemCount`, `totalRawCount`, `firstTitle`, `firstUrl`, `firstCommand`) for direct proof collection.
 `run` pipeline step coverage includes `fill` and `upload` (not just read/click/eval/snapshot), so plans can execute full form workflows without `target eval` glue.
 Prefer `target extract`, `target style`, and `target read` before `target eval`; when you need eval, `--output-shape compact` keeps payloads lean.

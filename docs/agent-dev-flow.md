@@ -5,6 +5,7 @@ Use this document to decide what to update when changing SurfWright.
 ## Goal
 
 Keep code behavior, runtime skill guidance, and maintainer docs synchronized with minimal drift and minimal token overhead.
+Prefer clean-slate evolution over compatibility layering: remove obsolete surface area instead of keeping deprecated aliases.
 
 ## Agent-First Evaluation Rule
 

@@ -40,3 +40,4 @@ If atomic swap fails, previous install state is restored.
 Repo validation enforces manifest + lock discipline:
 
 - `pnpm skill:validate`
+- `pnpm contract:fingerprint:sync` (or `pnpm contract:snapshot:update`) to align `requires.contractFingerprint` with the contract snapshot

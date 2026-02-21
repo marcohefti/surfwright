@@ -96,11 +96,9 @@ async function captureDownloadArtifact(opts: {
     mime,
     headers,
     fileName: path.basename(outPath),
-    filename: path.basename(outPath),
     path: outPath,
     sha256,
     bytes: size,
-    size,
   };
 }
 

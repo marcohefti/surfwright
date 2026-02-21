@@ -128,11 +128,9 @@ export type DownloadCaptureReport = {
   mime: string | null;
   headers: Record<string, string>;
   fileName: string;
-  filename: string;
   path: string;
   sha256: string;
   bytes: number;
-  size: number;
 };
 export type OpenReport = {
   ok: true;

@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:4c8aee864180d0fc97a2e94bf0414952d2a0a7c52db11da994f0b1d23e7f28c0",
+  "contractFingerprint": "sha256:c0e5c3f4234c07d240e2b252c13df93e355f3a774a5270d76c2d522fb4cda861",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -382,7 +382,7 @@
     },
     {
       "id": "target.upload",
-      "usage": "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--submit-selector <query>] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--submit-selector <query>] [--expect-uploaded-filename <name>] [--wait-for-result] [--result-selector <query>] [--result-text-contains <text>] [--result-filename-regex <pattern>] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "upload one or more files via input or file chooser fallback"
     },
     {

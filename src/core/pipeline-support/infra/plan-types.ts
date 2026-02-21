@@ -43,6 +43,12 @@ export type PipelineStepInput = {
   eventMode?: string;
   files?: string | string[];
   file?: string | string[];
+  submitSelector?: string;
+  expectUploadedFilename?: string;
+  waitForResult?: boolean;
+  resultSelector?: string;
+  resultTextContains?: string;
+  resultFilenameRegex?: string;
   waitTimeoutMs?: number;
   proof?: boolean;
   assertUrlPrefix?: string;
@@ -152,6 +158,12 @@ export type PipelineOps = {
     sessionId?: string;
     selectorQuery: string;
     files: string[];
+    submitSelector?: string;
+    expectUploadedFilename?: string;
+    waitForResult: boolean;
+    resultSelector?: string;
+    resultTextContains?: string;
+    resultFilenameRegex?: string;
     waitForText?: string;
     waitForSelector?: string;
     waitNetworkIdle: boolean;

@@ -42,7 +42,7 @@ test("target upload --submit-selector and target select-option return determinis
     "<title>Select Upload Contract Test</title>",
     "<main>",
     '<input id="file-input" type="file" />',
-    '<button id="upload-submit" onclick="document.getElementById(\'upload-status\').textContent=`uploaded:${document.getElementById(\'file-input\').files.length}`">Submit Upload</button>',
+    '<button id="upload-submit" onclick="const i=document.getElementById(\'file-input\');const f=i.files&&i.files[0]?i.files[0].name:\'none\';document.getElementById(\'upload-status\').textContent=`uploaded:${i.files.length}:${f}`">Submit Upload</button>',
     '<div id="upload-status">uploaded:0</div>',
     '<select id="role"><option value="viewer">Viewer</option><option value="editor">Editor</option><option value="owner">Owner</option></select>',
     "</main>",
@@ -62,6 +62,13 @@ test("target upload --submit-selector and target select-option return determinis
     fixturePath,
     "--submit-selector",
     "#upload-submit",
+    "--expect-uploaded-filename",
+    "upload-submit-fixture.txt",
+    "--wait-for-result",
+    "--result-selector",
+    "#upload-status",
+    "--result-filename-regex",
+    "upload-submit-fixture\\.txt",
     "--wait-for-text",
     "uploaded:1",
     "--timeout-ms",
@@ -70,6 +77,9 @@ test("target upload --submit-selector and target select-option return determinis
   assert.equal(uploadSubmit.status, 0);
   const uploadSubmitPayload = parseJson(uploadSubmit.stdout);
   assert.equal(uploadSubmitPayload.submitted, true);
+  assert.equal(uploadSubmitPayload.uploadedFilename, "upload-submit-fixture.txt");
+  assert.equal(uploadSubmitPayload.uploadVerified, true);
+  assert.equal(uploadSubmitPayload.resultVerification?.satisfied, true);
   assert.equal(uploadSubmitPayload.submitSelector, "#upload-submit");
   assert.equal(uploadSubmitPayload.wait.mode, "text");
 
@@ -143,6 +153,49 @@ test("target click --proof-check-state reports checkbox state transitions", () =
   assert.equal(payload.proof.checkState.before.checked, false);
   assert.equal(payload.proof.checkState.after.checked, true);
   assert.equal(payload.proof.checkState.changed, true);
+});
+
+test("target upload maps post-action wait timeout to typed E_WAIT_TIMEOUT", () => {
+  requireBrowser();
+  const ensureResult = runCli(["session", "fresh", "--timeout-ms", "8000"]);
+  assert.equal(ensureResult.status, 0);
+  const ensurePayload = parseJson(ensureResult.stdout);
+
+  const fixturePath = path.join(TEST_STATE_DIR, "upload-timeout-fixture.txt");
+  fs.writeFileSync(fixturePath, "hello upload timeout");
+  const html = [
+    "<title>Upload Wait Timeout</title>",
+    "<main>",
+    '<input id="file-input" type="file" />',
+    '<button id="upload-submit">Submit Upload</button>',
+    '<div id="upload-status">ready</div>',
+    "</main>",
+  ].join("");
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const uploadResult = runCli(["--session",
+    ensurePayload.sessionId,
+    "target",
+    "upload",
+    openPayload.targetId,
+    "--selector",
+    "#file-input",
+    "--file",
+    fixturePath,
+    "--submit-selector",
+    "#upload-submit",
+    "--wait-for-selector",
+    "#never-appears",
+    "--wait-timeout-ms",
+    "400",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(uploadResult.status, 1);
+  const payload = parseJson(uploadResult.stdout);
+  assert.equal(payload.code, "E_WAIT_TIMEOUT");
 });
 
 test("target count --count-only returns compact count shape", () => {

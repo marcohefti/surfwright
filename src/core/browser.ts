@@ -30,8 +30,23 @@ import {
   type SurfwrightState,
 } from "./types.js";
 
-const CDP_STARTUP_MAX_WAIT_MS = 6000;
+const CDP_STARTUP_INITIAL_WAIT_MS = 6000;
+const CDP_STARTUP_MAX_WAIT_MS = 30000;
 const CDP_STARTUP_POLL_MS = 125;
+const CDP_STARTUP_RETRY_BACKOFF_MS = 250;
+
+export function managedStartupWaitPlan(timeoutMs: number): {
+  firstAttemptStartupWaitMs: number;
+  retryAttemptStartupWaitMs: number;
+  retryBackoffMs: number;
+} {
+  const budgetMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.floor(timeoutMs) : CDP_STARTUP_INITIAL_WAIT_MS;
+  return {
+    firstAttemptStartupWaitMs: Math.min(budgetMs, CDP_STARTUP_INITIAL_WAIT_MS),
+    retryAttemptStartupWaitMs: Math.min(budgetMs, CDP_STARTUP_MAX_WAIT_MS),
+    retryBackoffMs: CDP_STARTUP_RETRY_BACKOFF_MS,
+  };
+}
 
 export function chromeCandidatesForPlatform(): string[] {
   if (process.platform === "darwin") {
@@ -214,9 +229,12 @@ export async function startManagedSession(
   }
 
   fs.mkdirSync(opts.userDataDir, { recursive: true });
-  const startupWaitMs = Math.min(timeoutMs, CDP_STARTUP_MAX_WAIT_MS);
+  const startupPlan = managedStartupWaitPlan(timeoutMs);
   const browserMode: ManagedBrowserMode = opts.browserMode ?? "headless";
-  const attemptStart = async (debugPort: number): Promise<{ browserPid: number; debugPort: number; cdpOrigin: string }> => {
+  const attemptStart = async (
+    debugPort: number,
+    startupWaitMs: number,
+  ): Promise<{ browserPid: number; debugPort: number; cdpOrigin: string }> => {
     const browserPid = launchDetachedBrowser({
       executablePath,
       debugPort,
@@ -256,14 +274,16 @@ export async function startManagedSession(
     return { browserPid, debugPort, cdpOrigin };
   };
 
-  let started = await attemptStart(opts.debugPort).catch((error: unknown) => {
+  let started = await attemptStart(opts.debugPort, startupPlan.firstAttemptStartupWaitMs).catch((error: unknown) => {
     if (!(error instanceof CliError) || error.code !== "E_BROWSER_START_TIMEOUT") {
       throw error;
     }
     return null;
   });
   if (started === null) {
-    started = await attemptStart(await allocateFreePort());
+    // Small backoff reduces repeated CDP start races on busy hosts.
+    await new Promise((resolve) => setTimeout(resolve, startupPlan.retryBackoffMs));
+    started = await attemptStart(await allocateFreePort(), startupPlan.retryAttemptStartupWaitMs);
   }
 
   const createdAt = opts.createdAt ?? nowIso();

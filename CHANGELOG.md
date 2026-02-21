@@ -39,6 +39,7 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target download --fallback-to-fetch` to capture artifacts deterministically when browser download events are missed.
 - [run] Added `run` plan-step support for `click-read`/`clickRead` (composed click then bounded read).
 - [target] Added `target upload --submit-selector <query>` for atomic attach+submit upload flows.
+- [target] Added upload result-verification controls: `target upload --wait-for-result`, `--result-selector`, `--result-text-contains`, and `--result-filename-regex` for deterministic post-upload confirmation in one action.
 - [target] Added `target select-option` for first-class native `<select>` control (`--value|--label|--option-index`) with deterministic selected proof fields.
 - [target] Added `target click --proof-check-state` for checkbox/radio proof deltas (`proof.checkState.before/after/changed`).
 - [target] Added `target spawn --proof --assert-title <text>` for compact spawn evidence and title assertion in new-window flows.
@@ -60,6 +61,7 @@ All notable changes to SurfWright are documented here.
 - [target] `target download` payload now includes additive capture provenance/alias fields (`downloadMethod`, `downloadedFilename`, `downloadedBytes`) across event, fetch-fallback, and non-started envelopes.
 - [errors] `target click` mismatch failures now include stronger disambiguation context (`withinSelector`, bounded candidate sample) for faster recovery without blind retries.
 - [run] Pipeline step execution is now table-driven to keep step parsing/dispatch behavior centralized and reduce drift risk as steps are added.
+- [run] Upload plan steps now forward upload action fields `submitSelector`, `expectUploadedFilename`, and result-verification controls (`waitForResult`, `resultSelector`, `resultTextContains`, `resultFilenameRegex`) instead of dropping them.
 - [target] `target style` now emits a compact additive `proof` payload so `--output-shape proof` is directly actionable without extra parsing.
 - [target] `target style --proof` now includes mission-friendly compact fields (`found`, `targetText`, `styleBg`, `styleColor`, `styleFontSize`, `styleRadius`).
 - [target] `target extract --summary` now includes a `count` alias (same value as `totalRawCount`) for simpler success checks.
@@ -72,6 +74,9 @@ All notable changes to SurfWright are documented here.
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
 - [errors] `E_BROWSER_START_FAILED`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_IO`, and `E_STATE_LOCK_TIMEOUT` now include bounded hints/hintContext for faster operator triage.
 - [target] Stale `targetId` errors now include stronger replacement-target hints and hint context to speed recovery in concurrent session flows.
+- [target] Upload wait-stage timeout failures now return typed `E_WAIT_TIMEOUT` instead of leaking as `E_INTERNAL` when wait conditions are not satisfied in time.
+- [cli] Commander unknown-option failures for `contract` now include focused alternatives for `--search` and `--compact` to reduce cold-start option probing loops.
+- [browser] Managed startup retry wait-plan is now explicitly exported/tested to guard first-attempt and retry envelopes against regression.
 - [cli] Commander parse failures now map to typed JSON `E_QUERY_INVALID` responses (with bounded hints/hintContext) in JSON mode.
 - [target] `target eval` timeout handling now performs best-effort CDP termination/stop-loading recovery so follow-up commands remain stable after `E_EVAL_TIMEOUT`.
 - [session] `session attach` unreachable failures now redact sensitive CDP query credentials in error text.

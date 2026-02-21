@@ -75,7 +75,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.upload",
     usage:
-      "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--submit-selector <query>] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--submit-selector <query>] [--expect-uploaded-filename <name>] [--wait-for-result] [--result-selector <query>] [--result-text-contains <text>] [--result-filename-regex <pattern>] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "upload one or more files via input or file chooser fallback",
   },
   {

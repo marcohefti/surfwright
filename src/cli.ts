@@ -218,7 +218,7 @@ async function runLocalCommand(argv: string[]): Promise<number> {
     if (exitCode !== null) {
       if (exitCode > 0) {
         const output = parseOutputOptsFromArgv(argv);
-        const failure = toCommanderFailure(error);
+        const failure = toCommanderFailure(error, argv);
         if (output.json && failure) {
           printFailure(failure, output);
         }

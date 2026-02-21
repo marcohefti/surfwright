@@ -1,4 +1,5 @@
 import type { CliFailure } from "../core/types.js";
+import { parseCommandPath } from "./options.js";
 
 export type OutputOpts = {
   json: boolean;
@@ -39,7 +40,25 @@ export function parseOutputOptsFromArgv(argv: string[]): OutputOpts {
   return { json, pretty };
 }
 
-export function toCommanderFailure(error: unknown): CliFailure | null {
+function contractUnknownOptionHints(unknownOption: string | null, argv?: string[]): string[] {
+  if (!unknownOption || !Array.isArray(argv)) {
+    return [];
+  }
+  const commandPath = parseCommandPath(argv);
+  if (commandPath[0] !== "contract") {
+    return [];
+  }
+  if (unknownOption !== "--kind" && unknownOption !== "--format") {
+    return [];
+  }
+  return [
+    "Use --search <term> to filter command/error/guidance entries.",
+    "Use --compact for low-token contract metadata.",
+    "Example: surfwright contract --search upload --compact",
+  ];
+}
+
+export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure | null {
   if (typeof error !== "object" || error === null) {
     return null;
   }
@@ -60,6 +79,10 @@ export function toCommanderFailure(error: unknown): CliFailure | null {
     expectedArgs: missingArgMatch?.[1] ?? null,
     unknownOption: unknownOptionMatch?.[1] ?? null,
   };
+  const commandPath = Array.isArray(argv) ? parseCommandPath(argv).join(" ") : "";
+  if (commandPath.length > 0) {
+    hintContext.commandPath = commandPath;
+  }
   let example: string | null = null;
   if (didYouMean) {
     example = `Try: surfwright ${didYouMean}`;
@@ -71,6 +94,7 @@ export function toCommanderFailure(error: unknown): CliFailure | null {
   const hints = [
     didYouMean ? `Did you mean ${didYouMean}?` : null,
     example,
+    ...contractUnknownOptionHints(unknownOptionMatch?.[1] ?? null, argv),
     "Run the command with --help for usage examples",
   ].filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
 

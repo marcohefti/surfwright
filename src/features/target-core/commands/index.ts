@@ -7,8 +7,8 @@ import {
   targetDragDropCommandSpec,
   targetFillCommandSpec,
   targetKeypressCommandSpec,
-  targetUploadCommandSpec,
 } from "./actions/target-interaction-commands.js";
+import { targetUploadCommandSpec } from "./actions/target-upload-command.js";
 import { targetSelectOptionCommandSpec } from "./actions/target-select-option.js";
 import { targetCloseCommandSpec, targetDialogCommandSpec, targetSpawnCommandSpec } from "./actions/target-window.js";
 import { targetDownloadCommandSpec } from "./actions/target-download.js";

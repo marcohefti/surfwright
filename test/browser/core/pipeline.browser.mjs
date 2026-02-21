@@ -151,7 +151,10 @@ test("run executes fill and upload steps with deterministic step reports", () =>
   };
   fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
 
-  const result = runCli(["run", "--plan", planPath, "--timeout-ms", "5000"]);
+  const isolatedStateDir = fs.mkdtempSync(path.join(TEST_STATE_DIR, "iso-upload-submit-"));
+  const result = runCliSync(["run", "--plan", planPath, "--timeout-ms", "5000"], {
+    env: { SURFWRIGHT_STATE_DIR: isolatedStateDir },
+  });
   assert.equal(result.status, 0, result.stdout || result.stderr);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);
@@ -162,4 +165,57 @@ test("run executes fill and upload steps with deterministic step reports", () =>
   assert.equal(payload.steps[2].report.fileCount, 1);
   assert.equal(typeof payload.steps[3].report.text, "string");
   assert.equal(payload.steps[3].report.text.includes("uploaded:1"), true);
+});
+
+test("run upload step honors submitSelector and upload result verification options", () => {
+  requireBrowser();
+
+  const fixturePath = path.join(TEST_STATE_DIR, "pipeline-upload-submit.txt");
+  fs.writeFileSync(fixturePath, "pipeline upload submit fixture\n", "utf8");
+  const html = `
+    <title>Pipeline Upload Submit</title>
+    <main>
+      <input id="upload" type="file" />
+      <button id="submit" type="button">Submit Upload</button>
+      <p id="status">ready</p>
+      <script>
+        const upload = document.getElementById("upload");
+        const status = document.getElementById("status");
+        upload.addEventListener("change", () => {
+          const file = upload.files && upload.files[0] ? upload.files[0].name : "none";
+          status.textContent = "selected:" + file;
+        });
+      </script>
+    </main>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+
+  const planPath = path.join(TEST_STATE_DIR, "plan-upload-submit-verify.json");
+  const plan = {
+    steps: [
+      { id: "open", url: dataUrl, timeoutMs: 5000 },
+      {
+        id: "upload",
+        selector: "#upload",
+        files: [fixturePath],
+        submitSelector: "#submit",
+        expectUploadedFilename: "pipeline-upload-submit.txt",
+        waitForText: "selected:",
+        timeoutMs: 5000,
+        noPersist: true,
+      },
+      { id: "read", selector: "#status", timeoutMs: 5000, noPersist: true },
+    ],
+  };
+  fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
+
+  const result = runCli(["run", "--plan", planPath, "--timeout-ms", "5000"]);
+  assert.equal(result.status, 0, result.stdout || result.stderr);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.steps[1].id, "upload");
+  assert.equal(payload.steps[1].report.submitted, true);
+  assert.equal(payload.steps[1].report.uploadVerified, true);
+  assert.equal(payload.steps[1].report.uploadedFilename, "pipeline-upload-submit.txt");
+  assert.equal(payload.steps[2].report.text.includes("selected:pipeline-upload-submit.txt"), true);
 });

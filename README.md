@@ -154,7 +154,7 @@ surfwright target click <targetId> --text "Sort" --within "#results-table" --pro
 surfwright target click <targetId> --selector "#agree" --proof --proof-check-state
 surfwright target click-read <targetId> --text "Pricing" --read-selector main --chunk-size 1200 --chunk 1
 surfwright target keypress <targetId> --key Enter --selector "#search" --wait-for-selector ".results" --proof
-surfwright target upload <targetId> --selector "input[type=file]" --file ./fixture.txt --submit-selector "button[type=submit]" --wait-for-text "uploaded"
+surfwright target upload <targetId> --selector "input[type=file]" --file ./fixture.txt --submit-selector "button[type=submit]" --expect-uploaded-filename fixture.txt --wait-for-result --result-selector "#uploaded-files" --result-filename-regex "fixture\\.txt"
 surfwright target spawn <targetId> --selector "a[target=_blank]" --proof --assert-title "Docs"
 surfwright target style <targetId> --selector ".btn.btn-primary" --properties background-color,color,font-size,border-radius
 surfwright --output-shape proof target style <targetId> --selector ".btn.btn-primary"
@@ -175,6 +175,7 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 `target click` mismatch failures now include bounded candidate samples and `withinSelector` context for faster disambiguation.
 `target fill|keypress|upload|drag-drop|dialog` now support the same post-action wait controls (`--wait-for-text|--wait-for-selector|--wait-network-idle`, `--wait-timeout-ms`) and optional `--proof`.
 `target upload --submit-selector <query>` runs attach + submit in one deterministic action so form uploads can be completed atomically.
+`target upload --wait-for-result` enables one-shot upload result verification using `--result-selector`, `--result-text-contains`, and/or `--result-filename-regex`; `--expect-uploaded-filename` now projects `uploadedFilename` + `uploadVerified` in the same action report.
 `target select-option` provides first-class native `<select>` control by `--value`, `--label`, or `--option-index`, returning `selectedValue`, `selectedText`, and `selectedIndex`.
 `target spawn --proof --assert-title <text>` adds compact spawn proof fields and optional title assertion for deterministic new-window checks.
 `open|target click|target fill|target keypress|target upload|target drag-drop|target dialog|target download|target wait` support additive post-action assertions: `--assert-url-prefix`, `--assert-selector`, `--assert-text`.
@@ -185,6 +186,7 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 `target extract --summary` adds compact summary/proof fields (`itemCount`, `totalRawCount`, `count`, `firstTitle`, `firstUrl`, `firstCommand`) for direct proof collection.
 `--output-shape proof` now also projects compact `target extract` proof fields without requiring `--summary`.
 `run` pipeline step coverage includes `fill`, `upload`, and `click-read` (not just read/click/eval/snapshot), so plans can execute full form workflows without `target eval` glue.
+`run` upload steps now honor `submitSelector`, `expectUploadedFilename`, and result-verification fields (`waitForResult`, `resultSelector`, `resultTextContains`, `resultFilenameRegex`) for deterministic attach+submit+verify flows.
 CLI compatibility for cold-start agents: `--json` is accepted as an explicit no-op (JSON remains default), and `target <subcommand> --target <targetId>` is accepted as an alias for positional `targetId`.
 Prefer `target extract`, `target style`, and `target read` before `target eval`; when you need eval, `--output-shape compact` keeps payloads lean.
 

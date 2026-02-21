@@ -4,10 +4,21 @@ import { CliError } from "../../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import { providers } from "../../../providers/index.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
-import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick } from "../../click/click-utils.js";
+import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick, waitTimeoutError } from "../../click/click-utils.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
 import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 import type { BrowserNodeLike } from "../types/browser-dom-types.js";
+import {
+  deriveResultSource,
+  escapeRegexLiteral,
+  parseOptionalRegex,
+  parseOptionalTrimmedString,
+  readBodyTextBestEffort,
+  readSelectorTextBestEffort,
+  resolveUploadedFilenameFromEvidence,
+  waitTimedOut,
+  type UploadResultVerification,
+} from "./target-upload-result.js";
 
 type TargetUploadReport = {
   ok: true;
@@ -25,6 +36,10 @@ type TargetUploadReport = {
   mode: "direct-input" | "filechooser";
   submitSelector: string | null;
   submitted: boolean;
+  uploadedFilename: string | null;
+  uploadVerified: boolean;
+  matchedResultText: string | null;
+  resultVerification: UploadResultVerification | null;
   proof?: {
     action: "upload";
     urlChanged: boolean;
@@ -75,6 +90,17 @@ function mimeFromName(name: string): string {
   return "application/octet-stream";
 }
 
+function parseOptionalExpectedFilename(input: string | undefined): string | null {
+  if (typeof input !== "string") {
+    return null;
+  }
+  const value = input.trim();
+  if (value.length < 1) {
+    return null;
+  }
+  return providers().path.basename(value);
+}
+
 function parseUploadFiles(input: string | string[] | undefined): Array<{ absolutePath: string; name: string; size: number; type: string }> {
   const { fs, path } = providers();
   const raw = Array.isArray(input) ? input : typeof input === "string" ? [input] : [];
@@ -116,6 +142,11 @@ export async function targetUpload(opts: {
   waitForSelector?: string;
   waitNetworkIdle?: boolean;
   waitTimeoutMs?: number;
+  expectUploadedFilename?: string;
+  waitForResult?: boolean;
+  resultSelector?: string;
+  resultTextContains?: string;
+  resultFilenameRegex?: string;
   proof?: boolean;
   assertUrlPrefix?: string;
   assertSelector?: string;
@@ -133,6 +164,21 @@ export async function targetUpload(opts: {
   });
   const waitTimeoutMs = resolveWaitTimeoutMs(opts.waitTimeoutMs, opts.timeoutMs);
   const includeProof = Boolean(opts.proof);
+  const expectedUploadedFilename = parseOptionalExpectedFilename(opts.expectUploadedFilename);
+  const waitForResult = Boolean(opts.waitForResult);
+  const resultSelector = parseOptionalTrimmedString(opts.resultSelector);
+  if (resultSelector) {
+    parseRequiredSelector(resultSelector, "result-selector");
+  }
+  const resultTextContains = parseOptionalTrimmedString(opts.resultTextContains);
+  const explicitFilenameRegex = parseOptionalRegex(opts.resultFilenameRegex, "result-filename-regex");
+  const inferredFilenameRegex =
+    explicitFilenameRegex ??
+    (expectedUploadedFilename
+      ? new RegExp(`\\b${escapeRegexLiteral(expectedUploadedFilename)}\\b`)
+      : fileInputs.length === 1
+        ? new RegExp(`\\b${escapeRegexLiteral(fileInputs[0].name)}\\b`)
+        : null);
   const parsedAssertions = parseActionAssertions({
     assertUrlPrefix: opts.assertUrlPrefix,
     assertSelector: opts.assertSelector,
@@ -206,11 +252,27 @@ export async function targetUpload(opts: {
     }
 
     const waitStartedAt = Date.now();
-    const waitedMode = await waitAfterClick({
-      page: target.page,
-      waitAfter,
-      timeoutMs: waitTimeoutMs,
-    });
+    let waitedMode: { mode: "text" | "selector" | "network-idle"; value: string | null } | null;
+    try {
+      waitedMode = await waitAfterClick({
+        page: target.page,
+        waitAfter,
+        timeoutMs: waitTimeoutMs,
+      });
+    } catch (error) {
+      if (waitAfter && waitTimedOut(error)) {
+        throw waitTimeoutError({
+          mode: waitAfter.mode,
+          value: waitAfter.value,
+          timeoutMs: waitTimeoutMs,
+          queryMode: "selector",
+          query: selector,
+          visibleOnly: false,
+          frameScope: "main",
+        });
+      }
+      throw error;
+    }
     const waited =
       waitedMode === null
         ? null
@@ -221,6 +283,111 @@ export async function targetUpload(opts: {
             elapsedMs: Date.now() - waitStartedAt,
             satisfied: true,
           };
+    let matchedResultText =
+      waited?.mode === "selector" && typeof waited.value === "string"
+        ? await readSelectorTextBestEffort(target.page, waited.value, waitTimeoutMs)
+        : null;
+    let resultSelectorText: string | null = null;
+    if (resultSelector) {
+      await ensureValidSelector(target.page, resultSelector);
+      const resultLocator = target.page.locator(resultSelector).first();
+      if (waitForResult) {
+        try {
+          await resultLocator.waitFor({
+            state: "visible",
+            timeout: waitTimeoutMs,
+          });
+        } catch (error) {
+          if (waitTimedOut(error)) {
+            throw waitTimeoutError({
+              mode: "selector",
+              value: resultSelector,
+              timeoutMs: waitTimeoutMs,
+              queryMode: "selector",
+              query: selector,
+              visibleOnly: false,
+              frameScope: "main",
+            });
+          }
+          throw error;
+        }
+      }
+      resultSelectorText = await readSelectorTextBestEffort(target.page, resultSelector, waitTimeoutMs);
+      if (resultSelectorText) {
+        matchedResultText = resultSelectorText;
+      }
+    }
+    let normalizedPageText = (await readBodyTextBestEffort(target.page, Math.min(opts.timeoutMs, 5000))) ?? "";
+    const verifyResultEvidence = () => {
+      const selectorText = resultSelectorText ?? matchedResultText;
+      const source = deriveResultSource(selectorText, normalizedPageText);
+      const evidenceText = [selectorText, normalizedPageText]
+        .filter((value): value is string => typeof value === "string" && value.length > 0)
+        .join("\n");
+      const matchedTextContains = resultTextContains ? evidenceText.includes(resultTextContains) : null;
+      const matchedFilenameRegex = inferredFilenameRegex ? inferredFilenameRegex.test(evidenceText) : null;
+      const uploadedFilename = resolveUploadedFilenameFromEvidence({
+        fileInputs,
+        expectedUploadedFilename,
+        selectorText,
+        bodyText: normalizedPageText,
+      });
+      const resultVerification: UploadResultVerification = {
+        enabled: waitForResult,
+        selector: resultSelector,
+        textContains: resultTextContains,
+        filenameRegex: inferredFilenameRegex ? inferredFilenameRegex.source : null,
+        source,
+        matchedTextContains,
+        matchedFilenameRegex,
+        satisfied: false,
+      };
+      const checks = [matchedTextContains, matchedFilenameRegex].filter((value) => value !== null);
+      resultVerification.satisfied = checks.length > 0 ? checks.every((value) => value === true) : uploadedFilename !== null;
+      return {
+        uploadedFilename,
+        resultVerification,
+      };
+    };
+    let { uploadedFilename, resultVerification } = verifyResultEvidence();
+    if (waitForResult) {
+      const started = Date.now();
+      while (!resultVerification.satisfied && Date.now() - started < waitTimeoutMs) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        if (resultSelector) {
+          resultSelectorText = await readSelectorTextBestEffort(target.page, resultSelector, 1000);
+          if (resultSelectorText) {
+            matchedResultText = resultSelectorText;
+          }
+        }
+        const nextBodyText = await readBodyTextBestEffort(target.page, 1000);
+        if (nextBodyText !== null) {
+          normalizedPageText = nextBodyText;
+        }
+        ({ uploadedFilename, resultVerification } = verifyResultEvidence());
+      }
+      if (!resultVerification.satisfied) {
+        throw waitTimeoutError({
+          mode: resultSelector ? "selector" : "text",
+          value: resultSelector ?? resultTextContains ?? (inferredFilenameRegex ? `regex:${inferredFilenameRegex.source}` : null),
+          timeoutMs: waitTimeoutMs,
+          queryMode: "selector",
+          query: selector,
+          visibleOnly: false,
+          frameScope: "main",
+        });
+      }
+    }
+    const uploadVerified = expectedUploadedFilename ? uploadedFilename === expectedUploadedFilename : uploadedFilename !== null;
+    if (expectedUploadedFilename && !uploadVerified) {
+      throw new CliError("E_ASSERT_FAILED", `uploaded filename assertion failed: expected ${expectedUploadedFilename}`, {
+        hintContext: {
+          expectedUploadedFilename,
+          observedUploadedFilename: uploadedFilename,
+          matchedResultText,
+        },
+      });
+    }
     const finalUrl = target.page.url();
     const assertions = await evaluateActionAssertions({
       page: target.page,
@@ -249,6 +416,9 @@ export async function targetUpload(opts: {
             fileCount: fileInputs.length,
             submitSelector: submitSelector.length > 0 ? submitSelector : null,
             submitted,
+            uploadedFilename,
+            uploadVerified,
+            resultVerification: waitForResult ? resultVerification : null,
             finalTitle,
           },
         })
@@ -265,6 +435,10 @@ export async function targetUpload(opts: {
       mode,
       submitSelector: submitSelector.length > 0 ? submitSelector : null,
       submitted,
+      uploadedFilename,
+      uploadVerified,
+      matchedResultText,
+      resultVerification: waitForResult ? resultVerification : null,
       ...(assertions ? { assertions } : {}),
       wait: waited,
       ...(includeProof

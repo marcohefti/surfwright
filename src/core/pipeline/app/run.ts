@@ -262,6 +262,12 @@ export async function runPipeline(opts: {
       sessionId?: string;
       selectorQuery: string;
       files: string[];
+      submitSelector?: string;
+      expectUploadedFilename?: string;
+      waitForResult: boolean;
+      resultSelector?: string;
+      resultTextContains?: string;
+      resultFilenameRegex?: string;
       waitForText?: string;
       waitForSelector?: string;
       waitNetworkIdle: boolean;
@@ -278,6 +284,12 @@ export async function runPipeline(opts: {
         sessionId: input.sessionId,
         selectorQuery: input.selectorQuery,
         files: input.files,
+        submitSelector: input.submitSelector,
+        expectUploadedFilename: input.expectUploadedFilename,
+        waitForResult: input.waitForResult,
+        resultSelector: input.resultSelector,
+        resultTextContains: input.resultTextContains,
+        resultFilenameRegex: input.resultFilenameRegex,
         waitForText: input.waitForText,
         waitForSelector: input.waitForSelector,
         waitNetworkIdle: input.waitNetworkIdle,

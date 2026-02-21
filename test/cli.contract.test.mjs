@@ -169,3 +169,16 @@ test("target find validates href-path-prefix before session resolution", () => {
   assert.equal(findPayload.code, "E_QUERY_INVALID");
   assert.equal(findPayload.message, "href-path-prefix must start with '/'");
 });
+
+test("contract unknown option includes focused alternatives for compact/search", () => {
+  const result = runCli(["contract", "--kind", "json"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+  assert.equal(Array.isArray(payload.hints), true);
+  assert.equal(payload.hints.some((hint) => hint.includes("Use --search <term>")), true);
+  assert.equal(payload.hints.some((hint) => hint.includes("Use --compact")), true);
+  assert.equal(payload.hintContext?.commandPath, "contract");
+  assert.equal(payload.hintContext?.unknownOption, "--kind");
+});

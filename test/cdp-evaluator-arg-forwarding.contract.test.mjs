@@ -87,3 +87,23 @@ test("managed browser args include Linux resilience flags and optional no-sandbo
   assert.equal(payload.noSandbox.includes("--no-sandbox"), true);
   assert.equal(payload.noSandbox.includes("--disable-setuid-sandbox"), true);
 });
+
+test("managed startup wait plan keeps first attempt tight and retry bounded", () => {
+  const result = runNodeModule(`
+    import { managedStartupWaitPlan } from "./src/core/browser.ts";
+    const shortBudget = managedStartupWaitPlan(2000);
+    const normalBudget = managedStartupWaitPlan(20000);
+    const longBudget = managedStartupWaitPlan(120000);
+    console.log(JSON.stringify({ shortBudget, normalBudget, longBudget }));
+  `);
+
+  assert.equal(result.status, 0, `Expected subprocess exit 0. stderr: ${result.stderr}`);
+  const payload = parseJsonLine(result.stdout);
+  assert.equal(payload.shortBudget.firstAttemptStartupWaitMs, 2000);
+  assert.equal(payload.shortBudget.retryAttemptStartupWaitMs, 2000);
+  assert.equal(payload.normalBudget.firstAttemptStartupWaitMs, 6000);
+  assert.equal(payload.normalBudget.retryAttemptStartupWaitMs, 20000);
+  assert.equal(payload.longBudget.firstAttemptStartupWaitMs, 6000);
+  assert.equal(payload.longBudget.retryAttemptStartupWaitMs, 30000);
+  assert.equal(payload.longBudget.retryBackoffMs, 250);
+});

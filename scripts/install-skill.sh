@@ -52,4 +52,4 @@ DEST_DIR="$DEST_ROOT/$SKILL_NAME"
 
 pnpm -s build >/dev/null
 
-node "$ROOT_DIR/dist/cli.js" --json skill install --source "$SOURCE_DIR" --dest "$DEST_DIR" --lock "$LOCK_PATH"
+node "$ROOT_DIR/dist/cli.js" skill install --source "$SOURCE_DIR" --dest "$DEST_DIR" --lock "$LOCK_PATH"

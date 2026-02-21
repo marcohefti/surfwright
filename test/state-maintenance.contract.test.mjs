@@ -60,7 +60,7 @@ process.on("exit", () => {
 });
 
 test("contract includes state maintenance commands", () => {
-  const result = runCli(["--json", "contract"]);
+  const result = runCli(["contract"]);
   assert.equal(result.status, 0);
   const payload = parseJson(result.stdout);
   const commandIds = new Set(payload.commands.map((entry) => entry.id));
@@ -70,7 +70,7 @@ test("contract includes state maintenance commands", () => {
   assert.equal(commandIds.has("state.reconcile"), true);
 });
 
-test("legacy state payload migrates forward before maintenance commands run", () => {
+test("legacy state payload is discarded before maintenance commands run", () => {
   writeState({
     version: 1,
     activeSessionId: null,
@@ -79,7 +79,7 @@ test("legacy state payload migrates forward before maintenance commands run", ()
     targets: {},
   });
 
-  const result = runCli(["--json", "target", "prune"]);
+  const result = runCli(["target", "prune"]);
   assert.equal(result.status, 0);
 
   const payload = parseJson(result.stdout);
@@ -89,13 +89,16 @@ test("legacy state payload migrates forward before maintenance commands run", ()
 
   const state = readState();
   assert.equal(state.version, 4);
+  assert.equal(state.nextSessionOrdinal, 1);
   assert.equal(state.nextCaptureOrdinal, 1);
   assert.equal(state.nextArtifactOrdinal, 1);
+  assert.deepEqual(state.sessions, {});
+  assert.deepEqual(state.targets, {});
   assert.deepEqual(state.networkCaptures, {});
   assert.deepEqual(state.networkArtifacts, {});
 });
 
-test("v2 session payload migrates policy and lease hygiene fields", () => {
+test("non-current state schema resets to empty current envelope", () => {
   writeState({
     version: 2,
     activeSessionId: "s-legacy",
@@ -119,16 +122,16 @@ test("v2 session payload migrates policy and lease hygiene fields", () => {
     networkArtifacts: {},
   });
 
-  const result = runCli(["--json", "target", "prune"]);
+  const result = runCli(["target", "prune"]);
   assert.equal(result.status, 0);
 
   const state = readState();
   assert.equal(state.version, 4);
-  assert.equal(state.sessions["s-legacy"].policy, "ephemeral");
-  assert.equal(typeof state.sessions["s-legacy"].leaseTtlMs, "number");
-  assert.equal(state.sessions["s-legacy"].managedUnreachableCount, 0);
-  assert.equal(state.sessions["s-legacy"].managedUnreachableSince, null);
-  assert.equal(state.sessions["s-legacy"].profile, null);
+  assert.equal(state.activeSessionId, null);
+  assert.deepEqual(state.sessions, {});
+  assert.deepEqual(state.targets, {});
+  assert.deepEqual(state.networkCaptures, {});
+  assert.deepEqual(state.networkArtifacts, {});
 });
 
 test("target prune removes orphaned, stale, and overflow metadata", () => {
@@ -196,7 +199,7 @@ test("target prune removes orphaned, stale, and overflow metadata", () => {
     },
   });
 
-  const result = runCli(["--json", "target", "prune", "--max-age-hours", "24", "--max-per-session", "2"]);
+  const result = runCli(["target", "prune", "--max-age-hours", "24", "--max-per-session", "2"]);
   assert.equal(result.status, 0);
 
   const payload = parseJson(result.stdout);
@@ -244,7 +247,7 @@ test("session prune removes unreachable attached sessions and can drop managed s
     targets: {},
   });
 
-  const firstPrune = runCli(["--json", "session", "prune", "--timeout-ms", "200"]);
+  const firstPrune = runCli(["session", "prune", "--timeout-ms", "200"]);
   assert.equal(firstPrune.status, 0);
   const firstPayload = parseJson(firstPrune.stdout);
   assert.equal(firstPayload.ok, true);
@@ -263,7 +266,7 @@ test("session prune removes unreachable attached sessions and can drop managed s
   assert.deepEqual(Object.keys(intermediateState.sessions), ["m-dead"]);
   assert.equal(intermediateState.sessions["m-dead"].browserPid, null);
 
-  const secondPrune = runCli(["--json", "session", "prune", "--drop-managed-unreachable", "--timeout-ms", "200"]);
+  const secondPrune = runCli(["session", "prune", "--drop-managed-unreachable", "--timeout-ms", "200"]);
   assert.equal(secondPrune.status, 0);
   const secondPayload = parseJson(secondPrune.stdout);
   assert.equal(secondPayload.ok, true);
@@ -355,9 +358,7 @@ test("state reconcile combines session and target maintenance", () => {
     },
   });
 
-  const reconcileResult = runCli([
-    "--json",
-    "state",
+  const reconcileResult = runCli(["state",
     "reconcile",
     "--timeout-ms",
     "200",
@@ -418,7 +419,7 @@ test("session prune drops managed sessions with expired lease even without drop-
     targets: {},
   });
 
-  const pruneResult = runCli(["--json", "session", "prune", "--timeout-ms", "200"]);
+  const pruneResult = runCli(["session", "prune", "--timeout-ms", "200"]);
   assert.equal(pruneResult.status, 0);
   const payload = parseJson(pruneResult.stdout);
   assert.equal(payload.ok, true);
@@ -460,7 +461,7 @@ test("session prune uses grace pass before removing unreachable managed sessions
     targets: {},
   });
 
-  const firstPrune = runCli(["--json", "session", "prune", "--timeout-ms", "200"]);
+  const firstPrune = runCli(["session", "prune", "--timeout-ms", "200"]);
   assert.equal(firstPrune.status, 0);
   const firstPayload = parseJson(firstPrune.stdout);
   assert.equal(firstPayload.ok, true);
@@ -475,7 +476,7 @@ test("session prune uses grace pass before removing unreachable managed sessions
   assert.equal(afterFirst.sessions["m-grace"].managedUnreachableCount, 1);
   assert.equal(typeof afterFirst.sessions["m-grace"].managedUnreachableSince, "string");
 
-  const secondPrune = runCli(["--json", "session", "prune", "--timeout-ms", "200"]);
+  const secondPrune = runCli(["session", "prune", "--timeout-ms", "200"]);
   assert.equal(secondPrune.status, 0);
   const secondPayload = parseJson(secondPrune.stdout);
   assert.equal(secondPayload.ok, true);

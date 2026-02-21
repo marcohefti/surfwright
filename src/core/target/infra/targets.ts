@@ -276,7 +276,7 @@ export async function resolveTargetHandle(
       replacement ? `Possible replacement targetId: ${replacement.targetId}` : "Retry by reopening the page with `open <url>`",
     ];
     if (replacement) {
-      hints.push(`Retry original command with --target ${replacement.targetId} (or positional targetId)`);
+      hints.push(`Retry original command with positional targetId ${replacement.targetId}`);
     }
     throw new CliError("E_TARGET_NOT_FOUND", `Target ${targetId} not found in session`, {
       hints,

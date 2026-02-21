@@ -28,14 +28,14 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   const payload = parseJson(doctor.stdout);
-  hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
+  hasBrowserCache = payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -44,7 +44,7 @@ test.after(async () => {
 
 test("target click-at returns deterministic coordinate click shape", () => {
   requireBrowser();
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
@@ -55,13 +55,11 @@ test("target click-at returns deterministic coordinate click shape", () => {
     </main>
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const clickAt = runCli([
-    "--json",
-    "--session",
+  const clickAt = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "click-at",
@@ -83,9 +81,7 @@ test("target click-at returns deterministic coordinate click shape", () => {
   assert.equal(clickAtPayload.clickCount, 1);
   assert.equal(typeof clickAtPayload.timingMs.total, "number");
 
-  const verifyClickAt = runCli([
-    "--json",
-    "--session",
+  const verifyClickAt = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "eval",
@@ -98,9 +94,7 @@ test("target click-at returns deterministic coordinate click shape", () => {
   assert.equal(verifyClickAt.status, 0);
   assert.deepEqual(parseJson(verifyClickAt.stdout).result.value, { x: 24, y: 37 });
 
-  const invalidClickAt = runCli([
-    "--json",
-    "--session",
+  const invalidClickAt = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "click-at",
@@ -120,7 +114,7 @@ test("target click-at returns deterministic coordinate click shape", () => {
 
 test("target form-fill shorthand --field is discoverable and typed", () => {
   requireBrowser();
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
@@ -133,9 +127,7 @@ test("target form-fill shorthand --field is discoverable and typed", () => {
       <select id="role"><option value="viewer">Viewer</option><option value="editor">Editor</option></select>
     </form>
   `;
-  const openResult = runCli([
-    "--json",
-    "--session",
+  const openResult = runCli(["--session",
     ensurePayload.sessionId,
     "open",
     `data:text/html,${encodeURIComponent(html)}`,
@@ -145,9 +137,7 @@ test("target form-fill shorthand --field is discoverable and typed", () => {
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const shorthandResult = runCli([
-    "--json",
-    "--session",
+  const shorthandResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "form-fill",
@@ -168,9 +158,7 @@ test("target form-fill shorthand --field is discoverable and typed", () => {
   assert.equal(shorthandPayload.ok, true);
   assert.equal(shorthandPayload.count, 4);
 
-  const verifyResult = runCli([
-    "--json",
-    "--session",
+  const verifyResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "eval",
@@ -188,9 +176,7 @@ test("target form-fill shorthand --field is discoverable and typed", () => {
     role: "viewer",
   });
 
-  const invalidField = runCli([
-    "--json",
-    "--session",
+  const invalidField = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "form-fill",

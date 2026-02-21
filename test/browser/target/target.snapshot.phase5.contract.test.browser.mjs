@@ -29,14 +29,14 @@ function hasBrowser() {
     return hasBrowserCache;
   }
 
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   const payload = parseJson(doctor.stdout);
-  hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
+  hasBrowserCache = payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 let sharedSessionId;
@@ -44,7 +44,7 @@ function ensureSharedSession() {
   if (typeof sharedSessionId === "string" && sharedSessionId.length > 0) {
     return sharedSessionId;
   }
-  const ensure = runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]);
+  const ensure = runCli(["session", "ensure", "--timeout-ms", "5000"]);
   assert.equal(ensure.status, 0);
   const payload = parseJson(ensure.stdout);
   sharedSessionId = payload.sessionId;
@@ -61,13 +61,11 @@ test("target snapshot accepts 0 for --max-* caps", () => {
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
 
   const sessionId = ensureSharedSession();
-  const openResult = runCli(["--json", "--session", sessionId, "open", dataUrl, "--timeout-ms", "20000"]);
+  const openResult = runCli(["--session", sessionId, "open", dataUrl, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const snapResult = runCli([
-    "--json",
-    "target",
+  const snapResult = runCli(["target",
     "snapshot",
     openPayload.targetId,
     "--max-buttons",
@@ -103,13 +101,11 @@ test("target snapshot supports paging via --cursor", () => {
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
 
   const sessionId = ensureSharedSession();
-  const openResult = runCli(["--json", "--session", sessionId, "open", dataUrl, "--timeout-ms", "20000"]);
+  const openResult = runCli(["--session", sessionId, "open", dataUrl, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const first = runCli([
-    "--json",
-    "target",
+  const first = runCli(["target",
     "snapshot",
     openPayload.targetId,
     "--max-chars",
@@ -132,9 +128,7 @@ test("target snapshot supports paging via --cursor", () => {
   );
   assert.equal(firstPayload.nextCursor, "h=0;b=0;l=2");
 
-  const second = runCli([
-    "--json",
-    "target",
+  const second = runCli(["target",
     "snapshot",
     openPayload.targetId,
     "--cursor",
@@ -160,9 +154,7 @@ test("target snapshot supports paging via --cursor", () => {
   );
   assert.equal(secondPayload.nextCursor, "h=0;b=0;l=4");
 
-  const third = runCli([
-    "--json",
-    "target",
+  const third = runCli(["target",
     "snapshot",
     openPayload.targetId,
     "--cursor",
@@ -201,13 +193,11 @@ test("target snapshot --include-selector-hints returns bounded selectorHint rows
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
 
   const sessionId = ensureSharedSession();
-  const openResult = runCli(["--json", "--session", sessionId, "open", dataUrl, "--timeout-ms", "20000"]);
+  const openResult = runCli(["--session", sessionId, "open", dataUrl, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const snap = runCli([
-    "--json",
-    "target",
+  const snap = runCli(["target",
     "snapshot",
     openPayload.targetId,
     "--include-selector-hints",
@@ -251,11 +241,11 @@ test("target snapshot --mode orient returns a quiet orientation payload", () => 
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
 
   const sessionId = ensureSharedSession();
-  const openResult = runCli(["--json", "--session", sessionId, "open", dataUrl, "--timeout-ms", "20000"]);
+  const openResult = runCli(["--session", sessionId, "open", dataUrl, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const snap = runCli(["--json", "target", "snapshot", openPayload.targetId, "--mode", "orient", "--timeout-ms", "20000"]);
+  const snap = runCli(["target", "snapshot", openPayload.targetId, "--mode", "orient", "--timeout-ms", "20000"]);
   assert.equal(snap.status, 0);
   const payload = parseJson(snap.stdout);
 

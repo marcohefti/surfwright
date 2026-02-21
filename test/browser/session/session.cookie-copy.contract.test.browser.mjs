@@ -29,15 +29,15 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const result = runCli(["--json", "doctor"]);
+  const result = runCli(["doctor"]);
   const payload = parseJson(result.stdout);
   hasBrowserCache =
-    payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
+    payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 async function withHttpServer(handler, fn) {
@@ -73,9 +73,7 @@ test("session cookie-copy transfers scoped cookies between explicit sessions", a
     const sourceSessionId = `s-cookie-src-${Date.now()}`;
     const destinationSessionId = `s-cookie-dst-${Date.now()}`;
 
-    const sourceSessionResult = await runCliAsync([
-      "--json",
-      "session",
+    const sourceSessionResult = await runCliAsync(["session",
       "new",
       "--session-id",
       sourceSessionId,
@@ -84,9 +82,7 @@ test("session cookie-copy transfers scoped cookies between explicit sessions", a
     ]);
     assert.equal(sourceSessionResult.status, 0);
 
-    const destinationSessionResult = await runCliAsync([
-      "--json",
-      "session",
+    const destinationSessionResult = await runCliAsync(["session",
       "new",
       "--session-id",
       destinationSessionId,
@@ -95,9 +91,7 @@ test("session cookie-copy transfers scoped cookies between explicit sessions", a
     ]);
     assert.equal(destinationSessionResult.status, 0);
 
-    const sourceOpenResult = await runCliAsync([
-      "--json",
-      "--session",
+    const sourceOpenResult = await runCliAsync(["--session",
       sourceSessionId,
       "open",
       baseUrl,
@@ -107,9 +101,7 @@ test("session cookie-copy transfers scoped cookies between explicit sessions", a
     assert.equal(sourceOpenResult.status, 0);
     const sourceOpenPayload = parseJson(sourceOpenResult.stdout);
 
-    const setCookiesResult = await runCliAsync([
-      "--json",
-      "--session",
+    const setCookiesResult = await runCliAsync(["--session",
       sourceSessionId,
       "target",
       "eval",
@@ -121,9 +113,7 @@ test("session cookie-copy transfers scoped cookies between explicit sessions", a
     ]);
     assert.equal(setCookiesResult.status, 0);
 
-    const copyResult = await runCliAsync([
-      "--json",
-      "session",
+    const copyResult = await runCliAsync(["session",
       "cookie-copy",
       "--from-session",
       sourceSessionId,
@@ -153,9 +143,7 @@ test("session cookie-copy transfers scoped cookies between explicit sessions", a
     assert.equal(copyPayload.sample.cookieNames.includes("sw_cookie_copy_a"), true);
     assert.equal(copyPayload.sample.cookieNames.includes("sw_cookie_copy_b"), true);
 
-    const destinationOpenResult = await runCliAsync([
-      "--json",
-      "--session",
+    const destinationOpenResult = await runCliAsync(["--session",
       destinationSessionId,
       "open",
       baseUrl,
@@ -165,9 +153,7 @@ test("session cookie-copy transfers scoped cookies between explicit sessions", a
     assert.equal(destinationOpenResult.status, 0);
     const destinationOpenPayload = parseJson(destinationOpenResult.stdout);
 
-    const readCookiesResult = await runCliAsync([
-      "--json",
-      "--session",
+    const readCookiesResult = await runCliAsync(["--session",
       destinationSessionId,
       "target",
       "eval",

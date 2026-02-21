@@ -27,15 +27,15 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const result = runCli(["--json", "doctor"]);
+  const result = runCli(["doctor"]);
   const payload = parseJson(result.stdout);
   hasBrowserCache =
-    payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
+    payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test("target eval tolerates navigation triggered by evaluation when persisting state", () => {
@@ -44,14 +44,12 @@ test("target eval tolerates navigation triggered by evaluation when persisting s
   const page1 = "<title>Page 1</title><main>one</main>";
   const page1Url = `data:text/html,${encodeURIComponent(page1)}`;
 
-  const openResult = runCli(["--json", "open", page1Url, "--timeout-ms", "8000"]);
+  const openResult = runCli(["open", page1Url, "--timeout-ms", "8000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
   // This triggers a navigation while SurfWright is still in the command, which used to fail during persist (page.title()).
-  const navResult = runCli([
-    "--json",
-    "target",
+  const navResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expr",
@@ -63,7 +61,7 @@ test("target eval tolerates navigation triggered by evaluation when persisting s
   const navPayload = parseJson(navResult.stdout);
   assert.equal(navPayload.ok, true);
 
-  const hrefResult = runCli(["--json", "target", "eval", openPayload.targetId, "--expr", "location.href", "--timeout-ms", "8000"]);
+  const hrefResult = runCli(["target", "eval", openPayload.targetId, "--expr", "location.href", "--timeout-ms", "8000"]);
   assert.equal(hrefResult.status, 0);
   const hrefPayload = parseJson(hrefResult.stdout);
   assert.equal(hrefPayload.result.type, "string");
@@ -76,13 +74,11 @@ test("target eval timeout performs recovery so follow-up eval remains usable", (
   const html = "<title>Eval Timeout Recovery</title><main>ok</main>";
   const pageUrl = `data:text/html,${encodeURIComponent(html)}`;
 
-  const openResult = runCli(["--json", "open", pageUrl, "--timeout-ms", "8000"]);
+  const openResult = runCli(["open", pageUrl, "--timeout-ms", "8000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const timeoutResult = runCli([
-    "--json",
-    "target",
+  const timeoutResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expr",
@@ -95,9 +91,7 @@ test("target eval timeout performs recovery so follow-up eval remains usable", (
   assert.equal(timeoutPayload.ok, false);
   assert.equal(["E_EVAL_TIMEOUT", "E_EVAL_RUNTIME"].includes(timeoutPayload.code), true);
 
-  const followupResult = runCli([
-    "--json",
-    "target",
+  const followupResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expr",

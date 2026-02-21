@@ -34,9 +34,7 @@ process.on("exit", () => {
 test("target eval accepts --script-file option", () => {
   const scriptPath = path.join(TEST_STATE_DIR, "eval-script.js");
   fs.writeFileSync(scriptPath, "return 1 + 1;", "utf8");
-  const evalResult = runCli([
-    "--json",
-    "target",
+  const evalResult = runCli(["target",
     "eval",
     "ABCDEF123456",
     "--script-file",
@@ -53,9 +51,7 @@ test("target eval accepts --script-file option", () => {
 test("target eval validates script-file size before session resolution", () => {
   const scriptPath = path.join(TEST_STATE_DIR, "eval-oversized-script.js");
   fs.writeFileSync(scriptPath, "x".repeat(70 * 1024), "utf8");
-  const evalResult = runCli([
-    "--json",
-    "target",
+  const evalResult = runCli(["target",
     "eval",
     "ABCDEF123456",
     "--script-file",
@@ -72,9 +68,7 @@ test("target eval validates script-file size before session resolution", () => {
 test("target eval rejects combining --script-file with inline expression", () => {
   const scriptPath = path.join(TEST_STATE_DIR, "eval-mixed-script.js");
   fs.writeFileSync(scriptPath, "return 2 + 2;", "utf8");
-  const evalResult = runCli([
-    "--json",
-    "target",
+  const evalResult = runCli(["target",
     "eval",
     "ABCDEF123456",
     "--script-file",

@@ -5,7 +5,7 @@
 Always branch on runtime contract data, not stale docs:
 
 ```bash
-surfwright --json contract | jq '.errors[] | {code,retryable,message}'
+surfwright contract | jq '.errors[] | {code,retryable,message}'
 ```
 
 ## Branch Policy

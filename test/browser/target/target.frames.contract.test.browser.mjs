@@ -28,15 +28,15 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const result = runCli(["--json", "doctor"]);
+  const result = runCli(["doctor"]);
   const payload = parseJson(result.stdout);
   hasBrowserCache =
-    payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
+    payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -53,11 +53,11 @@ function fixtureUrl() {
 test("target frames lists stable handles for local iframe fixture", () => {
   requireBrowser();
   const url = fixtureUrl();
-  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
+  const openResult = runCli(["open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const framesResult = runCli(["--json", "target", "frames", openPayload.targetId, "--limit", "10", "--timeout-ms", "20000"]);
+  const framesResult = runCli(["target", "frames", openPayload.targetId, "--limit", "10", "--timeout-ms", "20000"]);
   assert.equal(framesResult.status, 0);
   const framesPayload = parseJson(framesResult.stdout);
 
@@ -100,19 +100,17 @@ test("target frames lists stable handles for local iframe fixture", () => {
 test("target eval can target a specific frame via --frame-id", () => {
   requireBrowser();
   const url = fixtureUrl();
-  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
+  const openResult = runCli(["open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const framesResult = runCli(["--json", "target", "frames", openPayload.targetId, "--limit", "50", "--timeout-ms", "20000"]);
+  const framesResult = runCli(["target", "frames", openPayload.targetId, "--limit", "50", "--timeout-ms", "20000"]);
   assert.equal(framesResult.status, 0);
   const framesPayload = parseJson(framesResult.stdout);
   const targetFrame = framesPayload.frames.find((frame) => frame.isMain === false);
   assert.ok(targetFrame, "Expected at least one non-main frame");
 
-  const setResult = runCli([
-    "--json",
-    "target",
+  const setResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--frame-id",
@@ -128,9 +126,7 @@ test("target eval can target a specific frame via --frame-id", () => {
   assert.equal(setPayload.result.type, "boolean");
   assert.equal(setPayload.result.value, true);
 
-  const mainReadResult = runCli([
-    "--json",
-    "target",
+  const mainReadResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expr",
@@ -144,9 +140,7 @@ test("target eval can target a specific frame via --frame-id", () => {
   assert.equal(mainReadPayload.result.type, "null");
   assert.equal(mainReadPayload.result.value, null);
 
-  const frameReadResult = runCli([
-    "--json",
-    "target",
+  const frameReadResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--frame-id",

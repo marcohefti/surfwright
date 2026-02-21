@@ -32,9 +32,7 @@ process.on("exit", () => {
 });
 
 test("target scroll-plan validates steps before session resolution", () => {
-  const result = runCli([
-    "--json",
-    "target",
+  const result = runCli(["target",
     "scroll-plan",
     "ABCDEF123456",
     "--steps",
@@ -49,9 +47,7 @@ test("target scroll-plan validates steps before session resolution", () => {
 });
 
 test("target transition-trace validates max-events before session resolution", () => {
-  const result = runCli([
-    "--json",
-    "target",
+  const result = runCli(["target",
     "transition-trace",
     "ABCDEF123456",
     "--max-events",
@@ -66,9 +62,7 @@ test("target transition-trace validates max-events before session resolution", (
 });
 
 test("target observe requires selector before session resolution", () => {
-  const result = runCli([
-    "--json",
-    "target",
+  const result = runCli(["target",
     "observe",
     "ABCDEF123456",
     "--property",
@@ -83,9 +77,7 @@ test("target observe requires selector before session resolution", () => {
 });
 
 test("target scroll-sample validates steps before session resolution", () => {
-  const result = runCli([
-    "--json",
-    "target",
+  const result = runCli(["target",
     "scroll-sample",
     "ABCDEF123456",
     "--selector",
@@ -102,9 +94,7 @@ test("target scroll-sample validates steps before session resolution", () => {
 });
 
 test("target scroll-watch validates properties before session resolution", () => {
-  const result = runCli([
-    "--json",
-    "target",
+  const result = runCli(["target",
     "scroll-watch",
     "ABCDEF123456",
     "--selector",

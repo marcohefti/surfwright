@@ -68,7 +68,7 @@ function runContractFromInstalledPackage(opts) {
   if (install.status !== 0) {
     return { ok: false, reason: "npm-install-failed", status: install.status ?? 1, stderr: install.stderr.trim() };
   }
-  const cli = run("./node_modules/.bin/surfwright", ["--json", "contract"], workDir);
+  const cli = run("./node_modules/.bin/surfwright", ["contract"], workDir);
   if (cli.status !== 0) {
     return { ok: false, reason: "contract-run-failed", status: cli.status ?? 1, stderr: cli.stderr.trim() };
   }

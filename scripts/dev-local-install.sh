@@ -89,9 +89,9 @@ if [[ "$skill_sync" == "1" ]]; then
 
   say "dev-local-install: skill install -> ${dest}"
   if [[ "$quiet" == "1" ]]; then
-    node "${root}/dist/cli.js" --json skill install --source "$src" --dest "$dest" --lock "$lock" >/dev/null 2>&1
+    node "${root}/dist/cli.js" skill install --source "$src" --dest "$dest" --lock "$lock" >/dev/null 2>&1
   else
-    node "${root}/dist/cli.js" --json skill install --source "$src" --dest "$dest" --lock "$lock"
+    node "${root}/dist/cli.js" skill install --source "$src" --dest "$dest" --lock "$lock"
   fi
 fi
 

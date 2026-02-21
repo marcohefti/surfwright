@@ -3,7 +3,7 @@
 ## Preflight contract and health
 
 ```bash
-surfwright --json contract
+surfwright contract
 surfwright doctor
 ```
 

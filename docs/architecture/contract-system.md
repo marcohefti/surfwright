@@ -36,7 +36,7 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
     - `getCliContractReport(version)`: the payload behind `surfwright contract`
 - Snapshot gate (CI / validation):
   - `scripts/checks/contract-snapshot.mjs`
-    - executes `dist/cli.js --json contract` (explicit, though JSON is the default)
+    - executes `dist/cli.js contract` (explicit, though JSON is the default)
     - normalizes/sorts and compares against `test/fixtures/contract/contract.snapshot.json`
 - Contract truth tests:
   - `test/commands.contract.test.mjs` (fixtures for expected ids and usage fragments)

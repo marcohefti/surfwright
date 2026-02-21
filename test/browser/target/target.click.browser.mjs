@@ -29,14 +29,14 @@ function hasBrowser() {
     return hasBrowserCache;
   }
 
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   const payload = parseJson(doctor.stdout);
-  hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
+  hasBrowserCache = payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -45,7 +45,7 @@ test.after(async () => {
 
 test("target upload keypress and drag-drop return deterministic shapes", () => {
   requireBrowser();
-  const ensureResult = runCli(["--json", "session", "fresh", "--timeout-ms", "8000"]);
+  const ensureResult = runCli(["session", "fresh", "--timeout-ms", "8000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
@@ -70,57 +70,57 @@ test("target upload keypress and drag-drop return deterministic shapes", () => {
     "</script>",
     "</main>",
   ].join("");
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const uploadDirect = runCli(["--json", "--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId, "--selector", "#file-input", "--file", fixturePath, "--timeout-ms", "5000"]);
+  const uploadDirect = runCli(["--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId, "--selector", "#file-input", "--file", fixturePath, "--timeout-ms", "5000"]);
   assert.equal(uploadDirect.status, 0);
   const uploadDirectPayload = parseJson(uploadDirect.stdout);
   assert.equal(uploadDirectPayload.mode, "direct-input");
   assert.equal(uploadDirectPayload.fileCount, 1);
 
-  const uploadChooser = runCli(["--json", "--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId, "--selector", "#upload-trigger", "--file", fixturePath, "--timeout-ms", "5000"]);
+  const uploadChooser = runCli(["--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId, "--selector", "#upload-trigger", "--file", fixturePath, "--timeout-ms", "5000"]);
   assert.equal(uploadChooser.status, 0);
   assert.equal(parseJson(uploadChooser.stdout).mode, "filechooser");
 
-  const keypressResult = runCli(["--json", "--session", ensurePayload.sessionId, "target", "keypress", openPayload.targetId, "--selector", "#search", "--key", "Enter", "--timeout-ms", "5000"]);
+  const keypressResult = runCli(["--session", ensurePayload.sessionId, "target", "keypress", openPayload.targetId, "--selector", "#search", "--key", "Enter", "--timeout-ms", "5000"]);
   assert.equal(keypressResult.status, 0);
   const keypressPayload = parseJson(keypressResult.stdout);
   assert.equal(keypressPayload.key, "Enter");
   assert.equal(keypressPayload.selector, "#search");
   assert.equal(typeof keypressPayload.resultText, "string");
 
-  const dragDropResult = runCli(["--json", "--session", ensurePayload.sessionId, "target", "drag-drop", openPayload.targetId, "--from", "#drag-source", "--to", "#drop-target", "--timeout-ms", "5000"]);
+  const dragDropResult = runCli(["--session", ensurePayload.sessionId, "target", "drag-drop", openPayload.targetId, "--from", "#drag-source", "--to", "#drop-target", "--timeout-ms", "5000"]);
   assert.equal(dragDropResult.status, 0);
   const dragDropPayload = parseJson(dragDropResult.stdout);
   assert.equal(dragDropPayload.result, "dragged");
   assert.equal(dragDropPayload.from, "#drag-source");
   assert.equal(dragDropPayload.to, "#drop-target");
 
-  const verifyDrag = runCli(["--json", "--session", ensurePayload.sessionId, "target", "eval", openPayload.targetId, "--expression", "return document.querySelector('#drop-result').textContent", "--timeout-ms", "5000"]);
+  const verifyDrag = runCli(["--session", ensurePayload.sessionId, "target", "eval", openPayload.targetId, "--expression", "return document.querySelector('#drop-result').textContent", "--timeout-ms", "5000"]);
   assert.equal(verifyDrag.status, 0);
   assert.equal(parseJson(verifyDrag.stdout).result.value, "card-a");
 
-  const uploadMissingFile = runCli(["--json", "--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId, "--selector", "#search", "--file", "/tmp/does-not-exist.txt", "--timeout-ms", "5000"]);
+  const uploadMissingFile = runCli(["--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId, "--selector", "#search", "--file", "/tmp/does-not-exist.txt", "--timeout-ms", "5000"]);
   assert.equal(uploadMissingFile.status, 1);
   assert.equal(parseJson(uploadMissingFile.stdout).code, "E_QUERY_INVALID");
 
-  const keypressMissingSelector = runCli(["--json", "--session", ensurePayload.sessionId, "target", "keypress", openPayload.targetId, "--selector", "#missing", "--key", "Enter", "--timeout-ms", "5000"]);
+  const keypressMissingSelector = runCli(["--session", ensurePayload.sessionId, "target", "keypress", openPayload.targetId, "--selector", "#missing", "--key", "Enter", "--timeout-ms", "5000"]);
   assert.equal(keypressMissingSelector.status, 1);
   assert.equal(parseJson(keypressMissingSelector.stdout).code, "E_QUERY_INVALID");
 
-  const dragDropInvalidSelector = runCli(["--json", "--session", ensurePayload.sessionId, "target", "drag-drop", openPayload.targetId, "--from", "[[", "--to", "#dst", "--timeout-ms", "5000"]);
+  const dragDropInvalidSelector = runCli(["--session", ensurePayload.sessionId, "target", "drag-drop", openPayload.targetId, "--from", "[[", "--to", "#dst", "--timeout-ms", "5000"]);
   assert.equal(dragDropInvalidSelector.status, 1);
   assert.equal(parseJson(dragDropInvalidSelector.stdout).code, "E_SELECTOR_INVALID");
 
-  const cleared = runCli(["--json", "session", "clear", "--timeout-ms", "8000"]);
+  const cleared = runCli(["session", "clear", "--timeout-ms", "8000"]);
   assert.equal(cleared.status, 0);
 });
 
 test("target click returns deterministic shape for selector/text modes", () => {
   requireBrowser();
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
@@ -142,13 +142,11 @@ test("target click returns deterministic shape for selector/text modes", () => {
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
 
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const selectorClick = runCli([
-    "--json",
-    "--session",
+  const selectorClick = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "click",
@@ -197,9 +195,7 @@ test("target click returns deterministic shape for selector/text modes", () => {
   assert.equal(selectorPayload.handoff.openedTargetId, null);
   assert.equal(typeof selectorPayload.timingMs.total, "number");
 
-  const textClick = runCli([
-    "--json",
-    "--session",
+  const textClick = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "click",
@@ -228,19 +224,17 @@ test("target click returns deterministic shape for selector/text modes", () => {
 
 test("target click returns typed query failure when no match exists", () => {
   requireBrowser();
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
   const html = `<title>Click Missing Test</title><main><button id="exists">Exists</button></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const clickResult = runCli([
-    "--json",
-    "--session",
+  const clickResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "click",
@@ -257,7 +251,7 @@ test("target click returns typed query failure when no match exists", () => {
 });
 test("target click reports handoff metadata consistently", () => {
   requireBrowser();
-  const ensureResult = runCli(["--json", "session", "fresh", "--timeout-ms", "8000"]);
+  const ensureResult = runCli(["session", "fresh", "--timeout-ms", "8000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
   const html = `
@@ -267,12 +261,10 @@ test("target click reports handoff metadata consistently", () => {
     </main>
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
-  const clickResult = runCli([
-    "--json",
-    "--session",
+  const clickResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "click",
@@ -294,13 +286,13 @@ test("target click reports handoff metadata consistently", () => {
     assert.equal(typeof clickPayload.handoff.openedTargetId, "string");
     assert.equal(typeof clickPayload.handoff.openedUrl, "string");
   }
-  const cleared = runCli(["--json", "session", "clear", "--timeout-ms", "8000"]);
+  const cleared = runCli(["session", "clear", "--timeout-ms", "8000"]);
   assert.equal(cleared.status, 0);
 });
 
 test("target fill and form-fill return deterministic compact shapes", () => {
   requireBrowser();
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
@@ -317,13 +309,11 @@ test("target fill and form-fill return deterministic compact shapes", () => {
     </form>
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const fillResult = runCli([
-    "--json",
-    "--session",
+  const fillResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "fill",
@@ -349,9 +339,7 @@ test("target fill and form-fill return deterministic compact shapes", () => {
   assert.equal(typeof fillPayload.actionId, "string");
   assert.equal(typeof fillPayload.timingMs.total, "number");
 
-  const verifyFillResult = runCli([
-    "--json",
-    "--session",
+  const verifyFillResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "eval",
@@ -371,9 +359,7 @@ test("target fill and form-fill return deterministic compact shapes", () => {
     "#agree": true,
     "#role": "editor",
   });
-  const formFillResult = runCli([
-    "--json",
-    "--session",
+  const formFillResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "form-fill",
@@ -404,9 +390,7 @@ test("target fill and form-fill return deterministic compact shapes", () => {
   assert.equal(formFillPayload.applied.length, 4);
   assert.equal(typeof formFillPayload.timingMs.total, "number");
 
-  const verifyFormResult = runCli([
-    "--json",
-    "--session",
+  const verifyFormResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "eval",
@@ -429,19 +413,17 @@ test("target fill and form-fill return deterministic compact shapes", () => {
 
 test("target fill and form-fill return typed validation failures", () => {
   requireBrowser();
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
   const html = `<title>Fill Failure Test</title><main><input id="email" /></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const missingQueryFill = runCli([
-    "--json",
-    "--session",
+  const missingQueryFill = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "fill",
@@ -456,9 +438,7 @@ test("target fill and form-fill return typed validation failures", () => {
   assert.equal(missingQueryPayload.ok, false);
   assert.equal(missingQueryPayload.code, "E_QUERY_INVALID");
 
-  const invalidJson = runCli([
-    "--json",
-    "--session",
+  const invalidJson = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "form-fill",
@@ -473,9 +453,7 @@ test("target fill and form-fill return typed validation failures", () => {
   assert.equal(invalidJsonPayload.ok, false);
   assert.equal(invalidJsonPayload.code, "E_QUERY_INVALID");
 
-  const arrayPayload = runCli([
-    "--json",
-    "--session",
+  const arrayPayload = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "form-fill",

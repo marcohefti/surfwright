@@ -21,7 +21,7 @@ function parseJson(stdout) {
 }
 
 function requireBrowser() {
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   assert.equal(doctor.status, 0, doctor.stdout || doctor.stderr);
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
@@ -41,13 +41,11 @@ test("target extract supports table-rows schema mapping and deterministic dedupe
     </table>
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
   const openPayload = parseJson(openResult.stdout);
 
-  const extractResult = runCli([
-    "--json",
-    "target",
+  const extractResult = runCli(["target",
     "extract",
     openPayload.targetId,
     "--kind",
@@ -91,13 +89,11 @@ test("target extract table-rows works when selector points directly to a table",
     </table>
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
   const openPayload = parseJson(openResult.stdout);
 
-  const extractResult = runCli([
-    "--json",
-    "target",
+  const extractResult = runCli(["target",
     "extract",
     openPayload.targetId,
     "--kind",

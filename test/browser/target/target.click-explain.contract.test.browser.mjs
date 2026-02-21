@@ -28,15 +28,15 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const result = runCli(["--json", "doctor"]);
+  const result = runCli(["doctor"]);
   const payload = parseJson(result.stdout);
   hasBrowserCache =
-    payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
+    payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -47,13 +47,11 @@ test("target click --explain returns bounded rejection reasons without clicking"
   requireBrowser();
   const html = `<title>Click Explain</title><main><button style=\"display:none\">Delete</button><button>Delete</button></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const explainResult = runCli([
-    "--json",
-    "target",
+  const explainResult = runCli(["target",
     "click",
     openPayload.targetId,
     "--text",
@@ -95,13 +93,11 @@ test("target click supports --within scope for deterministic disambiguation", ()
     </main>
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const scopedClick = runCli([
-    "--json",
-    "target",
+  const scopedClick = runCli(["target",
     "click",
     openPayload.targetId,
     "--text",
@@ -115,9 +111,7 @@ test("target click supports --within scope for deterministic disambiguation", ()
   const scopedPayload = parseJson(scopedClick.stdout);
   assert.equal(scopedPayload.withinSelector, "#right");
 
-  const verifyResult = runCli([
-    "--json",
-    "target",
+  const verifyResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expression",
@@ -149,13 +143,11 @@ test("target fill --event-mode realistic dispatches keyup-compatible events", ()
     </main>
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const fillResult = runCli([
-    "--json",
-    "target",
+  const fillResult = runCli(["target",
     "fill",
     openPayload.targetId,
     "--selector",
@@ -173,9 +165,7 @@ test("target fill --event-mode realistic dispatches keyup-compatible events", ()
   assert.equal(Array.isArray(fillPayload.eventsDispatched), true);
   assert.equal(fillPayload.eventsDispatched.includes("keyup"), true);
 
-  const verifyKeyupResult = runCli([
-    "--json",
-    "target",
+  const verifyKeyupResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expression",

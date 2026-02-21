@@ -32,7 +32,7 @@ process.on("exit", () => {
 });
 
 test("open invalid URL returns typed compact JSON failure", () => {
-  const result = runCli(["--json", "open", "camelpay.localhost"]);
+  const result = runCli(["open", "camelpay.localhost"]);
   assert.equal(result.status, 1);
   assert.ok(result.stdout.trim().startsWith('{"ok":false,'));
   const payload = parseJson(result.stdout);
@@ -43,7 +43,7 @@ test("open invalid URL returns typed compact JSON failure", () => {
 });
 
 test("--pretty switches to multiline JSON", () => {
-  const result = runCli(["--json", "--pretty", "open", "camelpay.localhost"]);
+  const result = runCli(["--pretty", "open", "camelpay.localhost"]);
   assert.equal(result.status, 1);
   assert.ok(result.stdout.includes("\n  \"ok\": false"));
   const payload = parseJson(result.stdout);
@@ -51,7 +51,7 @@ test("--pretty switches to multiline JSON", () => {
 });
 
 test("session attach requires explicit valid CDP origin", () => {
-  const result = runCli(["--json", "session", "attach", "--cdp", "not-a-url"]);
+  const result = runCli(["session", "attach", "--cdp", "not-a-url"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
@@ -59,9 +59,7 @@ test("session attach requires explicit valid CDP origin", () => {
 });
 
 test("session attach accepts ws:// CDP endpoint format (returns typed unreachable if offline)", () => {
-  const result = runCli([
-    "--json",
-    "session",
+  const result = runCli(["session",
     "attach",
     "--cdp",
     "ws://127.0.0.1:9/devtools/browser/fake",
@@ -75,14 +73,14 @@ test("session attach accepts ws:// CDP endpoint format (returns typed unreachabl
 });
 
 test("browser-mode rejects invalid values (typed)", () => {
-  const ensureResult = runCli(["--json", "session", "ensure", "--browser-mode", "bogus"]);
+  const ensureResult = runCli(["session", "ensure", "--browser-mode", "bogus"]);
   assert.equal(ensureResult.status, 1);
   const ensurePayload = parseJson(ensureResult.stdout);
   assert.equal(ensurePayload.ok, false);
   assert.equal(ensurePayload.code, "E_QUERY_INVALID");
   assert.equal(ensurePayload.message, "browser-mode must be one of: headless, headed");
 
-  const openResult = runCli(["--json", "open", "https://example.com", "--browser-mode", "bogus"]);
+  const openResult = runCli(["open", "https://example.com", "--browser-mode", "bogus"]);
   assert.equal(openResult.status, 1);
   const openPayload = parseJson(openResult.stdout);
   assert.equal(openPayload.ok, false);
@@ -92,9 +90,7 @@ test("browser-mode rejects invalid values (typed)", () => {
 
 test("target eval validates script size before session resolution", () => {
   const oversizedExpression = "x".repeat(5000);
-  const evalResult = runCli([
-    "--json",
-    "target",
+  const evalResult = runCli(["target",
     "eval",
     "ABCDEF123456",
     "--expression",
@@ -108,10 +104,8 @@ test("target eval validates script size before session resolution", () => {
   assert.equal(evalPayload.code, "E_EVAL_SCRIPT_TOO_LARGE");
 });
 
-test("target eval accepts --js alias", () => {
-  const evalResult = runCli([
-    "--json",
-    "target",
+test("target eval rejects removed --js alias", () => {
+  const evalResult = runCli(["target",
     "eval",
     "ABCDEF123456",
     "--js",
@@ -122,13 +116,11 @@ test("target eval accepts --js alias", () => {
   assert.equal(evalResult.status, 1);
   const evalPayload = parseJson(evalResult.stdout);
   assert.equal(evalPayload.ok, false);
-  assert.equal(evalPayload.code, "E_TARGET_SESSION_UNKNOWN");
+  assert.equal(evalPayload.code, "E_QUERY_INVALID");
 });
 
 test("target find validates href-path-prefix before session resolution", () => {
-  const findResult = runCli([
-    "--json",
-    "target",
+  const findResult = runCli(["target",
     "find",
     "ABCDEF123456",
     "--text",

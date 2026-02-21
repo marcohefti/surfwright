@@ -147,7 +147,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.eval",
     usage:
-      "surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--mode <expr|script>] [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target eval <targetId> (--expr <js> | --expression <js> | --script-file <path>) [--mode <expr|script>] [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "execute bounded JavaScript in page context for a target",
   },
   {

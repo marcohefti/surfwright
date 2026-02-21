@@ -14,7 +14,6 @@ type TargetSpawnReport = {
   sessionId: string;
   parentTargetId: string;
   targetId: string;
-  childTargetId: string;
   actionId: string;
   query: string;
   url: string;
@@ -164,7 +163,7 @@ export async function targetSpawn(opts: {
         // Not all spawned pages reach domcontentloaded in this window.
       });
 
-    const childTargetId = await readPageTargetId(context, childPage);
+    const spawnedTargetId = await readPageTargetId(context, childPage);
     const title = await childPage.title();
     const actionCompletedAt = Date.now();
 
@@ -172,9 +171,7 @@ export async function targetSpawn(opts: {
       ok: true,
       sessionId: session.sessionId,
       parentTargetId: requestedTargetId,
-      // Compatibility alias so follow-up commands can consume targetId directly.
-      targetId: childTargetId,
-      childTargetId,
+      targetId: spawnedTargetId,
       actionId: newActionId(),
       query: parsed.query,
       url: childPage.url(),
@@ -191,7 +188,7 @@ export async function targetSpawn(opts: {
     const persistStartedAt = Date.now();
     if (opts.persistState !== false) {
       await saveTargetSnapshot({
-        targetId: report.childTargetId,
+        targetId: report.targetId,
         sessionId: report.sessionId,
         url: report.url,
         title: report.title,

@@ -23,7 +23,7 @@ function parseJson(stdout) {
 }
 
 function requireBrowser() {
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   assert.equal(doctor.status, 0, doctor.stdout || doctor.stderr);
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
@@ -32,7 +32,7 @@ function requireBrowser() {
 test("session ensure + open success returns contract shape", () => {
   requireBrowser();
 
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
   assert.deepEqual(Object.keys(ensurePayload), [
@@ -53,7 +53,7 @@ test("session ensure + open success returns contract shape", () => {
 
   const html = `<title>Contract Test Page</title><main><h1>ok heading</h1></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
   assert.deepEqual(Object.keys(openPayload), [

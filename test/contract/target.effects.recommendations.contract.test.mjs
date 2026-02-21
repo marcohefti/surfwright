@@ -32,9 +32,7 @@ process.on("exit", () => {
 });
 
 test("target hover requires query before session resolution", () => {
-  const result = runCli([
-    "--json",
-    "target",
+  const result = runCli(["target",
     "hover",
     "ABCDEF123456",
     "--timeout-ms",
@@ -47,9 +45,7 @@ test("target hover requires query before session resolution", () => {
 });
 
 test("target motion-detect requires selector before session resolution", () => {
-  const result = runCli([
-    "--json",
-    "target",
+  const result = runCli(["target",
     "motion-detect",
     "ABCDEF123456",
     "--timeout-ms",
@@ -62,9 +58,7 @@ test("target motion-detect requires selector before session resolution", () => {
 });
 
 test("target transition-assert validates cycle bounds", () => {
-  const result = runCli([
-    "--json",
-    "target",
+  const result = runCli(["target",
     "transition-assert",
     "ABCDEF123456",
     "--cycles",
@@ -81,9 +75,7 @@ test("target transition-assert validates cycle bounds", () => {
 });
 
 test("target scroll-reveal-scan validates two-step minimum", () => {
-  const result = runCli([
-    "--json",
-    "target",
+  const result = runCli(["target",
     "scroll-reveal-scan",
     "ABCDEF123456",
     "--steps",
@@ -98,9 +90,7 @@ test("target scroll-reveal-scan validates two-step minimum", () => {
 });
 
 test("target sticky-check validates step shape before session resolution", () => {
-  const result = runCli([
-    "--json",
-    "target",
+  const result = runCli(["target",
     "sticky-check",
     "ABCDEF123456",
     "--steps",

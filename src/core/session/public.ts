@@ -42,7 +42,6 @@ export async function openUrl(opts: {
   timeoutMs: number;
   sessionId?: string;
   profile?: string;
-  reuseUrl?: boolean;
   reuseModeInput?: string;
   waitUntilInput?: string;
   isolation?: string;

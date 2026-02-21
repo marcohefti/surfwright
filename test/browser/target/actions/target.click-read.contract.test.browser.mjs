@@ -18,7 +18,7 @@ function parseJson(stdout) {
 }
 
 function requireBrowser() {
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   assert.equal(doctor.status, 0, doctor.stdout || doctor.stderr);
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
@@ -30,7 +30,7 @@ test.after(async () => {
 
 test("target click-read composes click handoff and bounded read in one command", () => {
   requireBrowser();
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
@@ -40,13 +40,11 @@ test("target click-read composes click handoff and bounded read in one command",
     <a id="pricing" href="#pricing" onclick="document.getElementById('main').textContent='Pricing Details';">Pricing</a>
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
   const openPayload = parseJson(openResult.stdout);
 
-  const clickRead = runCli([
-    "--json",
-    "--session",
+  const clickRead = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "click-read",

@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:c73d56b44834fa2d2a8246fd8aa28d8b56906e007f6ef233eca7064fdd6282f8",
+  "contractFingerprint": "sha256:6ced61da6fe200cc2ff385187f9c6fe09531b099343d1d49f4efdffa97a7be35",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -47,7 +47,7 @@
     },
     {
       "id": "open",
-      "usage": "surfwright open <url> [--profile <name>] [--reuse-url] [--reuse <off|url|origin|active>] [--allow-download] [--download-out-dir <path>] [--wait-until <commit|domcontentloaded|load|networkidle>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright open <url> [--profile <name>] [--reuse <off|url|origin|active>] [--allow-download] [--download-out-dir <path>] [--wait-until <commit|domcontentloaded|load|networkidle>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "open URL and return minimal page report with target handle"
     },
     {
@@ -177,7 +177,7 @@
     },
     {
       "id": "target.eval",
-      "usage": "surfwright target eval <targetId> (--expr <js> | --expression <js> | --js <js> | --script <js> | --script-file <path>) [--mode <expr|script>] [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target eval <targetId> (--expr <js> | --expression <js> | --script-file <path>) [--mode <expr|script>] [--arg-json <json>] [--frame-id <id>] [--capture-console] [--max-console <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "execute bounded JavaScript in page context for a target"
     },
     {

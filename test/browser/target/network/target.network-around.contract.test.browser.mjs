@@ -24,7 +24,7 @@ function parseJson(stdout) {
 }
 
 function requireBrowser() {
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   assert.equal(doctor.status, 0, doctor.stdout || doctor.stderr);
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
@@ -70,13 +70,11 @@ test("target network-around captures around click and returns combined report", 
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     res.end("not found");
   }, async (baseUrl) => {
-    const openResult = await runCliAsync(["--json", "open", baseUrl, "--timeout-ms", "8000"]);
+    const openResult = await runCliAsync(["open", baseUrl, "--timeout-ms", "8000"]);
     assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
     const openPayload = parseJson(openResult.stdout);
 
-    const result = await runCliAsync([
-      "--json",
-      "target",
+    const result = await runCliAsync(["target",
       "network-around",
       openPayload.targetId,
       "--click-text",

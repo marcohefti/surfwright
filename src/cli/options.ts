@@ -89,7 +89,7 @@ export function parseCommandPath(argv: string[]): string[] {
       continue;
     }
 
-    if (token === "--json" || token === "--no-json" || token === "--pretty") {
+    if (token === "--no-json" || token === "--pretty") {
       index += 1;
       continue;
     }

@@ -28,15 +28,15 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   const payload = parseJson(doctor.stdout);
   hasBrowserCache =
-    payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
+    payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 async function withHttpServer(handler, fn) {
@@ -68,16 +68,14 @@ test("target url-assert returns deterministic shape and typed failures", async (
     const url = `${baseUrl}/`;
     const origin = new URL(url).origin;
 
-    const openResult = await runCliAsync(["--json", "open", url, "--timeout-ms", "20000"]);
+    const openResult = await runCliAsync(["open", url, "--timeout-ms", "20000"]);
     assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
     const openPayload = parseJson(openResult.stdout);
     const targetId = openPayload.targetId;
     assert.equal(typeof targetId, "string");
     assert.equal(targetId.length > 0, true);
 
-    const assertHostResult = await runCliAsync([
-      "--json",
-      "target",
+    const assertHostResult = await runCliAsync(["target",
       "url-assert",
       targetId,
       "--host",
@@ -94,9 +92,7 @@ test("target url-assert returns deterministic shape and typed failures", async (
     assert.equal(assertHostPayload.assert.urlPrefix, null);
     assert.equal(typeof assertHostPayload.blockType, "string");
 
-    const assertAllResult = await runCliAsync([
-      "--json",
-      "target",
+    const assertAllResult = await runCliAsync(["target",
       "url-assert",
       targetId,
       "--origin",
@@ -114,9 +110,7 @@ test("target url-assert returns deterministic shape and typed failures", async (
     assert.equal(assertAllPayload.url, url);
     assert.equal(assertAllPayload.assert.origin, origin);
 
-    const assertInvalidResult = await runCliAsync([
-      "--json",
-      "target",
+    const assertInvalidResult = await runCliAsync(["target",
       "url-assert",
       targetId,
       "--host",
@@ -129,7 +123,7 @@ test("target url-assert returns deterministic shape and typed failures", async (
     assert.equal(assertInvalidPayload.ok, false);
     assert.equal(assertInvalidPayload.code, "E_ASSERT_FAILED");
 
-    const assertMissingResult = await runCliAsync(["--json", "target", "url-assert", targetId, "--timeout-ms", "8000"]);
+    const assertMissingResult = await runCliAsync(["target", "url-assert", targetId, "--timeout-ms", "8000"]);
     assert.equal(assertMissingResult.status, 1);
     const assertMissingPayload = parseJson(assertMissingResult.stdout);
     assert.equal(assertMissingPayload.ok, false);

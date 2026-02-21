@@ -37,7 +37,7 @@ process.on("exit", () => {
 });
 
 test("contract command matches fixture-backed command surface", () => {
-  const result = runCli(["--json", "contract"]);
+  const result = runCli(["contract"]);
   assert.equal(result.status, 0);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);

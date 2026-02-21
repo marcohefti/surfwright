@@ -151,7 +151,6 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .description(openMeta.summary)
     .argument("<url>", "Absolute URL to open")
     .option("--profile <name>", "Use a project workspace profile for persisted auth (requires workspace init)")
-    .option("--reuse-url", "Reuse existing tab for same URL if present", false)
     .option("--reuse <mode>", "Tab reuse mode: off|url|origin|active")
     .option("--allow-download", "Treat download navigations as success and capture deterministic download artifact", false)
     .option("--download-out-dir <path>", "Directory to write captured downloads (default ./artifacts/downloads)")
@@ -179,7 +178,6 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         url: string,
         options: {
           timeoutMs: number;
-          reuseUrl?: boolean;
           reuse?: string;
           browserMode?: string;
           isolation?: string;
@@ -201,7 +199,6 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         const report = await openUrl({
           inputUrl: url,
           timeoutMs: options.timeoutMs,
-          reuseUrl: Boolean(options.reuseUrl),
           reuseModeInput: options.reuse,
           allowDownload: Boolean(options.allowDownload),
           downloadOutDir: typeof options.downloadOutDir === "string" ? options.downloadOutDir : undefined,

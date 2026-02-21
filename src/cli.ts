@@ -15,7 +15,6 @@ import {
 import type { CliFailure } from "./core/types.js";
 import { parseWorkerArgv, runTargetNetworkWorker } from "./features/network/index.js";
 import { allCommandManifest, registerFeaturePlugins } from "./features/registry.js";
-import { rewriteTargetIdOptionAlias } from "./core/cli/target-id-alias.js";
 import { setRuntimeOutputShapeInput } from "./core/report-fields.js";
 import {
   parseCommandPath,
@@ -170,7 +169,7 @@ function rewriteDotCommandAlias(argv: string[]): string[] {
       continue;
     }
 
-    if (token === "--json" || token === "--no-json" || token === "--pretty") {
+    if (token === "--no-json" || token === "--pretty") {
       commandIndex += 1;
       continue;
     }
@@ -193,7 +192,7 @@ function normalizeArgv(argv: string[]): string[] {
   if (out[2] === "--") {
     out.splice(2, 1);
   }
-  return rewriteTargetIdOptionAlias(rewriteDotCommandAlias(out));
+  return rewriteDotCommandAlias(out);
 }
 
 function shouldBypassDaemon(argv: string[]): boolean {
@@ -253,8 +252,6 @@ function createProgram(): Command {
       ].join(" "),
     )
     .version(readPackageVersion(), "-v, --version")
-    // Back-compat: older scripts/agents pass `--json`. Output is JSON by default now, so keep this flag as a no-op.
-    .addOption(new Option("--json", "Force JSON output (default)").hideHelp())
     .option("--no-json", "Disable JSON output (human-friendly summaries)")
     .option("--pretty", "Pretty-print JSON output", false)
     .option("--agent-id <agentId>", "Agent scope id for isolated state/daemon namespace")

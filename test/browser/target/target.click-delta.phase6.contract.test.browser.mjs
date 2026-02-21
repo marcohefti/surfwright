@@ -29,14 +29,14 @@ function hasBrowser() {
     return hasBrowserCache;
   }
 
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   const payload = parseJson(doctor.stdout);
-  hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
+  hasBrowserCache = payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -69,13 +69,11 @@ test("target click --delta returns bounded evidence-based delta", () => {
       </body>
     </html>`;
   const url = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
+  const openResult = runCli(["open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const clickResult = runCli([
-    "--json",
-    "target",
+  const clickResult = runCli(["target",
     "click",
     openPayload.targetId,
     "--text",

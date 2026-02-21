@@ -163,16 +163,8 @@ export function parseOpenWaitUntil(input: string | undefined, allowDownload: boo
 
 export function parseOpenReuseMode(opts: {
   reuseModeInput?: string;
-  reuseUrl?: boolean;
 }): OpenReuseMode {
   const hasReuseMode = typeof opts.reuseModeInput === "string" && opts.reuseModeInput.trim().length > 0;
-  const hasReuseUrl = Boolean(opts.reuseUrl);
-  if (hasReuseMode && hasReuseUrl) {
-    throw new CliError("E_QUERY_INVALID", "Use either --reuse or --reuse-url, not both");
-  }
-  if (hasReuseUrl) {
-    return "url";
-  }
   if (!hasReuseMode) {
     return "off";
   }

@@ -6,7 +6,7 @@ All notable changes to SurfWright are documented here.
 
 ### Added
 - [open] Added `open --wait-until <commit|domcontentloaded|load|networkidle>` and additive output fields `waitUntil`, `reuseMode`, `reusedTarget` for explicit navigation/readiness evidence.
-- [open] Added `open --reuse <off|url|origin|active>` for explicit tab-reuse policy (with `--reuse-url` preserved as compatibility alias).
+- [open] Added `open --reuse <off|url|origin|active>` for explicit tab-reuse policy.
 - [target] Added `target style` for first-class computed-style inspection without `target eval` scripting.
 - [target] Added `target click --proof` to emit a compact one-shot evidence payload (implies `--snapshot` + `--delta`).
 - [target] Added `target click --repeat <n>` (1-25) to execute repeated deterministic clicks in one command, returning final click fields plus additive `repeat` metadata (`requested`, `completed`, `actionIds`, `pickedIndices`).
@@ -39,7 +39,7 @@ All notable changes to SurfWright are documented here.
 - [target] `target wait` now includes a structured `wait` payload (`mode`, `value`, `timeoutMs`, `elapsedMs`, `satisfied`) while keeping existing top-level `mode`/`value`.
 - [target] `target snapshot --mode orient|snapshot` now includes additive aggregate counters (`headingsCount`, `buttonsCount`, `linksCount`), plus `navCount` for orient mode.
 - [errors] Typed failures can now include optional bounded `hints` and `hintContext` fields (additive; `code` + `message` contract preserved).
-- [cli] Improved first-run discoverability: parse errors now show stronger suggestions/help and `target --target/--target-id` aliases rewrite to positional `targetId` where applicable.
+- [cli] Improved first-run discoverability: parse errors now show stronger suggestions/help.
 - [target] Unified post-action waits across interactive actions: `target fill|keypress|upload|drag-drop|dialog` now support `--wait-for-text|--wait-for-selector|--wait-network-idle` and `--wait-timeout-ms`.
 - [session] Reduced repeat command overhead in tight loops with short-lived CDP reachability caching during session health checks.
 - [session] `session attach --cdp` now accepts `ws://`/`wss://` endpoints and supports HTTP(S) discovery URLs with path/query (resolved to websocket endpoints for runtime attach).
@@ -66,6 +66,13 @@ All notable changes to SurfWright are documented here.
 ### Removed
 - [docs] Removed campaign planning docs under `docs/campaigns/`.
 - [target] Removed legacy download aliases `download.filename` and `download.size`; use canonical `download.fileName` and `download.bytes`.
+- [open] Removed `open --reuse-url` compatibility alias; use `open --reuse url`.
+- [target] Removed `target eval` option aliases `--js` and `--script`; use `--expr|--expression|--script-file`.
+- [target] Removed `target style` output aliases `element` and `computed`; use `inspected` and `values`.
+- [target] Removed `target spawn` output alias `childTargetId`; use canonical `targetId`.
+- [cli] Removed argv rewrite compatibility for `target --target/--target-id`; use positional `targetId`.
+- [cli] Removed hidden global `--json` flag; JSON output remains default.
+- [state] Removed state schema migration layer; incompatible state versions now reset to empty state.
 
 ## [0.1.2] - 2026-02-17
 

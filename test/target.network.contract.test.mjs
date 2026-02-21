@@ -53,7 +53,7 @@ test("target network-end finalizes state and returns typed failure when done sta
   );
 
   writeState({
-    version: 2,
+    version: 4,
     activeSessionId: null,
     nextSessionOrdinal: 1,
     nextCaptureOrdinal: 2,
@@ -80,7 +80,7 @@ test("target network-end finalizes state and returns typed failure when done sta
     networkArtifacts: {},
   });
 
-  const endResult = runCli(["--json", "target", "network-end", captureId, "--timeout-ms", "500"]);
+  const endResult = runCli(["target", "network-end", captureId, "--timeout-ms", "500"]);
   assert.equal(endResult.status, 1);
   const failure = parseJson(endResult.stdout);
   assert.equal(failure.ok, false);
@@ -94,7 +94,7 @@ test("target network-end finalizes state and returns typed failure when done sta
 });
 
 test("target network-export-list returns indexed artifacts", () => {
-  const listResult = runCli(["--json", "target", "network-export-list", "--limit", "5"]);
+  const listResult = runCli(["target", "network-export-list", "--limit", "5"]);
   assert.equal(listResult.status, 0);
   const listPayload = parseJson(listResult.stdout);
   assert.deepEqual(Object.keys(listPayload), ["ok", "total", "returned", "artifacts"]);
@@ -192,7 +192,7 @@ test("target network-query/check/export-prune work on saved sources", () => {
     "utf8",
   );
   writeState({
-    version: 2,
+    version: 4,
     activeSessionId: null,
     nextSessionOrdinal: 1,
     nextCaptureOrdinal: 2,
@@ -231,7 +231,7 @@ test("target network-query/check/export-prune work on saved sources", () => {
     },
   });
 
-  const queryResult = runCli(["--json", "target", "network-query", "--capture-id", "c-1", "--preset", "slowest"]);
+  const queryResult = runCli(["target", "network-query", "--capture-id", "c-1", "--preset", "slowest"]);
   assert.equal(queryResult.status, 0);
   const queryPayload = parseJson(queryResult.stdout);
   assert.equal(queryPayload.ok, true);
@@ -241,14 +241,14 @@ test("target network-query/check/export-prune work on saved sources", () => {
 
   const budgetPath = path.join(TEST_STATE_DIR, "budget.json");
   fs.writeFileSync(budgetPath, JSON.stringify({ maxP95LatencyMs: 100, maxErrorRate: 0.2 }), "utf8");
-  const checkResult = runCli(["--json", "target", "network-check", "--capture-id", "c-1", "--budget", budgetPath]);
+  const checkResult = runCli(["target", "network-check", "--capture-id", "c-1", "--budget", budgetPath]);
   assert.equal(checkResult.status, 0);
   const checkPayload = parseJson(checkResult.stdout);
   assert.equal(checkPayload.ok, true);
   assert.equal(typeof checkPayload.passed, "boolean");
   assert.equal(Array.isArray(checkPayload.checks), true);
 
-  const pruneResult = runCli(["--json", "target", "network-export-prune", "--max-age-hours", "24"]);
+  const pruneResult = runCli(["target", "network-export-prune", "--max-age-hours", "24"]);
   assert.equal(pruneResult.status, 0);
   const prunePayload = parseJson(pruneResult.stdout);
   assert.equal(prunePayload.ok, true);

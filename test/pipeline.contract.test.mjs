@@ -49,9 +49,7 @@ test("run doctor validates inline plan-json without browser execution", () => {
       { id: "snapshot" },
     ],
   };
-  const result = runCli([
-    "--json",
-    "run",
+  const result = runCli(["run",
     "--doctor",
     "--plan-json",
     JSON.stringify(plan),
@@ -68,9 +66,7 @@ test("run doctor validates inline plan-json without browser execution", () => {
 
 test("run doctor returns exit code 1 for lint-invalid plan", () => {
   const invalid = { steps: [{ id: "open" }] };
-  const result = runCli([
-    "--json",
-    "run",
+  const result = runCli(["run",
     "--doctor",
     "--plan-json",
     JSON.stringify(invalid),
@@ -89,7 +85,7 @@ test("run doctor returns exit code 1 for lint-invalid plan", () => {
 test("run doctor accepts stdin plan source", () => {
   const plan = { steps: [{ id: "open", url: "https://example.com" }] };
   const result = runCliWithInput(
-    ["--json", "run", "--doctor", "--plan", "-", "--timeout-ms", "5000"],
+    ["run", "--doctor", "--plan", "-", "--timeout-ms", "5000"],
     JSON.stringify(plan),
   );
   assert.equal(result.status, 0);
@@ -99,7 +95,7 @@ test("run doctor accepts stdin plan source", () => {
 });
 
 test("run doctor rejects invalid plan-json JSON with typed failure", () => {
-  const result = runCli(["--json", "run", "--doctor", "--plan-json", "{", "--timeout-ms", "5000"]);
+  const result = runCli(["run", "--doctor", "--plan-json", "{", "--timeout-ms", "5000"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
@@ -109,7 +105,7 @@ test("run doctor rejects invalid plan-json JSON with typed failure", () => {
 test("run doctor rejects invalid plan file JSON with typed failure", () => {
   const planPath = path.join(TEST_STATE_DIR, "invalid-plan.json");
   fs.writeFileSync(planPath, "{", "utf8");
-  const result = runCli(["--json", "run", "--doctor", "--plan", planPath, "--timeout-ms", "5000"]);
+  const result = runCli(["run", "--doctor", "--plan", planPath, "--timeout-ms", "5000"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
@@ -118,7 +114,7 @@ test("run doctor rejects invalid plan file JSON with typed failure", () => {
 
 test("run rejects invalid step shapes before session resolution", () => {
   const plan = { steps: [{ id: "open", url: "https://example.com" }, { id: "snapshot", targetId: 42 }] };
-  const result = runCli(["--json", "run", "--plan-json", JSON.stringify(plan), "--timeout-ms", "5000"]);
+  const result = runCli(["run", "--plan-json", JSON.stringify(plan), "--timeout-ms", "5000"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
@@ -133,9 +129,7 @@ test("run doctor accepts fill/upload step shapes", () => {
       { id: "upload", selector: "input[type=file]", files: ["./fixture.txt"] },
     ],
   };
-  const result = runCli([
-    "--json",
-    "run",
+  const result = runCli(["run",
     "--doctor",
     "--plan-json",
     JSON.stringify(plan),

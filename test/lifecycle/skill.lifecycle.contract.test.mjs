@@ -42,9 +42,7 @@ process.on("exit", () => {
 });
 
 test("skill install + doctor + update lifecycle is atomic and lock-backed", () => {
-  const install = runCli([
-    "--json",
-    "skill",
+  const install = runCli(["skill",
     "install",
     "--source",
     SOURCE_DIR,
@@ -60,9 +58,7 @@ test("skill install + doctor + update lifecycle is atomic and lock-backed", () =
   assert.equal(fs.existsSync(path.join(DEST_DIR, "skill.json")), true);
   assert.equal(fs.existsSync(LOCK_PATH), true);
 
-  const doctor = runCli([
-    "--json",
-    "skill",
+  const doctor = runCli(["skill",
     "doctor",
     "--dest",
     DEST_DIR,
@@ -76,9 +72,7 @@ test("skill install + doctor + update lifecycle is atomic and lock-backed", () =
   assert.equal(doctorPayload.compatible, true);
   assert.equal(doctorPayload.lockStatus, "match");
 
-  const update = runCli([
-    "--json",
-    "skill",
+  const update = runCli(["skill",
     "update",
     "--source",
     SOURCE_DIR,
@@ -94,9 +88,7 @@ test("skill install + doctor + update lifecycle is atomic and lock-backed", () =
 });
 
 test("skill install fails fast with typed source error", () => {
-  const result = runCli([
-    "--json",
-    "skill",
+  const result = runCli(["skill",
     "install",
     "--source",
     path.join(TEST_TMP_DIR, "missing-source"),

@@ -29,14 +29,14 @@ function hasBrowser() {
     return hasBrowserCache;
   }
 
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   const payload = parseJson(doctor.stdout);
-  hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
+  hasBrowserCache = payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 const RETRYABLE_INFRA_CODES = new Set([
@@ -48,7 +48,7 @@ const RETRYABLE_INFRA_CODES = new Set([
 ]);
 
 function openTarget(url, { timeoutMs = 5000 } = {}) {
-  const args = ["--json", "open", url, "--timeout-ms", String(timeoutMs)];
+  const args = ["open", url, "--timeout-ms", String(timeoutMs)];
   let result = runCli(args);
   if (result.status !== 0) {
     try {
@@ -80,9 +80,7 @@ test("target scroll-plan returns deterministic shape", () => {
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
   const openPayload = openTarget(dataUrl);
 
-  const planResult = runCli([
-    "--json",
-    "target",
+  const planResult = runCli(["target",
     "scroll-plan",
     openPayload.targetId,
     "--steps",
@@ -122,9 +120,7 @@ test("target transition-trace captures transition events after click", () => {
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
   const openPayload = openTarget(dataUrl);
 
-  const traceResult = runCli([
-    "--json",
-    "target",
+  const traceResult = runCli(["target",
     "transition-trace",
     openPayload.targetId,
     "--click-selector",
@@ -171,9 +167,7 @@ test("target observe captures sampled property changes", () => {
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
   const openPayload = openTarget(dataUrl);
 
-  const observeResult = runCli([
-    "--json",
-    "target",
+  const observeResult = runCli(["target",
     "observe",
     openPayload.targetId,
     "--selector",
@@ -221,9 +215,7 @@ test("target scroll-sample returns sampled values across steps", () => {
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
   const openPayload = openTarget(dataUrl);
 
-  const sampleResult = runCli([
-    "--json",
-    "target",
+  const sampleResult = runCli(["target",
     "scroll-sample",
     openPayload.targetId,
     "--selector",
@@ -275,9 +267,7 @@ test("target scroll-watch returns class/style deltas and transition events", () 
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
   const openPayload = openTarget(dataUrl);
 
-  const watchResult = runCli([
-    "--json",
-    "target",
+  const watchResult = runCli(["target",
     "scroll-watch",
     openPayload.targetId,
     "--selector",

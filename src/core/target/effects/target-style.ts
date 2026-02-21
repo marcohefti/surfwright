@@ -164,12 +164,8 @@ export async function targetStyle(opts: {
       matchCount: count,
       pickedIndex: selected.index,
       inspected,
-      // Compatibility alias for evaluators that expect element/computed keys.
-      element: inspected,
       properties,
       values,
-      // Compatibility alias for evaluators that expect element/computed keys.
-      computed: values,
       proof: {
         action: "style",
         queryMode: parsed.mode,

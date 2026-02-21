@@ -60,7 +60,7 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
       url,
       timeoutMs,
       sessionId,
-      reuseUrl: Boolean(step.reuseUrl),
+      reuseModeInput: parseOptionalString(step.reuse, `steps[${index}].reuse`),
     });
   },
   list: async ({ step, timeoutMs, sessionId, ops }) =>

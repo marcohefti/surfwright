@@ -16,7 +16,6 @@ export async function openUrl(opts: {
   timeoutMs: number;
   sessionId?: string;
   profile?: string;
-  reuseUrl?: boolean;
   reuseModeInput?: string;
   waitUntilInput?: string;
   isolation?: string;
@@ -41,7 +40,6 @@ export async function openUrl(opts: {
   const waitUntil = parseOpenWaitUntil(opts.waitUntilInput, allowDownload);
   const reuseMode = parseOpenReuseMode({
     reuseModeInput: opts.reuseModeInput,
-    reuseUrl: opts.reuseUrl,
   });
   const profileHint = typeof opts.profile === "string" && opts.profile.trim().length > 0 ? opts.profile : undefined;
   const sessionHint = profileHint

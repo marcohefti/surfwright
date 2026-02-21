@@ -36,7 +36,7 @@ process.on("exit", () => {
 });
 
 test("workspace profile-locks lists locks and profile-lock-clear clears stale locks", () => {
-  const init = runCli(["--json", "workspace", "init"]);
+  const init = runCli(["workspace", "init"]);
   assert.equal(init.status, 0, init.stdout || init.stderr);
   const initPayload = parseJson(init.stdout);
   assert.equal(initPayload.ok, true);
@@ -47,7 +47,7 @@ test("workspace profile-locks lists locks and profile-lock-clear clears stale lo
   fs.mkdirSync(path.dirname(lockPath), { recursive: true });
   fs.writeFileSync(lockPath, `999999 ${Date.now() - 60000}\n`, { encoding: "utf8", mode: 0o600 });
 
-  const list = runCli(["--json", "workspace", "profile-locks"]);
+  const list = runCli(["workspace", "profile-locks"]);
   assert.equal(list.status, 0, list.stdout || list.stderr);
   const listPayload = parseJson(list.stdout);
   assert.equal(listPayload.ok, true);
@@ -55,7 +55,7 @@ test("workspace profile-locks lists locks and profile-lock-clear clears stale lo
   assert.equal(Array.isArray(listPayload.locks), true);
   assert.equal(listPayload.locks.some((entry) => entry.profile === profile), true);
 
-  const clear = runCli(["--json", "workspace", "profile-lock-clear", profile]);
+  const clear = runCli(["workspace", "profile-lock-clear", profile]);
   assert.equal(clear.status, 0, clear.stdout || clear.stderr);
   const clearPayload = parseJson(clear.stdout);
   assert.equal(clearPayload.ok, true);

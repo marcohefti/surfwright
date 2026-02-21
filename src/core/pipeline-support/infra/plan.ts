@@ -30,7 +30,7 @@ export type PipelineStepInput = {
   };
   targetId?: string;
   url?: string;
-  reuseUrl?: boolean;
+  reuse?: string;
   timeoutMs?: number;
   kind?: string;
   text?: string;
@@ -67,7 +67,7 @@ export type PipelineStepInput = {
 };
 
 export type PipelineOps = {
-  open: (opts: { url: string; timeoutMs: number; sessionId?: string; reuseUrl: boolean }) => Promise<Record<string, unknown>>;
+  open: (opts: { url: string; timeoutMs: number; sessionId?: string; reuseModeInput?: string }) => Promise<Record<string, unknown>>;
   list: (opts: { timeoutMs: number; sessionId?: string; persistState: boolean }) => Promise<Record<string, unknown>>;
   snapshot: (opts: {
     targetId: string;

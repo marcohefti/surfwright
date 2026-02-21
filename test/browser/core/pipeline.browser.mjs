@@ -23,7 +23,7 @@ function parseJson(stdout) {
 }
 
 function requireBrowser() {
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   assert.equal(doctor.status, 0, doctor.stdout || doctor.stderr);
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
@@ -54,7 +54,7 @@ test("run executes deterministic multi-step pipeline", () => {
   };
   fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
 
-  const result = runCli(["--json", "run", "--plan", planPath, "--timeout-ms", "5000"]);
+  const result = runCli(["run", "--plan", planPath, "--timeout-ms", "5000"]);
   assert.equal(result.status, 0);
   const payload = parseJson(result.stdout);
 
@@ -88,9 +88,7 @@ test("run --log-ndjson writes compact append-only run log", () => {
   fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
 
   const logPath = path.join(TEST_STATE_DIR, "run.ndjson");
-  const result = runCli([
-    "--json",
-    "run",
+  const result = runCli(["run",
     "--plan",
     planPath,
     "--timeout-ms",
@@ -153,7 +151,7 @@ test("run executes fill and upload steps with deterministic step reports", () =>
   };
   fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
 
-  const result = runCli(["--json", "run", "--plan", planPath, "--timeout-ms", "5000"]);
+  const result = runCli(["run", "--plan", planPath, "--timeout-ms", "5000"]);
   assert.equal(result.status, 0, result.stdout || result.stderr);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);

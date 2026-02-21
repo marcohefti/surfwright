@@ -71,7 +71,7 @@ function parseArgv(argv) {
 
 function runCli(args, env) {
   const started = performance.now();
-  const result = spawnSync(process.execPath, ["dist/cli.js", "--json", ...args], {
+  const result = spawnSync(process.execPath, ["dist/cli.js", ...args], {
     encoding: "utf8",
     env,
   });

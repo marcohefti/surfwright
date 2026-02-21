@@ -28,15 +28,15 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const result = runCli(["--json", "doctor"]);
+  const result = runCli(["doctor"]);
   const payload = parseJson(result.stdout);
   hasBrowserCache =
-    payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
+    payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -74,7 +74,7 @@ test("open without --session creates isolated implicit session", () => {
   fs.writeFileSync(stateFilePath(), `${JSON.stringify(staleState, null, 2)}\n`, "utf8");
 
   const dataUrl = `data:text/html,${encodeURIComponent("<title>Recovered Open</title><main>ok</main>")}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
   assert.equal(openPayload.ok, true);
@@ -93,8 +93,8 @@ test("open without session creates distinct isolated sessions per invocation", (
   const firstUrl = `data:text/html,${encodeURIComponent("<title>Isolated One</title><main>one</main>")}`;
   const secondUrl = `data:text/html,${encodeURIComponent("<title>Isolated Two</title><main>two</main>")}`;
 
-  const firstResult = runCli(["--json", "open", firstUrl, "--timeout-ms", "5000"]);
-  const secondResult = runCli(["--json", "open", secondUrl, "--timeout-ms", "5000"]);
+  const firstResult = runCli(["open", firstUrl, "--timeout-ms", "5000"]);
+  const secondResult = runCli(["open", secondUrl, "--timeout-ms", "5000"]);
   assert.equal(firstResult.status, 0);
   assert.equal(secondResult.status, 0);
 
@@ -127,7 +127,7 @@ test("open without session skips stale profile directory ids", () => {
 
   const html = `<title>Skip Stale Profile</title><main>ok</main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
   assert.equal(openPayload.ok, true);
@@ -140,11 +140,11 @@ test("target command infers session from targetId when --session is omitted", ()
 
   const html = `<title>Infer Session</title><main><h1>inferred heading</h1></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const snapshotResult = runCli(["--json", "target", "snapshot", openPayload.targetId, "--timeout-ms", "5000"]);
+  const snapshotResult = runCli(["target", "snapshot", openPayload.targetId, "--timeout-ms", "5000"]);
   assert.equal(snapshotResult.status, 0);
   const snapshotPayload = parseJson(snapshotResult.stdout);
   assert.equal(snapshotPayload.ok, true);
@@ -156,27 +156,25 @@ test("target command infers session from targetId when --session is omitted", ()
 test("target session resolution returns typed unknown/mismatch/required errors", () => {
   requireBrowser();
 
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
   const html = `<title>Session Mismatch</title><main><h1>ok</h1></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const unknownTargetResult = runCli(["--json", "target", "snapshot", "DEADBEEF", "--timeout-ms", "3000"]);
+  const unknownTargetResult = runCli(["target", "snapshot", "DEADBEEF", "--timeout-ms", "3000"]);
   assert.equal(unknownTargetResult.status, 1);
   const unknownPayload = parseJson(unknownTargetResult.stdout);
   assert.equal(unknownPayload.code, "E_TARGET_SESSION_UNKNOWN");
 
   const otherSessionId = `s-mismatch-${Date.now()}`;
-  const newSessionResult = runCli(["--json", "session", "new", "--session-id", otherSessionId, "--timeout-ms", "6000"]);
+  const newSessionResult = runCli(["session", "new", "--session-id", otherSessionId, "--timeout-ms", "6000"]);
   assert.equal(newSessionResult.status, 0);
 
-  const mismatchResult = runCli([
-    "--json",
-    "--session",
+  const mismatchResult = runCli(["--session",
     otherSessionId,
     "target",
     "snapshot",
@@ -188,7 +186,7 @@ test("target session resolution returns typed unknown/mismatch/required errors",
   const mismatchPayload = parseJson(mismatchResult.stdout);
   assert.equal(mismatchPayload.code, "E_TARGET_SESSION_MISMATCH");
 
-  const noSessionListResult = runCli(["--json", "target", "list", "--timeout-ms", "3000"]);
+  const noSessionListResult = runCli(["target", "list", "--timeout-ms", "3000"]);
   assert.equal(noSessionListResult.status, 1);
   const requiredPayload = parseJson(noSessionListResult.stdout);
   assert.equal(requiredPayload.code, "E_SESSION_REQUIRED");
@@ -199,13 +197,11 @@ test("target wait emits typed timeout error", () => {
 
   const html = `<title>Wait Timeout</title><main><h1>ready</h1></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const waitResult = runCli([
-    "--json",
-    "target",
+  const waitResult = runCli(["target",
     "wait",
     openPayload.targetId,
     "--for-selector",
@@ -223,13 +219,11 @@ test("target eval returns deterministic shape and typed runtime failures", () =>
 
   const html = `<title>Eval Contract</title><main><h1>Eval</h1></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const evalSuccessResult = runCli([
-    "--json",
-    "target",
+  const evalSuccessResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expression",
@@ -269,9 +263,7 @@ test("target eval returns deterministic shape and typed runtime failures", () =>
   assert.equal(evalSuccessPayload.console.entries[0]?.text.includes("hello from agent"), true);
   assert.equal(typeof evalSuccessPayload.timingMs.total, "number");
 
-  const evalFailureResult = runCli([
-    "--json",
-    "target",
+  const evalFailureResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expression",
@@ -289,7 +281,7 @@ test("session fresh creates ephemeral managed session", () => {
   requireBrowser();
 
   const sessionId = `s-fresh-${Date.now()}`;
-  const freshResult = runCli(["--json", "session", "fresh", "--session-id", sessionId, "--timeout-ms", "6000"]);
+  const freshResult = runCli(["session", "fresh", "--session-id", sessionId, "--timeout-ms", "6000"]);
   assert.equal(freshResult.status, 0);
   const freshPayload = parseJson(freshResult.stdout);
   assert.equal(freshPayload.ok, true);
@@ -307,8 +299,8 @@ test("open supports shared isolation mode", () => {
 
   const firstUrl = `data:text/html,${encodeURIComponent("<title>Shared One</title><main>one</main>")}`;
   const secondUrl = `data:text/html,${encodeURIComponent("<title>Shared Two</title><main>two</main>")}`;
-  const firstResult = runCli(["--json", "open", firstUrl, "--isolation", "shared", "--timeout-ms", "5000"]);
-  const secondResult = runCli(["--json", "open", secondUrl, "--isolation", "shared", "--timeout-ms", "5000"]);
+  const firstResult = runCli(["open", firstUrl, "--isolation", "shared", "--timeout-ms", "5000"]);
+  const secondResult = runCli(["open", secondUrl, "--isolation", "shared", "--timeout-ms", "5000"]);
   assert.equal(firstResult.status, 0);
   assert.equal(secondResult.status, 0);
   const firstPayload = parseJson(firstResult.stdout);
@@ -322,7 +314,7 @@ test("session new and session use switch active pointer", () => {
   requireBrowser();
 
   const sessionId = `s-contract-${Date.now()}`;
-  const createResult = runCli(["--json", "session", "new", "--session-id", sessionId, "--timeout-ms", "6000"]);
+  const createResult = runCli(["session", "new", "--session-id", sessionId, "--timeout-ms", "6000"]);
   assert.equal(createResult.status, 0);
   const createPayload = parseJson(createResult.stdout);
   assert.equal(createPayload.ok, true);
@@ -330,13 +322,13 @@ test("session new and session use switch active pointer", () => {
   assert.equal(createPayload.kind, "managed");
   assert.equal(createPayload.active, true);
   assert.equal(createPayload.created, true);
-  const useResult = runCli(["--json", "session", "use", sessionId, "--timeout-ms", "6000"]);
+  const useResult = runCli(["session", "use", sessionId, "--timeout-ms", "6000"]);
   assert.equal(useResult.status, 0);
   const usePayload = parseJson(useResult.stdout);
   assert.equal(usePayload.ok, true);
   assert.equal(usePayload.sessionId, sessionId);
   assert.equal(usePayload.active, true);
-  const listResult = runCli(["--json", "session", "list"]);
+  const listResult = runCli(["session", "list"]);
   assert.equal(listResult.status, 0);
   const listPayload = parseJson(listResult.stdout);
   assert.equal(listPayload.ok, true);
@@ -349,7 +341,7 @@ test("concurrent session new with same id returns one typed conflict", async () 
   requireBrowser();
 
   const sessionId = `s-concurrent-${Date.now()}`;
-  const args = ["--json", "session", "new", "--session-id", sessionId, "--timeout-ms", "6000"];
+  const args = ["session", "new", "--session-id", sessionId, "--timeout-ms", "6000"];
   const [first, second] = await Promise.all([runCliAsync(args), runCliAsync(args)]);
   const results = [first, second];
   const successes = results.filter((result) => result.status === 0);

@@ -29,14 +29,14 @@ function hasBrowser() {
     return hasBrowserCache;
   }
 
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   const payload = parseJson(doctor.stdout);
-  hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
+  hasBrowserCache = payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -55,13 +55,11 @@ test("target hover returns style diffs", () => {
   <button id="cta">Pay</button>
   </body></html>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const hoverResult = runCli([
-    "--json",
-    "target",
+  const hoverResult = runCli(["target",
     "hover",
     openPayload.targetId,
     "--selector",
@@ -94,13 +92,11 @@ test("target sticky-check reports sticky evidence", () => {
   <main style="height:3800px"></main>
   </body></html>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const stickyResult = runCli([
-    "--json",
-    "target",
+  const stickyResult = runCli(["target",
     "sticky-check",
     openPayload.targetId,
     "--selector",
@@ -135,13 +131,11 @@ test("target motion-detect reports autonomous movement", () => {
   </script>
   </body></html>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const motionResult = runCli([
-    "--json",
-    "target",
+  const motionResult = runCli(["target",
     "motion-detect",
     openPayload.targetId,
     "--selector",
@@ -177,13 +171,11 @@ test("target transition-assert aggregates repeated transitions", () => {
   <button id="btn" onclick="document.body.classList.toggle('faded')">Toggle</button>
   </body></html>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const assertResult = runCli([
-    "--json",
-    "target",
+  const assertResult = runCli(["target",
     "transition-assert",
     openPayload.targetId,
     "--cycles",
@@ -228,13 +220,11 @@ test("target scroll-reveal-scan reports revealed candidates", () => {
   </script>
   </body></html>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const revealResult = runCli([
-    "--json",
-    "target",
+  const revealResult = runCli(["target",
     "scroll-reveal-scan",
     openPayload.targetId,
     "--max-candidates",

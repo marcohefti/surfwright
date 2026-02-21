@@ -93,7 +93,7 @@ process.on("exit", () => {
 });
 
 test("daemon default path auto-starts and reuses the same worker", () => {
-  const first = runCli(["--json", "contract"]);
+  const first = runCli(["contract"]);
   assert.equal(first.status, 0);
 
   const firstMeta = readDaemonMeta();
@@ -102,7 +102,7 @@ test("daemon default path auto-starts and reuses the same worker", () => {
   assert.equal(firstMeta.pid > 0, true);
   assert.equal(isProcessAlive(firstMeta.pid), true);
 
-  const second = runCli(["--json", "contract"]);
+  const second = runCli(["contract"]);
   assert.equal(second.status, 0);
 
   const secondMeta = readDaemonMeta();
@@ -114,7 +114,7 @@ test("daemon default path auto-starts and reuses the same worker", () => {
 test("daemon idle timeout exits worker and clears metadata", async () => {
   await stopDaemonIfRunning();
 
-  const result = runCli(["--json", "contract"], {
+  const result = runCli(["contract"], {
     // Keep this comfortably above typical process startup jitter so the daemon
     // doesn't exit before we can read metadata under parallel test load.
     SURFWRIGHT_DAEMON_IDLE_MS: "2000",
@@ -138,7 +138,7 @@ test("daemon idle timeout exits worker and clears metadata", async () => {
 test("daemon rejects oversized request frames without wedging", async () => {
   await stopDaemonIfRunning();
 
-  const first = runCli(["--json", "contract"]);
+  const first = runCli(["contract"]);
   assert.equal(first.status, 0);
 
   const meta = readDaemonMeta();
@@ -170,7 +170,7 @@ test("daemon rejects oversized request frames without wedging", async () => {
 
   assert.equal(isProcessAlive(meta.pid), true);
 
-  const second = runCli(["--json", "contract"]);
+  const second = runCli(["contract"]);
   assert.equal(second.status, 0);
 
   const secondMeta = readDaemonMeta();
@@ -180,7 +180,7 @@ test("daemon rejects oversized request frames without wedging", async () => {
 });
 
 test("json-mode failures do not emit stack traces by default", () => {
-  const result = runCli(["--json", "open", "camelpay.localhost"]);
+  const result = runCli(["open", "camelpay.localhost"]);
   assert.equal(result.status, 1);
   assert.equal(result.stderr.trim().length, 0);
   assert.equal(/\n\s+at\s+/.test(result.stdout), false);

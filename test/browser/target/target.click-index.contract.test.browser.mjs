@@ -28,15 +28,15 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const result = runCli(["--json", "doctor"]);
+  const result = runCli(["doctor"]);
   const payload = parseJson(result.stdout);
   hasBrowserCache =
-    payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
+    payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -64,14 +64,12 @@ test("target click supports --index for deterministic multi-match selection", ()
         </script>
       </body></html>`;
   const url = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
+  const openResult = runCli(["open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
   for (let idx = 0; idx < 3; idx += 1) {
-    const addResult = runCli([
-      "--json",
-      "target",
+    const addResult = runCli(["target",
       "click",
       openPayload.targetId,
       "--text",
@@ -83,9 +81,7 @@ test("target click supports --index for deterministic multi-match selection", ()
     assert.equal(addResult.status, 0);
   }
 
-  const beforeFind = runCli([
-    "--json",
-    "target",
+  const beforeFind = runCli(["target",
     "find",
     openPayload.targetId,
     "--selector",
@@ -100,9 +96,7 @@ test("target click supports --index for deterministic multi-match selection", ()
   const beforePayload = parseJson(beforeFind.stdout);
   assert.equal(beforePayload.count, 3);
 
-  const clickSecond = runCli([
-    "--json",
-    "target",
+  const clickSecond = runCli(["target",
     "click",
     openPayload.targetId,
     "--selector",
@@ -120,9 +114,7 @@ test("target click supports --index for deterministic multi-match selection", ()
   assert.equal(clickPayload.pickedIndex, 1);
   assert.equal(clickPayload.clicked.index, 1);
 
-  const afterFind = runCli([
-    "--json",
-    "target",
+  const afterFind = runCli(["target",
     "find",
     openPayload.targetId,
     "--selector",
@@ -137,9 +129,7 @@ test("target click supports --index for deterministic multi-match selection", ()
   const afterPayload = parseJson(afterFind.stdout);
   assert.equal(afterPayload.count, 2);
 
-  const outOfRange = runCli([
-    "--json",
-    "target",
+  const outOfRange = runCli(["target",
     "click",
     openPayload.targetId,
     "--selector",
@@ -173,13 +163,11 @@ test("target click supports --repeat for deterministic multi-action loops", () =
         </script>
       </body></html>`;
   const url = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
+  const openResult = runCli(["open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const repeatClick = runCli([
-    "--json",
-    "--output-shape",
+  const repeatClick = runCli(["--output-shape",
     "compact",
     "target",
     "click",
@@ -204,9 +192,7 @@ test("target click supports --repeat for deterministic multi-action loops", () =
   assert.equal(Array.isArray(repeatPayload.repeat.pickedIndices), true);
   assert.equal(repeatPayload.repeat.pickedIndices.length, 3);
 
-  const countResult = runCli([
-    "--json",
-    "target",
+  const countResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expr",
@@ -218,9 +204,7 @@ test("target click supports --repeat for deterministic multi-action loops", () =
   const countPayload = parseJson(countResult.stdout);
   assert.equal(countPayload.result.value, "3");
 
-  const explainRepeat = runCli([
-    "--json",
-    "target",
+  const explainRepeat = runCli(["target",
     "click",
     openPayload.targetId,
     "--text",
@@ -249,13 +233,11 @@ test("target find returns href and tag metadata for each match", () => {
       </body>
     </html>`;
   const url = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
+  const openResult = runCli(["open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const found = runCli([
-    "--json",
-    "target",
+  const found = runCli(["target",
     "find",
     openPayload.targetId,
     "--text",
@@ -304,13 +286,11 @@ test("target find supports href host/path filtering for deterministic link narro
       </body>
     </html>`;
   const url = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
+  const openResult = runCli(["open", url, "--timeout-ms", "20000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const filtered = runCli([
-    "--json",
-    "target",
+  const filtered = runCli(["target",
     "find",
     openPayload.targetId,
     "--text",

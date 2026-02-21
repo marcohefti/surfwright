@@ -2,15 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-
 import { CliError } from "../../errors.js";
 import { asPositiveInteger } from "../../shared/index.js";
 import { currentAgentId, normalizeSessionState, withSessionHeartbeat } from "../../session/index.js";
-import { migrateStatePayload } from "../domain/migrations.js";
 import { STATE_VERSION, type SessionState, type SurfwrightState, type TargetState } from "../../types.js";
-
 const SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
-
 const STATE_LOCK_FILENAME = "state.lock";
 const STATE_LOCK_RETRY_MS = 40;
 const STATE_LOCK_TIMEOUT_MS = 12000;
@@ -204,11 +200,14 @@ export function readState(): SurfwrightState {
 function readStateFromPath(statePath: string): SurfwrightState {
   try {
     const raw = fs.readFileSync(statePath, "utf8");
-    const migrated = migrateStatePayload(JSON.parse(raw));
-    if (!migrated) {
+    const parsedRaw = JSON.parse(raw);
+    if (typeof parsedRaw !== "object" || parsedRaw === null) {
       return emptyState();
     }
-    const parsed = migrated as Partial<SurfwrightState>;
+    const parsed = parsedRaw as Partial<SurfwrightState>;
+    if (parsed.version !== STATE_VERSION) {
+      return emptyState();
+    }
     const sessions: Record<string, SessionState> = {};
     if (typeof parsed.sessions === "object" && parsed.sessions !== null) {
       for (const [sessionId, rawSession] of Object.entries(parsed.sessions)) {

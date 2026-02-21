@@ -205,7 +205,7 @@ function runNpmInstallGlobal(packageSpec: string): void {
 
 function runDoctorSelfCheck(cliPath: string): boolean {
   const { childProcess, env, runtime } = providers();
-  const result = childProcess.spawnSync(runtime.execPath, [cliPath, "--json", "doctor"], {
+  const result = childProcess.spawnSync(runtime.execPath, [cliPath, "doctor"], {
     encoding: "utf8",
     env: env.snapshot(),
   });

@@ -18,12 +18,12 @@ function parseJson(stdout) {
 }
 
 function requireBrowser() {
-  const doctor = runCliSync(["--json", "doctor"]);
+  const doctor = runCliSync(["doctor"]);
   assert.equal(doctor.status, 0, doctor.stdout || doctor.stderr);
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
 
-  const ensure = (timeoutMs) => runCliSync(["--json", "session", "ensure", "--timeout-ms", String(timeoutMs)]);
+  const ensure = (timeoutMs) => runCliSync(["session", "ensure", "--timeout-ms", String(timeoutMs)]);
   let ensured = ensure(5000);
   if (ensured.status !== 0) {
     let code = "";
@@ -33,7 +33,7 @@ function requireBrowser() {
       code = "";
     }
     if (code === "E_BROWSER_START_TIMEOUT" || code === "E_BROWSER_START_FAILED") {
-      runCliSync(["--json", "session", "clear", "--timeout-ms", "8000"]);
+      runCliSync(["session", "clear", "--timeout-ms", "8000"]);
       ensured = ensure(8000);
     }
   }
@@ -69,14 +69,12 @@ test("target spawn close and dialog return deterministic shapes", async () => {
     <a id="new-tab" target="_blank" href="${childUrl}">Open Child</a>
     <button id="confirm-btn" onclick="confirm('Delete record?')">Delete</button>
   `;
-  const open = runCliSync(["--json", "open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
+  const open = runCliSync(["open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
   assert.equal(open.status, 0);
   const openPayload = parseJson(open.stdout);
 
   const dialog = runCliSync(
-    [
-      "--json",
-      "--session",
+    ["--session",
       openPayload.sessionId,
       "target",
       "dialog",
@@ -96,9 +94,7 @@ test("target spawn close and dialog return deterministic shapes", async () => {
   assert.equal(dialogPayload.dialog.type, "confirm");
 
   const spawn = await runCliAsync(
-    [
-      "--json",
-      "--session",
+    ["--session",
       openPayload.sessionId,
       "target",
       "spawn",
@@ -112,17 +108,14 @@ test("target spawn close and dialog return deterministic shapes", async () => {
   assert.equal(spawn.status, 0);
   const spawnPayload = parseJson(spawn.stdout);
   assert.equal(spawnPayload.parentTargetId, openPayload.targetId);
-  assert.equal(spawnPayload.targetId, spawnPayload.childTargetId);
-  assert.equal(typeof spawnPayload.childTargetId, "string");
+  assert.equal(typeof spawnPayload.targetId, "string");
 
   const close = runCliSync(
-    [
-      "--json",
-      "--session",
+    ["--session",
       openPayload.sessionId,
       "target",
       "close",
-      spawnPayload.childTargetId,
+      spawnPayload.targetId,
       "--timeout-ms",
       "5000",
     ],
@@ -138,7 +131,7 @@ test("target spawn close and dialog return deterministic shapes", async () => {
   });
 });
 
-test("target style returns compatibility aliases for element/computed", () => {
+test("target style returns canonical inspected/values payload", () => {
   requireBrowser();
 
   const html = `
@@ -147,14 +140,12 @@ test("target style returns compatibility aliases for element/computed", () => {
       Primary
     </button>
   `;
-  const open = runCliSync(["--json", "open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
+  const open = runCliSync(["open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
   assert.equal(open.status, 0);
   const openPayload = parseJson(open.stdout);
 
   const style = runCliSync(
-    [
-      "--json",
-      "--session",
+    ["--session",
       openPayload.sessionId,
       "target",
       "style",
@@ -169,9 +160,7 @@ test("target style returns compatibility aliases for element/computed", () => {
   assert.equal(style.status, 0);
   const payload = parseJson(style.stdout);
   assert.equal(payload.inspected.text, "Primary");
-  assert.equal(payload.element.text, "Primary");
   assert.equal(payload.values["background-color"], "rgb(13, 110, 253)");
-  assert.equal(payload.computed["background-color"], "rgb(13, 110, 253)");
   assert.equal(payload.proof.action, "style");
   assert.equal(payload.proof.queryMode, "text");
   assert.equal(payload.proof.inspectedText, "Primary");
@@ -180,14 +169,12 @@ test("target style returns compatibility aliases for element/computed", () => {
 test("target spawn close and dialog return typed failures", () => {
   requireBrowser();
 
-  const open = runCliSync(["--json", "open", "data:text/html,%3Ctitle%3EFlow%3C%2Ftitle%3E", "--timeout-ms", "5000"]);
+  const open = runCliSync(["open", "data:text/html,%3Ctitle%3EFlow%3C%2Ftitle%3E", "--timeout-ms", "5000"]);
   assert.equal(open.status, 0);
   const openPayload = parseJson(open.stdout);
 
   const spawnMissing = runCliSync(
-    [
-      "--json",
-      "--session",
+    ["--session",
       openPayload.sessionId,
       "target",
       "spawn",
@@ -202,13 +189,13 @@ test("target spawn close and dialog return typed failures", () => {
   assert.equal(parseJson(spawnMissing.stdout).code, "E_QUERY_INVALID");
 
   const dialogInvalid = runCliSync(
-    ["--json", "--session", openPayload.sessionId, "target", "dialog", openPayload.targetId, "--action", "invalid", "--timeout-ms", "5000"],
+    ["--session", openPayload.sessionId, "target", "dialog", openPayload.targetId, "--action", "invalid", "--timeout-ms", "5000"],
   );
   assert.equal(dialogInvalid.status, 1);
   assert.equal(parseJson(dialogInvalid.stdout).code, "E_QUERY_INVALID");
 
   const closeMissing = runCliSync(
-    ["--json", "--session", openPayload.sessionId, "target", "close", "t-missing-target", "--timeout-ms", "5000"],
+    ["--session", openPayload.sessionId, "target", "close", "t-missing-target", "--timeout-ms", "5000"],
   );
   assert.equal(closeMissing.status, 1);
   assert.equal(parseJson(closeMissing.stdout).code, "E_TARGET_SESSION_UNKNOWN");
@@ -217,14 +204,12 @@ test("target spawn close and dialog return typed failures", () => {
 test("target emulate and screenshot return deterministic artifacts", () => {
   requireBrowser();
 
-  const open = runCliSync(["--json", "open", "data:text/html,%3Ctitle%3EEmulate%20Shot%3C%2Ftitle%3E%3Cmain%3Eok%3C%2Fmain%3E", "--timeout-ms", "5000"]);
+  const open = runCliSync(["open", "data:text/html,%3Ctitle%3EEmulate%20Shot%3C%2Ftitle%3E%3Cmain%3Eok%3C%2Fmain%3E", "--timeout-ms", "5000"]);
   assert.equal(open.status, 0);
   const openPayload = parseJson(open.stdout);
 
   const emulate = runCliSync(
-    [
-      "--json",
-      "--session",
+    ["--session",
       openPayload.sessionId,
       "target",
       "emulate",
@@ -251,7 +236,7 @@ test("target emulate and screenshot return deterministic artifacts", () => {
   assert.equal(emulatePayload.emulation.deviceScaleFactor, 2);
 
   const emulateNoTouch = runCliSync(
-    ["--json", "--session", openPayload.sessionId, "target", "emulate", openPayload.targetId, "--no-touch", "--timeout-ms", "5000"],
+    ["--session", openPayload.sessionId, "target", "emulate", openPayload.targetId, "--no-touch", "--timeout-ms", "5000"],
   );
   assert.equal(emulateNoTouch.status, 0);
   const emulateNoTouchPayload = parseJson(emulateNoTouch.stdout);
@@ -259,7 +244,7 @@ test("target emulate and screenshot return deterministic artifacts", () => {
 
   const outPath = path.join(TEST_TARGET_STATE_DIR, "artifacts", "page.png");
   const screenshot = runCliSync(
-    ["--json", "--session", openPayload.sessionId, "target", "screenshot", openPayload.targetId, "--out", outPath, "--full-page", "--timeout-ms", "5000"],
+    ["--session", openPayload.sessionId, "target", "screenshot", openPayload.targetId, "--out", outPath, "--full-page", "--timeout-ms", "5000"],
   );
   assert.equal(screenshot.status, 0);
   const screenshotPayload = parseJson(screenshot.stdout);
@@ -276,18 +261,16 @@ test("target emulate and screenshot return deterministic artifacts", () => {
 test("target emulate and screenshot return typed validation failures", () => {
   requireBrowser();
 
-  const open = runCliSync(["--json", "open", "data:text/html,%3Ctitle%3EEmulate%20Fail%3C%2Ftitle%3E", "--timeout-ms", "5000"]);
+  const open = runCliSync(["open", "data:text/html,%3Ctitle%3EEmulate%20Fail%3C%2Ftitle%3E", "--timeout-ms", "5000"]);
   assert.equal(open.status, 0);
   const openPayload = parseJson(open.stdout);
 
-  const emulateInvalid = runCliSync(["--json", "--session", openPayload.sessionId, "target", "emulate", openPayload.targetId, "--width", "10", "--timeout-ms", "5000"]);
+  const emulateInvalid = runCliSync(["--session", openPayload.sessionId, "target", "emulate", openPayload.targetId, "--width", "10", "--timeout-ms", "5000"]);
   assert.equal(emulateInvalid.status, 1);
   assert.equal(parseJson(emulateInvalid.stdout).code, "E_QUERY_INVALID");
 
   const screenshotInvalid = runCliSync(
-    [
-      "--json",
-      "--session",
+    ["--session",
       openPayload.sessionId,
       "target",
       "screenshot",
@@ -311,14 +294,12 @@ test("target console-get returns one structured event", () => {
 
   const sentinel = "CONSOLE_SENTINEL_EXAMPLE_20260214";
   const html = `<title>Console Get</title><script>console.error("${sentinel}")</script>`;
-  const open = runCliSync(["--json", "open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
+  const open = runCliSync(["open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
   assert.equal(open.status, 0);
   const openPayload = parseJson(open.stdout);
 
   const result = runCliSync(
-    [
-      "--json",
-      "--session",
+    ["--session",
       openPayload.sessionId,
       "target",
       "console-get",
@@ -345,11 +326,11 @@ test("target console-get returns one structured event", () => {
 test("target trace begin export and insight return deterministic shapes", () => {
   requireBrowser();
 
-  const open = runCliSync(["--json", "open", "data:text/html,%3Ctitle%3ETrace%3C%2Ftitle%3E%3Cmain%3Eok%3C%2Fmain%3E", "--timeout-ms", "5000"]);
+  const open = runCliSync(["open", "data:text/html,%3Ctitle%3ETrace%3C%2Ftitle%3E%3Cmain%3Eok%3C%2Fmain%3E", "--timeout-ms", "5000"]);
   assert.equal(open.status, 0);
   const openPayload = parseJson(open.stdout);
 
-  const begin = runCliSync(["--json", "--session", openPayload.sessionId, "target", "trace", "begin", openPayload.targetId, "--max-runtime-ms", "8000", "--timeout-ms", "5000"]);
+  const begin = runCliSync(["--session", openPayload.sessionId, "target", "trace", "begin", openPayload.targetId, "--max-runtime-ms", "8000", "--timeout-ms", "5000"]);
   assert.equal(begin.status, 0);
   const beginPayload = parseJson(begin.stdout);
   assert.equal(beginPayload.ok, true);
@@ -357,7 +338,7 @@ test("target trace begin export and insight return deterministic shapes", () => 
   assert.equal(beginPayload.status, "recording");
 
   const outPath = path.join(TEST_TARGET_STATE_DIR, "artifacts", "trace.json.gz");
-  const exportResult = runCliSync(["--json", "target", "trace", "export", "--trace-id", beginPayload.traceId, "--out", outPath, "--format", "json.gz", "--timeout-ms", "8000"]);
+  const exportResult = runCliSync(["target", "trace", "export", "--trace-id", beginPayload.traceId, "--out", outPath, "--format", "json.gz", "--timeout-ms", "8000"]);
   assert.equal(exportResult.status, 0);
   const exportPayload = parseJson(exportResult.stdout);
   assert.equal(exportPayload.ok, true);
@@ -373,7 +354,7 @@ test("target trace begin export and insight return deterministic shapes", () => 
   assert.equal(tracePayload.traceId, beginPayload.traceId);
   assert.equal(tracePayload.targetId, openPayload.targetId);
 
-  const insight = runCliSync(["--json", "--session", openPayload.sessionId, "target", "trace", "insight", openPayload.targetId, "--capture-ms", "200", "--timeout-ms", "5000"]);
+  const insight = runCliSync(["--session", openPayload.sessionId, "target", "trace", "insight", openPayload.targetId, "--capture-ms", "200", "--timeout-ms", "5000"]);
   assert.equal(insight.status, 0);
   const insightPayload = parseJson(insight.stdout);
   assert.equal(insightPayload.ok, true);

@@ -28,15 +28,15 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const result = runCli(["--json", "doctor"]);
+  const result = runCli(["doctor"]);
   const payload = parseJson(result.stdout);
   hasBrowserCache =
-    payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
+    payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -47,13 +47,11 @@ test("target eval supports --expr to return expression values without explicit r
   requireBrowser();
   const html = "<title>Eval Expr</title><main>ok</main>";
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const functionBodyResult = runCli([
-    "--json",
-    "target",
+  const functionBodyResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expression",
@@ -80,9 +78,7 @@ test("target eval supports --expr to return expression values without explicit r
   assert.equal(functionBodyPayload.context.evaluatedFrameId, "f-0");
   assert.equal(functionBodyPayload.context.world, "main");
 
-  const exprResult = runCli([
-    "--json",
-    "target",
+  const exprResult = runCli(["target",
     "eval",
     openPayload.targetId,
     "--expr",

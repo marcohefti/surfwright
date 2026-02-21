@@ -65,7 +65,7 @@ test("target snapshot-diff returns high-signal deltas for two snapshot reports",
   fs.writeFileSync(aPath, `${JSON.stringify(a)}\n`, "utf8");
   fs.writeFileSync(bPath, `${JSON.stringify(b)}\n`, "utf8");
 
-  const result = runCli(["--json", "target", "snapshot-diff", aPath, bPath]);
+  const result = runCli(["target", "snapshot-diff", aPath, bPath]);
   assert.equal(result.status, 0, result.stdout || result.stderr);
   const payload = parseJson(result.stdout);
   assert.deepEqual(Object.keys(payload), ["ok", "a", "b", "changed", "delta"]);

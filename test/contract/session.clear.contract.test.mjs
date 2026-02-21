@@ -47,7 +47,7 @@ process.on("exit", () => {
 
 test("session clear resets state and supports explicit keep-processes mode", () => {
   writeState({
-    version: 3,
+    version: 4,
     activeSessionId: "m-main",
     nextSessionOrdinal: 1,
     nextCaptureOrdinal: 1,
@@ -126,7 +126,7 @@ test("session clear resets state and supports explicit keep-processes mode", () 
     },
   });
 
-  const clearResult = runCli(["--json", "session", "clear", "--keep-processes", "--timeout-ms", "200"]);
+  const clearResult = runCli(["session", "clear", "--keep-processes", "--timeout-ms", "200"]);
   assert.equal(clearResult.status, 0);
   const payload = parseJson(clearResult.stdout);
   assert.equal(payload.ok, true);

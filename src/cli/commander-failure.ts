@@ -28,10 +28,6 @@ export function parseOutputOptsFromArgv(argv: string[]): OutputOpts {
       json = false;
       continue;
     }
-    if (token === "--json") {
-      json = true;
-      continue;
-    }
     if (token === "--pretty") {
       pretty = true;
     }

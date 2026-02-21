@@ -22,14 +22,14 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   const payload = parseJson(doctor.stdout);
-  hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
+  hasBrowserCache = payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -55,17 +55,15 @@ test("target click --handle clicks a snapshot-provided element handle", () => {
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
 
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "8000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "8000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const snapResult = runCli([
-    "--json",
-    "--session",
+  const snapResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "snapshot",
@@ -87,9 +85,7 @@ test("target click --handle clicks a snapshot-provided element handle", () => {
   const row = snapPayload.a11y.rows.find((entry) => entry.role === "button" && /open blog/i.test(entry.name) && typeof entry.handle === "string");
   assert.notEqual(row, undefined, "Expected a11y.rows to include a button with a handle");
 
-  const clickResult = runCli([
-    "--json",
-    "--session",
+  const clickResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "click",

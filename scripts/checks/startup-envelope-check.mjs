@@ -57,9 +57,9 @@ process.on("exit", () => {
 });
 
 const cases = [
-  { id: "contract", args: ["--json", "contract"] },
-  { id: "doctor", args: ["--json", "doctor"] },
-  { id: "skill-doctor", args: ["--json", "skill", "doctor"] },
+  { id: "contract", args: ["contract"] },
+  { id: "doctor", args: ["doctor"] },
+  { id: "skill-doctor", args: ["skill", "doctor"] },
 ];
 
 const results = [];
@@ -134,4 +134,3 @@ if (cliArgs.json) {
 } else {
   process.stdout.write(`startup-envelope: PASS (${results.length} cases)\n`);
 }
-

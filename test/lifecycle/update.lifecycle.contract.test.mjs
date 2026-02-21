@@ -32,9 +32,7 @@ process.on("exit", () => {
 });
 
 test("update check supports channel/policy combinations with structured payload", () => {
-  const result = runCli([
-    "--json",
-    "update",
+  const result = runCli(["update",
     "check",
     "--package",
     "surfwright",
@@ -56,9 +54,7 @@ test("update check supports channel/policy combinations with structured payload"
 });
 
 test("update run dry-run returns structured status without mutating install", () => {
-  const result = runCli([
-    "--json",
-    "update",
+  const result = runCli(["update",
     "run",
     "--package",
     "surfwright",
@@ -76,7 +72,7 @@ test("update run dry-run returns structured status without mutating install", ()
 });
 
 test("update rollback dry-run fails with typed error when history is missing", () => {
-  const result = runCli(["--json", "update", "rollback", "--package", "surfwright", "--dry-run"]);
+  const result = runCli(["update", "rollback", "--package", "surfwright", "--dry-run"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);

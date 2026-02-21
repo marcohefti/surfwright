@@ -22,8 +22,8 @@ Deep dives follow a consistent structure:
   - Manifest-driven contract, fingerprinting, and the snapshot gate.
 - `docs/architecture/features-and-commands.md`
   - Feature plugin registry, stability boundaries, and command registration pattern.
-- `docs/architecture/state-and-migrations.md`
-  - State store boundaries, agent scoping, and explicit migration flow.
+- `docs/architecture/state-and-versioning.md`
+  - State store boundaries, agent scoping, and strict schema/version handling.
 - `docs/architecture/policy-and-layering.md`
   - The policy harness and how to interpret ARC*/BUDG* violations without spelunking.
 

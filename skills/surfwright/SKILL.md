@@ -16,7 +16,7 @@ description: Use when controlling a browser through the SurfWright CLI in determ
 Always refresh command/error truth from runtime before non-trivial loops:
 
 ```bash
-surfwright --json contract
+surfwright contract
 ```
 
 Do not assume docs are fresher than the contract payload.

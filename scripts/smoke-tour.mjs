@@ -59,7 +59,7 @@ function runCliJson(opts, args, envExtra) {
     ...process.env,
     ...envExtra,
   };
-  const result = spawnSync(process.execPath, [opts.cliJs, "--json", ...args], {
+  const result = spawnSync(process.execPath, [opts.cliJs, ...args], {
     encoding: "utf8",
     env,
     cwd: process.cwd(),
@@ -86,7 +86,7 @@ function runCliNdjson(opts, args, envExtra) {
     ...process.env,
     ...envExtra,
   };
-  const result = spawnSync(process.execPath, [opts.cliJs, "--json", ...args], {
+  const result = spawnSync(process.execPath, [opts.cliJs, ...args], {
     encoding: "utf8",
     env,
     cwd: process.cwd(),
@@ -161,7 +161,7 @@ try {
       );
       process.exit(0);
     }
-    fail("chrome not found (run surfwright --json doctor)", { chrome: doctorPayload.chrome ?? null });
+    fail("chrome not found (run surfwright doctor)", { chrome: doctorPayload.chrome ?? null });
   }
 
   const ensure = runCliJson(opts, ["session", "ensure", "--timeout-ms", "5000"], envBase);
@@ -375,7 +375,7 @@ try {
   const afterBad = runCliJson(opts, ["--session", sessionId, "target", "snapshot", evalErrTargetId, "--max-chars", "0", "--max-headings", "5", "--max-buttons", "5", "--max-links", "5", "--timeout-ms", String(opts.timeoutMs)], envBase);
   expectOk("target.snapshot(after bad eval)", afterBad, { evalErrTargetId });
 
-  // Streaming tails should end with capture end when run with global --json.
+  // Streaming tails should end with capture end in default JSON mode.
   const openExample = runCliJson(opts, ["--session", sessionId, "open", "https://example.com", "--timeout-ms", String(opts.timeoutMs)], envBase);
   const openExamplePayload = expectOk("open(example.com)", openExample);
   const exampleTargetId = openExamplePayload.targetId;
@@ -442,7 +442,7 @@ try {
   if (didStartSession) {
     // Best-effort cleanup; never fail the run due to cleanup.
     try {
-      spawnSync(process.execPath, [opts.cliJs, "--json", "session", "clear"], {
+      spawnSync(process.execPath, [opts.cliJs, "session", "clear"], {
         encoding: "utf8",
         env: { ...process.env, ...envBase },
         cwd: process.cwd(),
@@ -457,4 +457,3 @@ try {
     // ignore
   }
 }
-

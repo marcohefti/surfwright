@@ -53,7 +53,7 @@ process.on("exit", () => {
 });
 
 test("agent id scopes default state root under ~/.surfwright/agents/<agentId>", () => {
-  const result = runCli(["--json", "target", "prune"], {
+  const result = runCli(["target", "prune"], {
     HOME: TEST_HOME_DIR,
     SURFWRIGHT_AGENT_ID: "agent.alpha",
   });
@@ -66,7 +66,7 @@ test("agent id scopes default state root under ~/.surfwright/agents/<agentId>", 
 });
 
 test("explicit SURFWRIGHT_STATE_DIR overrides agent-id namespacing", () => {
-  const result = runCli(["--json", "target", "prune"], {
+  const result = runCli(["target", "prune"], {
     HOME: TEST_HOME_DIR,
     SURFWRIGHT_AGENT_ID: "agent.beta",
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
@@ -80,7 +80,7 @@ test("explicit SURFWRIGHT_STATE_DIR overrides agent-id namespacing", () => {
 });
 
 test("--agent-id CLI option scopes state root without env wiring", () => {
-  const result = runCli(["--json", "--agent-id", "agent.flag", "target", "prune"], {
+  const result = runCli(["--agent-id", "agent.flag", "target", "prune"], {
     HOME: TEST_HOME_DIR,
   });
   assert.equal(result.status, 0);
@@ -92,7 +92,7 @@ test("--agent-id CLI option scopes state root without env wiring", () => {
 });
 
 test("malformed --agent-id does not override existing agent scope", () => {
-  const result = runCli(["--json", "--agent-id=", "target", "prune"], {
+  const result = runCli(["--agent-id=", "target", "prune"], {
     HOME: TEST_HOME_DIR,
     SURFWRIGHT_AGENT_ID: "agent.fallback",
   });
@@ -108,7 +108,7 @@ test("extension lifecycle commands return deterministic fallback metadata", () =
   const extensionName = "SurfWright Parity Minimal Extension";
   const extensionDir = createExtensionFixture(TEST_STATE_DIR, extensionName);
 
-  const loadResult = runCli(["--json", "extension", "load", extensionDir], {
+  const loadResult = runCli(["extension", "load", extensionDir], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(loadResult.status, 0);
@@ -121,7 +121,7 @@ test("extension lifecycle commands return deterministic fallback metadata", () =
   assert.equal(loadPayload.fallback.strategy, "registry-only");
   assert.equal(loadPayload.fallback.applied, false);
 
-  const listResult = runCli(["--json", "extension", "list"], {
+  const listResult = runCli(["extension", "list"], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(listResult.status, 0);
@@ -131,7 +131,7 @@ test("extension lifecycle commands return deterministic fallback metadata", () =
   const listed = listPayload.extensions.find((entry) => entry.name === extensionName);
   assert.notEqual(listed, undefined);
 
-  const reloadResult = runCli(["--json", "extension", "reload", extensionName], {
+  const reloadResult = runCli(["extension", "reload", extensionName], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(reloadResult.status, 0);
@@ -141,7 +141,7 @@ test("extension lifecycle commands return deterministic fallback metadata", () =
   assert.equal(reloadPayload.extension.name, extensionName);
   assert.equal(reloadPayload.fallback.strategy, "registry-only");
 
-  const uninstallResult = runCli(["--json", "extension", "uninstall", listed.id], {
+  const uninstallResult = runCli(["extension", "uninstall", listed.id], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(uninstallResult.status, 0);
@@ -152,7 +152,7 @@ test("extension lifecycle commands return deterministic fallback metadata", () =
   assert.equal(uninstallPayload.extension.id, listed.id);
   assert.equal(uninstallPayload.extension.name, extensionName);
 
-  const uninstallMissingResult = runCli(["--json", "extension", "uninstall", listed.id], {
+  const uninstallMissingResult = runCli(["extension", "uninstall", listed.id], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(uninstallMissingResult.status, 0);
@@ -162,7 +162,7 @@ test("extension lifecycle commands return deterministic fallback metadata", () =
   assert.equal(uninstallMissingPayload.missing, true);
   assert.equal(uninstallMissingPayload.extension, null);
 
-  const reloadMissingResult = runCli(["--json", "extension", "reload", listed.id], {
+  const reloadMissingResult = runCli(["extension", "reload", listed.id], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(reloadMissingResult.status, 0);
@@ -172,7 +172,7 @@ test("extension lifecycle commands return deterministic fallback metadata", () =
   assert.equal(reloadMissingPayload.missing, true);
   assert.equal(reloadMissingPayload.extension, null);
 
-  const listAfterResult = runCli(["--json", "extension", "list"], {
+  const listAfterResult = runCli(["extension", "list"], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(listAfterResult.status, 0);
@@ -181,14 +181,14 @@ test("extension lifecycle commands return deterministic fallback metadata", () =
 });
 
 test("extension lifecycle strict mode returns typed unknown-extension failure", () => {
-  const reloadResult = runCli(["--json", "extension", "reload", "missing-extension", "--fail-if-missing"], {
+  const reloadResult = runCli(["extension", "reload", "missing-extension", "--fail-if-missing"], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(reloadResult.status, 1);
   const reloadPayload = parseJson(reloadResult.stdout);
   assert.equal(reloadPayload.code, "E_QUERY_INVALID");
 
-  const uninstallResult = runCli(["--json", "extension", "uninstall", "missing-extension", "--fail-if-missing"], {
+  const uninstallResult = runCli(["extension", "uninstall", "missing-extension", "--fail-if-missing"], {
     SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
   });
   assert.equal(uninstallResult.status, 1);

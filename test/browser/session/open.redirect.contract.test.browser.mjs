@@ -26,15 +26,15 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   const payload = parseJson(doctor.stdout);
   hasBrowserCache =
-    payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "4000"]).status === 0;
+    payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "4000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 async function withHttpServer(handler, fn) {
@@ -78,7 +78,7 @@ test("open reports requestedUrl/finalUrl redirect evidence", async () => {
     const requested = `${baseUrl}/start`;
     const finalUrl = `${baseUrl}/final`;
 
-    const openResult = await runCliAsync(["--json", "open", requested, "--timeout-ms", "8000"]);
+    const openResult = await runCliAsync(["open", requested, "--timeout-ms", "8000"]);
     assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
     const openPayload = parseJson(openResult.stdout);
     assert.equal(openPayload.ok, true);

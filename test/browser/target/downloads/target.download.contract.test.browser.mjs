@@ -24,7 +24,7 @@ function parseJson(stdout) {
 }
 
 function requireBrowser() {
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   assert.equal(doctor.status, 0, doctor.stdout || doctor.stderr);
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
@@ -75,14 +75,12 @@ test("target download captures deterministic download artifact", async () => {
     res.end("not found");
   }, async (baseUrl) => {
     const outDir = path.join(TEST_STATE_DIR, "artifacts", "downloads");
-    const openResult = await runCliAsync(["--json", "open", baseUrl, "--timeout-ms", "8000"]);
+    const openResult = await runCliAsync(["open", baseUrl, "--timeout-ms", "8000"]);
     assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
     const openPayload = parseJson(openResult.stdout);
     assert.equal(typeof openPayload.targetId, "string");
 
-    const dlResult = await runCliAsync([
-      "--json",
-      "target",
+    const dlResult = await runCliAsync(["target",
       "download",
       openPayload.targetId,
       "--text",

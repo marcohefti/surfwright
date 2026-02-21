@@ -208,14 +208,8 @@ export type TargetStyleReport = {
     id: string | null;
     className: string | null;
   };
-  element: TargetObservedElement & {
-    tagName: string | null;
-    id: string | null;
-    className: string | null;
-  };
   properties: string[];
   values: Record<string, string | null>;
-  computed: Record<string, string | null>;
   proof?: {
     action: "style";
     queryMode: "text" | "selector";

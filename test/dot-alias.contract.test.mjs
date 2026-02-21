@@ -34,25 +34,25 @@ process.on("exit", () => {
 });
 
 test("dot-command aliases route to runtime/target commands", () => {
-  const listResult = runCli(["--json", "session.list"]);
+  const listResult = runCli(["session.list"]);
   assert.equal(listResult.status, 0);
   const listPayload = parseJson(listResult.stdout);
   assert.equal(listPayload.ok, true);
   assert.equal(Array.isArray(listPayload.sessions), true);
 
-  const pruneResult = runCli(["--json", "target.prune"]);
+  const pruneResult = runCli(["target.prune"]);
   assert.equal(pruneResult.status, 0);
   const prunePayload = parseJson(pruneResult.stdout);
   assert.equal(prunePayload.ok, true);
   assert.equal(typeof prunePayload.removed, "number");
 
-  const reconcileResult = runCli(["--json", "state.reconcile", "--timeout-ms", "200"]);
+  const reconcileResult = runCli(["state.reconcile", "--timeout-ms", "200"]);
   assert.equal(reconcileResult.status, 0);
   const reconcilePayload = parseJson(reconcileResult.stdout);
   assert.equal(reconcilePayload.ok, true);
   assert.equal(typeof reconcilePayload.sessions.removed, "number");
 
-  const evalResult = runCli(["--json", "target.eval", "DEADBEEF", "--expression", "1 + 1"]);
+  const evalResult = runCli(["target.eval", "DEADBEEF", "--expression", "1 + 1"]);
   assert.equal(evalResult.status, 1);
   const evalPayload = parseJson(evalResult.stdout);
   assert.equal(evalPayload.ok, false);
@@ -60,41 +60,27 @@ test("dot-command aliases route to runtime/target commands", () => {
 });
 
 test("dot-command alias supports network subcommands", () => {
-  const result = runCli(["--json", "target.network-query", "--preset", "summary"]);
+  const result = runCli(["target.network-query", "--preset", "summary"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_QUERY_INVALID");
 
-  const traceResult = runCli(["--json", "target.trace.insight"]);
+  const traceResult = runCli(["target.trace.insight"]);
   assert.equal(traceResult.status, 1);
   const tracePayload = parseJson(traceResult.stdout);
   assert.equal(tracePayload.ok, false);
   assert.equal(tracePayload.code, "E_QUERY_INVALID");
 
-  const extensionList = runCli(["--json", "extension.list"]);
+  const extensionList = runCli(["extension.list"]);
   assert.equal(extensionList.status, 0);
   const extensionPayload = parseJson(extensionList.stdout);
   assert.equal(extensionPayload.ok, true);
   assert.equal(Array.isArray(extensionPayload.extensions), true);
 });
 
-test("target --target alias rewrites to positional targetId", () => {
-  const styleResult = runCli(["--json", "target", "style", "--target", "DEADBEEF", "--selector", "body"]);
-  assert.equal(styleResult.status, 1);
-  const stylePayload = parseJson(styleResult.stdout);
-  assert.equal(stylePayload.ok, false);
-  assert.equal(stylePayload.code, "E_TARGET_SESSION_UNKNOWN");
-
-  const styleTargetIdResult = runCli(["--json", "target", "style", "--target-id=DEADBEEF", "--selector", "body"]);
-  assert.equal(styleTargetIdResult.status, 1);
-  const styleTargetIdPayload = parseJson(styleTargetIdResult.stdout);
-  assert.equal(styleTargetIdPayload.ok, false);
-  assert.equal(styleTargetIdPayload.code, "E_TARGET_SESSION_UNKNOWN");
-});
-
 test("json shape lint for pure commands (keys only)", () => {
-  const contractResult = runCli(["--json", "contract"]);
+  const contractResult = runCli(["contract"]);
   assert.equal(contractResult.status, 0);
   assert.deepEqual(Object.keys(parseJson(contractResult.stdout)), [
     "ok",
@@ -108,11 +94,11 @@ test("json shape lint for pure commands (keys only)", () => {
     "guidance",
   ]);
 
-  const doctorResult = runCli(["--json", "doctor"]);
+  const doctorResult = runCli(["doctor"]);
   assert.equal(doctorResult.status, 0);
   assert.deepEqual(Object.keys(parseJson(doctorResult.stdout)), ["ok", "node", "chrome"]);
 
-  const skillDoctor = runCli(["--json", "skill", "doctor"]);
+  const skillDoctor = runCli(["skill", "doctor"]);
   assert.equal(skillDoctor.status, 0);
   assert.deepEqual(Object.keys(parseJson(skillDoctor.stdout)), [
     "ok",
@@ -126,7 +112,7 @@ test("json shape lint for pure commands (keys only)", () => {
     "lockStatus",
   ]);
 
-  const sessionList = runCli(["--json", "session", "list"]);
+  const sessionList = runCli(["session", "list"]);
   assert.equal(sessionList.status, 0);
   assert.deepEqual(Object.keys(parseJson(sessionList.stdout)), ["ok", "activeSessionId", "sessions"]);
 });
@@ -216,9 +202,9 @@ function listRegisteredCommandIdsViaHelp() {
   return leaves.map((tokens) => tokens.join(".")).sort();
 }
 
-test("contract truthfulness: --json contract ids match registered commander commands", () => {
+test("contract truthfulness: contract ids match registered commander commands", () => {
   const helpIds = listRegisteredCommandIdsViaHelp();
-  const contractPayload = parseJson(runCli(["--json", "contract"]).stdout);
+  const contractPayload = parseJson(runCli(["contract"]).stdout);
   const contractIds = (contractPayload.commands ?? []).map((cmd) => cmd.id).sort();
 
   const helpSet = new Set(helpIds);

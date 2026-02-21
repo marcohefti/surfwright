@@ -30,7 +30,7 @@ This repo exists for one thing: a stable browser control surface that agents can
 Use this command whenever behavior may have changed:
 
 ```bash
-surfwright --json contract
+surfwright contract
 ```
 
 ## Change Routing

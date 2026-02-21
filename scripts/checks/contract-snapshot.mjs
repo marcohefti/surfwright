@@ -37,7 +37,7 @@ function parseArgs(argv) {
         [
           "Usage: node scripts/checks/contract-snapshot.mjs [--check|--update] [--snapshot <path>]",
           "",
-          "Checks or updates the contract snapshot generated from dist/cli.js --json contract.",
+          "Checks or updates the contract snapshot generated from dist/cli.js contract.",
         ].join("\n") + "\n",
       );
       process.exit(0);
@@ -50,7 +50,7 @@ function parseArgs(argv) {
 }
 
 function readContractFromCli() {
-  const result = spawnSync(process.execPath, ["dist/cli.js", "--json", "contract"], {
+  const result = spawnSync(process.execPath, ["dist/cli.js", "contract"], {
     encoding: "utf8",
   });
 

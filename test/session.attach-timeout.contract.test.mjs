@@ -126,9 +126,7 @@ process.on("exit", () => {
 test("session attach honors timeout window for slower CDP health checks", async () => {
   await withDelayedCdpServer(900, async (cdpOrigin) => {
     const sessionId = `a-slow-${Date.now()}`;
-    const attachResult = await runCliAsync([
-      "--json",
-      "session",
+    const attachResult = await runCliAsync(["session",
       "attach",
       "--cdp",
       cdpOrigin,
@@ -147,9 +145,7 @@ test("session attach honors timeout window for slower CDP health checks", async 
     assert.equal(attachPayload.created, true);
     assert.equal(attachPayload.restarted, false);
 
-    const useResult = await runCliAsync([
-      "--json",
-      "session",
+    const useResult = await runCliAsync(["session",
       "use",
       sessionId,
       "--timeout-ms",
@@ -165,9 +161,7 @@ test("session attach honors timeout window for slower CDP health checks", async 
 
 test("session attach returns typed unreachable failure when timeout window is too short", async () => {
   await withDelayedCdpServer(900, async (cdpOrigin) => {
-    const result = await runCliAsync([
-      "--json",
-      "session",
+    const result = await runCliAsync(["session",
       "attach",
       "--cdp",
       cdpOrigin,
@@ -187,9 +181,7 @@ test("session attach returns typed unreachable failure when timeout window is to
 test("session attach resolves CDP discovery URLs with path and query parameters", async () => {
   await withPathAndQueryCdpServer(async (cdpInput) => {
     const sessionId = `a-path-${Date.now()}`;
-    const attachResult = await runCliAsync([
-      "--json",
-      "session",
+    const attachResult = await runCliAsync(["session",
       "attach",
       "--cdp",
       cdpInput,

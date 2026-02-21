@@ -16,8 +16,6 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--expr <js>", "JavaScript expression to evaluate and return")
       .option("--expression <js>", "JavaScript function body to run in page context (use return to yield a value)")
-      .option("--js <js>", "Alias for --expression")
-      .option("--script <js>", "Alias for --expression")
       .option("--script-file <path>", "Read JavaScript from file (defaults to script mode; use --mode expr to treat as expression)")
       .option("--mode <mode>", "Mode for --script-file: expr|script")
       .option("--arg-json <json>", "JSON value passed as arg to the expression")
@@ -45,9 +43,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
           targetId: string,
           options: {
             expr?: string;
-            expression: string;
-            js?: string;
-            script?: string;
+            expression?: string;
             scriptFile?: string;
             mode?: string;
             argJson?: string;
@@ -62,9 +58,6 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
           const maxConsole = Number.parseInt(options.maxConsole, 10);
-          const expression = [options.expression, options.js, options.script].find(
-            (entry): entry is string => typeof entry === "string" && entry.trim().length > 0,
-          );
           const fields = parseFieldsCsv(options.fields);
 
           try {
@@ -73,7 +66,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
               timeoutMs: options.timeoutMs,
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               expr: options.expr,
-              expression,
+              expression: options.expression,
               scriptFile: options.scriptFile,
               mode: options.mode === "expr" || options.mode === "script" ? (options.mode as "expr" | "script") : undefined,
               argJson: options.argJson,

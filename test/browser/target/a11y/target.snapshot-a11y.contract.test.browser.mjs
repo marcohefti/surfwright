@@ -22,14 +22,14 @@ function hasBrowser() {
   if (typeof hasBrowserCache === "boolean") {
     return hasBrowserCache;
   }
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   const payload = parseJson(doctor.stdout);
-  hasBrowserCache = payload?.chrome?.found === true && runCli(["--json", "session", "ensure", "--timeout-ms", "5000"]).status === 0;
+  hasBrowserCache = payload?.chrome?.found === true && runCli(["session", "ensure", "--timeout-ms", "5000"]).status === 0;
   return hasBrowserCache;
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 test.after(async () => {
@@ -49,17 +49,15 @@ test("target snapshot --mode a11y returns bounded rows and supports ax cursor pa
   `;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
 
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "8000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "8000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const first = runCli([
-    "--json",
-    "--session",
+  const first = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "snapshot",
@@ -84,9 +82,7 @@ test("target snapshot --mode a11y returns bounded rows and supports ax cursor pa
     assert.equal(typeof firstPayload.nextCursor, "string");
     assert.ok(firstPayload.nextCursor.startsWith("ax="));
 
-    const second = runCli([
-      "--json",
-      "--session",
+    const second = runCli(["--session",
       ensurePayload.sessionId,
       "target",
       "snapshot",

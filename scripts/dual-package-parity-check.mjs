@@ -79,8 +79,8 @@ const canonicalSha = crypto.createHash("sha256").update(canonicalDist).digest("h
 const guardSha = crypto.createHash("sha256").update(guardDist).digest("hex");
 parity.checks.distCliEqual = canonicalSha === guardSha;
 
-const canonicalContract = run("node", ["dist/cli.js", "--json", "contract"], canonicalDir);
-const guardContract = run("node", ["dist/cli.js", "--json", "contract"], guardDir);
+const canonicalContract = run("node", ["dist/cli.js", "contract"], canonicalDir);
+const guardContract = run("node", ["dist/cli.js", "contract"], guardDir);
 if (canonicalContract.status === 0 && guardContract.status === 0) {
   parity.checks.contractEqual = canonicalContract.stdout.trim() === guardContract.stdout.trim();
 }

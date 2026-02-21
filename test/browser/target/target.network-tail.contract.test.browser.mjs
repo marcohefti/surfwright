@@ -24,7 +24,7 @@ function hasBrowser() {
     return hasBrowserCache;
   }
 
-  const result = runCliSync(["--json", "doctor"]);
+  const result = runCliSync(["doctor"]);
   if (result.status !== 0) {
     hasBrowserCache = false;
     return hasBrowserCache;
@@ -35,7 +35,7 @@ function hasBrowser() {
 }
 
 function requireBrowser() {
-  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright --json doctor`)");
+  assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
 async function withHttpServer(handler, fn) {
@@ -84,17 +84,15 @@ test("target network-tail --failed-only emits only failed request events", async
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     res.end("not found");
   }, async (baseUrl) => {
-    const ensureResult = await runCliAsync(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+    const ensureResult = await runCliAsync(["session", "ensure", "--timeout-ms", "6000"]);
     assert.equal(ensureResult.status, 0, ensureResult.stdout || ensureResult.stderr);
     const ensurePayload = parseJson(ensureResult.stdout);
 
-    const openResult = await runCliAsync(["--json", "--session", ensurePayload.sessionId, "open", baseUrl, "--timeout-ms", "20000"]);
+    const openResult = await runCliAsync(["--session", ensurePayload.sessionId, "open", baseUrl, "--timeout-ms", "20000"]);
     assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
     const openPayload = parseJson(openResult.stdout);
 
-    const tail = await runCliAsync([
-      "--json",
-      "--session",
+    const tail = await runCliAsync(["--session",
       ensurePayload.sessionId,
       "target",
       "network-tail",

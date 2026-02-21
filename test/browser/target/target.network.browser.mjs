@@ -23,7 +23,7 @@ function parseJson(stdout) {
 }
 
 function requireBrowser() {
-  const doctor = runCli(["--json", "doctor"]);
+  const doctor = runCli(["doctor"]);
   assert.equal(doctor.status, 0, doctor.stdout || doctor.stderr);
   const payload = parseJson(doctor.stdout);
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
@@ -32,19 +32,17 @@ function requireBrowser() {
 test("target network returns deterministic JSON shape", () => {
   requireBrowser();
 
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
   const html = `<title>Network Contract Page</title><main><h1>network ok</h1></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const networkResult = runCli([
-    "--json",
-    "--session",
+  const networkResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "network",
@@ -62,20 +60,18 @@ test("target network returns deterministic JSON shape", () => {
 test("target network-export writes HAR artifact metadata", () => {
   requireBrowser();
 
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
   const html = `<title>Network Export</title><main>ok</main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
   const outPath = path.join(TEST_STATE_DIR, "artifacts", "capture.har");
-  const exportResult = runCli([
-    "--json",
-    "--session",
+  const exportResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "network-export",
@@ -98,19 +94,17 @@ test("target network-export writes HAR artifact metadata", () => {
 test("target network begin/end returns capture handle and projected report", () => {
   requireBrowser();
 
-  const ensureResult = runCli(["--json", "session", "ensure", "--timeout-ms", "6000"]);
+  const ensureResult = runCli(["session", "ensure", "--timeout-ms", "6000"]);
   assert.equal(ensureResult.status, 0);
   const ensurePayload = parseJson(ensureResult.stdout);
 
   const html = `<title>Network Capture</title><main>ok</main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
-  const openResult = runCli(["--json", "--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
+  const openResult = runCli(["--session", ensurePayload.sessionId, "open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
   const openPayload = parseJson(openResult.stdout);
 
-  const beginResult = runCli([
-    "--json",
-    "--session",
+  const beginResult = runCli(["--session",
     ensurePayload.sessionId,
     "target",
     "network-begin",
@@ -123,7 +117,7 @@ test("target network begin/end returns capture handle and projected report", () 
   assert.equal(beginPayload.ok, true);
   assert.equal(typeof beginPayload.captureId, "string");
 
-  const endResult = runCli(["--json", "target", "network-end", beginPayload.captureId, "--view", "summary", "--timeout-ms", "20000"]);
+  const endResult = runCli(["target", "network-end", beginPayload.captureId, "--view", "summary", "--timeout-ms", "20000"]);
   assert.equal(endResult.status, 0);
   const endPayload = parseJson(endResult.stdout);
   assert.equal(endPayload.ok, true);

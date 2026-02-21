@@ -52,12 +52,12 @@ export async function runPipeline(opts: {
   });
 
   const ops = {
-    open: async (input: { url: string; timeoutMs: number; sessionId?: string; reuseUrl: boolean }) =>
+    open: async (input: { url: string; timeoutMs: number; sessionId?: string; reuseModeInput?: string }) =>
       (await openUrl({
         inputUrl: input.url,
         timeoutMs: input.timeoutMs,
         sessionId: input.sessionId,
-        reuseUrl: input.reuseUrl,
+        reuseModeInput: input.reuseModeInput,
         isolation: opts.isolation,
         browserModeInput: opts.browserModeInput,
       })) as unknown as Record<string, unknown>,

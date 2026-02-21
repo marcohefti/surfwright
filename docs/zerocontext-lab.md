@@ -32,6 +32,39 @@ Use this when you want to measure what a fresh agent does on first contact:
 - missing-command demand based on real command attempts,
 - architecture fit (new primitive vs better naming/output for existing primitives).
 
+## Session Isolation Policy (Mandatory)
+
+For comparison campaigns across multiple missions/flows:
+
+- one fresh agent session per `flow+mission` attempt,
+- never reuse the same agent session for a second mission,
+- close each agent immediately after attempt finalization,
+- run attempts in bounded waves with a hard cap of 6 concurrent agents (unless explicitly overridden by operator).
+
+This policy exists to keep results unbiased and reproducible.
+
+## Runner Shell Safety (Mandatory)
+
+ZCL orchestration scripts must not mutate shell-reserved environment variables used by Node/Chrome/SurfWright path resolution.
+
+- never assign mission outputs to reserved names like `HOME`, `PATH`, `SHELL`, `PWD`, `USER`, `TMPDIR`
+- use lowercase, routine-scoped names for captured outputs (example: `homepage_result_json`, `modal_proof_json`)
+- run orchestrator snippets with `set -euo pipefail`
+- preflight check before launching attempts:
+  - `HOME` must be an absolute path
+  - Node must resolve `os.homedir()` to that same absolute path
+
+Reference preflight snippet:
+
+```bash
+set -euo pipefail
+test "${HOME#/}" != "$HOME" || { echo "HOME must be absolute"; exit 1; }
+node -e 'const os=require("node:os"); const h=os.homedir(); if(!h.startsWith("/")) { console.error("bad homedir", h); process.exit(1); }'
+```
+
+If a run accidentally mutates `HOME` (or other reserved vars), treat that run as invalid, stop immediately, and clean up leaked browser processes/artifacts before retrying.
+Cleanup must be scoped to the routine's isolated `SURFWRIGHT_STATE_DIR`; never run machine-wide kill commands in shared multi-project environments.
+
 ## What It Captures
 
 Per attempt, ZCL should write deterministic artifacts (exact filenames/layout are owned by ZCL; do not treat them as a SurfWright contract).
@@ -81,6 +114,12 @@ Use this when discovering missing CLI primitives/names/output shapes:
 
 This mode is intentionally qualitative + evidence-backed. It is designed to reveal
 natural command demand and where agents get stuck.
+
+### Prohibited for Zero-Context Comparisons
+
+- hardcoded mission-solver scripts that execute full tasks without a fresh agent,
+- reuse of one long-lived agent across multiple missions,
+- replacing trace-backed attempts with summary-only claims.
 
 Keep campaign prompts/assets in a temporary workspace (for example `tmp/zcl/zero-context-gap/`) and exclude them from version control.
 
@@ -217,3 +256,4 @@ For comparability across sessions, capture at minimum:
 ## Notes
 
 - Each attempt should use an isolated `SURFWRIGHT_STATE_DIR`, preventing stale cross-run state pollution.
+- Session/process cleanup should target that isolated state path only (for example `SURFWRIGHT_STATE_DIR=... surfwright session clear`), not global process matches.

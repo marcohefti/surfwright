@@ -109,6 +109,9 @@ When the user asks to "spawn agents", "zero context test", or evaluate fresh-age
 - Ensure runs are trace-backed (captured command artifacts/logs), then evaluate from those artifacts first.
 - Prefer evidence-based scoring: success/failure, command count, typed failures, and where agents got stuck.
 - Treat agent self-reports as secondary; ground conclusions in ZeroContext outputs (tool-call trace JSONL, run artifacts, report).
+- For multi-mission comparisons, enforce one fresh subagent per `flow+mission`; never reuse a session across missions.
+- Keep a hard concurrency cap of `6` live subagents unless the user explicitly overrides it.
+- Do not replace zero-context discovery with scripted mission solvers; mission completion should come from fresh subagents, not hardcoded pipelines.
 
 ## Commit Message Rule
 

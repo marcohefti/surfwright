@@ -27,6 +27,19 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
       .option("--timeout-ms <ms>", "Evaluation timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Typed alternatives (prefer before eval when possible):",
+          "  surfwright target extract <targetId> --kind docs-commands --selector main --limit 10",
+          "  surfwright target style <targetId> --selector '.btn.btn-primary' --kind button-primary",
+          "  surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1",
+          "",
+          "Compact output tip:",
+          "  surfwright --output-shape compact target eval <targetId> --expr 'document.title'",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,

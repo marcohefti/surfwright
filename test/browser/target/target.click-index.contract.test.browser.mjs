@@ -155,6 +155,87 @@ test("target click supports --index for deterministic multi-match selection", ()
   assert.equal(outPayload.code, "E_QUERY_INVALID");
 });
 
+test("target click supports --repeat for deterministic multi-action loops", () => {
+  requireBrowser();
+  const html = `<!doctype html>
+    <html><head><meta charset="utf-8"><title>Click Repeat</title></head>
+      <body>
+        <main>
+          <button id="add">Add Element</button>
+          <div id="count">0</div>
+        </main>
+        <script>
+          const countNode = document.getElementById('count');
+          document.getElementById('add').addEventListener('click', () => {
+            const next = Number.parseInt(countNode.textContent || '0', 10) + 1;
+            countNode.textContent = String(next);
+          });
+        </script>
+      </body></html>`;
+  const url = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", url, "--timeout-ms", "20000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const repeatClick = runCli([
+    "--json",
+    "--output-shape",
+    "compact",
+    "target",
+    "click",
+    openPayload.targetId,
+    "--text",
+    "Add Element",
+    "--visible-only",
+    "--repeat",
+    "3",
+    "--timeout-ms",
+    "20000",
+  ]);
+  assert.equal(repeatClick.status, 0);
+  const repeatPayload = parseJson(repeatClick.stdout);
+  assert.equal(repeatPayload.ok, true);
+  assert.equal(typeof repeatPayload.actionId, "string");
+  assert.equal(typeof repeatPayload.repeat, "object");
+  assert.equal(repeatPayload.repeat.requested, 3);
+  assert.equal(repeatPayload.repeat.completed, 3);
+  assert.equal(Array.isArray(repeatPayload.repeat.actionIds), true);
+  assert.equal(repeatPayload.repeat.actionIds.length, 3);
+  assert.equal(Array.isArray(repeatPayload.repeat.pickedIndices), true);
+  assert.equal(repeatPayload.repeat.pickedIndices.length, 3);
+
+  const countResult = runCli([
+    "--json",
+    "target",
+    "eval",
+    openPayload.targetId,
+    "--expr",
+    "document.querySelector('#count')?.textContent",
+    "--timeout-ms",
+    "20000",
+  ]);
+  assert.equal(countResult.status, 0);
+  const countPayload = parseJson(countResult.stdout);
+  assert.equal(countPayload.result.value, "3");
+
+  const explainRepeat = runCli([
+    "--json",
+    "target",
+    "click",
+    openPayload.targetId,
+    "--text",
+    "Add Element",
+    "--explain",
+    "--repeat",
+    "2",
+    "--timeout-ms",
+    "20000",
+  ]);
+  assert.equal(explainRepeat.status, 1);
+  const explainPayload = parseJson(explainRepeat.stdout);
+  assert.equal(explainPayload.code, "E_QUERY_INVALID");
+});
+
 test("target find returns href and tag metadata for each match", () => {
   requireBrowser();
   const html = `<!doctype html>

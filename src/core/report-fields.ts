@@ -34,6 +34,7 @@ function compactKeys(): string[] {
     "selector",
     "matchCount",
     "pickedIndex",
+    "repeat",
     "wait",
     "proofEnvelope",
     "proof",
@@ -80,6 +81,9 @@ function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputSh
   }
   if (Object.prototype.hasOwnProperty.call(report, "finalUrl")) {
     out.finalUrl = report.finalUrl;
+  }
+  if (Object.prototype.hasOwnProperty.call(report, "repeat")) {
+    out.repeat = report.repeat;
   }
   out.proof = proof;
   return out;

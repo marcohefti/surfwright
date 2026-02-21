@@ -1,6 +1,7 @@
 import {
   parseFieldsCsv,
   projectReportFields,
+  queryInvalid,
   targetClick,
   targetClickAt,
   targetDragDrop,
@@ -9,9 +10,26 @@ import {
   targetUpload,
 } from "../../../core/target/public.js";
 import { DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
+import type { TargetClickReport } from "../../../core/types.js";
 import { targetCommandMeta } from "../manifest.js";
 import type { TargetCommandSpec } from "./types.js";
 function collectRepeatedString(value: string, previous: string[]): string[] { return [...previous, value]; }
+
+function parseRepeatCount(input: string | undefined): number {
+  if (typeof input !== "string" || input.trim().length === 0) {
+    return 1;
+  }
+  const raw = input.trim();
+  if (!/^\d+$/.test(raw)) {
+    throw queryInvalid("repeat must be a positive integer between 1 and 25");
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 25) {
+    throw queryInvalid("repeat must be a positive integer between 1 and 25");
+  }
+  return parsed;
+}
+
 const meta = targetCommandMeta("target.click");
 export const targetClickCommandSpec: TargetCommandSpec = {
   id: meta.id,
@@ -30,6 +48,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--within <selector>", "Scope query resolution to descendants of selector")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--index <n>", "Pick the Nth match (0-based) instead of first match")
+      .option("--repeat <n>", "Repeat click action N times (1-25); returns final click report plus repeat metadata")
       .option("--explain", "Explain match selection/rejection without clicking", false)
       .option("--wait-for-text <text>", "After click, wait until text becomes visible")
       .option("--wait-for-selector <query>", "After click, wait until selector becomes visible")
@@ -56,6 +75,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             within?: string;
             frameScope?: string;
             index?: string;
+            repeat?: string;
             explain?: boolean;
             waitForText?: string;
             waitForSelector?: string;
@@ -76,9 +96,12 @@ export const targetClickCommandSpec: TargetCommandSpec = {
           const globalOpts = ctx.program.opts<{ session?: string }>();
           const fields = parseFieldsCsv(options.fields);
           const index = typeof options.index === "string" ? Number.parseInt(options.index, 10) : undefined;
+          const repeat = parseRepeatCount(options.repeat);
           try {
-            const report = await targetClick({
-              targetId,
+            if (Boolean(options.explain) && repeat > 1) {
+              throw queryInvalid("--repeat cannot be combined with --explain");
+            }
+            const clickOpts = {
               timeoutMs: options.timeoutMs,
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               textQuery: options.text,
@@ -101,8 +124,48 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               assertSelector: options.assertSelector,
               assertText: options.assertText,
               persistState: options.persist !== false,
-            });
-            ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
+            };
+            if (repeat === 1) {
+              const report = await targetClick({
+                targetId,
+                ...clickOpts,
+              });
+              ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);
+              return;
+            }
+
+            let currentTargetId = targetId;
+            let lastReport: TargetClickReport | null = null;
+            const actionIds: string[] = [];
+            const pickedIndices: number[] = [];
+            for (let iteration = 0; iteration < repeat; iteration += 1) {
+              const report = await targetClick({
+                targetId: currentTargetId,
+                ...clickOpts,
+              });
+              if (!("actionId" in report)) {
+                throw queryInvalid("--repeat only supports click execution mode");
+              }
+              lastReport = report as TargetClickReport;
+              actionIds.push(lastReport.actionId);
+              pickedIndices.push(lastReport.pickedIndex);
+              if (!lastReport.handoff.sameTarget && typeof lastReport.handoff.openedTargetId === "string" && lastReport.handoff.openedTargetId.length > 0) {
+                currentTargetId = lastReport.handoff.openedTargetId;
+              }
+            }
+            if (!lastReport) {
+              throw queryInvalid("repeat execution did not produce a click report");
+            }
+            const repeatReport = {
+              ...lastReport,
+              repeat: {
+                requested: repeat,
+                completed: actionIds.length,
+                actionIds,
+                pickedIndices,
+              },
+            };
+            ctx.printTargetSuccess(projectReportFields(repeatReport as unknown as Record<string, unknown>, fields), output);
           } catch (error) {
             ctx.handleFailure(error, output);
           }

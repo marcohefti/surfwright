@@ -186,6 +186,12 @@ export type TargetClickReport = {
   proofEnvelope?: ActionProofEnvelope;
   assertions?: ActionAssertionReport | null;
   delta?: TargetClickDeltaEvidence;
+  repeat?: {
+    requested: number;
+    completed: number;
+    actionIds: string[];
+    pickedIndices: number[];
+  };
   handoff: {
     sameTarget: boolean;
     openedTargetId: string | null;

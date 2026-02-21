@@ -83,6 +83,7 @@ Fix path:
 ```bash
 surfwright target count <targetId> --text "<label>" --visible-only
 surfwright target click <targetId> --text "<label>" --visible-only --index <n>
+surfwright --output-shape compact target click <targetId> --text "<label>" --visible-only --repeat 2
 surfwright target network-around <targetId> --click-text "<label>" --profile api --view summary
 ```
 

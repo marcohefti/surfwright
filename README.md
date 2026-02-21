@@ -145,6 +145,7 @@ Fast first-pass flow with explicit reuse/readiness controls:
 ```bash
 surfwright open https://example.com --reuse active --wait-until commit
 surfwright target click <targetId> --text "Pricing" --visible-only --proof
+surfwright --output-shape compact target click <targetId> --text "Delete" --visible-only --repeat 3
 surfwright target fill <targetId> --selector "#email" --value "agent@example.com" --wait-network-idle --proof
 surfwright target fill <targetId> --selector "#search" --value "surfwright" --event-mode realistic
 surfwright target click <targetId> --text "Sort" --within "#results-table" --proof
@@ -158,11 +159,13 @@ surfwright target extract <targetId> --kind headings --selector main --limit 12
 `target find` match rows include `text`, `visible`, `selectorHint`, `href`, and `tag`.
 `target snapshot --mode orient` now includes additive counters (`headingsCount`, `buttonsCount`, `linksCount`, `navCount`).
 `target click --proof` now includes additive `proof.countAfter` for selector-mode clicks (when post-action counting is available).
+`target click --repeat <n>` executes repeated deterministic clicks and returns final click fields plus `repeat` metadata (`requested`, `completed`, `actionIds`, `pickedIndices`).
 `target click` mismatch failures now include bounded candidate samples and `withinSelector` context for faster disambiguation.
 `target fill|keypress|upload|drag-drop|dialog` now support the same post-action wait controls (`--wait-for-text|--wait-for-selector|--wait-network-idle`, `--wait-timeout-ms`) and optional `--proof`.
 `open|target click|target fill|target keypress|target upload|target drag-drop|target dialog|target download|target wait` support additive post-action assertions: `--assert-url-prefix`, `--assert-selector`, `--assert-text`.
 `open` and `target url-assert` include additive `blockType` (`auth|captcha|consent|unknown`) for navigation gating triage.
 `target download` includes additive artifact-proof fields (`downloadStarted`, `sourceUrl`, `fileName`, `bytes`, `mime`) while keeping `filename`/`size` for compatibility.
+Prefer `target extract`, `target style`, and `target read` before `target eval`; when you need eval, `--output-shape compact` keeps payloads lean.
 
 Use workspace profile for persistent login state:
 

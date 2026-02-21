@@ -40,7 +40,10 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
   {
     id: "target.click",
     signature: "click(targetId, query) -> { clicked, handoff, wait?, proof? }",
-    examples: ["surfwright target click <targetId> --text \"Pricing\" --visible-only --proof"],
+    examples: [
+      "surfwright --output-shape compact target click <targetId> --text \"Delete\" --visible-only --repeat 3",
+      "surfwright target click <targetId> --text \"Pricing\" --visible-only --proof",
+    ],
     proofSchema: {
       action: "click",
       urlChanged: "boolean",
@@ -50,6 +53,17 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
       openedTargetId: "string|null",
       countAfter: "number|null",
     },
+  },
+  {
+    id: "target.eval",
+    signature: "eval(targetId, expr|script) -> { result, context, console? }",
+    examples: [
+      "surfwright target extract <targetId> --kind docs-commands --selector main --limit 10",
+      "surfwright target style <targetId> --selector '.btn.btn-primary' --kind button-primary",
+      "surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1",
+      "surfwright --output-shape compact target eval <targetId> --expr 'document.title'",
+    ],
+    proofSchema: null,
   },
   {
     id: "target.fill",

@@ -95,6 +95,7 @@ Count first, then click deterministically:
 ```bash
 surfwright target count <targetId> --text "Delete" --visible-only
 surfwright target click <targetId> --text "Delete" --visible-only --index 1
+surfwright --output-shape compact target click <targetId> --text "Delete" --visible-only --repeat 3
 ```
 
 One-shot click evidence payload (post-click proof):
@@ -167,6 +168,14 @@ Frame-aware introspection:
 ```bash
 surfwright target frames <targetId>
 surfwright target eval <targetId> --frame-id f-1 --expr "document.title"
+```
+
+Prefer typed primitives before `target eval`:
+
+```bash
+surfwright target extract <targetId> --kind docs-commands --selector main --limit 10
+surfwright target style <targetId> --selector ".btn.btn-primary" --kind button-primary
+surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1
 ```
 
 Structured content and readiness checks:

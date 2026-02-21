@@ -9,6 +9,7 @@ All notable changes to SurfWright are documented here.
 - [open] Added `open --reuse <off|url|origin|active>` for explicit tab-reuse policy (with `--reuse-url` preserved as compatibility alias).
 - [target] Added `target style` for first-class computed-style inspection without `target eval` scripting.
 - [target] Added `target click --proof` to emit a compact one-shot evidence payload (implies `--snapshot` + `--delta`).
+- [target] Added `target click --repeat <n>` (1-25) to execute repeated deterministic clicks in one command, returning final click fields plus additive `repeat` metadata (`requested`, `completed`, `actionIds`, `pickedIndices`).
 - [target] Added additive `target click --proof.countAfter` for selector-mode clicks (post-action selector cardinality when available).
 - [target] Added `target extract --include-actionable` with per-item actionable metadata (`handle`, `selectorHint`, `frameId`, `href`) for deterministic extract-to-action chaining.
 - [target] Added `target extract --kind docs-commands` with command-oriented fields (`command`, `language`, `section`) for docs/codeblock extraction.
@@ -31,6 +32,7 @@ All notable changes to SurfWright are documented here.
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
+- [target] `target eval --help` now surfaces typed alternatives (`target extract`, `target style`, `target read`) plus compact-output usage for lower-token operator loops.
 - [target] `target wait` now includes a structured `wait` payload (`mode`, `value`, `timeoutMs`, `elapsedMs`, `satisfied`) while keeping existing top-level `mode`/`value`.
 - [target] `target snapshot --mode orient|snapshot` now includes additive aggregate counters (`headingsCount`, `buttonsCount`, `linksCount`), plus `navCount` for orient mode.
 - [errors] Typed failures can now include optional bounded `hints` and `hintContext` fields (additive; `code` + `message` contract preserved).

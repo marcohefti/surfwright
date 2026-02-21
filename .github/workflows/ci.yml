@@ -40,7 +40,7 @@ jobs:
       - name: Capture contract JSON
         run: |
           pnpm -s build
-          node dist/cli.js --json contract > artifacts/validate/contract.json
+          node dist/cli.js contract > artifacts/validate/contract.json
 
       - name: Capture policy-check JSON
         run: node scripts/policy-check.mjs --json > artifacts/validate/policy-check.json || true
@@ -87,7 +87,7 @@ jobs:
       - name: Capture contract JSON
         run: |
           pnpm -s build
-          node dist/cli.js --json contract > artifacts/validate-strict/contract.json
+          node dist/cli.js contract > artifacts/validate-strict/contract.json
 
       - name: Upload validate:strict artifacts
         if: always()

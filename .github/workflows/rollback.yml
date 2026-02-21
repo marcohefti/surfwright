@@ -61,8 +61,8 @@ jobs:
       - name: Rollback smoke checks
         run: |
           GOOD="${{ inputs.good_version }}"
-          npx -y @marcohefti/surfwright@"$GOOD" --json contract > /tmp/canonical-rollback-contract.json
-          npx -y surfwright@"$GOOD" --json contract > /tmp/guard-rollback-contract.json
+          npx -y @marcohefti/surfwright@"$GOOD" contract > /tmp/canonical-rollback-contract.json
+          npx -y surfwright@"$GOOD" contract > /tmp/guard-rollback-contract.json
 
       - name: Write rollback metadata
         run: |

@@ -91,7 +91,7 @@ jobs:
             end
 
             test do
-              assert_match "\"ok\":true", shell_output("#{bin}/surfwright --json contract")
+              assert_match "\"ok\":true", shell_output("#{bin}/surfwright contract")
             end
           end
           RUBY

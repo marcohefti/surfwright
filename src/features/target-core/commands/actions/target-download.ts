@@ -21,6 +21,7 @@ export const targetDownloadCommandSpec: TargetCommandSpec = {
       .option("--frame-scope <scope>", "Frame scope: main|all (default main)")
       .option("--index <n>", "Match index (default picks first visible match)", (value) => Number.parseInt(value, 10))
       .option("--download-out-dir <path>", "Directory to write captured downloads (default ./artifacts/downloads)")
+      .option("--allow-missing-download-event", "Return deterministic non-started download envelope instead of failing on download-event timeout", false)
       .option("--proof", "Include standardized proof envelope for download result", false)
       .option("--assert-url-prefix <prefix>", "Post-download assertion: final URL must start with prefix")
       .option("--assert-selector <query>", "Post-download assertion: selector must be visible")
@@ -39,6 +40,7 @@ export const targetDownloadCommandSpec: TargetCommandSpec = {
             frameScope?: string;
             index?: number;
             downloadOutDir?: string;
+            allowMissingDownloadEvent?: boolean;
             proof?: boolean;
             assertUrlPrefix?: string;
             assertSelector?: string;
@@ -63,6 +65,7 @@ export const targetDownloadCommandSpec: TargetCommandSpec = {
               frameScope: options.frameScope,
               index: typeof options.index === "number" ? options.index : undefined,
               downloadOutDir: typeof options.downloadOutDir === "string" ? options.downloadOutDir : undefined,
+              allowMissingDownloadEvent: Boolean(options.allowMissingDownloadEvent),
               proof: Boolean(options.proof),
               assertUrlPrefix: options.assertUrlPrefix,
               assertSelector: options.assertSelector,

@@ -16,7 +16,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.snapshot",
     usage:
-      "surfwright target snapshot <targetId> [--mode <snapshot|orient|a11y>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--max-ax-rows <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target snapshot <targetId> [--mode <snapshot|orient|a11y>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--count-scope <full|bounded>] [--count-filter <csv>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--max-ax-rows <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "read bounded text and UI primitives for a target",
   },
   {
@@ -51,7 +51,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.download",
     usage:
-      "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--allow-missing-download-event] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "click a deterministic element and capture a download artifact",
   },
   {

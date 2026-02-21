@@ -11,7 +11,6 @@ const STATE_LOCK_FILENAME = "state.lock";
 const STATE_LOCK_RETRY_MS = 40;
 const STATE_LOCK_TIMEOUT_MS = 12000;
 const STATE_LOCK_STALE_MS = 20000;
-
 export function stateRootDir(): string {
   const fromEnv = process.env.SURFWRIGHT_STATE_DIR;
   if (typeof fromEnv === "string" && fromEnv.trim().length > 0) {
@@ -27,11 +26,9 @@ export function stateRootDir(): string {
 export function stateFilePath(): string {
   return path.join(stateRootDir(), "state.json");
 }
-
 function stateLockFilePath(): string {
   return path.join(stateRootDir(), STATE_LOCK_FILENAME);
 }
-
 export function defaultSessionUserDataDir(sessionId: string): string {
   return path.join(stateRootDir(), "profiles", sessionId);
 }
@@ -418,6 +415,10 @@ export async function writeState(state: SurfwrightState) {
 
 export function sanitizeSessionId(input: string): string {
   const value = input.trim();
+  const lowered = value.toLowerCase();
+  if (lowered === "undefined" || lowered === "null" || lowered === "nan") {
+    throw new CliError("E_SESSION_ID_INVALID", "sessionId must be an explicit non-placeholder handle");
+  }
   if (!SESSION_ID_PATTERN.test(value)) {
     throw new CliError("E_SESSION_ID_INVALID", "sessionId may only contain letters, numbers, dot, underscore, and dash");
   }

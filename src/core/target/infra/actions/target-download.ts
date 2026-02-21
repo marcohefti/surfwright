@@ -84,6 +84,7 @@ export async function targetDownload(opts: {
   frameScope?: string;
   index?: number;
   downloadOutDir?: string;
+  allowMissingDownloadEvent?: boolean;
   proof?: boolean;
   assertUrlPrefix?: string;
   assertSelector?: string;
@@ -102,6 +103,7 @@ export async function targetDownload(opts: {
     throw new CliError("E_QUERY_INVALID", "index must be a non-negative integer");
   }
   const includeProof = Boolean(opts.proof);
+  const allowMissingDownloadEvent = Boolean(opts.allowMissingDownloadEvent);
   const parsedAssertions = parseActionAssertions({
     assertUrlPrefix: opts.assertUrlPrefix,
     assertSelector: opts.assertSelector,
@@ -120,6 +122,11 @@ export async function targetDownload(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
+    // Download queries are frequently issued right after open --allow-download (commit wait),
+    // so we opportunistically wait for domcontentloaded to reduce transient no-match results.
+    await target.page.waitForLoadState("domcontentloaded", {
+      timeout: Math.min(opts.timeoutMs, 4000),
+    }).catch(() => null);
     const cdp = await openCdpSession(target.page);
     const frameTree = await getCdpFrameTree(cdp);
     const worldCache = new Map<string, number>();
@@ -233,8 +240,131 @@ export async function targetDownload(opts: {
 
     const clickedPreview = await clickAt(pickedIndex);
     const urlBeforeDownload = target.page.url();
-    let download: import("playwright-core").Download;
-    download = await downloadPromise;
+    let download: import("playwright-core").Download | null = null;
+    let downloadWaitError: unknown = null;
+    try {
+      download = await downloadPromise;
+    } catch (error) {
+      downloadWaitError = error;
+    }
+    if (!download) {
+      target.page.off("response", onResponse);
+      const timeoutReason =
+        downloadWaitError instanceof Error
+          ? downloadWaitError.message
+          : `download event not observed within timeout (${opts.timeoutMs}ms)`;
+      if (!allowMissingDownloadEvent) {
+        throw downloadWaitError instanceof Error
+          ? new CliError("E_INTERNAL", timeoutReason)
+          : new CliError("E_INTERNAL", `download event not observed within timeout (${opts.timeoutMs}ms)`);
+      }
+
+      const assertions = await evaluateActionAssertions({
+        page: target.page,
+        assertions: parsedAssertions,
+      });
+      const actionCompletedAt = Date.now();
+      const currentUrl = target.page.url();
+      const currentTitle = await target.page.title();
+      const sourceUrl = clickedPreview.href ?? urlBeforeDownload;
+      const failureReason = `download event not observed within timeout (${opts.timeoutMs}ms)`;
+      const proofEnvelope = includeProof
+        ? buildActionProofEnvelope({
+            action: "download",
+            urlBefore: urlBeforeDownload,
+            urlAfter: currentUrl,
+            targetBefore: requestedTargetId,
+            targetAfter: requestedTargetId,
+            matchCount,
+            pickedIndex,
+            wait: toActionWaitEvidence({
+              requested: null,
+              observed: null,
+            }),
+            assertions,
+            countAfter: null,
+            details: {
+              downloadUrl: null,
+              downloadStatus: null,
+              fileName: null,
+              bytes: null,
+              failureReason: timeoutReason,
+            },
+          })
+        : null;
+
+      const report: TargetDownloadReport = {
+        ok: true,
+        sessionId: session.sessionId,
+        sessionSource,
+        targetId: requestedTargetId,
+        actionId: newActionId(),
+        mode: queryMode,
+        selector,
+        contains,
+        visibleOnly,
+        query,
+        sourceUrl,
+        matchCount,
+        pickedIndex,
+        clicked: {
+          index: pickedIndex,
+          text: clickedPreview.text,
+          visible: clickedPreview.visible,
+          selectorHint: clickedPreview.selectorHint,
+        },
+        url: currentUrl,
+        title: currentTitle,
+        downloadStarted: false,
+        downloadStatus: null,
+        downloadFinalUrl: null,
+        downloadFileName: null,
+        downloadBytes: null,
+        download: null,
+        failureReason,
+        ...(includeProof
+          ? {
+              proof: {
+                downloadStarted: false,
+                fileName: null,
+                path: null,
+                bytes: null,
+                mime: null,
+                sourceUrl,
+                failureReason,
+              },
+            }
+          : {}),
+        ...(proofEnvelope ? { proofEnvelope } : {}),
+        ...(assertions ? { assertions } : {}),
+        timingMs: {
+          total: 0,
+          resolveSession: resolvedSessionAt - startedAt,
+          connectCdp: connectedAt - resolvedSessionAt,
+          action: actionCompletedAt - connectedAt,
+          persistState: 0,
+        },
+      };
+
+      const persistStartedAt = Date.now();
+      if (opts.persistState !== false) {
+        await saveTargetSnapshot({
+          targetId: report.targetId,
+          sessionId: report.sessionId,
+          url: report.url,
+          title: report.title,
+          status: null,
+          lastActionId: report.actionId,
+          lastActionAt: nowIso(),
+          lastActionKind: "download",
+          updatedAt: nowIso(),
+        });
+      }
+      const persistedAt = Date.now();
+      report.timingMs.persistState = persistedAt - persistStartedAt;
+      report.timingMs.total = persistedAt - startedAt;
+      return report;
+    }
 
     const outDir = resolveDownloadOutDir(opts.downloadOutDir);
     providers().fs.mkdirSync(outDir, { recursive: true });

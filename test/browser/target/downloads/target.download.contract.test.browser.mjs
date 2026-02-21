@@ -115,3 +115,48 @@ test("target download captures deterministic download artifact", async () => {
     assert.equal(payload.download.bytes, data.byteLength);
   });
 });
+
+test("target download can return deterministic non-started envelope on timeout", async () => {
+  requireBrowser();
+  await withHttpServer((req, res) => {
+    if (req.url === "/") {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(`<!doctype html>
+        <title>No Download</title>
+        <main><a id="go" href="/plain">Open Plain</a></main>`);
+      return;
+    }
+    if (req.url === "/plain") {
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+      res.end("plain response");
+      return;
+    }
+    res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    res.end("not found");
+  }, async (baseUrl) => {
+    const openResult = await runCliAsync(["open", baseUrl, "--timeout-ms", "8000"]);
+    assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
+    const openPayload = parseJson(openResult.stdout);
+
+    const dlResult = await runCliAsync(["target",
+      "download",
+      openPayload.targetId,
+      "--text",
+      "Open Plain",
+      "--allow-missing-download-event",
+      "--timeout-ms",
+      "1000",
+    ]);
+    assert.equal(dlResult.status, 0, dlResult.stdout || dlResult.stderr);
+    const payload = parseJson(dlResult.stdout);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.downloadStarted, false);
+    assert.equal(payload.downloadStatus, null);
+    assert.equal(payload.downloadFinalUrl, null);
+    assert.equal(payload.downloadFileName, null);
+    assert.equal(payload.downloadBytes, null);
+    assert.equal(payload.download, null);
+    assert.equal(typeof payload.failureReason, "string");
+    assert.equal(payload.failureReason.includes("download event not observed within timeout"), true);
+  });
+});

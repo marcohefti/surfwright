@@ -14,14 +14,11 @@ import {
 } from "./core/daemon/index.js";
 import type { CliFailure } from "./core/types.js";
 import { parseWorkerArgv, runTargetNetworkWorker } from "./features/network/index.js";
-import { allCommandManifest, registerFeaturePlugins } from "./features/registry.js";
+import { registerFeaturePlugins } from "./features/registry.js";
 import { setRuntimeOutputShapeInput } from "./core/report-fields.js";
-import {
-  parseCommandPath,
-  parseGlobalOptionValue,
-  parseOptionTokenSpan,
-} from "./cli/options.js";
+import { parseCommandPath, parseGlobalOptionValue } from "./cli/options.js";
 import { commanderExitCode, parseOutputOptsFromArgv, toCommanderFailure, type OutputOpts } from "./cli/commander-failure.js";
+import { normalizeArgv } from "./cli/argv-normalize.js";
 
 const INITIAL_AGENT_ID_ENV = typeof process.env.SURFWRIGHT_AGENT_ID === "string" ? process.env.SURFWRIGHT_AGENT_ID : null;
 const INITIAL_WORKSPACE_DIR_ENV =
@@ -128,73 +125,6 @@ function applyOutputShapeOverrideFromArgv(argv: string[]): void {
   setRuntimeOutputShapeInput(process.env.SURFWRIGHT_OUTPUT_SHAPE);
 }
 
-
-const DOT_COMMAND_ALIAS_MAP = (() => {
-  const map = new Map<string, string[]>();
-  for (const command of allCommandManifest) {
-    if (!command.id.includes(".")) {
-      continue;
-    }
-    map.set(command.id, command.id.split("."));
-  }
-  return map;
-})();
-
-function rewriteDotCommandAlias(argv: string[]): string[] {
-  const out = [...argv];
-  let commandIndex = 2;
-  while (commandIndex < out.length) {
-    const token = out[commandIndex];
-    if (token === "--") {
-      return out;
-    }
-    const sessionSpan = parseOptionTokenSpan(out, commandIndex, "--session");
-    if (sessionSpan > 0) {
-      commandIndex += sessionSpan;
-      continue;
-    }
-    const agentIdSpan = parseOptionTokenSpan(out, commandIndex, "--agent-id");
-    if (agentIdSpan > 0) {
-      commandIndex += agentIdSpan;
-      continue;
-    }
-    const workspaceSpan = parseOptionTokenSpan(out, commandIndex, "--workspace");
-    if (workspaceSpan > 0) {
-      commandIndex += workspaceSpan;
-      continue;
-    }
-    const outputShapeSpan = parseOptionTokenSpan(out, commandIndex, "--output-shape");
-    if (outputShapeSpan > 0) {
-      commandIndex += outputShapeSpan;
-      continue;
-    }
-
-    if (token === "--no-json" || token === "--pretty") {
-      commandIndex += 1;
-      continue;
-    }
-    if (token.startsWith("-")) {
-      commandIndex += 1;
-      continue;
-    }
-    const alias = DOT_COMMAND_ALIAS_MAP.get(token);
-    if (alias) {
-      out.splice(commandIndex, 1, ...alias);
-    }
-    return out;
-  }
-
-  return out;
-}
-
-function normalizeArgv(argv: string[]): string[] {
-  const out = [...argv];
-  if (out[2] === "--") {
-    out.splice(2, 1);
-  }
-  return rewriteDotCommandAlias(out);
-}
-
 function shouldBypassDaemon(argv: string[]): boolean {
   const [first, second] = parseCommandPath(argv);
   if (!first) {
@@ -252,6 +182,7 @@ function createProgram(): Command {
       ].join(" "),
     )
     .version(readPackageVersion(), "-v, --version")
+    .option("--json", "Enable JSON output (default)")
     .option("--no-json", "Disable JSON output (human-friendly summaries)")
     .option("--pretty", "Pretty-print JSON output", false)
     .option("--agent-id <agentId>", "Agent scope id for isolated state/daemon namespace")

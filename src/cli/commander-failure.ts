@@ -24,6 +24,10 @@ export function parseOutputOptsFromArgv(argv: string[]): OutputOpts {
     if (token === "--") {
       break;
     }
+    if (token === "--json") {
+      json = true;
+      continue;
+    }
     if (token === "--no-json") {
       json = false;
       continue;

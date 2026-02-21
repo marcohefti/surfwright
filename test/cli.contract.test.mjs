@@ -119,6 +119,39 @@ test("target eval rejects removed --js alias", () => {
   assert.equal(evalPayload.code, "E_QUERY_INVALID");
 });
 
+test("--json global option is accepted as no-op compatibility flag", () => {
+  const result = runCli(["--json", "session", "list"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(Array.isArray(payload.sessions), true);
+});
+
+test("target subcommands accept --target alias for targetId position", () => {
+  const evalResult = runCli(["target",
+    "eval",
+    "--target",
+    "DEADBEEF",
+    "--expression",
+    "1 + 1",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(evalResult.status, 1);
+  const payload = parseJson(evalResult.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_TARGET_SESSION_UNKNOWN");
+});
+
+test("open validates ensure-session mode early", () => {
+  const openResult = runCli(["open", "https://example.com", "--ensure-session", "not-a-mode", "--timeout-ms", "1000"]);
+  assert.equal(openResult.status, 1);
+  const payload = parseJson(openResult.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+  assert.equal(payload.message, "ensure-session must be one of: off, if-missing, fresh");
+});
+
 test("target find validates href-path-prefix before session resolution", () => {
   const findResult = runCli(["target",
     "find",

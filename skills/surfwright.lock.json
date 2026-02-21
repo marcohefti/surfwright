@@ -7,7 +7,7 @@
   "requires": {
     "surfwrightVersion": ">=0.1.0 <0.2.0",
     "contractSchemaVersion": "^1",
-    "contractFingerprint": "sha256:6ced61da6fe200cc2ff385187f9c6fe09531b099343d1d49f4efdffa97a7be35"
+    "contractFingerprint": "sha256:22c5ba25c3195db7ab37b7c1637bc34270e578135d57f4589c7f5c11e2224f87"
   },
   "updatedAt": "2026-02-21T06:58:08.367Z"
 }

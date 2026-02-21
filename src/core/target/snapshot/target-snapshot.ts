@@ -11,6 +11,8 @@ import { safePageTitle } from "../infra/utils/safe-page-title.js";
 import { targetSnapshotA11y } from "./snapshot-a11y.js";
 
 type SnapshotMode = "snapshot" | "orient" | "a11y";
+type SnapshotCountScope = "full" | "bounded";
+type SnapshotCountFilter = "headings" | "buttons" | "links" | "nav";
 
 const SNAPSHOT_TEXT_MAX_CHARS = 1200;
 const SNAPSHOT_MAX_HEADINGS = 12;
@@ -43,6 +45,40 @@ function parseSnapshotMode(input: string | undefined): SnapshotMode {
     return normalized;
   }
   throw new CliError("E_QUERY_INVALID", "mode must be one of: snapshot, orient, a11y");
+}
+
+function parseSnapshotCountScope(input: string | undefined): SnapshotCountScope {
+  if (typeof input !== "string" || input.trim().length === 0) {
+    return "full";
+  }
+  const normalized = input.trim().toLowerCase();
+  if (normalized === "full" || normalized === "bounded") {
+    return normalized;
+  }
+  throw new CliError("E_QUERY_INVALID", "count-scope must be one of: full, bounded");
+}
+
+function parseSnapshotCountFilter(input: string | undefined): SnapshotCountFilter[] {
+  if (typeof input !== "string" || input.trim().length === 0) {
+    return ["headings", "buttons", "links", "nav"];
+  }
+  const values = input
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry) => entry.length > 0);
+  if (values.length < 1) {
+    throw new CliError("E_QUERY_INVALID", "count-filter must include at least one value");
+  }
+  const unique: SnapshotCountFilter[] = [];
+  for (const value of values) {
+    if (value !== "headings" && value !== "buttons" && value !== "links" && value !== "nav") {
+      throw new CliError("E_QUERY_INVALID", "count-filter values must be: headings, buttons, links, nav");
+    }
+    if (!unique.includes(value)) {
+      unique.push(value);
+    }
+  }
+  return unique;
 }
 
 function parseNonNegativeIntInRange(opts: {
@@ -113,6 +149,8 @@ export async function targetSnapshot(opts: {
   mode?: string;
   cursor?: string;
   includeSelectorHints?: boolean;
+  countScope?: string;
+  countFilter?: string;
   maxChars?: number;
   maxHeadings?: number;
   maxButtons?: number;
@@ -125,6 +163,11 @@ export async function targetSnapshot(opts: {
   const visibleOnly = Boolean(opts.visibleOnly);
   const frameScope = parseFrameScope(opts.frameScope);
   const mode = parseSnapshotMode(opts.mode);
+  const countScope = parseSnapshotCountScope(opts.countScope);
+  const countFilter = parseSnapshotCountFilter(opts.countFilter);
+  if (mode !== "orient" && (typeof opts.countScope === "string" || typeof opts.countFilter === "string")) {
+    throw new CliError("E_QUERY_INVALID", "--count-scope/--count-filter are only supported with --mode orient");
+  }
   const cursor = parseSnapshotCursor(opts.cursor);
   const includeSelectorHints = Boolean(opts.includeSelectorHints);
 
@@ -363,8 +406,41 @@ export async function targetSnapshot(opts: {
     };
 
     if (mode === "orient") {
+      const countFrom = (key: SnapshotCountFilter): number => {
+        if (countScope === "bounded") {
+          if (key === "headings") return headings.length;
+          if (key === "buttons") return buttons.length;
+          if (key === "links" || key === "nav") return links.length;
+          return 0;
+        }
+        if (key === "headings") return totalHeadings;
+        if (key === "buttons") return totalButtons;
+        if (key === "links" || key === "nav") return totalLinks;
+        return 0;
+      };
       report.h1 = h1;
-      report.navCount = totalLinks;
+      report.countScope = countScope;
+      report.countFilter = countFilter;
+      if (countFilter.includes("headings")) {
+        report.headingsCount = countFrom("headings");
+      } else {
+        delete report.headingsCount;
+      }
+      if (countFilter.includes("buttons")) {
+        report.buttonsCount = countFrom("buttons");
+      } else {
+        delete report.buttonsCount;
+      }
+      if (countFilter.includes("links")) {
+        report.linksCount = countFrom("links");
+      } else {
+        delete report.linksCount;
+      }
+      if (countFilter.includes("nav")) {
+        report.navCount = countFrom("nav");
+      } else {
+        delete report.navCount;
+      }
     }
 
     if (includeSelectorHints) {

@@ -107,6 +107,29 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
       snapshot: Boolean(step.snapshot),
       persistState: !Boolean(step.noPersist),
     }),
+  "click-read": async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
+    await ops.clickRead({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      textQuery: parseOptionalString(step.text, `steps[${index}].text`),
+      selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+      containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
+      visibleOnly: Boolean(step.visibleOnly),
+      frameScope: stepFrameScope,
+      index: parseOptionalInteger(step.index, `steps[${index}].index`),
+      waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
+      waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
+      waitNetworkIdle: Boolean(step.waitNetworkIdle),
+      waitTimeoutMs: parseOptionalInteger(step.waitTimeoutMs, `steps[${index}].waitTimeoutMs`),
+      readSelector: parseOptionalString(step.readSelector, `steps[${index}].readSelector`),
+      readVisibleOnly: Boolean(step.readVisibleOnly),
+      readFrameScope: parseOptionalString(step.readFrameScope, `steps[${index}].readFrameScope`),
+      chunkSize: parseOptionalInteger(step.chunkSize, `steps[${index}].chunkSize`),
+      chunkIndex: parseOptionalInteger(step.chunk, `steps[${index}].chunk`),
+      persistState: !Boolean(step.noPersist),
+    }),
+  clickRead: async (input) => await PIPELINE_STEP_EXECUTORS["click-read"](input),
   fill: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) => {
     const value = parseOptionalString(step.value, `steps[${index}].value`);
     if (typeof value !== "string") {

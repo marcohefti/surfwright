@@ -32,6 +32,10 @@ All notable changes to SurfWright are documented here.
 - [run] Added `run` plan-step support for `fill` and `upload` so multi-step plans can execute full form workflows without eval glue.
 - [target] Added `target click-read` as a composed primitive to click and then read bounded text in one deterministic command.
 - [target] Added `target extract --summary` for compact summary/proof fields (`itemCount`, `totalRawCount`, `firstTitle`, `firstUrl`, `firstCommand`, `source`).
+- [open] Added `open --ensure-session <off|if-missing|fresh>` to let `open` bootstrap or fork managed sessions without separate `session` orchestration.
+- [target] Added orient count controls to `target snapshot`: `--count-scope <full|bounded>` and `--count-filter <headings,buttons,links,nav>`.
+- [target] Added `target download --allow-missing-download-event` for deterministic non-started result envelopes when browser download events are suppressed.
+- [run] Added `run` plan-step support for `click-read`/`clickRead` (composed click then bounded read).
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
@@ -49,6 +53,10 @@ All notable changes to SurfWright are documented here.
 - [errors] `target click` mismatch failures now include stronger disambiguation context (`withinSelector`, bounded candidate sample) for faster recovery without blind retries.
 - [run] Pipeline step execution is now table-driven to keep step parsing/dispatch behavior centralized and reduce drift risk as steps are added.
 - [target] `target style` now emits a compact additive `proof` payload so `--output-shape proof` is directly actionable without extra parsing.
+- [target] `target style --proof` now includes mission-friendly compact fields (`found`, `targetText`, `styleBg`, `styleColor`, `styleFontSize`, `styleRadius`).
+- [target] `target extract --summary` now includes a `count` alias (same value as `totalRawCount`) for simpler success checks.
+- [cli] JSON output remains default and now also accepts explicit `--json` as a no-op compatibility flag.
+- [cli] `target <subcommand> --target <id>` is now accepted as a compatibility alias for positional `targetId` on target subcommands.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
@@ -59,6 +67,8 @@ All notable changes to SurfWright are documented here.
 - [session] `session attach` unreachable failures now redact sensitive CDP query credentials in error text.
 - [errors] `E_SESSION_NOT_FOUND` and `E_TARGET_SESSION_UNKNOWN` now include bounded continuity hints/hintContext for faster recovery after stale session/target mappings.
 - [run] Fixed deterministic plan template resolution for object payloads by removing duplicate nested assignment in `resolveTemplateInValue`.
+- [state] Hardened `sessionId`/`targetId` sanitization to reject placeholder handles (`undefined`, `null`, `nan`) early.
+- [target] `target download` now waits for `domcontentloaded` before click query evaluation to reduce commit-stage race misses after `open --allow-download`.
 
 ### Deprecated
 - None.
@@ -70,8 +80,6 @@ All notable changes to SurfWright are documented here.
 - [target] Removed `target eval` option aliases `--js` and `--script`; use `--expr|--expression|--script-file`.
 - [target] Removed `target style` output aliases `element` and `computed`; use `inspected` and `values`.
 - [target] Removed `target spawn` output alias `childTargetId`; use canonical `targetId`.
-- [cli] Removed argv rewrite compatibility for `target --target/--target-id`; use positional `targetId`.
-- [cli] Removed hidden global `--json` flag; JSON output remains default.
 - [state] Removed state schema migration layer; incompatible state versions now reset to empty state.
 
 ## [0.1.2] - 2026-02-17

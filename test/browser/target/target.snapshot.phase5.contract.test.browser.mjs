@@ -258,3 +258,64 @@ test("target snapshot --mode orient returns a quiet orientation payload", () => 
     ["One", "Two"],
   );
 });
+
+test("target snapshot orient supports bounded count scope", () => {
+  requireBrowser();
+  const html = `
+    <title>Orient Counts</title>
+    <header>
+      <nav>
+        <a href="#one">One</a>
+        <a href="#two">Two</a>
+      </nav>
+    </header>
+    <main>
+      <h1>Welcome</h1>
+      <h2>Details</h2>
+      <a href="#body">Body</a>
+    </main>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+
+  const sessionId = ensureSharedSession();
+  const openResult = runCli(["--session", sessionId, "open", dataUrl, "--timeout-ms", "20000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  const fullSnap = runCli(["target",
+    "snapshot",
+    openPayload.targetId,
+    "--mode",
+    "orient",
+    "--timeout-ms",
+    "20000",
+  ]);
+  assert.equal(fullSnap.status, 0);
+  const fullPayload = parseJson(fullSnap.stdout);
+
+  const boundedSnap = runCli(["target",
+    "snapshot",
+    openPayload.targetId,
+    "--mode",
+    "orient",
+    "--count-scope",
+    "bounded",
+    "--count-filter",
+    "headings,nav",
+    "--max-headings",
+    "1",
+    "--max-links",
+    "1",
+    "--timeout-ms",
+    "20000",
+  ]);
+  assert.equal(boundedSnap.status, 0);
+  const boundedPayload = parseJson(boundedSnap.stdout);
+
+  assert.equal(fullPayload.headingsCount > boundedPayload.headingsCount, true);
+  assert.equal(fullPayload.navCount > boundedPayload.navCount, true);
+  assert.equal(boundedPayload.headingsCount, boundedPayload.headings.length);
+  assert.equal(boundedPayload.navCount, boundedPayload.links.length);
+  assert.equal(boundedPayload.countScope, "bounded");
+  assert.deepEqual(boundedPayload.countFilter, ["headings", "nav"]);
+});

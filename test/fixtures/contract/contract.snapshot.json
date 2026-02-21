@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:6ced61da6fe200cc2ff385187f9c6fe09531b099343d1d49f4efdffa97a7be35",
+  "contractFingerprint": "sha256:22c5ba25c3195db7ab37b7c1637bc34270e578135d57f4589c7f5c11e2224f87",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -47,7 +47,7 @@
     },
     {
       "id": "open",
-      "usage": "surfwright open <url> [--profile <name>] [--reuse <off|url|origin|active>] [--allow-download] [--download-out-dir <path>] [--wait-until <commit|domcontentloaded|load|networkidle>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright open <url> [--profile <name>] [--reuse <off|url|origin|active>] [--allow-download] [--download-out-dir <path>] [--wait-until <commit|domcontentloaded|load|networkidle>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--browser-mode <headless|headed>] [--isolation <mode>] [--ensure-session <off|if-missing|fresh>] [--timeout-ms <ms>] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "open URL and return minimal page report with target handle"
     },
     {
@@ -162,7 +162,7 @@
     },
     {
       "id": "target.download",
-      "usage": "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--allow-missing-download-event] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "click a deterministic element and capture a download artifact"
     },
     {
@@ -327,7 +327,7 @@
     },
     {
       "id": "target.snapshot",
-      "usage": "surfwright target snapshot <targetId> [--mode <snapshot|orient|a11y>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--max-ax-rows <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target snapshot <targetId> [--mode <snapshot|orient|a11y>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--count-scope <full|bounded>] [--count-filter <csv>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--max-ax-rows <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "read bounded text and UI primitives for a target"
     },
     {

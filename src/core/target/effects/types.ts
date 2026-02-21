@@ -212,10 +212,16 @@ export type TargetStyleReport = {
   values: Record<string, string | null>;
   proof?: {
     action: "style";
+    found: boolean;
     queryMode: "text" | "selector";
     query: string;
     selector: string | null;
     pickedIndex: number;
+    targetText: string;
+    styleBg: string | null;
+    styleColor: string | null;
+    styleFontSize: string | null;
+    styleRadius: string | null;
     inspectedText: string;
     inspectedSelectorHint: string | null;
     values: Record<string, string | null>;

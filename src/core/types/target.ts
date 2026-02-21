@@ -66,6 +66,8 @@ export type TargetSnapshotReport = {
     href: string;
   }>;
   headingsCount?: number; buttonsCount?: number; linksCount?: number; navCount?: number;
+  countScope?: "full" | "bounded";
+  countFilter?: Array<"headings" | "buttons" | "links" | "nav">;
   truncated: {
     text: boolean;
     headings: boolean;
@@ -224,11 +226,20 @@ export type TargetDownloadReport = {
   title: string;
   downloadStarted: boolean;
   downloadStatus: number | null;
-  downloadFinalUrl: string;
-  downloadFileName: string;
-  downloadBytes: number;
-  download: DownloadCaptureReport;
-  proof?: { downloadStarted: boolean; fileName: string; path: string; bytes: number; mime: string | null; sourceUrl: string | null };
+  downloadFinalUrl: string | null;
+  downloadFileName: string | null;
+  downloadBytes: number | null;
+  download: DownloadCaptureReport | null;
+  failureReason?: string | null;
+  proof?: {
+    downloadStarted: boolean;
+    fileName: string | null;
+    path: string | null;
+    bytes: number | null;
+    mime: string | null;
+    sourceUrl: string | null;
+    failureReason?: string | null;
+  };
   proofEnvelope?: ActionProofEnvelope;
   assertions?: ActionAssertionReport | null;
   timingMs: ActionTimingMs;
@@ -387,6 +398,7 @@ export type TargetExtractReport = {
   };
   records?: Array<Record<string, string | null>>;
   summary?: {
+    count: number;
     itemCount: number;
     totalRawCount: number;
     truncated: boolean;
@@ -396,6 +408,7 @@ export type TargetExtractReport = {
     source: "dom" | "api-feed";
   };
   proof?: {
+    count: number;
     itemCount: number;
     totalRawCount: number;
     truncated: boolean;

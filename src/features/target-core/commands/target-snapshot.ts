@@ -20,6 +20,8 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--cursor <token>", "Paging cursor token returned by a previous snapshot call")
       .option("--include-selector-hints", "Include selectorHint rows for headings/buttons/links (bounded)", false)
+      .option("--count-scope <scope>", "Count semantics for *Count fields in orient mode: full|bounded")
+      .option("--count-filter <csv>", "Count fields to include in orient mode (csv: headings,buttons,links,nav)")
       .option("--max-chars <n>", "Maximum text preview chars to return (0 to omit)")
       .option("--max-headings <n>", "Maximum heading rows to return (0 to omit)")
       .option("--max-buttons <n>", "Maximum button rows to return (0 to omit)")
@@ -38,6 +40,8 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
             frameScope?: string;
             cursor?: string;
             includeSelectorHints?: boolean;
+            countScope?: string;
+            countFilter?: string;
             maxChars?: string;
             maxHeadings?: string;
             maxButtons?: string;
@@ -70,6 +74,8 @@ export const targetSnapshotCommandSpec: TargetCommandSpec = {
               frameScope: options.frameScope,
               cursor: options.cursor,
               includeSelectorHints: Boolean(options.includeSelectorHints),
+              countScope: options.countScope,
+              countFilter: options.countFilter,
               maxChars,
               maxHeadings,
               maxButtons,

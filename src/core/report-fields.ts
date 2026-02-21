@@ -34,6 +34,7 @@ function compactKeys(): string[] {
     "downloadFinalUrl",
     "downloadFileName",
     "downloadBytes",
+    "failureReason",
     "mode",
     "query",
     "selector",
@@ -85,6 +86,7 @@ function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputSh
           downloadFinalUrl: report.downloadFinalUrl,
           downloadFileName: report.downloadFileName,
           downloadBytes: report.downloadBytes,
+          failureReason: report.failureReason,
         }
       : null);
   if (Object.prototype.hasOwnProperty.call(report, "sessionId")) {

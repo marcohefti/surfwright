@@ -15,6 +15,7 @@ import {
   targetUpload,
   targetWait,
 } from "../../target/public.js";
+import type { TargetClickReport } from "../../types.js";
 import type { SessionReport } from "../../types.js";
 import { executePipelinePlan, loadPipelinePlan } from "../index.js";
 
@@ -136,6 +137,81 @@ export async function runPipeline(opts: {
         snapshot: input.snapshot,
         persistState: input.persistState,
       })) as unknown as Record<string, unknown>,
+    clickRead: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      textQuery?: string;
+      selectorQuery?: string;
+      containsQuery?: string;
+      visibleOnly: boolean;
+      frameScope?: string;
+      index?: number;
+      waitForText?: string;
+      waitForSelector?: string;
+      waitNetworkIdle: boolean;
+      waitTimeoutMs?: number;
+      readSelector?: string;
+      readVisibleOnly: boolean;
+      readFrameScope?: string;
+      chunkSize?: number;
+      chunkIndex?: number;
+      persistState: boolean;
+    }) => {
+      const clickReport = await targetClick({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        textQuery: input.textQuery,
+        selectorQuery: input.selectorQuery,
+        containsQuery: input.containsQuery,
+        visibleOnly: input.visibleOnly,
+        frameScope: input.frameScope,
+        index: input.index,
+        waitForText: input.waitForText,
+        waitForSelector: input.waitForSelector,
+        waitNetworkIdle: input.waitNetworkIdle,
+        waitTimeoutMs: input.waitTimeoutMs,
+        snapshot: false,
+        delta: false,
+        proof: false,
+        persistState: input.persistState,
+      });
+      const clickResult = clickReport as TargetClickReport;
+      const readTargetId =
+        !clickResult.handoff.sameTarget &&
+        typeof clickResult.handoff.openedTargetId === "string" &&
+        clickResult.handoff.openedTargetId.length > 0
+          ? clickResult.handoff.openedTargetId
+          : clickResult.targetId;
+      const readReport = await targetRead({
+        targetId: readTargetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: clickResult.sessionId,
+        selectorQuery: input.readSelector,
+        visibleOnly: input.readVisibleOnly,
+        frameScope: input.readFrameScope ?? input.frameScope,
+        chunkSize: input.chunkSize,
+        chunkIndex: input.chunkIndex,
+        persistState: input.persistState,
+      });
+      return {
+        ok: true,
+        sessionId: clickResult.sessionId,
+        targetId: readTargetId,
+        click: {
+          actionId: clickResult.actionId,
+          targetId: clickResult.targetId,
+          mode: clickResult.mode,
+          query: clickResult.query,
+          selector: clickResult.selector,
+          matchCount: clickResult.matchCount,
+          pickedIndex: clickResult.pickedIndex,
+          handoff: clickResult.handoff,
+        },
+        read: readReport,
+      } as Record<string, unknown>;
+    },
     fill: async (input: {
       targetId: string;
       timeoutMs: number;

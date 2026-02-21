@@ -361,6 +361,7 @@ export async function targetExtract(opts: {
     const firstItem = merged[0] ?? null;
     const summary = includeSummary
       ? {
+          count: totalRawCount,
           itemCount: merged.length,
           totalRawCount,
           truncated: totalRawCount > merged.length,

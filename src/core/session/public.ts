@@ -37,6 +37,19 @@ export function getDoctorReport(): DoctorReport {
   return getDoctorReportInternal();
 }
 
+type OpenEnsureSessionMode = "off" | "if-missing" | "fresh";
+
+function parseOpenEnsureSessionMode(input: string | undefined): OpenEnsureSessionMode {
+  const value = typeof input === "string" ? input.trim().toLowerCase() : "";
+  if (value.length === 0 || value === "off") {
+    return "off";
+  }
+  if (value === "if-missing" || value === "fresh") {
+    return value;
+  }
+  throw new CliError("E_QUERY_INVALID", "ensure-session must be one of: off, if-missing, fresh");
+}
+
 export async function openUrl(opts: {
   inputUrl: string;
   timeoutMs: number;
@@ -46,6 +59,7 @@ export async function openUrl(opts: {
   waitUntilInput?: string;
   isolation?: string;
   browserModeInput?: string;
+  ensureSessionModeInput?: string;
   allowDownload?: boolean;
   downloadOutDir?: string;
   includeProof?: boolean;
@@ -53,8 +67,40 @@ export async function openUrl(opts: {
   assertSelector?: string;
   assertText?: string;
 }): Promise<OpenReport> {
+  const ensureMode = parseOpenEnsureSessionMode(opts.ensureSessionModeInput);
+  if (ensureMode !== "off" && typeof opts.profile === "string" && opts.profile.trim().length > 0) {
+    throw new CliError("E_QUERY_INVALID", "--ensure-session cannot be combined with --profile");
+  }
+  let sessionIdInput = opts.sessionId;
+  const requestedSessionId =
+    typeof sessionIdInput === "string" && sessionIdInput.trim().length > 0 ? sanitizeSessionId(sessionIdInput) : null;
+  if (ensureMode === "if-missing" && requestedSessionId) {
+    const snapshot = readState();
+    if (!snapshot.sessions[requestedSessionId]) {
+      await sessionNew({
+        timeoutMs: opts.timeoutMs,
+        requestedSessionId,
+        policyInput: "ephemeral",
+        browserModeInput: opts.browserModeInput,
+      });
+    }
+    sessionIdInput = requestedSessionId;
+  }
+  if (ensureMode === "fresh") {
+    const snapshot = readState();
+    const canReuseRequestedId = requestedSessionId ? !Boolean(snapshot.sessions[requestedSessionId]) : false;
+    const created = await sessionNew({
+      timeoutMs: opts.timeoutMs,
+      requestedSessionId: canReuseRequestedId ? requestedSessionId ?? undefined : undefined,
+      policyInput: "ephemeral",
+      browserModeInput: opts.browserModeInput,
+    });
+    sessionIdInput = created.sessionId;
+  }
+
   return await openUrlInternal({
     ...opts,
+    sessionId: sessionIdInput ?? undefined,
     ensureSharedSession: async ({ timeoutMs }) =>
       await sessionEnsure({
         timeoutMs,

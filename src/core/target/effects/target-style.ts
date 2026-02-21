@@ -147,6 +147,10 @@ export async function targetStyle(opts: {
       className: measured.className,
     };
     const values = measured.values;
+    const styleBg = typeof values["background-color"] === "string" ? values["background-color"] : null;
+    const styleColor = typeof values["color"] === "string" ? values["color"] : null;
+    const styleFontSize = typeof values["font-size"] === "string" ? values["font-size"] : null;
+    const styleRadius = typeof values["border-radius"] === "string" ? values["border-radius"] : null;
 
     const report: TargetStyleReport = {
       ok: true,
@@ -168,10 +172,16 @@ export async function targetStyle(opts: {
       values,
       proof: {
         action: "style",
+        found: true,
         queryMode: parsed.mode,
         query: parsed.query,
         selector: parsed.selector,
         pickedIndex: selected.index,
+        targetText: inspected.text,
+        styleBg,
+        styleColor,
+        styleFontSize,
+        styleRadius,
         inspectedText: inspected.text,
         inspectedSelectorHint: inspected.selectorHint,
         values,

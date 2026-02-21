@@ -17,6 +17,10 @@ const TARGET_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
 
 export function sanitizeTargetId(input: string): string {
   const value = input.trim();
+  const lowered = value.toLowerCase();
+  if (lowered === "undefined" || lowered === "null" || lowered === "nan") {
+    throw new CliError("E_TARGET_ID_INVALID", "targetId must be an explicit non-placeholder handle");
+  }
   if (!TARGET_ID_PATTERN.test(value)) {
     throw new CliError(
       "E_TARGET_ID_INVALID",

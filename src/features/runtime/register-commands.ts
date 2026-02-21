@@ -161,6 +161,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .option("--assert-text <text>", "Post-open assertion: text must be present in page body")
     .option("--browser-mode <mode>", "Browser launch mode for managed sessions: headless | headed")
     .option("--isolation <mode>", "Session mode when --session is omitted: isolated|shared", "isolated")
+    .option("--ensure-session <mode>", "Session bootstrap mode for --session: off|if-missing|fresh", "off")
     .option("--timeout-ms <ms>", "Navigation timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_OPEN_TIMEOUT_MS)
     .option("--fields <csv>", "Return only selected top-level fields")
     .addHelpText(
@@ -181,6 +182,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           reuse?: string;
           browserMode?: string;
           isolation?: string;
+          ensureSession?: string;
           fields?: string;
           profile?: string;
           allowDownload?: boolean;
@@ -209,6 +211,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
           assertText: options.assertText,
           browserModeInput: options.browserMode,
           isolation: options.isolation,
+          ensureSessionModeInput: options.ensureSession,
           profile: typeof options.profile === "string" ? options.profile : undefined,
           sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
         });

@@ -106,8 +106,8 @@ test("session cookie-copy transfers scoped cookies between explicit sessions", a
       "target",
       "eval",
       sourceOpenPayload.targetId,
-      "--js",
-      "document.cookie='sw_cookie_copy_a=alpha; path=/'; document.cookie='sw_cookie_copy_b=beta; path=/'; return document.cookie;",
+      "--expr",
+      "(() => { document.cookie='sw_cookie_copy_a=alpha; path=/'; document.cookie='sw_cookie_copy_b=beta; path=/'; return document.cookie; })()",
       "--timeout-ms",
       "6000",
     ]);
@@ -158,8 +158,8 @@ test("session cookie-copy transfers scoped cookies between explicit sessions", a
       "target",
       "eval",
       destinationOpenPayload.targetId,
-      "--js",
-      "return document.cookie;",
+      "--expr",
+      "document.cookie",
       "--timeout-ms",
       "6000",
     ]);

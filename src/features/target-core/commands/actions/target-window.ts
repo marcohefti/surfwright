@@ -18,9 +18,20 @@ export const targetSpawnCommandSpec: TargetCommandSpec = {
       .option("--contains <text>", "Text filter to apply with --selector")
       .option("--visible-only", "Only match visible elements")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
+      .option("--proof", "Include one-shot evidence payload for spawn result", false)
+      .option("--assert-title <text>", "Post-spawn assertion: child target title must include text")
       .option("--timeout-ms <ms>", "Spawn timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright target spawn <targetId> --selector 'a[target=_blank]' --proof",
+          "  surfwright target spawn <targetId> --text 'Open docs' --assert-title 'Documentation'",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,
@@ -30,6 +41,8 @@ export const targetSpawnCommandSpec: TargetCommandSpec = {
             contains?: string;
             visibleOnly?: boolean;
             frameScope?: string;
+            proof?: boolean;
+            assertTitle?: string;
             timeoutMs: number;
             persist?: boolean;
             fields?: string;
@@ -48,6 +61,8 @@ export const targetSpawnCommandSpec: TargetCommandSpec = {
               containsQuery: options.contains,
               visibleOnly: Boolean(options.visibleOnly),
               frameScope: options.frameScope,
+              proof: Boolean(options.proof),
+              assertTitle: options.assertTitle,
               persistState: options.persist !== false,
             });
             ctx.printTargetSuccess(projectReportFields(report as unknown as Record<string, unknown>, fields), output);

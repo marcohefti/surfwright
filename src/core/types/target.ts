@@ -140,6 +140,7 @@ export type TargetCountReport = {
   count: number;
   timingMs: ActionTimingMs;
 };
+
 export type TargetClickReport = {
   ok: true;
   sessionId: string;
@@ -184,6 +185,17 @@ export type TargetClickReport = {
     finalUrl: string;
     openedTargetId: string | null;
     countAfter: number | null;
+    checkState?: {
+      before: {
+        checked: boolean | null;
+        ariaChecked: string | null;
+      };
+      after: {
+        checked: boolean | null;
+        ariaChecked: string | null;
+      };
+      changed: boolean | null;
+    };
   };
   proofEnvelope?: ActionProofEnvelope;
   assertions?: ActionAssertionReport | null;
@@ -225,14 +237,18 @@ export type TargetDownloadReport = {
   url: string;
   title: string;
   downloadStarted: boolean;
+  downloadMethod: "event" | "fetch-fallback" | "none";
   downloadStatus: number | null;
   downloadFinalUrl: string | null;
   downloadFileName: string | null;
   downloadBytes: number | null;
+  downloadedFilename: string | null;
+  downloadedBytes: number | null;
   download: DownloadCaptureReport | null;
   failureReason?: string | null;
   proof?: {
     downloadStarted: boolean;
+    downloadMethod: "event" | "fetch-fallback" | "none";
     fileName: string | null;
     path: string | null;
     bytes: number | null;
@@ -363,7 +379,7 @@ export type TargetExtractReport = {
   targetId: string;
   url: string;
   title: string;
-  kind: "generic" | "blog" | "news" | "docs" | "docs-commands" | "headings" | "links" | "codeblocks" | "forms" | "tables" | "table-rows";
+  kind: "generic" | "blog" | "news" | "docs" | "docs-commands" | "command-lines" | "headings" | "links" | "codeblocks" | "forms" | "tables" | "table-rows";
   source: "dom" | "api-feed";
   sourcesTried: string[];
   scope: {

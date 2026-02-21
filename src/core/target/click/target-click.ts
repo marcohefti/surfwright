@@ -13,6 +13,7 @@ import { cdpQueryOp } from "./cdp-query-op.js";
 import { buildClickExplainReport } from "./click-explain.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
 import { readSelectorCountAfter } from "./click-proof.js";
+import { buildClickCheckStateProof, readClickCheckStateAt } from "../infra/utils/click-check-state.js";
 import { safePageTitle } from "../infra/utils/safe-page-title.js";
 import { targetClickByHandle } from "./target-click-handle.js";
 import { waitAfterClickWithBudget } from "./click-wait.js";
@@ -39,6 +40,7 @@ export async function targetClick(opts: {
   snapshot?: boolean;
   delta?: boolean;
   proof?: boolean;
+  proofCheckState?: boolean;
   assertUrlPrefix?: string;
   assertSelector?: string;
   assertText?: string;
@@ -65,6 +67,7 @@ export async function targetClick(opts: {
     assertSelector: opts.assertSelector,
     assertText: opts.assertText,
   });
+  const includeProofCheckState = Boolean(opts.proofCheckState);
   const includeDelta = Boolean(opts.delta) || includeProof;
   const includeSnapshot = Boolean(opts.snapshot) || includeProof;
   const waitAfter = parseWaitAfterClick({
@@ -147,6 +150,7 @@ export async function targetClick(opts: {
         snapshot: includeSnapshot,
         includeDelta,
         includeProof,
+        proofCheckState: includeProofCheckState,
         parsedAssertions,
         persistState: opts.persistState !== false,
       });
@@ -345,6 +349,12 @@ export async function targetClick(opts: {
     const urlBeforeClick = target.page.url();
     const deltaBefore = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;
     const clickedAriaBefore = includeDelta ? await readAriaAt(pickedIndex) : null;
+    const readProofCheckState = async () => (includeProof && includeProofCheckState
+      ? await readClickCheckStateAt({
+          cdp, worldCache, resolveFrameForGlobalIndex, globalIndex: pickedIndex, queryMode, query, selector, contains, withinSelector: scopedWithinSelector,
+        })
+      : null);
+    const checkStateBefore = await readProofCheckState();
     const clickedPreview = await clickAt(pickedIndex);
     await target.page
       .waitForLoadState("domcontentloaded", {
@@ -372,6 +382,7 @@ export async function targetClick(opts: {
     });
     const deltaAfter = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;
     const clickedAriaAfter = includeDelta ? await readAriaAt(pickedIndex) : null;
+    const checkStateAfter = await readProofCheckState();
     const openedPage = context.pages().find((page) => !pagesBeforeClick.includes(page)) ?? null;
     let openedTargetId: string | null = null;
     let openedUrl: string | null = null;
@@ -409,26 +420,9 @@ export async function targetClick(opts: {
       selector,
       contains,
     });
+    const checkState = buildClickCheckStateProof({ before: checkStateBefore, after: checkStateAfter });
     const urlAfterClick = target.page.url();
-    const { proof, proofEnvelope } = buildClickProofArtifacts({
-      includeProof,
-      requestedTargetId,
-      urlBeforeClick,
-      urlAfterClick,
-      openedTargetId,
-      openedPageDetected: openedPage !== null,
-      matchCount,
-      pickedIndex,
-      waitAfter,
-      waitTimeoutMs,
-      waited,
-      assertions,
-      countAfter,
-      postSnapshot,
-      delta,
-      clickedText: clickedPreview.text,
-      clickedSelectorHint: clickedPreview.selectorHint,
-    });
+    const { proof, proofEnvelope } = buildClickProofArtifacts({ includeProof, requestedTargetId, urlBeforeClick, urlAfterClick, openedTargetId, openedPageDetected: openedPage !== null, matchCount, pickedIndex, waitAfter, waitTimeoutMs, waited, assertions, countAfter, postSnapshot, delta, clickedText: clickedPreview.text, clickedSelectorHint: clickedPreview.selectorHint, checkState });
     const report: TargetClickReport = buildClickReport({
       sessionId: session.sessionId,
       sessionSource,

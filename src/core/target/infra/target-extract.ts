@@ -33,6 +33,7 @@ function parseKind(input: string | undefined): TargetExtractReport["kind"] {
     normalized === "news" ||
     normalized === "docs" ||
     normalized === "docs-commands" ||
+    normalized === "command-lines" ||
     normalized === "headings" ||
     normalized === "links" ||
     normalized === "codeblocks" ||
@@ -45,7 +46,7 @@ function parseKind(input: string | undefined): TargetExtractReport["kind"] {
   }
   throw new CliError(
     "E_QUERY_INVALID",
-    "kind must be one of: generic, blog, news, docs, docs-commands, headings, links, codeblocks, forms, tables, table-rows",
+    "kind must be one of: generic, blog, news, docs, docs-commands, command-lines, headings, links, codeblocks, forms, tables, table-rows",
   );
 }
 

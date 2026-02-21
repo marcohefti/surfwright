@@ -45,6 +45,8 @@ Do not reuse `--agent-id` across tasks.
 8. Keep capture volumes bounded (`--max-*`, `--limit`, `--capture-ms`) for token and runtime control.
 9. Use `state reconcile` after restart/crash before deeper debugging.
 10. End task runs with owned-teardown (`session clear` in the task `--agent-id`) unless prompt says to keep session/process alive.
+11. Prefer first-class primitives over eval glue: `target select-option`, `target upload --submit-selector`, `target extract --kind command-lines`.
+12. For flaky download-event pages, prefer `target download --fallback-to-fetch` before giving up.
 
 ## Minimal Agent Loop
 

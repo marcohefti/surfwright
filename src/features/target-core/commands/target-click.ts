@@ -52,6 +52,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--snapshot", "Include compact post-click text preview")
       .option("--delta", "Include bounded evidence-based delta after click", false)
       .option("--proof", "Include one-shot evidence payload (implies --snapshot and --delta)", false)
+      .option("--proof-check-state", "Include checkbox/radio check-state evidence in proof payload", false)
       .option("--assert-url-prefix <prefix>", "Post-click assertion: final URL must start with prefix")
       .option("--assert-selector <query>", "Post-click assertion: selector must be visible")
       .option("--assert-text <text>", "Post-click assertion: text must be present in page body")
@@ -79,6 +80,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             snapshot?: boolean;
             delta?: boolean;
             proof?: boolean;
+            proofCheckState?: boolean;
             assertUrlPrefix?: string;
             assertSelector?: string;
             assertText?: string;
@@ -115,6 +117,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               snapshot: Boolean(options.snapshot),
               delta: Boolean(options.delta),
               proof: Boolean(options.proof),
+              proofCheckState: Boolean(options.proofCheckState),
               assertUrlPrefix: options.assertUrlPrefix,
               assertSelector: options.assertSelector,
               assertText: options.assertText,

@@ -22,6 +22,7 @@ export const targetDownloadCommandSpec: TargetCommandSpec = {
       .option("--index <n>", "Match index (default picks first visible match)", (value) => Number.parseInt(value, 10))
       .option("--download-out-dir <path>", "Directory to write captured downloads (default ./artifacts/downloads)")
       .option("--allow-missing-download-event", "Return deterministic non-started download envelope instead of failing on download-event timeout", false)
+      .option("--fallback-to-fetch", "When download event is missing, attempt deterministic fetch fallback capture", false)
       .option("--proof", "Include standardized proof envelope for download result", false)
       .option("--assert-url-prefix <prefix>", "Post-download assertion: final URL must start with prefix")
       .option("--assert-selector <query>", "Post-download assertion: selector must be visible")
@@ -29,6 +30,15 @@ export const targetDownloadCommandSpec: TargetCommandSpec = {
       .option("--timeout-ms <ms>", "Click/download timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
+      .addHelpText(
+        "after",
+        [
+          "",
+          "Examples:",
+          "  surfwright target download <targetId> --text 'Export CSV' --proof",
+          "  surfwright target download <targetId> --text 'Download' --fallback-to-fetch --timeout-ms 2000",
+        ].join("\n"),
+      )
       .action(
         async (
           targetId: string,
@@ -41,6 +51,7 @@ export const targetDownloadCommandSpec: TargetCommandSpec = {
             index?: number;
             downloadOutDir?: string;
             allowMissingDownloadEvent?: boolean;
+            fallbackToFetch?: boolean;
             proof?: boolean;
             assertUrlPrefix?: string;
             assertSelector?: string;
@@ -66,6 +77,7 @@ export const targetDownloadCommandSpec: TargetCommandSpec = {
               index: typeof options.index === "number" ? options.index : undefined,
               downloadOutDir: typeof options.downloadOutDir === "string" ? options.downloadOutDir : undefined,
               allowMissingDownloadEvent: Boolean(options.allowMissingDownloadEvent),
+              fallbackToFetch: Boolean(options.fallbackToFetch),
               proof: Boolean(options.proof),
               assertUrlPrefix: options.assertUrlPrefix,
               assertSelector: options.assertSelector,

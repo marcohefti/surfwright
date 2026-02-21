@@ -9,6 +9,7 @@ import {
   targetKeypressCommandSpec,
   targetUploadCommandSpec,
 } from "./actions/target-interaction-commands.js";
+import { targetSelectOptionCommandSpec } from "./actions/target-select-option.js";
 import { targetCloseCommandSpec, targetDialogCommandSpec, targetSpawnCommandSpec } from "./actions/target-window.js";
 import { targetDownloadCommandSpec } from "./actions/target-download.js";
 import {
@@ -58,6 +59,7 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetDownloadCommandSpec,
   targetClickAtCommandSpec,
   targetFillCommandSpec,
+  targetSelectOptionCommandSpec,
   targetUploadCommandSpec,
   targetKeypressCommandSpec,
   targetDragDropCommandSpec,

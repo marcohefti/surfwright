@@ -149,28 +149,38 @@ surfwright target click <targetId> --text "Pricing" --visible-only --proof
 surfwright --output-shape compact target click <targetId> --text "Delete" --visible-only --repeat 3
 surfwright target fill <targetId> --selector "#email" --value "agent@example.com" --wait-network-idle --proof
 surfwright target fill <targetId> --selector "#search" --value "surfwright" --event-mode realistic
+surfwright target select-option <targetId> --selector "#role" --label "Editor" --proof
 surfwright target click <targetId> --text "Sort" --within "#results-table" --proof
+surfwright target click <targetId> --selector "#agree" --proof --proof-check-state
 surfwright target click-read <targetId> --text "Pricing" --read-selector main --chunk-size 1200 --chunk 1
 surfwright target keypress <targetId> --key Enter --selector "#search" --wait-for-selector ".results" --proof
+surfwright target upload <targetId> --selector "input[type=file]" --file ./fixture.txt --submit-selector "button[type=submit]" --wait-for-text "uploaded"
+surfwright target spawn <targetId> --selector "a[target=_blank]" --proof --assert-title "Docs"
 surfwright target style <targetId> --selector ".btn.btn-primary" --properties background-color,color,font-size,border-radius
 surfwright --output-shape proof target style <targetId> --selector ".btn.btn-primary"
 surfwright target extract <targetId> --kind docs-commands --selector main --limit 5
+surfwright target extract <targetId> --kind command-lines --selector main --limit 12
 surfwright --output-shape proof target extract <targetId> --kind docs-commands --selector main --limit 5
 surfwright target extract <targetId> --kind table-rows --schema-json '{"name":"record.Name","price":"record.Price"}' --dedupe-by name
 surfwright target extract <targetId> --kind headings --selector main --limit 12
-surfwright target download <targetId> --text "Export CSV" --allow-missing-download-event --proof
+surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --proof
 ```
 
 `target find` match rows include `text`, `visible`, `selectorHint`, `href`, and `tag`.
 `open --ensure-session <off|if-missing|fresh>` can bootstrap/fork managed sessions for `open` without a separate `session` command (`--profile` cannot be combined).
 `target snapshot --mode orient` now includes additive counters (`headingsCount`, `buttonsCount`, `linksCount`, `navCount`) and optional count controls (`--count-scope <full|bounded>`, `--count-filter headings,buttons,links,nav`).
 `target click --proof` now includes additive `proof.countAfter` for selector-mode clicks (when post-action counting is available).
+`target click --proof-check-state` adds additive checkbox/radio state evidence (`proof.checkState.before/after/changed`) for toggle workflows.
 `target click --repeat <n>` executes repeated deterministic clicks and returns final click fields plus `repeat` metadata (`requested`, `completed`, `actionIds`, `pickedIndices`).
 `target click` mismatch failures now include bounded candidate samples and `withinSelector` context for faster disambiguation.
 `target fill|keypress|upload|drag-drop|dialog` now support the same post-action wait controls (`--wait-for-text|--wait-for-selector|--wait-network-idle`, `--wait-timeout-ms`) and optional `--proof`.
+`target upload --submit-selector <query>` runs attach + submit in one deterministic action so form uploads can be completed atomically.
+`target select-option` provides first-class native `<select>` control by `--value`, `--label`, or `--option-index`, returning `selectedValue`, `selectedText`, and `selectedIndex`.
+`target spawn --proof --assert-title <text>` adds compact spawn proof fields and optional title assertion for deterministic new-window checks.
 `open|target click|target fill|target keypress|target upload|target drag-drop|target dialog|target download|target wait` support additive post-action assertions: `--assert-url-prefix`, `--assert-selector`, `--assert-text`.
 `open` and `target url-assert` include additive `blockType` (`auth|captcha|consent|unknown`) for navigation gating triage.
-`target download` includes additive top-level fields (`downloadStarted`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`) and canonical nested `download.*` fields (`fileName`, `bytes`); use `--allow-missing-download-event` for deterministic non-started envelopes on event-suppressed flows.
+`target download` includes additive top-level fields (`downloadStarted`, `downloadMethod`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`, `downloadedFilename`, `downloadedBytes`) and canonical nested `download.*` fields (`fileName`, `bytes`); use `--fallback-to-fetch` for event-missed downloads and `--allow-missing-download-event` for deterministic non-started envelopes.
+`target extract --kind command-lines` emits normalized runnable command entries (`item.command`) from docs/code blocks for low-friction command harvesting.
 `target style --proof` includes compact fields (`found`, `targetText`, `styleBg`, `styleColor`, `styleFontSize`, `styleRadius`) for mission checks.
 `target extract --summary` adds compact summary/proof fields (`itemCount`, `totalRawCount`, `count`, `firstTitle`, `firstUrl`, `firstCommand`) for direct proof collection.
 `--output-shape proof` now also projects compact `target extract` proof fields without requiring `--summary`.

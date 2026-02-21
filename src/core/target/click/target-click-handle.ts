@@ -33,6 +33,7 @@ export async function targetClickByHandle(opts: {
   snapshot: boolean;
   includeDelta: boolean;
   includeProof: boolean;
+  proofCheckState: boolean;
   parsedAssertions: ParsedActionAssertions;
   persistState: boolean;
 }): Promise<TargetClickReport> {
@@ -133,12 +134,13 @@ export async function targetClickByHandle(opts: {
         openedPageDetected: openedPage !== null,
         waited,
         postSnapshot,
-      delta,
-      clickedText: clickedPreview.text,
-      clickedSelectorHint: clickedPreview.selectorHint,
-      countAfter: null,
-    })
-  : null;
+        delta,
+        clickedText: clickedPreview.text,
+        clickedSelectorHint: clickedPreview.selectorHint,
+        countAfter: null,
+        checkState: null,
+      })
+    : null;
   const proofEnvelope = opts.includeProof
     ? buildActionProofEnvelope({
         action: "click",

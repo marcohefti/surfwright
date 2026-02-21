@@ -8,6 +8,7 @@ export function cdpQueryOp(arg: {
     | "click-point"
     | "invisible"
     | "aria"
+    | "check-state"
     | "fill"
     | "wait-selector-visible"
     | "wait-text-visible";
@@ -31,6 +32,7 @@ export function cdpQueryOp(arg: {
   | { ok: false }
   | { rejected: Array<{ index: number; visible: boolean; text: string; selectorHint: string | null }>; rejectedTruncated: boolean }
   | { detached: boolean; values: Record<string, string | null> }
+  | { detached: boolean; checked: boolean | null; ariaChecked: string | null }
   | { filled: boolean; valueLength: number; eventsDispatched: string[] }
   | boolean {
   const runtime = globalThis as unknown as BrowserRuntimeLike;
@@ -82,7 +84,7 @@ export function cdpQueryOp(arg: {
   const hrefFor = (node: BrowserNodeLike | null): string | null => {
     const direct = node?.matches?.("a[href]") ? node : null;
     const nearest = direct ?? node?.closest?.("a[href]") ?? node?.querySelector?.("a[href]") ?? null;
-    const href = nearest?.getAttribute?.("href") ?? nearest?.href ?? null;
+    const href = nearest?.href ?? nearest?.getAttribute?.("href") ?? null;
     return typeof href === "string" && href.trim().length > 0 ? href : null;
   };
 
@@ -117,6 +119,9 @@ export function cdpQueryOp(arg: {
       const values: Record<string, string | null> = {};
       for (const name of arg.attrNames ?? []) values[name] = null;
       return { detached: true, values };
+    }
+    if (arg.op === "check-state") {
+      return { detached: true, checked: null, ariaChecked: null };
     }
     if (arg.op === "fill") return { filled: false, valueLength: 0, eventsDispatched: [] };
     return { ok: false };
@@ -278,6 +283,25 @@ export function cdpQueryOp(arg: {
       values[name] = node?.getAttribute?.(name) ?? null;
     }
     return { detached: false, values };
+  }
+
+  if (arg.op === "check-state") {
+    const index = typeof arg.index === "number" ? arg.index : -1;
+    const node = index >= 0 ? (matches[index] ?? null) : null;
+    if (!node) {
+      return { detached: true, checked: null, ariaChecked: null };
+    }
+    let checked: boolean | null = null;
+    if (typeof (node as { checked?: unknown }).checked === "boolean") {
+      checked = Boolean((node as { checked: boolean }).checked);
+    }
+    const ariaCheckedRaw = node.getAttribute?.("aria-checked") ?? null;
+    const ariaChecked = typeof ariaCheckedRaw === "string" ? ariaCheckedRaw : null;
+    return {
+      detached: false,
+      checked,
+      ariaChecked,
+    };
   }
 
   if (arg.op === "fill") {

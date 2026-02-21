@@ -30,10 +30,13 @@ function compactKeys(): string[] {
     "title",
     "status",
     "downloadStarted",
+    "downloadMethod",
     "downloadStatus",
     "downloadFinalUrl",
     "downloadFileName",
     "downloadBytes",
+    "downloadedFilename",
+    "downloadedBytes",
     "failureReason",
     "mode",
     "query",
@@ -78,6 +81,7 @@ function deriveExtractProof(report: Record<string, unknown>): Record<string, unk
     kind === "news" ||
     kind === "docs" ||
     kind === "docs-commands" ||
+    kind === "command-lines" ||
     kind === "headings" ||
     kind === "links" ||
     kind === "codeblocks" ||
@@ -161,10 +165,13 @@ function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputSh
     (Object.prototype.hasOwnProperty.call(report, "downloadStarted")
       ? {
           downloadStarted: report.downloadStarted,
+          downloadMethod: report.downloadMethod,
           downloadStatus: report.downloadStatus,
           downloadFinalUrl: report.downloadFinalUrl,
           downloadFileName: report.downloadFileName,
           downloadBytes: report.downloadBytes,
+          downloadedFilename: report.downloadedFilename,
+          downloadedBytes: report.downloadedBytes,
           failureReason: report.failureReason,
         }
       : null);

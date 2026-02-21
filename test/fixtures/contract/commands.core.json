@@ -23,6 +23,7 @@
   { "id": "target.click-read", "usageMustContain": "target click-read" },
   { "id": "target.download", "usageMustContain": "target download" },
   { "id": "target.click-at", "usageMustContain": "target click-at" },
+  { "id": "target.select-option", "usageMustContain": "target select-option" },
   { "id": "target.style", "usageMustContain": "target style" },
   { "id": "target.hover", "usageMustContain": "target hover" },
   { "id": "target.read", "usageMustContain": "target read" },

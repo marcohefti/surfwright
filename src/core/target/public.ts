@@ -15,6 +15,7 @@ export { targetExtract } from "./infra/target-extract.js";
 export { targetFind } from "./infra/target-find.js";
 export { targetDragDrop } from "./infra/actions/target-drag-drop.js";
 export { targetUpload } from "./infra/actions/target-upload.js";
+export { targetSelectOption } from "./infra/actions/target-select-option.js";
 export { targetConsoleGet, targetConsoleTail, targetHealth, targetHud } from "./infra/target-observability.js";
 export { targetFormFill, targetRead } from "./infra/target-read.js";
 export { targetWait } from "./infra/target-wait.js";

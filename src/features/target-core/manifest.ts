@@ -27,7 +27,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.count",
     usage:
-      "surfwright target count <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target count <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--count-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "count matching elements by text or selector in a target",
   },
   {
@@ -39,7 +39,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.click",
     usage:
-      "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--within <selector>] [--frame-scope <scope>] [--index <n>] [--repeat <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--within <selector>] [--frame-scope <scope>] [--index <n>] [--repeat <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--proof] [--proof-check-state] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "click the first matching element in a target",
   },
   {
@@ -51,7 +51,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.download",
     usage:
-      "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--allow-missing-download-event] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--allow-missing-download-event] [--fallback-to-fetch] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "click a deterministic element and capture a download artifact",
   },
   {
@@ -75,8 +75,14 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.upload",
     usage:
-      "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--submit-selector <query>] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "upload one or more files via input or file chooser fallback",
+  },
+  {
+    id: "target.select-option",
+    usage:
+      "surfwright target select-option <targetId> --selector <query> (--value <value> | --label <label> | --option-index <n>) [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+    summary: "select a native dropdown option by value, label, or index with deterministic proof fields",
   },
   {
     id: "target.keypress",
@@ -93,7 +99,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.spawn",
     usage:
-      "surfwright target spawn <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target spawn <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--proof] [--assert-title <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "click a trigger and return deterministic child target handle",
   },
   {
@@ -141,7 +147,7 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.extract",
     usage:
-      "surfwright target extract <targetId> [--kind <generic|blog|news|docs|docs-commands|headings|links|codeblocks|forms|tables|table-rows>] [--selector <query>] [--visible-only] [--include-actionable] [--schema-json <json> | --schema-file <path>] [--dedupe-by <csv>] [--summary] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "surfwright target extract <targetId> [--kind <generic|blog|news|docs|docs-commands|command-lines|headings|links|codeblocks|forms|tables|table-rows>] [--selector <query>] [--visible-only] [--include-actionable] [--schema-json <json> | --schema-file <path>] [--dedupe-by <csv>] [--summary] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
     summary: "extract structured records from a target using generic content kinds",
   },
   {

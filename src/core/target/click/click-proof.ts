@@ -53,6 +53,17 @@ export function buildClickProof(opts: {
   clickedText: string;
   clickedSelectorHint: string | null;
   countAfter: number | null;
+  checkState?: {
+    before: {
+      checked: boolean | null;
+      ariaChecked: string | null;
+    };
+    after: {
+      checked: boolean | null;
+      ariaChecked: string | null;
+    };
+    changed: boolean | null;
+  } | null;
 }): NonNullable<TargetClickReport["proof"]> {
   return {
     urlChanged: opts.urlBeforeClick !== opts.urlAfterClick,
@@ -65,5 +76,6 @@ export function buildClickProof(opts: {
     finalUrl: opts.urlAfterClick,
     openedTargetId: opts.openedTargetId,
     countAfter: opts.countAfter,
+    ...(opts.checkState ? { checkState: opts.checkState } : {}),
   };
 }

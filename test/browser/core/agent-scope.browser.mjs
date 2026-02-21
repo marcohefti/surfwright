@@ -101,6 +101,9 @@ test("target spawn close and dialog return deterministic shapes", async () => {
       openPayload.targetId,
       "--selector",
       "#new-tab",
+      "--proof",
+      "--assert-title",
+      "Child",
       "--timeout-ms",
       "5000",
     ],
@@ -109,6 +112,8 @@ test("target spawn close and dialog return deterministic shapes", async () => {
   const spawnPayload = parseJson(spawn.stdout);
   assert.equal(spawnPayload.parentTargetId, openPayload.targetId);
   assert.equal(typeof spawnPayload.targetId, "string");
+  assert.equal(typeof spawnPayload.proof, "object");
+  assert.equal(spawnPayload.proof.titleMatched, true);
 
   const close = runCliSync(
     ["--session",
@@ -187,6 +192,27 @@ test("target spawn close and dialog return typed failures", () => {
   );
   assert.equal(spawnMissing.status, 1);
   assert.equal(parseJson(spawnMissing.stdout).code, "E_QUERY_INVALID");
+
+  const html = `<title>Spawn Assert Failure</title><button id="go" onclick="window.open('about:blank', '_blank')">go</button>`;
+  const openSpawn = runCliSync(["open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
+  assert.equal(openSpawn.status, 0);
+  const openSpawnPayload = parseJson(openSpawn.stdout);
+  const spawnAssertFail = runCliSync(
+    ["--session",
+      openSpawnPayload.sessionId,
+      "target",
+      "spawn",
+      openSpawnPayload.targetId,
+      "--selector",
+      "#go",
+      "--assert-title",
+      "Nope",
+      "--timeout-ms",
+      "5000",
+    ],
+  );
+  assert.equal(spawnAssertFail.status, 1);
+  assert.equal(parseJson(spawnAssertFail.stdout).code, "E_ASSERT_FAILED");
 
   const dialogInvalid = runCliSync(
     ["--session", openPayload.sessionId, "target", "dialog", openPayload.targetId, "--action", "invalid", "--timeout-ms", "5000"],

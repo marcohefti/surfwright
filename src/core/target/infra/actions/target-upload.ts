@@ -23,6 +23,8 @@ type TargetUploadReport = {
   }>;
   fileCount: number;
   mode: "direct-input" | "filechooser";
+  submitSelector: string | null;
+  submitted: boolean;
   proof?: {
     action: "upload";
     urlChanged: boolean;
@@ -109,6 +111,7 @@ export async function targetUpload(opts: {
   persistState?: boolean;
   selectorQuery?: string;
   files?: string | string[];
+  submitSelector?: string;
   waitForText?: string;
   waitForSelector?: string;
   waitNetworkIdle?: boolean;
@@ -121,6 +124,7 @@ export async function targetUpload(opts: {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
   const selector = parseRequiredSelector(opts.selectorQuery, "selector");
+  const submitSelector = typeof opts.submitSelector === "string" ? opts.submitSelector.trim() : "";
   const fileInputs = parseUploadFiles(opts.files);
   const waitAfter = parseWaitAfterClick({
     waitForText: opts.waitForText,
@@ -163,6 +167,7 @@ export async function targetUpload(opts: {
     });
 
     let mode: TargetUploadReport["mode"] = "direct-input";
+    let submitted = false;
     const urlBeforeAction = target.page.url();
     if (isFileInput) {
       await locator.setInputFiles(absolutePaths, {
@@ -185,6 +190,19 @@ export async function targetUpload(opts: {
       await chooser.setFiles(absolutePaths, {
         timeout: opts.timeoutMs,
       });
+    }
+
+    if (submitSelector.length > 0) {
+      await ensureValidSelector(target.page, submitSelector);
+      const submitLocator = target.page.locator(submitSelector).first();
+      const submitCount = await target.page.locator(submitSelector).count();
+      if (submitCount < 1) {
+        throw new CliError("E_QUERY_INVALID", `No element matched submit selector: ${submitSelector}`);
+      }
+      await submitLocator.click({
+        timeout: opts.timeoutMs,
+      });
+      submitted = true;
     }
 
     const waitStartedAt = Date.now();
@@ -229,6 +247,8 @@ export async function targetUpload(opts: {
             selector,
             mode,
             fileCount: fileInputs.length,
+            submitSelector: submitSelector.length > 0 ? submitSelector : null,
+            submitted,
             finalTitle,
           },
         })
@@ -243,6 +263,8 @@ export async function targetUpload(opts: {
       files: fileInputs.map(({ name, size, type }) => ({ name, size, type })),
       fileCount: fileInputs.length,
       mode,
+      submitSelector: submitSelector.length > 0 ? submitSelector : null,
+      submitted,
       ...(assertions ? { assertions } : {}),
       wait: waited,
       ...(includeProof

@@ -18,6 +18,14 @@ type TargetSpawnReport = {
   query: string;
   url: string;
   title: string;
+  proof?: {
+    action: "spawn";
+    parentTargetId: string;
+    targetId: string;
+    title: string;
+    titleMatched: boolean;
+    finalUrl: string;
+  };
   timingMs: {
     total: number;
     resolveSession: number;
@@ -37,6 +45,8 @@ export async function targetSpawn(opts: {
   containsQuery?: string;
   visibleOnly?: boolean;
   frameScope?: string;
+  proof?: boolean;
+  assertTitle?: string;
 }): Promise<TargetSpawnReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
@@ -47,6 +57,8 @@ export async function targetSpawn(opts: {
     visibleOnly: opts.visibleOnly,
   });
   const frameScope = parseFrameScope(opts.frameScope);
+  const includeProof = Boolean(opts.proof);
+  const assertTitle = typeof opts.assertTitle === "string" ? opts.assertTitle.trim() : "";
 
   const { session } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -165,6 +177,10 @@ export async function targetSpawn(opts: {
 
     const spawnedTargetId = await readPageTargetId(context, childPage);
     const title = await childPage.title();
+    const titleMatched = assertTitle.length < 1 ? true : title.includes(assertTitle);
+    if (!titleMatched) {
+      throw new CliError("E_ASSERT_FAILED", `spawn assertion failed: title did not include "${assertTitle}"`);
+    }
     const actionCompletedAt = Date.now();
 
     const report: TargetSpawnReport = {
@@ -176,6 +192,18 @@ export async function targetSpawn(opts: {
       query: parsed.query,
       url: childPage.url(),
       title,
+      ...(includeProof
+        ? {
+            proof: {
+              action: "spawn",
+              parentTargetId: requestedTargetId,
+              targetId: spawnedTargetId,
+              title,
+              titleMatched,
+              finalUrl: childPage.url(),
+            },
+          }
+        : {}),
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,

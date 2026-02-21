@@ -13,6 +13,7 @@ All notable changes to SurfWright are documented here.
 - [target] Added additive `target click --proof.countAfter` for selector-mode clicks (post-action selector cardinality when available).
 - [target] Added `target extract --include-actionable` with per-item actionable metadata (`handle`, `selectorHint`, `frameId`, `href`) for deterministic extract-to-action chaining.
 - [target] Added `target extract --kind docs-commands` with command-oriented fields (`command`, `language`, `section`) for docs/codeblock extraction.
+- [target] Added `target extract --kind command-lines` for normalized runnable command-line entries from docs/code blocks.
 - [target] Added `--wait-timeout-ms <ms>` to `target click` and `target wait` so wait-stage budgets are explicit and independent from command timeout.
 - [target] Added additive `target find` per-match metadata fields: `href` (nearest actionable anchor URL when present) and `tag` (matched element tag).
 - [target] Added `target find` link-destination narrowing flags: `--href-host <host>` and `--href-path-prefix <prefix>` with echoed filter fields in the report.
@@ -35,7 +36,13 @@ All notable changes to SurfWright are documented here.
 - [open] Added `open --ensure-session <off|if-missing|fresh>` to let `open` bootstrap or fork managed sessions without separate `session` orchestration.
 - [target] Added orient count controls to `target snapshot`: `--count-scope <full|bounded>` and `--count-filter <headings,buttons,links,nav>`.
 - [target] Added `target download --allow-missing-download-event` for deterministic non-started result envelopes when browser download events are suppressed.
+- [target] Added `target download --fallback-to-fetch` to capture artifacts deterministically when browser download events are missed.
 - [run] Added `run` plan-step support for `click-read`/`clickRead` (composed click then bounded read).
+- [target] Added `target upload --submit-selector <query>` for atomic attach+submit upload flows.
+- [target] Added `target select-option` for first-class native `<select>` control (`--value|--label|--option-index`) with deterministic selected proof fields.
+- [target] Added `target click --proof-check-state` for checkbox/radio proof deltas (`proof.checkState.before/after/changed`).
+- [target] Added `target spawn --proof --assert-title <text>` for compact spawn evidence and title assertion in new-window flows.
+- [target] Added `target count --count-only` for compact `{ok,count}` output mode in low-token loops.
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
@@ -50,6 +57,7 @@ All notable changes to SurfWright are documented here.
 - [session] CDP attach health checks now split discovery and websocket-connect stages for clearer remote endpoint handling under variable latency.
 - [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage` to reduce startup flakes in constrained environments.
 - [target] `target download` payload now uses canonical nested proof fields (`fileName`, `bytes`) plus additive top-level projection fields (`downloadStarted`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`).
+- [target] `target download` payload now includes additive capture provenance/alias fields (`downloadMethod`, `downloadedFilename`, `downloadedBytes`) across event, fetch-fallback, and non-started envelopes.
 - [errors] `target click` mismatch failures now include stronger disambiguation context (`withinSelector`, bounded candidate sample) for faster recovery without blind retries.
 - [run] Pipeline step execution is now table-driven to keep step parsing/dispatch behavior centralized and reduce drift risk as steps are added.
 - [target] `target style` now emits a compact additive `proof` payload so `--output-shape proof` is directly actionable without extra parsing.

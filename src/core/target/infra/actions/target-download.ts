@@ -1,7 +1,6 @@
 import { chromium, type Response } from "playwright-core";
 import { newActionId } from "../../../action-id.js";
 import { CliError } from "../../../errors.js";
-import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import { providers } from "../../../providers/index.js";
 import { redactHeaders } from "../../../shared/index.js";
 import { parseTargetQueryInput } from "../target-query.js";
@@ -12,65 +11,15 @@ import { cdpQueryOp } from "../../click/cdp-query-op.js";
 import type { TargetDownloadReport } from "../../../types.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
 import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
-
-const DOWNLOAD_OUT_DIR_DEFAULT = "artifacts/downloads";
-const DOWNLOAD_FILENAME_MAX = 180;
-
-function sanitizeFilename(input: string): string {
-  const raw = input.trim();
-  const normalized = raw.replace(/[\\\/]+/g, "-").replace(/\s+/g, " ").trim();
-  const safe = normalized.replace(/[^A-Za-z0-9._ -]+/g, "-").replace(/-+/g, "-").trim();
-  const sliced = safe.length > 0 ? safe.slice(0, DOWNLOAD_FILENAME_MAX) : "download.bin";
-  return sliced.replace(/\s+/g, " ");
-}
-
-function resolveDownloadOutDir(input: string | undefined): string {
-  const value = typeof input === "string" ? input.trim() : "";
-  return providers().path.resolve(value.length > 0 ? value : DOWNLOAD_OUT_DIR_DEFAULT);
-}
-
-function uniquePath(dir: string, filename: string): string {
-  const { fs, path } = providers();
-  const base = filename;
-  const ext = path.extname(base);
-  const stem = ext.length > 0 ? base.slice(0, -ext.length) : base;
-  let candidate = path.join(dir, base);
-  let idx = 1;
-  while (fs.existsSync(candidate) && idx < 5000) {
-    candidate = path.join(dir, `${stem}-${idx}${ext}`);
-    idx += 1;
-  }
-  return candidate;
-}
-
-async function sha256File(filePath: string): Promise<string> {
-  const { fs, crypto } = providers();
-  return await new Promise<string>((resolve, reject) => {
-    const hash = crypto.createHash("sha256");
-    const stream = fs.createReadStream(filePath);
-    stream.on("data", (chunk: string | Buffer) => hash.update(chunk));
-    stream.on("error", reject);
-    stream.on("end", () => resolve(hash.digest("hex")));
-  });
-}
-
-function pickDownloadResponse(responses: Response[], finalUrl: string): Response | null {
-  const exact = responses.find((entry) => entry.url() === finalUrl);
-  if (exact) {
-    return exact;
-  }
-  for (const entry of responses.slice().reverse()) {
-    try {
-      const cd = entry.headers()["content-disposition"];
-      if (typeof cd === "string" && cd.toLowerCase().includes("attachment")) {
-        return entry;
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return null;
-}
+import {
+  handleMissingDownloadEvent,
+  persistDownloadReport,
+  pickDownloadResponse,
+  resolveDownloadOutDir,
+  sanitizeFilename,
+  sha256File,
+  uniquePath,
+} from "./target-download-support.js";
 
 export async function targetDownload(opts: {
   targetId: string;
@@ -85,6 +34,7 @@ export async function targetDownload(opts: {
   index?: number;
   downloadOutDir?: string;
   allowMissingDownloadEvent?: boolean;
+  fallbackToFetch?: boolean;
   proof?: boolean;
   assertUrlPrefix?: string;
   assertSelector?: string;
@@ -104,6 +54,7 @@ export async function targetDownload(opts: {
   }
   const includeProof = Boolean(opts.proof);
   const allowMissingDownloadEvent = Boolean(opts.allowMissingDownloadEvent);
+  const fallbackToFetch = Boolean(opts.fallbackToFetch);
   const parsedAssertions = parseActionAssertions({
     assertUrlPrefix: opts.assertUrlPrefix,
     assertSelector: opts.assertSelector,
@@ -122,8 +73,6 @@ export async function targetDownload(opts: {
 
   try {
     const target = await resolveTargetHandle(browser, requestedTargetId);
-    // Download queries are frequently issued right after open --allow-download (commit wait),
-    // so we opportunistically wait for domcontentloaded to reduce transient no-match results.
     await target.page.waitForLoadState("domcontentloaded", {
       timeout: Math.min(opts.timeoutMs, 4000),
     }).catch(() => null);
@@ -249,62 +198,24 @@ export async function targetDownload(opts: {
     }
     if (!download) {
       target.page.off("response", onResponse);
-      const timeoutReason =
-        downloadWaitError instanceof Error
-          ? downloadWaitError.message
-          : `download event not observed within timeout (${opts.timeoutMs}ms)`;
-      if (!allowMissingDownloadEvent) {
-        throw downloadWaitError instanceof Error
-          ? new CliError("E_INTERNAL", timeoutReason)
-          : new CliError("E_INTERNAL", `download event not observed within timeout (${opts.timeoutMs}ms)`);
-      }
-
-      const assertions = await evaluateActionAssertions({
+      return await handleMissingDownloadEvent({
         page: target.page,
-        assertions: parsedAssertions,
-      });
-      const actionCompletedAt = Date.now();
-      const currentUrl = target.page.url();
-      const currentTitle = await target.page.title();
-      const sourceUrl = clickedPreview.href ?? urlBeforeDownload;
-      const failureReason = `download event not observed within timeout (${opts.timeoutMs}ms)`;
-      const proofEnvelope = includeProof
-        ? buildActionProofEnvelope({
-            action: "download",
-            urlBefore: urlBeforeDownload,
-            urlAfter: currentUrl,
-            targetBefore: requestedTargetId,
-            targetAfter: requestedTargetId,
-            matchCount,
-            pickedIndex,
-            wait: toActionWaitEvidence({
-              requested: null,
-              observed: null,
-            }),
-            assertions,
-            countAfter: null,
-            details: {
-              downloadUrl: null,
-              downloadStatus: null,
-              fileName: null,
-              bytes: null,
-              failureReason: timeoutReason,
-            },
-          })
-        : null;
-
-      const report: TargetDownloadReport = {
-        ok: true,
+        downloadWaitError,
+        timeoutMs: opts.timeoutMs,
+        allowMissingDownloadEvent,
+        fallbackToFetch,
+        downloadOutDir: opts.downloadOutDir,
+        parsedAssertions,
+        includeProof,
+        requestedTargetId,
         sessionId: session.sessionId,
         sessionSource,
-        targetId: requestedTargetId,
-        actionId: newActionId(),
         mode: queryMode,
         selector,
         contains,
         visibleOnly,
         query,
-        sourceUrl,
+        sourceUrl: clickedPreview.href ?? urlBeforeDownload,
         matchCount,
         pickedIndex,
         clicked: {
@@ -313,57 +224,12 @@ export async function targetDownload(opts: {
           visible: clickedPreview.visible,
           selectorHint: clickedPreview.selectorHint,
         },
-        url: currentUrl,
-        title: currentTitle,
-        downloadStarted: false,
-        downloadStatus: null,
-        downloadFinalUrl: null,
-        downloadFileName: null,
-        downloadBytes: null,
-        download: null,
-        failureReason,
-        ...(includeProof
-          ? {
-              proof: {
-                downloadStarted: false,
-                fileName: null,
-                path: null,
-                bytes: null,
-                mime: null,
-                sourceUrl,
-                failureReason,
-              },
-            }
-          : {}),
-        ...(proofEnvelope ? { proofEnvelope } : {}),
-        ...(assertions ? { assertions } : {}),
-        timingMs: {
-          total: 0,
-          resolveSession: resolvedSessionAt - startedAt,
-          connectCdp: connectedAt - resolvedSessionAt,
-          action: actionCompletedAt - connectedAt,
-          persistState: 0,
-        },
-      };
-
-      const persistStartedAt = Date.now();
-      if (opts.persistState !== false) {
-        await saveTargetSnapshot({
-          targetId: report.targetId,
-          sessionId: report.sessionId,
-          url: report.url,
-          title: report.title,
-          status: null,
-          lastActionId: report.actionId,
-          lastActionAt: nowIso(),
-          lastActionKind: "download",
-          updatedAt: nowIso(),
-        });
-      }
-      const persistedAt = Date.now();
-      report.timingMs.persistState = persistedAt - persistStartedAt;
-      report.timingMs.total = persistedAt - startedAt;
-      return report;
+        urlBeforeDownload,
+        resolvedSessionAt,
+        connectedAt,
+        startedAt,
+        persistState: opts.persistState !== false,
+      });
     }
 
     const outDir = resolveDownloadOutDir(opts.downloadOutDir);
@@ -408,6 +274,7 @@ export async function targetDownload(opts: {
             downloadStatus: status,
             fileName: providers().path.basename(outPath),
             bytes: stat.size,
+            downloadMethod: "event",
           },
         })
       : null;
@@ -435,10 +302,13 @@ export async function targetDownload(opts: {
       url: currentUrl,
       title: currentTitle,
       downloadStarted: true,
+      downloadMethod: "event",
       downloadStatus: status,
       downloadFinalUrl: finalUrl,
       downloadFileName: providers().path.basename(outPath),
       downloadBytes: stat.size,
+      downloadedFilename: providers().path.basename(outPath),
+      downloadedBytes: stat.size,
       download: {
         downloadStarted: true,
         sourceUrl,
@@ -455,6 +325,7 @@ export async function targetDownload(opts: {
         ? {
             proof: {
               downloadStarted: true,
+              downloadMethod: "event",
               fileName: providers().path.basename(outPath),
               path: outPath,
               bytes: stat.size,
@@ -473,26 +344,7 @@ export async function targetDownload(opts: {
         persistState: 0,
       },
     };
-
-    const persistStartedAt = Date.now();
-    if (opts.persistState !== false) {
-      await saveTargetSnapshot({
-        targetId: report.targetId,
-        sessionId: report.sessionId,
-        url: report.url,
-        title: report.title,
-        status: null,
-        lastActionId: report.actionId,
-        lastActionAt: nowIso(),
-        lastActionKind: "download",
-        updatedAt: nowIso(),
-      });
-    }
-    const persistedAt = Date.now();
-    report.timingMs.persistState = persistedAt - persistStartedAt;
-    report.timingMs.total = persistedAt - startedAt;
-
-    return report;
+    return await persistDownloadReport({ report, persistState: opts.persistState !== false, startedAt });
   } finally {
     await browser.close();
   }

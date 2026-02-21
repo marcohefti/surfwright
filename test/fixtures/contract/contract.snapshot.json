@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:22c5ba25c3195db7ab37b7c1637bc34270e578135d57f4589c7f5c11e2224f87",
+  "contractFingerprint": "sha256:4c8aee864180d0fc97a2e94bf0414952d2a0a7c52db11da994f0b1d23e7f28c0",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -122,7 +122,7 @@
     },
     {
       "id": "target.click",
-      "usage": "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--within <selector>] [--frame-scope <scope>] [--index <n>] [--repeat <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target click <targetId> (--handle <handle> | --text <query> | --selector <query>) [--contains <text>] [--visible-only] [--within <selector>] [--frame-scope <scope>] [--index <n>] [--repeat <n>] [--explain] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--snapshot] [--delta] [--proof] [--proof-check-state] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "click the first matching element in a target"
     },
     {
@@ -152,7 +152,7 @@
     },
     {
       "id": "target.count",
-      "usage": "surfwright target count <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target count <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--count-only] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "count matching elements by text or selector in a target"
     },
     {
@@ -162,7 +162,7 @@
     },
     {
       "id": "target.download",
-      "usage": "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--allow-missing-download-event] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target download <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--index <n>] [--download-out-dir <path>] [--allow-missing-download-event] [--fallback-to-fetch] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "click a deterministic element and capture a download artifact"
     },
     {
@@ -182,7 +182,7 @@
     },
     {
       "id": "target.extract",
-      "usage": "surfwright target extract <targetId> [--kind <generic|blog|news|docs|docs-commands|headings|links|codeblocks|forms|tables|table-rows>] [--selector <query>] [--visible-only] [--include-actionable] [--schema-json <json> | --schema-file <path>] [--dedupe-by <csv>] [--summary] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target extract <targetId> [--kind <generic|blog|news|docs|docs-commands|command-lines|headings|links|codeblocks|forms|tables|table-rows>] [--selector <query>] [--visible-only] [--include-actionable] [--schema-json <json> | --schema-file <path>] [--dedupe-by <csv>] [--summary] [--frame-scope <scope>] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "extract structured records from a target using generic content kinds"
     },
     {
@@ -326,6 +326,11 @@
       "summary": "watch class/computed-style deltas and transition events while running a scroll plan"
     },
     {
+      "id": "target.select-option",
+      "usage": "surfwright target select-option <targetId> --selector <query> (--value <value> | --label <label> | --option-index <n>) [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "summary": "select a native dropdown option by value, label, or index with deterministic proof fields"
+    },
+    {
       "id": "target.snapshot",
       "usage": "surfwright target snapshot <targetId> [--mode <snapshot|orient|a11y>] [--selector <query>] [--visible-only] [--frame-scope <scope>] [--cursor <token>] [--include-selector-hints] [--count-scope <full|bounded>] [--count-filter <csv>] [--max-chars <n>] [--max-headings <n>] [--max-buttons <n>] [--max-links <n>] [--max-ax-rows <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "read bounded text and UI primitives for a target"
@@ -337,7 +342,7 @@
     },
     {
       "id": "target.spawn",
-      "usage": "surfwright target spawn <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target spawn <targetId> (--text <query> | --selector <query>) [--contains <text>] [--visible-only] [--frame-scope <scope>] [--proof] [--assert-title <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "click a trigger and return deterministic child target handle"
     },
     {
@@ -377,7 +382,7 @@
     },
     {
       "id": "target.upload",
-      "usage": "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+      "usage": "surfwright target upload <targetId> --selector <query> --file <path> [--file <path>...] [--submit-selector <query>] [--wait-for-text <text> | --wait-for-selector <query> | --wait-network-idle] [--wait-timeout-ms <ms>] [--proof] [--assert-url-prefix <prefix>] [--assert-selector <query>] [--assert-text <text>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
       "summary": "upload one or more files via input or file chooser fallback"
     },
     {

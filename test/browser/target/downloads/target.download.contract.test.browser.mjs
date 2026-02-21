@@ -160,3 +160,51 @@ test("target download can return deterministic non-started envelope on timeout",
     assert.equal(payload.failureReason.includes("download event not observed within timeout"), true);
   });
 });
+
+test("target download --fallback-to-fetch captures deterministic artifact when download event is missing", async () => {
+  requireBrowser();
+  await withHttpServer((req, res) => {
+    if (req.url === "/") {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(`<!doctype html>
+        <title>Fetch Fallback</title>
+        <main><a id="plain" href="/plain.txt">Open Plain</a></main>`);
+      return;
+    }
+    if (req.url === "/plain.txt") {
+      const body = Buffer.from("fallback-body\n", "utf8");
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+      res.end(body);
+      return;
+    }
+    res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    res.end("not found");
+  }, async (baseUrl) => {
+    const openResult = await runCliAsync(["open", baseUrl, "--timeout-ms", "8000"]);
+    assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
+    const openPayload = parseJson(openResult.stdout);
+
+    const dlResult = await runCliAsync(["target",
+      "download",
+      openPayload.targetId,
+      "--text",
+      "Open Plain",
+      "--fallback-to-fetch",
+      "--timeout-ms",
+      "2000",
+    ]);
+    assert.equal(dlResult.status, 0, dlResult.stdout || dlResult.stderr);
+    const payload = parseJson(dlResult.stdout);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.downloadStarted, true);
+    assert.equal(payload.downloadMethod, "fetch-fallback");
+    assert.equal(typeof payload.downloadFileName, "string");
+    assert.equal(typeof payload.downloadedFilename, "string");
+    assert.equal(payload.downloadedFilename, payload.downloadFileName);
+    assert.equal(payload.downloadedBytes, payload.downloadBytes);
+    assert.equal(typeof payload.downloadBytes, "number");
+    assert.equal(payload.downloadBytes > 0, true);
+    assert.equal(typeof payload.download.path, "string");
+    assert.equal(fs.existsSync(payload.download.path), true);
+  });
+});

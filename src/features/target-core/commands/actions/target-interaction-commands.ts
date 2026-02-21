@@ -262,6 +262,7 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
       .option("--wait-for-text <text>", "After upload, wait until text becomes visible")
       .option("--wait-for-selector <query>", "After upload, wait until selector becomes visible")
       .option("--wait-network-idle", "After upload, wait for network idle")
+      .option("--submit-selector <query>", "Optional submit selector clicked after files are attached")
       .option("--wait-timeout-ms <ms>", "Post-upload wait timeout budget in milliseconds", ctx.parseTimeoutMs)
       .option("--proof", "Include one-shot evidence payload for upload result", false)
       .option("--assert-url-prefix <prefix>", "Post-upload assertion: final URL must start with prefix")
@@ -276,6 +277,7 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
           "",
           "Examples:",
           "  surfwright target upload <targetId> --selector 'input[type=file]' --file ./avatar.png --proof",
+          "  surfwright target upload <targetId> --selector '#file' --file ./report.csv --submit-selector 'button[type=submit]' --wait-for-text 'uploaded'",
         ].join("\n"),
       )
       .action(
@@ -284,6 +286,7 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
           options: {
             selector: string;
             file: string[];
+            submitSelector?: string;
             waitForText?: string;
             waitForSelector?: string;
             waitNetworkIdle?: boolean;
@@ -307,6 +310,7 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               selectorQuery: options.selector,
               files: options.file,
+              submitSelector: options.submitSelector,
               waitForText: options.waitForText,
               waitForSelector: options.waitForSelector,
               waitNetworkIdle: Boolean(options.waitNetworkIdle),

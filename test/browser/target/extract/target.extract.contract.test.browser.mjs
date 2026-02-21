@@ -155,3 +155,43 @@ test("target extract --output-shape proof derives compact proof without --summar
   assert.equal(payload.proof.count >= 2, true);
   assert.equal(payload.proof.firstCommand, "curl");
 });
+
+test("target extract --kind command-lines returns normalized runnable commands", () => {
+  requireBrowser();
+  const html = `
+    <title>Extract Command Lines</title>
+    <main>
+      <h2>Install</h2>
+      <pre><code>$ uv tool install surfwright
+uv python install 3.13</code></pre>
+      <pre><code># comment
+curl -LsSf http://127.0.0.1/install.sh | sh</code></pre>
+    </main>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
+  const openPayload = parseJson(openResult.stdout);
+
+  const extractResult = runCli(["target",
+    "extract",
+    openPayload.targetId,
+    "--kind",
+    "command-lines",
+    "--selector",
+    "main",
+    "--limit",
+    "10",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(extractResult.status, 0, extractResult.stdout || extractResult.stderr);
+  const payload = parseJson(extractResult.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.kind, "command-lines");
+  assert.equal(Array.isArray(payload.items), true);
+  assert.equal(payload.items.length >= 3, true);
+  assert.equal(payload.items[0].command, "uv tool install surfwright");
+  assert.equal(payload.items[1].command, "uv python install 3.13");
+  assert.equal(payload.items[2].command, "curl -LsSf http://127.0.0.1/install.sh | sh");
+});

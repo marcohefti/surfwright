@@ -25,6 +25,17 @@ export function buildClickProofArtifacts(opts: {
   delta: TargetClickDeltaEvidence | null;
   clickedText: string;
   clickedSelectorHint: string | null;
+  checkState?: {
+    before: {
+      checked: boolean | null;
+      ariaChecked: string | null;
+    };
+    after: {
+      checked: boolean | null;
+      ariaChecked: string | null;
+    };
+    changed: boolean | null;
+  } | null;
 }): {
   proof: TargetClickReport["proof"] | undefined;
   proofEnvelope: TargetClickReport["proofEnvelope"] | undefined;
@@ -41,6 +52,7 @@ export function buildClickProofArtifacts(opts: {
         clickedText: opts.clickedText,
         clickedSelectorHint: opts.clickedSelectorHint,
         countAfter: opts.countAfter,
+        checkState: opts.checkState ?? null,
       })
     : undefined;
 

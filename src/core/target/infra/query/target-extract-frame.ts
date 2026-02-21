@@ -13,11 +13,7 @@ type ExtractEvalItem = {
   record?: Record<string, string | null>;
   actionable?: { handle: string | null; selectorHint: string | null; frameId: string | null; href: string | null };
 };
-type ExtractFramePayload = {
-  matched: boolean;
-  items: ExtractEvalItem[];
-};
-
+type ExtractFramePayload = { matched: boolean; items: ExtractEvalItem[] };
 export async function extractFrameItems(opts: {
   evaluator: {
     evaluate<T, Arg>(pageFunction: (arg: Arg) => T, arg: Arg): Promise<T>;
@@ -86,12 +82,10 @@ export async function extractFrameItems(opts: {
         const id = typeof el?.id === "string" && el.id.length > 0 ? `#${el.id}` : "";
         return tag.length > 0 ? `${tag}${id}${classSuffix}` : null;
       };
-
       const rootNode = selectorQuery ? doc?.querySelector?.(selectorQuery) ?? null : doc?.body ?? null;
       if (!rootNode) {
         return { matched: false, items: [] };
       }
-
       const languageFromNode = (node: BrowserNodeLike | null): string | null => {
         const classPool = [String(node?.className ?? ""), String(node?.parentElement?.className ?? "")]
           .join(" ")
@@ -317,41 +311,26 @@ export async function extractFrameItems(opts: {
         }
         return { matched: true, items };
       }
-
-
-      if (kind === "docs-commands") {
+      if (kind === "docs-commands" || kind === "command-lines") {
         const shellCommandRegex =
           /^(?:\$|#|>)?\s*(npm|pnpm|yarn|npx|bun|pip|pipx|poetry|uv|curl|wget|git|node|python|go|cargo|docker|kubectl|surfwright|zcl)\b/i;
-        const commandFromSnippet = (snippet: string): string | null => {
+        const commandLinesFromSnippet = (snippet: string): string[] => {
           const lines = snippet
             .split(/\r?\n/)
             .map((line) => line.trim())
             .filter((line) => line.length > 0);
+          const commands: string[] = [];
           for (const line of lines) {
             const stripped = line.replace(/^(?:\$|#|>)\s*/, "");
             if (shellCommandRegex.test(stripped)) {
-              return stripped;
+              commands.push(stripped);
             }
           }
-          return null;
+          return commands;
         };
 
         const codeNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.("pre code,pre,code") ?? []);
-        const items: Array<{
-          title: string;
-          url: string | null;
-          summary: string | null;
-          publishedAt: string | null;
-          language: string | null;
-          command: string | null;
-          section: string | null;
-          actionable?: {
-            handle: string | null;
-            selectorHint: string | null;
-            frameId: string | null;
-            href: string | null;
-          };
-        }> = [];
+        const items: ExtractEvalItem[] = [];
         for (const node of codeNodes) {
           if (visibleOnly && !isVisible(node)) {
             continue;
@@ -360,8 +339,8 @@ export async function extractFrameItems(opts: {
           if (snippetRaw.length === 0) {
             continue;
           }
-          const command = commandFromSnippet(snippetRaw);
-          if (!command) {
+          const commands = commandLinesFromSnippet(snippetRaw);
+          if (commands.length < 1) {
             continue;
           }
           const section = sectionFromNode(node);
@@ -374,16 +353,35 @@ export async function extractFrameItems(opts: {
                 href: null,
               }
             : undefined;
-          items.push({
-            title: section ?? command,
-            url: null,
-            summary: null,
-            publishedAt: null,
-            language,
-            command,
-            section,
-            actionable,
-          });
+          if (kind === "docs-commands") {
+            const command = commands[0];
+            items.push({
+              title: section ?? command,
+              url: null,
+              summary: null,
+              publishedAt: null,
+              language,
+              command,
+              section,
+              actionable,
+            });
+          } else {
+            for (const command of commands) {
+              items.push({
+                title: command,
+                url: null,
+                summary: section,
+                publishedAt: null,
+                language,
+                command,
+                section,
+                actionable,
+              });
+              if (items.length >= Math.max(scanLimit * 3, scanLimit)) {
+                break;
+              }
+            }
+          }
           if (items.length >= Math.max(scanLimit * 3, scanLimit)) {
             break;
           }
@@ -398,6 +396,7 @@ export async function extractFrameItems(opts: {
         news: "article,[role=\"article\"]",
         docs: "main a[href],nav a[href],article a[href]",
         "docs-commands": "pre code,pre,code",
+        "command-lines": "pre code,pre,code",
         headings: "h1,h2,h3,h4,h5,h6",
         links: "a[href]",
         codeblocks: "pre code,pre,code",

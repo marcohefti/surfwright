@@ -43,6 +43,7 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
     examples: [
       "surfwright --output-shape compact target click <targetId> --text \"Delete\" --visible-only --repeat 3",
       "surfwright target click <targetId> --text \"Pricing\" --visible-only --proof",
+      "surfwright target click <targetId> --selector '#agree' --proof --proof-check-state",
     ],
     proofSchema: {
       action: "click",
@@ -82,6 +83,22 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
     },
   },
   {
+    id: "target.select-option",
+    signature: "select-option(targetId, selector, value|label|index) -> { selectedValue, selectedText, selectedIndex }",
+    examples: [
+      "surfwright target select-option <targetId> --selector '#role' --value editor --proof",
+      "surfwright target select-option <targetId> --selector '#country' --label Switzerland",
+    ],
+    proofSchema: {
+      action: "select-option",
+      selectedBy: "value|label|index",
+      selectedValue: "string|null",
+      selectedText: "string|null",
+      selectedIndex: "number|null",
+      finalUrl: "string",
+    },
+  },
+  {
     id: "target.keypress",
     signature: "keypress(targetId, key, query?) -> { resultText, wait?, proof? }",
     examples: ["surfwright target keypress <targetId> --key Enter --selector '#search' --proof"],
@@ -99,6 +116,7 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
     signature: "extract(targetId, kind) -> { items[], count, truncated, schema?, records? }",
     examples: [
       "surfwright target extract <targetId> --kind docs-commands --selector main --limit 10",
+      "surfwright target extract <targetId> --kind command-lines --selector main --limit 20",
       "surfwright target extract <targetId> --kind headings --selector main --limit 20",
       "surfwright target extract <targetId> --kind table-rows --schema-json '{\"company\":\"record.Company\"}' --dedupe-by company",
     ],

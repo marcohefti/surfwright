@@ -75,7 +75,22 @@ export function targetExtractTableRowsOp(arg: {
       href: string | null;
     };
   }> = [];
-  const tableNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.("table") ?? []);
+  const tableNodes: BrowserNodeLike[] = [];
+  const pushTable = (node: BrowserNodeLike | null) => {
+    if (!node) {
+      return;
+    }
+    if (!tableNodes.includes(node)) {
+      tableNodes.push(node);
+    }
+  };
+  if (rootNode.matches?.("table")) {
+    pushTable(rootNode);
+  }
+  pushTable(rootNode.closest?.("table") ?? null);
+  for (const node of Array.from(rootNode.querySelectorAll?.("table") ?? [])) {
+    pushTable(node);
+  }
   const maxItems = Math.max(arg.scanLimit * 3, arg.scanLimit);
   const normalizeHeader = (value: string, fallbackIndex: number): string => {
     const trimmed = normalize(value);

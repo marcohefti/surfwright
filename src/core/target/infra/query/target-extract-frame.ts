@@ -278,7 +278,22 @@ export async function extractFrameItems(opts: {
       }
 
       if (kind === "tables") {
-        const tableNodes: BrowserNodeLike[] = Array.from(rootNode.querySelectorAll?.("table") ?? []);
+        const tableNodes: BrowserNodeLike[] = [];
+        const pushTable = (node: BrowserNodeLike | null) => {
+          if (!node) {
+            return;
+          }
+          if (!tableNodes.includes(node)) {
+            tableNodes.push(node);
+          }
+        };
+        if (rootNode.matches?.("table")) {
+          pushTable(rootNode);
+        }
+        pushTable(rootNode.closest?.("table") ?? null);
+        for (const node of Array.from(rootNode.querySelectorAll?.("table") ?? [])) {
+          pushTable(node);
+        }
         const items: ExtractEvalItem[] = [];
         for (const node of tableNodes) {
           if (visibleOnly && !isVisible(node)) {

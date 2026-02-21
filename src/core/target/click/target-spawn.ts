@@ -13,6 +13,7 @@ type TargetSpawnReport = {
   ok: true;
   sessionId: string;
   parentTargetId: string;
+  targetId: string;
   childTargetId: string;
   actionId: string;
   query: string;
@@ -171,6 +172,8 @@ export async function targetSpawn(opts: {
       ok: true,
       sessionId: session.sessionId,
       parentTargetId: requestedTargetId,
+      // Compatibility alias so follow-up commands can consume targetId directly.
+      targetId: childTargetId,
       childTargetId,
       actionId: newActionId(),
       query: parsed.query,

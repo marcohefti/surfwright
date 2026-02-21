@@ -70,3 +70,47 @@ test("target extract supports table-rows schema mapping and deterministic dedupe
   assert.deepEqual(payload.records[0], { name: "SurfWright", score: "99" });
   assert.deepEqual(payload.records[1], { name: "Chrome MCP", score: "72" });
 });
+
+test("target extract table-rows works when selector points directly to a table", () => {
+  requireBrowser();
+  const html = `
+    <title>Extract Table Selector Root</title>
+    <table id="scores">
+      <thead><tr><th>Company</th><th>Score</th></tr></thead>
+      <tbody>
+        <tr><td>SurfWright</td><td>99</td></tr>
+        <tr><td>Chrome MCP</td><td>72</td></tr>
+      </tbody>
+    </table>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["--json", "open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
+  const openPayload = parseJson(openResult.stdout);
+
+  const extractResult = runCli([
+    "--json",
+    "target",
+    "extract",
+    openPayload.targetId,
+    "--kind",
+    "table-rows",
+    "--selector",
+    "#scores",
+    "--schema-json",
+    "{\"name\":\"record.Company\",\"score\":\"record.Score\"}",
+    "--dedupe-by",
+    "name,score",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(extractResult.status, 0, extractResult.stdout || extractResult.stderr);
+  const payload = parseJson(extractResult.stdout);
+
+  assert.equal(payload.ok, true);
+  assert.equal(payload.kind, "table-rows");
+  assert.equal(Array.isArray(payload.records), true);
+  assert.equal(payload.records.length, 2);
+  assert.deepEqual(payload.records[0], { name: "SurfWright", score: "99" });
+  assert.deepEqual(payload.records[1], { name: "Chrome MCP", score: "72" });
+});

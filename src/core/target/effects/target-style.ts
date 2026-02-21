@@ -137,6 +137,17 @@ export async function targetStyle(opts: {
     );
 
     const actionCompletedAt = Date.now();
+    const inspected = {
+      index: selected.index,
+      text: preview.text,
+      visible: selected.visible,
+      selectorHint: preview.selectorHint,
+      tagName: measured.tagName,
+      id: measured.id,
+      className: measured.className,
+    };
+    const values = measured.values;
+
     const report: TargetStyleReport = {
       ok: true,
       sessionId: session.sessionId,
@@ -152,17 +163,13 @@ export async function targetStyle(opts: {
       },
       matchCount: count,
       pickedIndex: selected.index,
-      inspected: {
-        index: selected.index,
-        text: preview.text,
-        visible: selected.visible,
-        selectorHint: preview.selectorHint,
-        tagName: measured.tagName,
-        id: measured.id,
-        className: measured.className,
-      },
+      inspected,
+      // Compatibility alias for evaluators that expect element/computed keys.
+      element: inspected,
       properties,
-      values: measured.values,
+      values,
+      // Compatibility alias for evaluators that expect element/computed keys.
+      computed: values,
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,

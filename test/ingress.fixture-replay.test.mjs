@@ -168,7 +168,9 @@ function assertTargetSpawnFixture(fixture, filePath) {
   assert.equal(observed.ok, true, `${filePath}: observed.ok should be true`);
   assert.equal(observed.query, expect.query, `${filePath}: query mismatch`);
   assert.equal(typeof observed.parentTargetId, "string", `${filePath}: parentTargetId must be a string`);
+  assert.equal(typeof observed.targetId, "string", `${filePath}: targetId must be a string`);
   assert.equal(typeof observed.childTargetId, "string", `${filePath}: childTargetId must be a string`);
+  assert.equal(observed.targetId, observed.childTargetId, `${filePath}: targetId alias must match childTargetId`);
   assert.ok(observed.url.includes(expect.urlContains), `${filePath}: url missing expected content`);
   assert.equal(typeof observed.actionId, "string", `${filePath}: actionId must be a string`);
   assert.equal(typeof observed.timingMs, "object", `${filePath}: timingMs must be an object`);

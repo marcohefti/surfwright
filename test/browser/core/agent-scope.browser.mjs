@@ -91,6 +91,7 @@ test("target spawn close and dialog return deterministic shapes", async () => {
   );
   assert.equal(dialog.status, 0);
   const dialogPayload = parseJson(dialog.stdout);
+  assert.equal(dialogPayload.handled, true);
   assert.equal(dialogPayload.dialog.action, "dismiss");
   assert.equal(dialogPayload.dialog.type, "confirm");
 
@@ -111,6 +112,7 @@ test("target spawn close and dialog return deterministic shapes", async () => {
   assert.equal(spawn.status, 0);
   const spawnPayload = parseJson(spawn.stdout);
   assert.equal(spawnPayload.parentTargetId, openPayload.targetId);
+  assert.equal(spawnPayload.targetId, spawnPayload.childTargetId);
   assert.equal(typeof spawnPayload.childTargetId, "string");
 
   const close = runCliSync(
@@ -134,6 +136,42 @@ test("target spawn close and dialog return deterministic shapes", async () => {
       else resolve();
     });
   });
+});
+
+test("target style returns compatibility aliases for element/computed", () => {
+  requireBrowser();
+
+  const html = `
+    <title>Style Alias</title>
+    <button class="btn btn-primary" style="background-color: rgb(13, 110, 253); color: rgb(255, 255, 255); font-size: 16px; border-radius: 6px;">
+      Primary
+    </button>
+  `;
+  const open = runCliSync(["--json", "open", `data:text/html,${encodeURIComponent(html)}`, "--timeout-ms", "5000"]);
+  assert.equal(open.status, 0);
+  const openPayload = parseJson(open.stdout);
+
+  const style = runCliSync(
+    [
+      "--json",
+      "--session",
+      openPayload.sessionId,
+      "target",
+      "style",
+      openPayload.targetId,
+      "--text",
+      "Primary",
+      "--visible-only",
+      "--timeout-ms",
+      "5000",
+    ],
+  );
+  assert.equal(style.status, 0);
+  const payload = parseJson(style.stdout);
+  assert.equal(payload.inspected.text, "Primary");
+  assert.equal(payload.element.text, "Primary");
+  assert.equal(payload.values["background-color"], "rgb(13, 110, 253)");
+  assert.equal(payload.computed["background-color"], "rgb(13, 110, 253)");
 });
 
 test("target spawn close and dialog return typed failures", () => {

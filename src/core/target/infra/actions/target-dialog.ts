@@ -13,6 +13,7 @@ type TargetDialogReport = {
   sessionId: string;
   sessionSource?: "explicit" | "target-inferred" | "implicit-new";
   targetId: string;
+  handled: boolean;
   dialog: {
     type: string;
     message: string;
@@ -203,6 +204,7 @@ export async function targetDialog(opts: {
       sessionId: session.sessionId,
       sessionSource,
       targetId: requestedTargetId,
+      handled: true,
       dialog: {
         type: handledDialog.type,
         message: handledDialog.message,

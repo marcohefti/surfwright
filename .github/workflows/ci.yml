@@ -38,10 +38,12 @@ jobs:
           pnpm -s validate | tee artifacts/validate/validate.log
 
       - name: Capture contract JSON
-        run: node dist/cli.js --json contract > artifacts/validate/contract.json
+        run: |
+          pnpm -s build
+          node dist/cli.js --json contract > artifacts/validate/contract.json
 
       - name: Capture policy-check JSON
-        run: pnpm -s policy:check --json > artifacts/validate/policy-check.json
+        run: node scripts/policy-check.mjs --json > artifacts/validate/policy-check.json
 
       - name: Upload validate artifacts
         if: always()
@@ -80,10 +82,12 @@ jobs:
           pnpm -s validate:strict | tee artifacts/validate-strict/validate-strict.log
 
       - name: Capture strict policy-check JSON
-        run: pnpm -s policy:check:strict --json > artifacts/validate-strict/policy-strict.json
+        run: node scripts/policy-check.mjs --config policy/config.strict.json --json > artifacts/validate-strict/policy-strict.json
 
       - name: Capture contract JSON
-        run: node dist/cli.js --json contract > artifacts/validate-strict/contract.json
+        run: |
+          pnpm -s build
+          node dist/cli.js --json contract > artifacts/validate-strict/contract.json
 
       - name: Upload validate:strict artifacts
         if: always()

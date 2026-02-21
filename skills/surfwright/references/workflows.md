@@ -183,6 +183,7 @@ Structured content and readiness checks:
 ```bash
 surfwright target extract <targetId> --kind blog --include-actionable --limit 10
 surfwright target extract <targetId> --kind docs-commands --selector main --limit 10
+surfwright --output-shape proof target extract <targetId> --kind docs-commands --selector main --limit 10
 surfwright target extract <targetId> --kind headings --selector main --limit 20
 surfwright target extract <targetId> --kind links --selector main --limit 20
 surfwright target extract <targetId> --kind codeblocks --selector main --limit 10

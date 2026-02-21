@@ -51,6 +51,83 @@ function compactKeys(): string[] {
   ];
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function commandToken(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const stripped = value.trim().replace(/^(?:\$|#|>)\s*/, "");
+  if (stripped.length < 1) {
+    return null;
+  }
+  const token = stripped.split(/\s+/)[0]?.trim() ?? "";
+  return token.length > 0 ? token : null;
+}
+
+function deriveExtractProof(report: Record<string, unknown>): Record<string, unknown> | null {
+  const kind = typeof report.kind === "string" ? report.kind : "";
+  const hasExtractKind =
+    kind === "generic" ||
+    kind === "blog" ||
+    kind === "news" ||
+    kind === "docs" ||
+    kind === "docs-commands" ||
+    kind === "headings" ||
+    kind === "links" ||
+    kind === "codeblocks" ||
+    kind === "forms" ||
+    kind === "tables" ||
+    kind === "table-rows";
+  if (!hasExtractKind) {
+    return null;
+  }
+
+  const count = typeof report.count === "number" ? report.count : null;
+  const items = Array.isArray(report.items) ? report.items : null;
+  if (count === null && !items) {
+    return null;
+  }
+  const firstItem = items?.[0];
+  const firstItemRecord = asRecord(firstItem);
+  const firstTitle = typeof firstItemRecord?.title === "string" ? firstItemRecord.title : null;
+  const firstUrl = typeof firstItemRecord?.url === "string" ? firstItemRecord.url : null;
+  const firstCommand = commandToken(firstItemRecord?.command);
+  const source = report.source === "dom" || report.source === "api-feed" ? report.source : null;
+  return {
+    count: count ?? 0,
+    itemCount: items?.length ?? 0,
+    totalRawCount: count ?? 0,
+    truncated: Boolean(report.truncated),
+    firstTitle,
+    firstUrl,
+    firstCommand,
+    source,
+  };
+}
+
+function deriveEvalProof(report: Record<string, unknown>): Record<string, unknown> | null {
+  const result = asRecord(report.result);
+  if (!result) {
+    return null;
+  }
+  const context = asRecord(report.context);
+  const consoleObj = asRecord(report.console);
+  return {
+    resultType: typeof result.type === "string" ? result.type : "unknown",
+    resultValue: Object.prototype.hasOwnProperty.call(result, "value") ? result.value : null,
+    resultTruncated: Boolean(result.truncated),
+    consoleCount: typeof consoleObj?.count === "number" ? consoleObj.count : 0,
+    consoleCaptured: Boolean(consoleObj?.captured),
+    evaluatedFrameId: typeof context?.evaluatedFrameId === "string" ? context.evaluatedFrameId : null,
+  };
+}
+
 function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputShape): Record<string, unknown> {
   if (shape === "full") {
     return report;
@@ -79,6 +156,8 @@ function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputSh
   const derivedProof =
     proof ??
     (Object.prototype.hasOwnProperty.call(report, "summary") ? report.summary : null) ??
+    deriveExtractProof(report) ??
+    deriveEvalProof(report) ??
     (Object.prototype.hasOwnProperty.call(report, "downloadStarted")
       ? {
           downloadStarted: report.downloadStarted,

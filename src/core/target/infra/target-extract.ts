@@ -138,6 +138,18 @@ function scalarString(value: unknown): string | null {
   return null;
 }
 
+function commandToken(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const stripped = value.trim().replace(/^(?:\$|#|>)\s*/, "");
+  if (stripped.length < 1) {
+    return null;
+  }
+  const token = stripped.split(/\s+/)[0]?.trim() ?? "";
+  return token.length > 0 ? token : null;
+}
+
 function resolveSchemaPath(item: TargetExtractReport["items"][number], path: string): string | null {
   const trimmed = path.trim();
   if (trimmed.length < 1) {
@@ -367,7 +379,7 @@ export async function targetExtract(opts: {
           truncated: totalRawCount > merged.length,
           firstTitle: firstItem?.title ?? null,
           firstUrl: firstItem?.url ?? null,
-          firstCommand: firstItem?.command ?? null,
+          firstCommand: commandToken(firstItem?.command),
           source,
         }
       : null;

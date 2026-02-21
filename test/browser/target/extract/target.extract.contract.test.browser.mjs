@@ -117,3 +117,41 @@ test("target extract table-rows works when selector points directly to a table",
   assert.deepEqual(payload.records[0], { name: "SurfWright", score: "99" });
   assert.deepEqual(payload.records[1], { name: "Chrome MCP", score: "72" });
 });
+
+test("target extract --output-shape proof derives compact proof without --summary", () => {
+  requireBrowser();
+  const html = `
+    <title>Extract Docs Commands</title>
+    <main>
+      <h2>Install</h2>
+      <pre><code>curl -LsSf http://127.0.0.1/install.sh | sh</code></pre>
+      <pre><code>uv python install 3.13</code></pre>
+    </main>
+  `;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
+  assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
+  const openPayload = parseJson(openResult.stdout);
+
+  const extractResult = runCli(["--output-shape",
+    "proof",
+    "target",
+    "extract",
+    openPayload.targetId,
+    "--kind",
+    "docs-commands",
+    "--selector",
+    "main",
+    "--limit",
+    "10",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(extractResult.status, 0, extractResult.stdout || extractResult.stderr);
+  const payload = parseJson(extractResult.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.targetId, openPayload.targetId);
+  assert.equal(typeof payload.proof, "object");
+  assert.equal(payload.proof.count >= 2, true);
+  assert.equal(payload.proof.firstCommand, "curl");
+});

@@ -155,7 +155,7 @@ surfwright target keypress <targetId> --key Enter --selector "#search" --wait-fo
 surfwright target style <targetId> --selector ".btn.btn-primary" --properties background-color,color,font-size,border-radius
 surfwright --output-shape proof target style <targetId> --selector ".btn.btn-primary"
 surfwright target extract <targetId> --kind docs-commands --selector main --limit 5
-surfwright --output-shape proof target extract <targetId> --kind docs-commands --selector main --limit 5 --summary
+surfwright --output-shape proof target extract <targetId> --kind docs-commands --selector main --limit 5
 surfwright target extract <targetId> --kind table-rows --schema-json '{"name":"record.Name","price":"record.Price"}' --dedupe-by name
 surfwright target extract <targetId> --kind headings --selector main --limit 12
 surfwright target download <targetId> --text "Export CSV" --allow-missing-download-event --proof
@@ -173,6 +173,7 @@ surfwright target download <targetId> --text "Export CSV" --allow-missing-downlo
 `target download` includes additive top-level fields (`downloadStarted`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`) and canonical nested `download.*` fields (`fileName`, `bytes`); use `--allow-missing-download-event` for deterministic non-started envelopes on event-suppressed flows.
 `target style --proof` includes compact fields (`found`, `targetText`, `styleBg`, `styleColor`, `styleFontSize`, `styleRadius`) for mission checks.
 `target extract --summary` adds compact summary/proof fields (`itemCount`, `totalRawCount`, `count`, `firstTitle`, `firstUrl`, `firstCommand`) for direct proof collection.
+`--output-shape proof` now also projects compact `target extract` proof fields without requiring `--summary`.
 `run` pipeline step coverage includes `fill`, `upload`, and `click-read` (not just read/click/eval/snapshot), so plans can execute full form workflows without `target eval` glue.
 CLI compatibility for cold-start agents: `--json` is accepted as an explicit no-op (JSON remains default), and `target <subcommand> --target <targetId>` is accepted as an alias for positional `targetId`.
 Prefer `target extract`, `target style`, and `target read` before `target eval`; when you need eval, `--output-shape compact` keeps payloads lean.

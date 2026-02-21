@@ -263,6 +263,26 @@ test("target eval returns deterministic shape and typed runtime failures", () =>
   assert.equal(evalSuccessPayload.console.entries[0]?.text.includes("hello from agent"), true);
   assert.equal(typeof evalSuccessPayload.timingMs.total, "number");
 
+  const evalProofResult = runCli(["--output-shape",
+    "proof",
+    "target",
+    "eval",
+    openPayload.targetId,
+    "--expression",
+    "return { ok: true, value: 42 };",
+    "--capture-console",
+    "--max-console",
+    "5",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(evalProofResult.status, 0);
+  const evalProofPayload = parseJson(evalProofResult.stdout);
+  assert.equal(evalProofPayload.ok, true);
+  assert.equal(typeof evalProofPayload.proof, "object");
+  assert.equal(evalProofPayload.proof.resultType, "object");
+  assert.equal(evalProofPayload.proof.resultValue.value, 42);
+
   const evalFailureResult = runCli(["target",
     "eval",
     openPayload.targetId,

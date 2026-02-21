@@ -55,6 +55,8 @@ All notable changes to SurfWright are documented here.
 - [target] `target style` now emits a compact additive `proof` payload so `--output-shape proof` is directly actionable without extra parsing.
 - [target] `target style --proof` now includes mission-friendly compact fields (`found`, `targetText`, `styleBg`, `styleColor`, `styleFontSize`, `styleRadius`).
 - [target] `target extract --summary` now includes a `count` alias (same value as `totalRawCount`) for simpler success checks.
+- [target] `target extract --output-shape proof` now derives compact proof fields from extracted records without requiring `--summary`.
+- [target] `target eval --output-shape proof` now consistently projects compact `proof.resultType` and `proof.resultValue` fields.
 - [cli] JSON output remains default and now also accepts explicit `--json` as a no-op compatibility flag.
 - [cli] `target <subcommand> --target <id>` is now accepted as a compatibility alias for positional `targetId` on target subcommands.
 

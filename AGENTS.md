@@ -20,10 +20,9 @@ This repo exists for one thing: a stable browser control surface that agents can
 6. `docs/policy-harness.md` for structural rule framework and plug-in rules.
 7. `docs/fixture-ingress-workflow.md` for adding regression fixtures when new edge cases appear.
 8. `docs/bugfix-tdd-workflow.md` for the reproduce-test-fix loop (TDD) when you hit regressions.
-9. `docs/zerocontext-lab.md` for unbiased cold-start subagent evaluation workflow.
-10. `docs/release-governance.md` for locked release/update policy and required checks.
-11. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
-12. `docs/policy/feature-recommendation-groundrules.md` for mandatory recommendation/evaluation scope rules.
+9. `docs/release-governance.md` for locked release/update policy and required checks.
+10. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
+11. `docs/policy/feature-recommendation-groundrules.md` for mandatory recommendation/evaluation scope rules.
 
 ## Runtime Source of Truth
 
@@ -102,14 +101,13 @@ When the user asks for adjustments, new features, optimizations, evaluations, or
 
 When the user asks to "spawn agents", "zero context test", or evaluate fresh-agent intuition:
 
-- Use the ZeroContext Lab workflow in `docs/zerocontext-lab.md` (do not invent an ad-hoc process).
-- If running under Codex and the `zcl` skill is available, use it for orchestration (it keeps runner wiring and evidence paths consistent).
-- Store all ZeroContext campaign artifacts in unversioned routine-scoped paths under `tmp/zcl/<routine-id>/` and never write loose files directly under `tmp/zcl/`.
+- Use fresh subagent sessions; do not reuse the same session across missions.
+- Store all ZeroContext campaign artifacts in unversioned routine-scoped paths under `tmp/zerocontext/<routine-id>/`.
 - ZeroContext evaluation model baseline (unless the user overrides): `gpt-5.3-codex-spark` (locked as of 2026-02-16).
 - Keep task prompts short and unbiased; do not leak implementation hints or feature names unless explicitly requested.
 - Ensure runs are trace-backed (captured command artifacts/logs), then evaluate from those artifacts first.
 - Prefer evidence-based scoring: success/failure, command count, typed failures, and where agents got stuck.
-- Treat agent self-reports as secondary; ground conclusions in ZeroContext outputs (tool-call trace JSONL, run artifacts, report).
+- Treat agent self-reports as secondary; ground conclusions in run outputs (tool-call trace JSONL, run artifacts, report).
 - For multi-mission comparisons, enforce one fresh subagent per `flow+mission`; never reuse a session across missions.
 - Keep a hard concurrency cap of `6` live subagents unless the user explicitly overrides it.
 - Do not replace zero-context discovery with scripted mission solvers; mission completion should come from fresh subagents, not hardcoded pipelines.

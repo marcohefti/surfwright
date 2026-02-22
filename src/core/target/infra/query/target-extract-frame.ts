@@ -313,7 +313,7 @@ export async function extractFrameItems(opts: {
       }
       if (kind === "docs-commands" || kind === "command-lines") {
         const shellCommandRegex =
-          /^(?:\$|#|>)?\s*(npm|pnpm|yarn|npx|bun|pip|pipx|poetry|uv|curl|wget|git|node|python|go|cargo|docker|kubectl|surfwright|zcl)\b/i;
+          /^(?:\$|#|>)?\s*(npm|pnpm|yarn|npx|bun|pip|pipx|poetry|uv|curl|wget|git|node|python|go|cargo|docker|kubectl|surfwright)\b/i;
         const commandLinesFromSnippet = (snippet: string): string[] => {
           const lines = snippet
             .split(/\r?\n/)

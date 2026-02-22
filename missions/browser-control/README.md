@@ -5,7 +5,7 @@ This folder is the versioned, reusable mission pack for browser-control validati
 ## Scope
 
 - Runner-independent mission definitions.
-- No ZCL/Codex/Claude execution commands in mission files.
+- No runner-specific execution commands in mission files.
 - Each mission file contains all validation requirements (intent, proof fields, success check).
 
 ## Conventions

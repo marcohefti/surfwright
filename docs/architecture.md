@@ -36,4 +36,3 @@ Deep dives follow a consistent structure:
 - Update lifecycle: `docs/lifecycle/update-lifecycle.md`
 - Skill lifecycle: `docs/skills-lifecycle.md`
 - Fixture ingress workflow: `docs/fixture-ingress-workflow.md`
-- ZeroContext workflows: `docs/zerocontext-lab.md`

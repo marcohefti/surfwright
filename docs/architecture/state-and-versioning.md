@@ -58,8 +58,8 @@ SurfWright needs durable state (sessions, targets, capture indexes) while stayin
 - Concurrency is bounded:
   - Writes are guarded via a lock file strategy in the state store (`src/core/state/infra/state-store.ts`).
 - Maintenance is explicit:
-  - Reconcile/prune behavior lives in runtime commands (for example `state reconcile`, `target prune`, `session prune`) rather than hidden schema/state shape rewrites.
-  - Bounded opportunistic maintenance may run detached on command ingress for host hygiene (for example parking idle managed browser processes) without changing command output contracts.
+  - Reconcile/prune behavior lives in runtime commands (for example `state reconcile`, `state disk-prune`, `target prune`, `session prune`) rather than hidden schema/state shape rewrites.
+  - Bounded opportunistic maintenance may run detached on command ingress for host hygiene (for example parking idle managed browser processes and pruning stale run/capture/profile artifacts) without changing command output contracts.
 
 ## Observability
 

@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:c0e5c3f4234c07d240e2b252c13df93e355f3a774a5270d76c2d522fb4cda861",
+  "contractFingerprint": "sha256:6ecc9a1795f4e5f5a59c0354100b531ce2380748132c1015761a25bd9a9c19e0",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",
@@ -114,6 +114,11 @@
       "id": "skill.update",
       "usage": "surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--no-json] [--pretty]",
       "summary": "update skill atomically with compatibility checks and rollback safety"
+    },
+    {
+      "id": "state.disk-prune",
+      "usage": "surfwright state disk-prune [--runs-max-age-hours <h>] [--runs-max-total-mb <n>] [--captures-max-age-hours <h>] [--captures-max-total-mb <n>] [--orphan-profiles-max-age-hours <h>] [--workspace-profiles-max-age-hours <h>] [--dry-run] [--no-json] [--pretty]",
+      "summary": "prune run/capture/profile disk usage with bounded retention policies"
     },
     {
       "id": "state.reconcile",

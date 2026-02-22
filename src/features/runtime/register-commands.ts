@@ -12,7 +12,6 @@ import {
 } from "../../core/session/public.js";
 import { workspaceInfo, workspaceInit, workspaceProfileLockClear, workspaceProfileLocks } from "../../core/workspace/public.js";
 import { runPipeline } from "../../core/pipeline/public.js";
-import { stateReconcile } from "../../core/state/public.js";
 import { parseFieldsCsv, projectReportFields } from "../../core/target/public.js";
 import {
   DEFAULT_OPEN_TIMEOUT_MS,
@@ -23,6 +22,7 @@ import { runtimeCommandMeta } from "./manifest.js";
 import { registerSkillLifecycleCommands } from "./commands/skill-lifecycle.js";
 import { registerSessionCookieCopyCommand } from "./commands/session-cookie-copy.js";
 import { registerSessionClearCommand } from "./commands/session-clear.js";
+import { registerStateMaintenanceCommands } from "./commands/state-maintenance.js";
 import { registerUpdateLifecycleCommands } from "./commands/update-lifecycle.js";
 import { buildContractOutput } from "./contract-output.js";
 import {
@@ -31,7 +31,6 @@ import {
   printOpenSuccess,
   printRunSuccess,
   printSessionSuccess,
-  printStateReconcileSuccess,
   printWorkspaceSuccess,
   type RuntimeOutputOpts,
 } from "./printers.js";
@@ -378,39 +377,14 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     commandMeta: runtimeCommandMeta("session.cookie-copy"),
   });
 
-  ctx.program
-    .command("state")
-    .description("State maintenance operations")
-    .command("reconcile")
-    .description(runtimeCommandMeta("state.reconcile").summary)
-    .option("--timeout-ms <ms>", "Session reachability timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_SESSION_TIMEOUT_MS)
-    .option("--max-age-hours <h>", "Maximum target age in hours to retain")
-    .option("--max-per-session <n>", "Maximum retained targets per session")
-    .option("--drop-managed-unreachable", "Remove managed sessions when currently unreachable", false)
-    .action(
-      async (options: {
-        timeoutMs: number;
-        maxAgeHours?: string;
-        maxPerSession?: string;
-        dropManagedUnreachable?: boolean;
-      }) => {
-        const output = ctx.globalOutputOpts();
-        const maxAgeHours = typeof options.maxAgeHours === "string" ? Number.parseInt(options.maxAgeHours, 10) : undefined;
-        const maxPerSession =
-          typeof options.maxPerSession === "string" ? Number.parseInt(options.maxPerSession, 10) : undefined;
-        try {
-          const report = await stateReconcile({
-            timeoutMs: options.timeoutMs,
-            maxAgeHours,
-            maxPerSession,
-            dropManagedUnreachable: Boolean(options.dropManagedUnreachable),
-          });
-          printStateReconcileSuccess(report, output);
-        } catch (error) {
-          ctx.handleFailure(error, output);
-        }
-      },
-    );
+  registerStateMaintenanceCommands({
+    program: ctx.program,
+    parseTimeoutMs: ctx.parseTimeoutMs,
+    globalOutputOpts: ctx.globalOutputOpts,
+    handleFailure: ctx.handleFailure,
+    reconcileMeta: runtimeCommandMeta("state.reconcile"),
+    diskPruneMeta: runtimeCommandMeta("state.disk-prune"),
+  });
 
   ctx.program
     .command("run")

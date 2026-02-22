@@ -71,6 +71,7 @@ test("contract includes state maintenance commands", () => {
   assert.equal(commandIds.has("session.prune"), true);
   assert.equal(commandIds.has("target.prune"), true);
   assert.equal(commandIds.has("state.reconcile"), true);
+  assert.equal(commandIds.has("state.disk-prune"), true);
 });
 
 test("legacy state payload is discarded before maintenance commands run", () => {

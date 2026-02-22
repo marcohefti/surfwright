@@ -49,6 +49,7 @@
   { "id": "extension.reload", "usageMustContain": "extension reload <extensionRef>" },
   { "id": "extension.uninstall", "usageMustContain": "extension uninstall <extensionRef>" },
   { "id": "state.reconcile", "usageMustContain": "state reconcile" },
+  { "id": "state.disk-prune", "usageMustContain": "state disk-prune" },
   { "id": "run", "usageMustContain": "run [--plan <path>|--plan-json <json>|--replay <path>]" },
   { "id": "update.check", "usageMustContain": "update check" },
   { "id": "update.run", "usageMustContain": "update run" },

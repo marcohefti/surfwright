@@ -16,7 +16,7 @@ function runCli(args, env = {}) {
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
       SURFWRIGHT_DAEMON: "0",
       SURFWRIGHT_GC_ENABLED: "1",
-      SURFWRIGHT_GC_MIN_INTERVAL_MS: "1",
+      SURFWRIGHT_GC_MIN_INTERVAL_MS: "1000",
       ...env,
     },
   });
@@ -85,6 +85,17 @@ async function waitForProcessExit(pid, timeoutMs) {
   return false;
 }
 
+async function waitForPathMissing(targetPath, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!fs.existsSync(targetPath)) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+  return !fs.existsSync(targetPath);
+}
+
 process.on("exit", () => {
   try {
     fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
@@ -148,4 +159,25 @@ test("opportunistic maintenance parks idle managed browser processes without del
       process.kill(pid, "SIGKILL");
     }
   }
+});
+
+test("opportunistic maintenance prunes stale run artifacts in detached worker", async () => {
+  writeState(baseState());
+  fs.rmSync(path.join(TEST_STATE_DIR, "opportunistic-gc.stamp"), { force: true });
+  fs.rmSync(path.join(TEST_STATE_DIR, "opportunistic-gc.lock"), { force: true });
+  const runsDir = path.join(TEST_STATE_DIR, "runs");
+  const staleRun = path.join(runsDir, "stale-run.json");
+  fs.mkdirSync(runsDir, { recursive: true });
+  fs.writeFileSync(staleRun, JSON.stringify({ ok: true }), "utf8");
+  const oldStamp = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  fs.utimesSync(staleRun, oldStamp, oldStamp);
+
+  const result = runCli(["contract"], {
+    SURFWRIGHT_GC_RUNS_MAX_AGE_HOURS: "1",
+    SURFWRIGHT_GC_DISK_PRUNE_ENABLED: "1",
+  });
+  assert.equal(result.status, 0);
+
+  const removed = await waitForPathMissing(staleRun, 4000);
+  assert.equal(removed, true);
 });

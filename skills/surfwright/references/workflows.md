@@ -329,6 +329,13 @@ One-command recovery:
 surfwright state reconcile
 ```
 
+Disk hygiene:
+
+```bash
+surfwright state disk-prune --dry-run
+surfwright state disk-prune --workspace-profiles-max-age-hours 336
+```
+
 Full teardown:
 
 ```bash

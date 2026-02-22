@@ -123,4 +123,10 @@ For long-lived automation, use per-agent state namespaces with `SURFWRIGHT_AGENT
 
 `session ensure` includes an automatic session hygiene pass for shared-session workflows, but a scheduled weekly `state reconcile` is still a good full cleanup baseline.
 
-SurfWright also runs a bounded detached opportunistic maintenance pass on normal command ingress to park long-idle managed browser processes; explicit `state reconcile` remains the full deterministic cleanup command.
+SurfWright also runs a bounded detached opportunistic maintenance pass on normal command ingress to:
+
+- park long-idle managed browser processes
+- prune stale disk artifacts (`runs/`, `captures/`, orphan `profiles/` dirs) with conservative caps
+
+Use `state disk-prune` for explicit deterministic disk cleanup (supports `--dry-run` and optional workspace profile pruning).
+`state reconcile` remains the state-shape/session/target maintenance command.

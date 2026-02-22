@@ -143,6 +143,7 @@ surfwright target transition-assert <targetId> --click-text "<trigger>" --cycles
 surfwright session prune
 surfwright target prune --max-age-hours 168 --max-per-session 200
 surfwright state reconcile
+surfwright state disk-prune --dry-run
 surfwright session clear
 ```
 

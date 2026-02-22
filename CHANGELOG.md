@@ -44,6 +44,7 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target click --proof-check-state` for checkbox/radio proof deltas (`proof.checkState.before/after/changed`).
 - [target] Added `target spawn --proof --assert-title <text>` for compact spawn evidence and title assertion in new-window flows.
 - [target] Added `target count --count-only` for compact `{ok,count}` output mode in low-token loops.
+- [state] Added `state disk-prune` for bounded cleanup of run artifacts, capture artifacts, and orphan profile storage (`--dry-run` supported; workspace profile pruning opt-in).
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
@@ -55,6 +56,7 @@ All notable changes to SurfWright are documented here.
 - [target] Unified post-action waits across interactive actions: `target fill|keypress|upload|drag-drop|dialog` now support `--wait-for-text|--wait-for-selector|--wait-network-idle` and `--wait-timeout-ms`.
 - [session] Reduced repeat command overhead in tight loops with short-lived CDP reachability caching during session health checks.
 - [session] Added opportunistic idle managed-process parking on command ingress (detached worker, bounded sweep) to prevent Chrome accumulation without introducing a persistent daemon.
+- [state] Opportunistic maintenance now also prunes stale disk artifacts (`runs`, `captures`, orphan `profiles`) with conservative retention caps; workspace profile pruning remains explicit opt-in.
 - [session] `session attach --cdp` now accepts `ws://`/`wss://` endpoints and supports HTTP(S) discovery URLs with path/query (resolved to websocket endpoints for runtime attach).
 - [session] CDP attach health checks now split discovery and websocket-connect stages for clearer remote endpoint handling under variable latency.
 - [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage` to reduce startup flakes in constrained environments.

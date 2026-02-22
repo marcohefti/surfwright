@@ -3,6 +3,7 @@ import type {
   SessionListReport,
   SessionPruneReport,
   SessionReport,
+  StateDiskPruneReport,
   StateReconcileReport,
   WorkspaceInfoReport,
   WorkspaceInitReport,
@@ -170,6 +171,24 @@ export function printStateReconcileSuccess(report: StateReconcileReport, opts: R
       `activeSessionId=${report.activeSessionId ?? "none"}`,
       `sessionsRemoved=${report.sessions.removed}`,
       `targetsRemoved=${report.targets.removed}`,
+    ].join(" ") + "\n",
+  );
+}
+
+export function printStateDiskPruneSuccess(report: StateDiskPruneReport, opts: RuntimeOutputOpts) {
+  if (opts.json) {
+    writeJson(report, { pretty: opts.pretty });
+    return;
+  }
+  process.stdout.write(
+    [
+      "ok",
+      `bytesFreed=${report.totalBytesFreed}`,
+      `runsRemoved=${report.runs.removed}`,
+      `capturesRemoved=${report.captures.removed}`,
+      `orphanProfilesRemoved=${report.orphanProfiles.removed}`,
+      `workspaceProfilesRemoved=${report.workspaceProfiles.removed}`,
+      `dryRun=${report.dryRun ? "true" : "false"}`,
     ].join(" ") + "\n",
   );
 }

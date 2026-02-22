@@ -269,6 +269,30 @@ export type StateReconcileReport = {
     maxPerSession: number;
   };
 };
+export type StateDiskPruneBucketReport = {
+  scanned: number;
+  removed: number;
+  bytesBefore: number;
+  bytesAfter: number;
+  bytesFreed: number;
+  maxAgeHours: number | null;
+  maxTotalBytes: number | null;
+};
+export type StateDiskPruneReport = {
+  ok: true;
+  stateRootDir: string;
+  dryRun: boolean;
+  totalBytesBefore: number;
+  totalBytesAfter: number;
+  totalBytesFreed: number;
+  runs: StateDiskPruneBucketReport;
+  captures: StateDiskPruneBucketReport;
+  orphanProfiles: StateDiskPruneBucketReport;
+  workspaceProfiles: StateDiskPruneBucketReport & {
+    enabled: boolean;
+    workspaceDir: string | null;
+  };
+};
 export type CliFailure = {
   ok: false;
   code: string;

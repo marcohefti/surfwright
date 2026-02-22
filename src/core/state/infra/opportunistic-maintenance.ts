@@ -1,5 +1,13 @@
 import process from "node:process";
 import { sessionParkIdleManagedProcesses } from "./session-idle-parking.js";
+import {
+  DEFAULT_DISK_PRUNE_CAPTURES_MAX_AGE_HOURS,
+  DEFAULT_DISK_PRUNE_CAPTURES_MAX_TOTAL_BYTES,
+  DEFAULT_DISK_PRUNE_ORPHAN_PROFILES_MAX_AGE_HOURS,
+  DEFAULT_DISK_PRUNE_RUNS_MAX_AGE_HOURS,
+  DEFAULT_DISK_PRUNE_RUNS_MAX_TOTAL_BYTES,
+  stateDiskPrune,
+} from "./disk-prune.js";
 import { stateRootDir } from "./state-store.js";
 import { providers } from "../../providers/index.js";
 
@@ -12,6 +20,10 @@ const MAX_IDLE_PROCESS_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const DEFAULT_IDLE_PROCESS_SWEEP_CAP = 6;
 const MIN_IDLE_PROCESS_SWEEP_CAP = 1;
 const MAX_IDLE_PROCESS_SWEEP_CAP = 200;
+const MIN_DISK_MAX_AGE_HOURS = 1;
+const MAX_DISK_MAX_AGE_HOURS = 24 * 365 * 5;
+const MIN_DISK_MAX_TOTAL_MB = 1;
+const MAX_DISK_MAX_TOTAL_MB = 1024 * 1024;
 const KICK_LOCK_STALE_MS = 30 * 1000;
 const KICK_STAMP_FILE = "opportunistic-gc.stamp";
 const KICK_LOCK_FILE = "opportunistic-gc.lock";
@@ -38,6 +50,26 @@ function parseIntWithinBounds(input: {
 }): number {
   if (typeof input.raw !== "string" || input.raw.trim().length === 0) {
     return input.fallback;
+  }
+  const parsed = Number.parseInt(input.raw.trim(), 10);
+  if (!Number.isFinite(parsed) || parsed < input.min || parsed > input.max) {
+    return input.fallback;
+  }
+  return parsed;
+}
+
+function parseOptionalIntWithinBounds(input: {
+  raw: string | undefined;
+  fallback: number | null;
+  min: number;
+  max: number;
+}): number | null {
+  if (typeof input.raw !== "string" || input.raw.trim().length === 0) {
+    return input.fallback;
+  }
+  const normalized = input.raw.trim().toLowerCase();
+  if (normalized === "off" || normalized === "none" || normalized === "null" || normalized === "0") {
+    return null;
   }
   const parsed = Number.parseInt(input.raw.trim(), 10);
   if (!Number.isFinite(parsed) || parsed < input.min || parsed > input.max) {
@@ -74,6 +106,66 @@ function idleProcessSweepCap(): number {
     fallback: DEFAULT_IDLE_PROCESS_SWEEP_CAP,
     min: MIN_IDLE_PROCESS_SWEEP_CAP,
     max: MAX_IDLE_PROCESS_SWEEP_CAP,
+  });
+}
+
+function diskPruneEnabled(): boolean {
+  return parseBooleanEnabled(providers().env.get("SURFWRIGHT_GC_DISK_PRUNE_ENABLED"));
+}
+
+function diskRunsMaxAgeHours(): number {
+  return parseIntWithinBounds({
+    raw: providers().env.get("SURFWRIGHT_GC_RUNS_MAX_AGE_HOURS"),
+    fallback: DEFAULT_DISK_PRUNE_RUNS_MAX_AGE_HOURS,
+    min: MIN_DISK_MAX_AGE_HOURS,
+    max: MAX_DISK_MAX_AGE_HOURS,
+  });
+}
+
+function diskRunsMaxTotalBytes(): number {
+  const mb = parseIntWithinBounds({
+    raw: providers().env.get("SURFWRIGHT_GC_RUNS_MAX_TOTAL_MB"),
+    fallback: Math.floor(DEFAULT_DISK_PRUNE_RUNS_MAX_TOTAL_BYTES / (1024 * 1024)),
+    min: MIN_DISK_MAX_TOTAL_MB,
+    max: MAX_DISK_MAX_TOTAL_MB,
+  });
+  return mb * 1024 * 1024;
+}
+
+function diskCapturesMaxAgeHours(): number {
+  return parseIntWithinBounds({
+    raw: providers().env.get("SURFWRIGHT_GC_CAPTURES_MAX_AGE_HOURS"),
+    fallback: DEFAULT_DISK_PRUNE_CAPTURES_MAX_AGE_HOURS,
+    min: MIN_DISK_MAX_AGE_HOURS,
+    max: MAX_DISK_MAX_AGE_HOURS,
+  });
+}
+
+function diskCapturesMaxTotalBytes(): number {
+  const mb = parseIntWithinBounds({
+    raw: providers().env.get("SURFWRIGHT_GC_CAPTURES_MAX_TOTAL_MB"),
+    fallback: Math.floor(DEFAULT_DISK_PRUNE_CAPTURES_MAX_TOTAL_BYTES / (1024 * 1024)),
+    min: MIN_DISK_MAX_TOTAL_MB,
+    max: MAX_DISK_MAX_TOTAL_MB,
+  });
+  return mb * 1024 * 1024;
+}
+
+function diskOrphanProfilesMaxAgeHours(): number {
+  return parseIntWithinBounds({
+    raw: providers().env.get("SURFWRIGHT_GC_ORPHAN_PROFILES_MAX_AGE_HOURS"),
+    fallback: DEFAULT_DISK_PRUNE_ORPHAN_PROFILES_MAX_AGE_HOURS,
+    min: MIN_DISK_MAX_AGE_HOURS,
+    max: MAX_DISK_MAX_AGE_HOURS,
+  });
+}
+
+function diskWorkspaceProfilesMaxAgeHours(): number | null {
+  return parseOptionalIntWithinBounds({
+    raw: providers().env.get("SURFWRIGHT_GC_WORKSPACE_PROFILES_MAX_AGE_HOURS"),
+    fallback: null,
+    min: MIN_DISK_MAX_AGE_HOURS,
+    max: MAX_DISK_MAX_AGE_HOURS,
   });
 }
 
@@ -192,8 +284,30 @@ export async function runOpportunisticStateMaintenanceWorker(): Promise<void> {
   if (!gcEnabled()) {
     return;
   }
-  await sessionParkIdleManagedProcesses({
-    idleTtlMs: idleProcessTtlMs(),
-    sweepCap: idleProcessSweepCap(),
-  });
+  try {
+    await sessionParkIdleManagedProcesses({
+      idleTtlMs: idleProcessTtlMs(),
+      sweepCap: idleProcessSweepCap(),
+    });
+  } catch {
+    // best effort; maintenance failures should not crash caller flows
+  }
+
+  if (!diskPruneEnabled()) {
+    return;
+  }
+
+  try {
+    await stateDiskPrune({
+      runsMaxAgeHours: diskRunsMaxAgeHours(),
+      runsMaxTotalBytes: diskRunsMaxTotalBytes(),
+      capturesMaxAgeHours: diskCapturesMaxAgeHours(),
+      capturesMaxTotalBytes: diskCapturesMaxTotalBytes(),
+      orphanProfilesMaxAgeHours: diskOrphanProfilesMaxAgeHours(),
+      workspaceProfilesMaxAgeHours: diskWorkspaceProfilesMaxAgeHours(),
+      dryRun: false,
+    });
+  } catch {
+    // best effort; maintenance failures should not crash caller flows
+  }
 }

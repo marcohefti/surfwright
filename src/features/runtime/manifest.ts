@@ -93,6 +93,12 @@ export const runtimeCommandManifest: CliCommandContract[] = [
     summary: "repair and prune state for resilient post-restart recovery",
   },
   {
+    id: "state.disk-prune",
+    usage:
+      "surfwright state disk-prune [--runs-max-age-hours <h>] [--runs-max-total-mb <n>] [--captures-max-age-hours <h>] [--captures-max-total-mb <n>] [--orphan-profiles-max-age-hours <h>] [--workspace-profiles-max-age-hours <h>] [--dry-run] [--no-json] [--pretty]",
+    summary: "prune run/capture/profile disk usage with bounded retention policies",
+  },
+  {
     id: "run",
     usage:
       "surfwright run [--plan <path>|--plan-json <json>|--replay <path>] [--doctor] [--record] [--record-path <path>] [--record-label <label>] [--log-ndjson <path>] [--log-mode <minimal|full>] [--profile <name>] [--browser-mode <headless|headed>] [--isolation <mode>] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]",

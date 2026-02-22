@@ -43,7 +43,7 @@ Do not reuse `--agent-id` across tasks.
 6. Use `session cookie-copy` for cross-session auth handoff.
 7. Treat every non-zero exit as typed failure and branch on `code`, never message text.
 8. Keep capture volumes bounded (`--max-*`, `--limit`, `--capture-ms`) for token and runtime control.
-9. Use `state reconcile` after restart/crash before deeper debugging.
+9. Use `state reconcile` after restart/crash before deeper debugging, and `state disk-prune --dry-run` when local storage grows unexpectedly.
 10. End task runs with owned-teardown (`session clear` in the task `--agent-id`) unless prompt says to keep session/process alive.
 11. Prefer first-class primitives over eval glue: `target select-option`, `target upload --submit-selector`, `target extract --kind command-lines`.
 12. For flaky download-event pages, prefer `target download --fallback-to-fetch` before giving up.

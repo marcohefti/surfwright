@@ -135,14 +135,29 @@ SurfWright now performs opportunistic idle process parking on normal command ing
 - managed browser processes idle longer than `30m` are shut down in a detached maintenance worker
 - session metadata/profile state is kept so the next command can transparently restart the session
 - attached sessions are never process-killed by this path
+- stale disk artifacts are opportunistically pruned with bounded retention (runs, captures, orphan session profiles)
 
 Tuning knobs:
 
 ```bash
-SURFWRIGHT_GC_ENABLED=0                  # disable opportunistic parking
+SURFWRIGHT_GC_ENABLED=0                  # disable opportunistic maintenance (parking + disk prune)
 SURFWRIGHT_GC_MIN_INTERVAL_MS=600000     # minimum trigger interval (default: 10m)
 SURFWRIGHT_IDLE_PROCESS_TTL_MS=1800000   # idle threshold (default: 30m)
 SURFWRIGHT_IDLE_PROCESS_SWEEP_CAP=6      # max managed sessions parked per run
+SURFWRIGHT_GC_DISK_PRUNE_ENABLED=0       # disable opportunistic disk pruning
+SURFWRIGHT_GC_RUNS_MAX_AGE_HOURS=168     # prune ~/.surfwright/runs older than N hours
+SURFWRIGHT_GC_RUNS_MAX_TOTAL_MB=1024     # keep runs within total size budget (MB)
+SURFWRIGHT_GC_CAPTURES_MAX_AGE_HOURS=72  # prune ~/.surfwright/captures older than N hours
+SURFWRIGHT_GC_CAPTURES_MAX_TOTAL_MB=1024 # keep captures within total size budget (MB)
+SURFWRIGHT_GC_ORPHAN_PROFILES_MAX_AGE_HOURS=24  # prune orphan ~/.surfwright/profiles dirs older than N hours
+SURFWRIGHT_GC_WORKSPACE_PROFILES_MAX_AGE_HOURS=off  # optional: prune old workspace profiles when explicitly enabled
+```
+
+Manual disk cleanup command:
+
+```bash
+surfwright state disk-prune --dry-run
+surfwright state disk-prune --workspace-profiles-max-age-hours 336
 ```
 
 ## Common Flows

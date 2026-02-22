@@ -1,0 +1,15 @@
+# Mission 012 - iframe-edit
+
+Task
+- Use SurfWright to complete this browser mission.
+- Start URL: https://the-internet.herokuapp.com/iframe
+- Goal: edit TinyMCE iframe body and verify content
+
+Output format
+Return exactly one JSON object with these keys:
+- ok
+- text
+
+Constraints
+- Use the exact key names listed above.
+- Return JSON only (no markdown fences, no prose).

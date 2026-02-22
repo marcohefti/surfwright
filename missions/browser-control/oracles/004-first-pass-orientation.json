@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "missionId": "004-first-pass-orientation",
+  "startUrl": "https://www.w3.org/TR/WCAG22/",
+  "collectFields": [
+    "title",
+    "h1",
+    "headingsCount",
+    "navCount"
+  ],
+  "successCheck": "title == \"Web Content Accessibility Guidelines (WCAG) 2.2\" and h1 == \"Web Content Accessibility Guidelines (WCAG) 2.2\" and headingsCount == 8 and navCount == 10",
+  "rules": [
+    {
+      "field": "title",
+      "op": "eq",
+      "value": "Web Content Accessibility Guidelines (WCAG) 2.2"
+    },
+    {
+      "field": "h1",
+      "op": "eq",
+      "value": "Web Content Accessibility Guidelines (WCAG) 2.2"
+    },
+    {
+      "field": "headingsCount",
+      "op": "eq",
+      "value": 8
+    },
+    {
+      "field": "navCount",
+      "op": "eq",
+      "value": 10
+    }
+  ],
+  "examplePayload": {
+    "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
+    "h1": "Web Content Accessibility Guidelines (WCAG) 2.2",
+    "headingsCount": 8,
+    "navCount": 10
+  }
+}

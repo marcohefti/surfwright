@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "missionId": "008-login-success",
+  "startUrl": "https://the-internet.herokuapp.com/login",
+  "collectFields": [
+    "secureArea",
+    "flash"
+  ],
+  "successCheck": "secureArea == true and flash contains \"You logged into a secure area!\"",
+  "rules": [
+    {
+      "field": "secureArea",
+      "op": "eq",
+      "value": true
+    },
+    {
+      "field": "flash",
+      "op": "contains",
+      "value": "You logged into a secure area!"
+    }
+  ],
+  "examplePayload": {
+    "secureArea": true,
+    "flash": "You logged into a secure area!"
+  }
+}

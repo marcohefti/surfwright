@@ -4,9 +4,10 @@ This folder is the versioned, reusable mission pack for browser-control validati
 
 ## Scope
 
-- Runner-independent mission definitions.
+- Runner-independent mission authoring definitions.
 - No runner-specific execution commands in mission files.
-- Each mission file contains all validation requirements (intent, proof fields, success check).
+- Source mission files include intent, proof fields, and authoritative success checks.
+- ZCL exam-mode assets are generated from this source into split prompt/oracle directories.
 
 ## Conventions
 
@@ -45,3 +46,19 @@ This folder is the versioned, reusable mission pack for browser-control validati
 - "Run mission 10" -> `010-dropdown-select.md`
 - "Run mission `dropdown-select`" -> `010-dropdown-select.md`
 - "Run missions 5-8" -> `005-modal-lifecycle.md` to `008-login-success.md`
+
+## ZCL Integration
+
+- Native campaign spec: `docs/campaigns/browser-control-native-codex.yaml`
+- Runbook: `docs/campaigns/browser-control-zcl-native.md`
+- Prompt set (agent-visible): `missions/browser-control/prompts/*.md`
+- Oracle set (host-evaluated): `missions/browser-control/oracles/*.json`
+- Oracle evaluator: `scripts/zcl/eval-browser-control-oracle.mjs`
+
+## Regeneration
+
+When source missions change, regenerate the split prompt/oracle assets:
+
+```bash
+node scripts/zcl/build-browser-control-exam-pack.mjs
+```

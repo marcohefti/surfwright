@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "missionId": "010-dropdown-select",
+  "startUrl": "https://the-internet.herokuapp.com/dropdown",
+  "collectFields": [
+    "selectedValue",
+    "selectedText"
+  ],
+  "successCheck": "selectedValue == \"2\" and selectedText == \"Option 2\"",
+  "rules": [
+    {
+      "field": "selectedValue",
+      "op": "eq",
+      "value": "2"
+    },
+    {
+      "field": "selectedText",
+      "op": "eq",
+      "value": "Option 2"
+    }
+  ],
+  "examplePayload": {
+    "selectedValue": "2",
+    "selectedText": "Option 2"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "missionId": "005-modal-lifecycle",
+  "startUrl": "https://jquerymodal.com/",
+  "collectFields": [
+    "openSignal",
+    "closedSignal"
+  ],
+  "successCheck": "openSignal == 1 and closedSignal == 0",
+  "rules": [
+    {
+      "field": "openSignal",
+      "op": "eq",
+      "value": 1
+    },
+    {
+      "field": "closedSignal",
+      "op": "eq",
+      "value": 0
+    }
+  ],
+  "examplePayload": {
+    "openSignal": 1,
+    "closedSignal": 0
+  }
+}

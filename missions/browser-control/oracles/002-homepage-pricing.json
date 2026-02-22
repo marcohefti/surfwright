@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "missionId": "002-homepage-pricing",
+  "startUrl": "https://github.com",
+  "collectFields": [
+    "finalUrl",
+    "finalTitle",
+    "pricingPageOk"
+  ],
+  "successCheck": "finalUrl == \"https://github.com/pricing\" and finalTitle == \"Pricing · Plans for every developer · GitHub\" and pricingPageOk == true",
+  "rules": [
+    {
+      "field": "finalUrl",
+      "op": "eq",
+      "value": "https://github.com/pricing"
+    },
+    {
+      "field": "finalTitle",
+      "op": "eq",
+      "value": "Pricing · Plans for every developer · GitHub"
+    },
+    {
+      "field": "pricingPageOk",
+      "op": "eq",
+      "value": true
+    }
+  ],
+  "examplePayload": {
+    "finalUrl": "https://github.com/pricing",
+    "finalTitle": "Pricing · Plans for every developer · GitHub",
+    "pricingPageOk": true
+  }
+}

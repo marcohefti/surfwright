@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "missionId": "001-docs-install-command",
+  "startUrl": "https://docs.astral.sh/uv/getting-started/installation/",
+  "collectFields": [
+    "installCommand",
+    "sourceUrl"
+  ],
+  "successCheck": "installCommand == \"curl -LsSf https://astral.sh/uv/install.sh | sh\" and sourceUrl == startUrl",
+  "rules": [
+    {
+      "field": "installCommand",
+      "op": "eq",
+      "value": "curl -LsSf https://astral.sh/uv/install.sh | sh"
+    },
+    {
+      "field": "sourceUrl",
+      "op": "eq_ref",
+      "ref": "startUrl"
+    }
+  ],
+  "examplePayload": {
+    "installCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+    "sourceUrl": "https://docs.astral.sh/uv/getting-started/installation/"
+  }
+}

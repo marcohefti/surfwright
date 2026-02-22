@@ -45,6 +45,10 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target spawn --proof --assert-title <text>` for compact spawn evidence and title assertion in new-window flows.
 - [target] Added `target count --count-only` for compact `{ok,count}` output mode in low-token loops.
 - [state] Added `state disk-prune` for bounded cleanup of run artifacts, capture artifacts, and orphan profile storage (`--dry-run` supported; workspace profile pruning opt-in).
+- [docs] Added a versioned native ZCL browser-control campaign package (`docs/campaigns/browser-control-native-codex.yaml` + `docs/campaigns/browser-control-zcl-native.md`) for repeatable 20-mission feedback runs.
+- [docs] Pinned the native browser-control ZCL campaign to `runner.model=gpt-5.3-codex-spark` with `runner.modelReasoningEffort=medium` and `runner.modelReasoningPolicy=best_effort`.
+- [zcl] Added browser-control exam-mode asset tooling: `scripts/zcl/build-browser-control-exam-pack.mjs` (split prompt/oracle generation) and `scripts/zcl/eval-browser-control-oracle.mjs` (host-side oracle evaluator).
+- [zcl] Added generated browser-control prompt set (`missions/browser-control/prompts/*.md`) and oracle set (`missions/browser-control/oracles/*.json`) for 20 mission IDs.
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
@@ -72,6 +76,7 @@ All notable changes to SurfWright are documented here.
 - [target] `target eval --output-shape proof` now consistently projects compact `proof.resultType` and `proof.resultValue` fields.
 - [cli] JSON output remains default and now also accepts explicit `--json` as a no-op compatibility flag.
 - [cli] `target <subcommand> --target <id>` is now accepted as a compatibility alias for positional `targetId` on target subcommands.
+- [zcl] Switched the versioned browser-control campaign to `promptMode=exam` with split mission sources (`promptSource` + `oracleSource`) and `evaluation.mode=oracle` via script evaluator.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.

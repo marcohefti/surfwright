@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "missionId": "012-iframe-edit",
+  "startUrl": "https://the-internet.herokuapp.com/iframe",
+  "collectFields": [
+    "ok",
+    "text"
+  ],
+  "successCheck": "ok == true and text == \"ZCL_IFRAME_TEST\"",
+  "rules": [
+    {
+      "field": "ok",
+      "op": "eq",
+      "value": true
+    },
+    {
+      "field": "text",
+      "op": "eq",
+      "value": "ZCL_IFRAME_TEST"
+    }
+  ],
+  "examplePayload": {
+    "ok": true,
+    "text": "ZCL_IFRAME_TEST"
+  }
+}

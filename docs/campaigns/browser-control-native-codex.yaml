@@ -1,0 +1,88 @@
+# SurfWright browser-control exam campaign (20 missions) via native Codex runtime.
+# Versioned baseline spec with split prompts/oracles for repeatable ZCL feedback campaigns.
+schemaVersion: 1
+campaignId: surfwright-browser-control-native
+outRoot: .zcl
+promptMode: exam
+
+totalMissions: 20
+canaryMissions: 3
+failFast: false
+
+missionSource:
+  promptSource:
+    path: ../../missions/browser-control/prompts
+  oracleSource:
+    path: ../../missions/browser-control/oracles
+    visibility: workspace
+  selection:
+    mode: mission_id
+    missionIds:
+      - 001-docs-install-command
+      - 002-homepage-pricing
+      - 003-redirect-evidence
+      - 004-first-pass-orientation
+      - 005-modal-lifecycle
+      - 006-multimatch-disambiguation
+      - 007-style-inspection
+      - 008-login-success
+      - 009-checkbox-toggle
+      - 010-dropdown-select
+      - 011-javascript-alert-dialog
+      - 012-iframe-edit
+      - 013-new-window-spawn
+      - 014-table-sort-lastname
+      - 015-file-upload
+      - 016-dynamic-controls-enable
+      - 017-dynamic-loading
+      - 018-infinite-scroll-chunks
+      - 019-download-file
+      - 020-docs-commands-extract
+
+evaluation:
+  mode: oracle
+  evaluator:
+    kind: script
+    command: ["node", "../../scripts/zcl/eval-browser-control-oracle.mjs"]
+
+execution:
+  flowMode: sequence
+
+pairGate:
+  enabled: true
+  stopOnFirstMissionFailure: false
+  traceProfile: none
+
+timeouts:
+  campaignGlobalTimeoutMs: 7200000
+  defaultAttemptTimeoutMs: 180000
+  cleanupHookTimeoutMs: 10000
+  timeoutStart: first_tool_call
+
+flows:
+  - flowId: codex-native
+    runner:
+      type: codex_app_server
+      sessionIsolation: native
+      runtimeStrategies: ["codex_app_server"]
+      model: gpt-5.3-codex-spark
+      modelReasoningEffort: medium
+      modelReasoningPolicy: best_effort
+      feedbackPolicy: strict
+      mode: discovery
+      freshAgentPerAttempt: true
+      toolDriver:
+        kind: mcp_proxy
+      finalization:
+        mode: auto_from_result_json
+        minResultTurn: 3
+        resultChannel:
+          kind: file_json
+          path: mission.result.json
+      mcp:
+        maxToolCalls: 100
+        idleTimeoutMs: 45000
+        shutdownOnComplete: true
+      env:
+        ZCL_NATIVE_MAX_INFLIGHT_PER_STRATEGY: "6"
+        ZCL_NATIVE_MIN_START_INTERVAL_MS: "150"

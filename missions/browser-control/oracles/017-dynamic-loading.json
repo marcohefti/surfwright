@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "missionId": "017-dynamic-loading",
+  "startUrl": "https://the-internet.herokuapp.com/dynamic_loading/1",
+  "collectFields": [
+    "finishText"
+  ],
+  "successCheck": "finishText == \"Hello World!\"",
+  "rules": [
+    {
+      "field": "finishText",
+      "op": "eq",
+      "value": "Hello World!"
+    }
+  ],
+  "examplePayload": {
+    "finishText": "Hello World!"
+  }
+}

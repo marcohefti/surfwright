@@ -250,6 +250,8 @@ surfwright target network-end <captureId> --view summary
 - Runtime contract: `surfwright contract`
 - Architecture map: `ARCHITECTURE.md`
 - Release policy: `docs/release-governance.md`
+- ZCL browser-control campaign runbook: `docs/campaigns/browser-control-zcl-native.md`
+- ZCL browser-control prompt/oracle assets: `missions/browser-control/prompts/` + `missions/browser-control/oracles/`
 - Skill source: `skills/surfwright/SKILL.md`
 
 ## ZERO_CONTEXT_DAY

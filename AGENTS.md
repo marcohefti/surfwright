@@ -23,6 +23,7 @@ This repo exists for one thing: a stable browser control surface that agents can
 9. `docs/release-governance.md` for locked release/update policy and required checks.
 10. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
 11. `docs/policy/feature-recommendation-groundrules.md` for mandatory recommendation/evaluation scope rules.
+12. `docs/campaigns/browser-control-zcl-native.md` for the versioned native ZCL campaign workflow (20 browser-control missions).
 
 ## Runtime Source of Truth
 
@@ -50,6 +51,10 @@ surfwright contract
   update `docs/skills-lifecycle.md`, `skills/surfwright/skill.json`, and `skills/surfwright.lock.json`.
 - Changing recommendation/evaluation guardrails:
   update `docs/policy/feature-recommendation-groundrules.md` and this `AGENTS.md` trigger section together.
+- Changing ZeroContext/ZCL browser-control campaign setup:
+  update `docs/campaigns/browser-control-native-codex.yaml` + `docs/campaigns/browser-control-zcl-native.md` in the same change window.
+- Changing browser-control mission prompt/oracle assets for exam-mode ZCL runs:
+  update `missions/browser-control/*.md`, regenerate `missions/browser-control/prompts/*` + `missions/browser-control/oracles/*` via `scripts/zcl/build-browser-control-exam-pack.mjs`, and keep `scripts/zcl/eval-browser-control-oracle.mjs` aligned with oracle schema.
 
 ## Validation Baseline
 
@@ -103,11 +108,12 @@ When the user asks to "spawn agents", "zero context test", or evaluate fresh-age
 
 - Use fresh subagent sessions; do not reuse the same session across missions.
 - Store all ZeroContext campaign artifacts in unversioned routine-scoped paths under `tmp/zerocontext/<routine-id>/`.
-- ZeroContext evaluation model baseline (unless the user overrides): `gpt-5.3-codex-spark` (locked as of 2026-02-16).
+- ZeroContext evaluation model baseline (unless the user overrides): `gpt-5.3-codex-spark` (locked as of 2026-02-16), with `medium` reasoning effort when supported.
 - Keep task prompts short and unbiased; do not leak implementation hints or feature names unless explicitly requested.
 - Ensure runs are trace-backed (captured command artifacts/logs), then evaluate from those artifacts first.
 - Prefer evidence-based scoring: success/failure, command count, typed failures, and where agents got stuck.
 - Treat agent self-reports as secondary; ground conclusions in run outputs (tool-call trace JSONL, run artifacts, report).
+- Use `docs/campaigns/browser-control-zcl-native.md` as the baseline runbook for the versioned 20-mission browser-control campaign.
 - For multi-mission comparisons, enforce one fresh subagent per `flow+mission`; never reuse a session across missions.
 - Keep a hard concurrency cap of `6` live subagents unless the user explicitly overrides it.
 - Do not replace zero-context discovery with scripted mission solvers; mission completion should come from fresh subagents, not hardcoded pipelines.

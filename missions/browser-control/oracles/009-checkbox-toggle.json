@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "missionId": "009-checkbox-toggle",
+  "startUrl": "https://the-internet.herokuapp.com/checkboxes",
+  "collectFields": [
+    "checkedBefore",
+    "checkedAfter"
+  ],
+  "successCheck": "checkedBefore == 1 and checkedAfter == 2",
+  "rules": [
+    {
+      "field": "checkedBefore",
+      "op": "eq",
+      "value": 1
+    },
+    {
+      "field": "checkedAfter",
+      "op": "eq",
+      "value": 2
+    }
+  ],
+  "examplePayload": {
+    "checkedBefore": 1,
+    "checkedAfter": 2
+  }
+}

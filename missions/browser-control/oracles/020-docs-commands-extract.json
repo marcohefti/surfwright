@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "missionId": "020-docs-commands-extract",
+  "startUrl": "https://docs.astral.sh/uv/getting-started/installation/",
+  "collectFields": [
+    "count",
+    "firstCommand"
+  ],
+  "successCheck": "count >= 10 and firstCommand == \"curl\"",
+  "rules": [
+    {
+      "field": "count",
+      "op": "gte",
+      "value": 10
+    },
+    {
+      "field": "firstCommand",
+      "op": "eq",
+      "value": "curl"
+    }
+  ],
+  "examplePayload": {
+    "count": 26,
+    "firstCommand": "curl"
+  }
+}

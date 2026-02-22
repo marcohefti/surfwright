@@ -26,7 +26,7 @@ SurfWright is both an operator CLI and an agent-driven automation surface. The C
   - `src/cli.ts`
     - dot-alias rewriting: `rewriteDotCommandAlias` (driven by `allCommandManifest`)
     - bypass routing: `shouldBypassDaemon`
-    - worker entrypoints: `maybeRunInternalWorker` (`__network-worker`, `__daemon-worker`)
+    - worker entrypoints: `maybeRunInternalWorker` (`__network-worker`, `__daemon-worker`, `__maintenance-worker`)
     - proxy attempt: `runViaDaemon(...)` then fallback to local
 - Feature manifest aggregation (drives dot aliases + contract):
   - `src/features/registry.ts` (`allCommandManifest`, `registerFeaturePlugins`)

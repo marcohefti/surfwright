@@ -8,12 +8,14 @@ import test from "node:test";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-state-maint-"));
 
-function runCli(args) {
+function runCli(args, env = {}) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
     encoding: "utf8",
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      SURFWRIGHT_GC_ENABLED: "0",
+      ...env,
     },
   });
 }
@@ -50,6 +52,7 @@ function writeState(state) {
 function readState() {
   return JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
 }
+
 
 process.on("exit", () => {
   try {

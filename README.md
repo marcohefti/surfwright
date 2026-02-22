@@ -128,6 +128,23 @@ surfwright skill install
 
 Everything is JSON-first by default.
 
+## Session Hygiene
+
+SurfWright now performs opportunistic idle process parking on normal command ingress (no persistent daemon required):
+
+- managed browser processes idle longer than `30m` are shut down in a detached maintenance worker
+- session metadata/profile state is kept so the next command can transparently restart the session
+- attached sessions are never process-killed by this path
+
+Tuning knobs:
+
+```bash
+SURFWRIGHT_GC_ENABLED=0                  # disable opportunistic parking
+SURFWRIGHT_GC_MIN_INTERVAL_MS=600000     # minimum trigger interval (default: 10m)
+SURFWRIGHT_IDLE_PROCESS_TTL_MS=1800000   # idle threshold (default: 30m)
+SURFWRIGHT_IDLE_PROCESS_SWEEP_CAP=6      # max managed sessions parked per run
+```
+
 ## Common Flows
 
 Explore and act on a page:

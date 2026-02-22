@@ -16,6 +16,7 @@ import type { CliFailure } from "./core/types.js";
 import { parseWorkerArgv, runTargetNetworkWorker } from "./features/network/index.js";
 import { registerFeaturePlugins } from "./features/registry.js";
 import { setRuntimeOutputShapeInput } from "./core/report-fields.js";
+import { kickOpportunisticStateMaintenance, runOpportunisticStateMaintenanceWorker } from "./core/state/public.js";
 import { parseCommandPath, parseGlobalOptionValue } from "./cli/options.js";
 import { commanderExitCode, parseOutputOptsFromArgv, toCommanderFailure, type OutputOpts } from "./cli/commander-failure.js";
 import { normalizeArgv } from "./cli/argv-normalize.js";
@@ -209,6 +210,10 @@ async function runLocalCommand(argv: string[]): Promise<number> {
   applyAgentIdOverrideFromArgv(argv);
   applyWorkspaceDirOverrideFromArgv(argv);
   applyOutputShapeOverrideFromArgv(argv);
+  const [firstCommand] = parseCommandPath(argv);
+  if (firstCommand && !firstCommand.startsWith("__")) {
+    kickOpportunisticStateMaintenance(argv[1] ?? process.argv[1] ?? "");
+  }
   const program = createProgram();
   process.exitCode = 0;
   try {
@@ -308,6 +313,16 @@ async function maybeRunInternalWorker(argv: string[]): Promise<number | null> {
       if (daemonToken.length > 0) {
         cleanupOwnedDaemonMeta(daemonToken);
       }
+    }
+    return process.exitCode ?? 0;
+  }
+
+  if (argv[2] === "__maintenance-worker") {
+    try {
+      await runOpportunisticStateMaintenanceWorker();
+      process.exitCode = 0;
+    } catch {
+      process.exitCode = 1;
     }
     return process.exitCode ?? 0;
   }

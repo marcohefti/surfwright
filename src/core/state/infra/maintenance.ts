@@ -32,6 +32,7 @@ export type SessionClearReport = {
   networkCapturesRemoved: number;
   networkArtifactsRemoved: number;
 };
+
 function pidIsAlive(pid: number | null): boolean {
   if (!pid || !Number.isFinite(pid) || pid <= 0) {
     return false;
@@ -77,8 +78,16 @@ async function stopManagedSessionProcessStrict(session: SessionState, timeoutMs:
   }
 
   killManagedBrowserProcessTree(pid, "SIGKILL");
+  const killWaitUntil = Date.now() + 250;
+  while (Date.now() < killWaitUntil) {
+    if (!pidIsAlive(pid)) {
+      return true;
+    }
+    await delay(25);
+  }
   return !pidIsAlive(pid);
 }
+
 
 async function stopSessionViaCdp(session: SessionState, timeoutMs: number): Promise<boolean> {
   const cdpTimeoutMs = Math.max(CDP_HEALTHCHECK_TIMEOUT_MS, Math.min(timeoutMs, SESSION_CLEAR_SHUTDOWN_TIMEOUT_CAP_MS));
@@ -440,6 +449,7 @@ export async function targetPrune(opts: { maxAgeHours?: number; maxPerSession?: 
 
   return await targetPruneInternal(parsed);
 }
+
 
 export async function stateReconcile(opts: {
   timeoutMs: number;

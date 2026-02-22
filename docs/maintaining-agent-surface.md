@@ -122,3 +122,5 @@ surfwright session clear
 For long-lived automation, use per-agent state namespaces with `SURFWRIGHT_AGENT_ID=<agentId>`.
 
 `session ensure` includes an automatic session hygiene pass for shared-session workflows, but a scheduled weekly `state reconcile` is still a good full cleanup baseline.
+
+SurfWright also runs a bounded detached opportunistic maintenance pass on normal command ingress to park long-idle managed browser processes; explicit `state reconcile` remains the full deterministic cleanup command.

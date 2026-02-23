@@ -209,3 +209,131 @@ export function makeHeadlessShim({ repoRoot, iterationDir, runShell }) {
     surfwrightRealBin,
   };
 }
+
+function toPositiveInt(raw) {
+  const text = String(raw ?? "").trim();
+  if (!text) {
+    return null;
+  }
+  const n = Number.parseInt(text, 10);
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
+  return n;
+}
+
+function toNonNegativeInt(raw) {
+  const text = String(raw ?? "").trim();
+  if (!text) {
+    return null;
+  }
+  const n = Number.parseInt(text, 10);
+  if (!Number.isFinite(n) || n < 0) {
+    return null;
+  }
+  return n;
+}
+
+export function resolveAgentsPerMission(config, args) {
+  const fromArgs = toPositiveInt(args.agentsPerMission);
+  if (String(args.agentsPerMission ?? "").trim() && !fromArgs) {
+    throw new Error(`invalid --agents-per-mission: ${String(args.agentsPerMission)}`);
+  }
+  const fromConfig = toPositiveInt(config.agentsPerMission ?? 1);
+  if (!fromConfig) {
+    throw new Error(`invalid config.agentsPerMission: ${String(config.agentsPerMission)}`);
+  }
+  return fromArgs || fromConfig;
+}
+
+export function resolveNativeScheduling(config, agentsPerMission) {
+  const maxInflightPerStrategy = toPositiveInt(config.nativeMaxInflightPerStrategy ?? 6);
+  if (!maxInflightPerStrategy) {
+    throw new Error(`invalid config.nativeMaxInflightPerStrategy: ${String(config.nativeMaxInflightPerStrategy)}`);
+  }
+  const minStartIntervalMs = toNonNegativeInt(config.nativeMinStartIntervalMs ?? 150);
+  if (minStartIntervalMs == null) {
+    throw new Error(`invalid config.nativeMinStartIntervalMs: ${String(config.nativeMinStartIntervalMs)}`);
+  }
+  if (agentsPerMission > maxInflightPerStrategy) {
+    throw new Error(
+      `agentsPerMission (${agentsPerMission}) exceeds nativeMaxInflightPerStrategy (${maxInflightPerStrategy}); increase config.nativeMaxInflightPerStrategy`,
+    );
+  }
+  return {
+    maxInflightPerStrategy,
+    minStartIntervalMs,
+  };
+}
+
+export function buildFlowIds(agentsPerMission, baseFlowId = "surfwright") {
+  const normalizedBase = String(baseFlowId || "").trim() || "surfwright";
+  if (agentsPerMission <= 1) {
+    return [normalizedBase];
+  }
+  const out = [];
+  for (let slot = 1; slot <= agentsPerMission; slot += 1) {
+    out.push(slot === 1 ? normalizedBase : `${normalizedBase}-a${slot}`);
+  }
+  return out;
+}
+
+export function resolveIterationMode(args, config) {
+  const modeFromArgs = normalizeIterationMode(args.iterationMode);
+  if (modeFromArgs === "__invalid__") {
+    throw new Error(`invalid --mode: ${String(args.iterationMode)} (expected optimize|sample)`);
+  }
+  if (modeFromArgs) {
+    return modeFromArgs;
+  }
+  const modeFromConfig = normalizeIterationMode(config.defaultIterationMode || "optimize");
+  if (modeFromConfig === "__invalid__") {
+    throw new Error(`invalid config.defaultIterationMode: ${String(config.defaultIterationMode)} (expected optimize|sample)`);
+  }
+  return modeFromConfig || "optimize";
+}
+
+function normalizeIterationMode(raw) {
+  const mode = String(raw || "").trim().toLowerCase();
+  if (!mode) {
+    return "";
+  }
+  if (mode === "optimize" || mode === "sample") {
+    return mode;
+  }
+  return "__invalid__";
+}
+
+export function looksLikeNoChange(text) {
+  const normalized = String(text || "").trim().toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+  return [
+    "no change",
+    "no code change",
+    "none",
+    "n/a",
+    "na",
+    "baseline",
+    "control",
+    "sampling",
+  ].includes(normalized);
+}
+
+export function extractChangedPath(line) {
+  const body = String(line || "").slice(3).trim();
+  if (!body) {
+    return "";
+  }
+  const arrow = body.lastIndexOf(" -> ");
+  if (arrow >= 0) {
+    return body.slice(arrow + 4).trim();
+  }
+  return body;
+}
+
+export function isLoopDataPath(filePath) {
+  const normalized = String(filePath || "").replace(/\\/g, "/");
+  return normalized.startsWith("bench/agent-loop/scopes/") || normalized.startsWith("tmp/");
+}

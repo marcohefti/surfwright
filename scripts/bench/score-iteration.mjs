@@ -20,7 +20,8 @@ const die = (message) => fail(message, "bench-score");
 function parseArgs(argv) {
   const out = {
     statePath: "",
-    flowId: "surfwright",
+    flowId: "",
+    flowPrefix: "",
     outDir: "",
     label: "",
     topSlow: 25,
@@ -35,7 +36,12 @@ function parseArgs(argv) {
       continue;
     }
     if (token === "--flow") {
-      out.flowId = argv[i + 1] || out.flowId;
+      out.flowId = argv[i + 1] || "";
+      i += 1;
+      continue;
+    }
+    if (token === "--flow-prefix") {
+      out.flowPrefix = argv[i + 1] || out.flowPrefix;
       i += 1;
       continue;
     }
@@ -68,7 +74,8 @@ function parseArgs(argv) {
           "Usage: node scripts/bench/score-iteration.mjs --state <campaign.run.state.json> --out-dir <dir> [options]",
           "",
           "Options:",
-          "  --flow <id>       Flow id to score (default: surfwright)",
+          "  --flow <id>       Exact flow id to score",
+          "  --flow-prefix <p> Score all flows where flowId = <p> or starts with <p>- (default: surfwright)",
           "  --label <text>    Optional label echoed in output",
           "  --top-slow <n>    Number of slow command events in summary (default: 25)",
           "  --json            Print compact summary JSON to stdout",
@@ -85,8 +92,63 @@ function parseArgs(argv) {
   if (!out.outDir) {
     die("--out-dir is required");
   }
+  if (out.flowId && out.flowPrefix) {
+    die("use either --flow or --flow-prefix, not both");
+  }
+  if (!out.flowId && !out.flowPrefix) {
+    out.flowPrefix = "surfwright";
+  }
+  if (!out.flowId && !out.flowPrefix) {
+    die("flow selection missing (set --flow or --flow-prefix)");
+  }
 
   return out;
+}
+
+function parseAgentSlot(flowId) {
+  const text = String(flowId || "").trim();
+  const match = text.match(/-a([0-9]+)$/);
+  if (!match) {
+    return 1;
+  }
+  const slot = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(slot) || slot <= 0) {
+    return 1;
+  }
+  return slot;
+}
+
+function selectFlowRuns(runState, args) {
+  const all = Array.isArray(runState.flowRuns) ? runState.flowRuns : [];
+  if (args.flowId) {
+    const exact = all.find((row) => String(row.flowId || "") === args.flowId);
+    if (!exact) {
+      const available = all.map((row) => String(row.flowId || "")).filter(Boolean);
+      die(`flow not found in run state: ${args.flowId}; available: ${available.join(", ")}`);
+    }
+    return {
+      selectionKind: "flow",
+      flowSelector: args.flowId,
+      selected: [exact],
+    };
+  }
+
+  const prefix = String(args.flowPrefix || "").trim();
+  const selected = all.filter((row) => {
+    const flowId = String(row.flowId || "");
+    return flowId === prefix || flowId.startsWith(`${prefix}-`);
+  });
+
+  if (selected.length === 0) {
+    const available = all.map((row) => String(row.flowId || "")).filter(Boolean);
+    die(`flow prefix not found in run state: ${prefix}; available: ${available.join(", ")}`);
+  }
+
+  return {
+    selectionKind: "flow_prefix",
+    flowSelector: prefix,
+    selected,
+  };
 }
 
 function main() {
@@ -98,10 +160,9 @@ function main() {
   fs.mkdirSync(args.outDir, { recursive: true });
 
   const runState = readJson(args.statePath);
-  const flowRun = (runState.flowRuns || []).find((row) => row.flowId === args.flowId);
-  if (!flowRun) {
-    die(`flow not found in run state: ${args.flowId}`);
-  }
+  const flowSelection = selectFlowRuns(runState, args);
+  const selectedFlowRuns = flowSelection.selected;
+  const selectedFlowIds = selectedFlowRuns.map((row) => String(row.flowId || ""));
 
   const attempts = [];
   const reasonCodes = {};
@@ -109,63 +170,82 @@ function main() {
   const chromeTools = {};
   const commandEvents = [];
 
-  for (const a of flowRun.attempts || []) {
-    const attemptDir = String(a.attemptDir || "");
-    const report = readJsonMaybe(path.join(attemptDir, "attempt.report.json"));
-    const feedback = readJsonMaybe(path.join(attemptDir, "feedback.json"));
-    const oracle = readJsonMaybe(path.join(attemptDir, "oracle.verdict.json"));
-    const trace = parseTraceStats(path.join(attemptDir, "tool.calls.jsonl"), String(a.missionId || ""), String(a.attemptId || ""));
+  for (const flowRun of selectedFlowRuns) {
+    const flowId = String(flowRun.flowId || "");
+    const agentSlot = parseAgentSlot(flowId);
 
-    mergeCounts(subcommands, trace.surfwrightSubcommands);
-    mergeCounts(chromeTools, trace.chromeTools);
-    commandEvents.push(...trace.commandEvents);
+    for (const a of flowRun.attempts || []) {
+      const attemptDir = String(a.attemptDir || "");
+      const report = readJsonMaybe(path.join(attemptDir, "attempt.report.json"));
+      const feedback = readJsonMaybe(path.join(attemptDir, "feedback.json"));
+      const oracle = readJsonMaybe(path.join(attemptDir, "oracle.verdict.json"));
+      const trace = parseTraceStats(path.join(attemptDir, "tool.calls.jsonl"), String(a.missionId || ""), String(a.attemptId || ""));
 
-    const claimedOk = Boolean(report?.ok === true || feedback?.ok === true);
-    const verifiedOk = Boolean(oracle?.ok === true && a.status === "valid");
+      mergeCounts(subcommands, trace.surfwrightSubcommands);
+      mergeCounts(chromeTools, trace.chromeTools);
+      commandEvents.push(...trace.commandEvents.map((event) => ({
+        ...event,
+        flowId,
+        agentSlot,
+      })));
 
-    const attemptReasonCodes = new Set();
-    for (const code of a.errors || []) {
-      if (code) {
-        attemptReasonCodes.add(String(code));
+      const claimedOk = Boolean(report?.ok === true || feedback?.ok === true);
+      const verifiedOk = Boolean(oracle?.ok === true && a.status === "valid");
+
+      const attemptReasonCodes = new Set();
+      for (const code of a.errors || []) {
+        if (code) {
+          attemptReasonCodes.add(String(code));
+        }
       }
-    }
-    for (const code of oracle?.reasonCodes || []) {
-      if (code) {
-        attemptReasonCodes.add(String(code));
+      for (const code of oracle?.reasonCodes || []) {
+        if (code) {
+          attemptReasonCodes.add(String(code));
+        }
       }
-    }
-    for (const code of attemptReasonCodes) {
-      reasonCodes[code] = (reasonCodes[code] || 0) + 1;
-    }
+      for (const code of attemptReasonCodes) {
+        reasonCodes[code] = (reasonCodes[code] || 0) + 1;
+      }
 
-    attempts.push({
-      missionIndex: Number(a.missionIndex ?? -1),
-      missionId: String(a.missionId || report?.missionId || ""),
-      attemptId: String(a.attemptId || report?.attemptId || ""),
-      attemptDir,
-      status: String(a.status || ""),
-      claimedOk,
-      verifiedOk,
-      mismatch: claimedOk !== verifiedOk,
-      reasonCodes: [...attemptReasonCodes].sort(),
-      feedbackResult: parseFeedbackResult(feedback?.result),
-      metrics: {
-        wallTimeMs: Number(report?.metrics?.wallTimeMs || 0),
-        toolCallsTotal: Number(report?.metrics?.toolCallsTotal || 0),
-        failuresTotal: Number(report?.metrics?.failuresTotal || 0),
-        retriesTotal: Number(report?.metrics?.retriesTotal || 0),
-        timeoutsTotal: Number(report?.metrics?.timeoutsTotal || 0),
-        turnsStarted: Number(report?.metrics?.toolCallsByOp?.turn_started || 0),
-        commentaryMessages: Number(report?.nativeResult?.commentaryMessagesObserved || 0),
-        reasoningItems: Number(report?.nativeResult?.reasoningItemsObserved || 0),
-        tokensTotal: Number(report?.tokenEstimates?.totalTokens || 0),
-        resultSource: String(report?.nativeResult?.resultSource || ""),
-      },
-      trace,
-    });
+      attempts.push({
+        flowId,
+        agentSlot,
+        missionIndex: Number(a.missionIndex ?? -1),
+        missionId: String(a.missionId || report?.missionId || ""),
+        attemptId: String(a.attemptId || report?.attemptId || ""),
+        attemptDir,
+        status: String(a.status || ""),
+        claimedOk,
+        verifiedOk,
+        mismatch: claimedOk !== verifiedOk,
+        reasonCodes: [...attemptReasonCodes].sort(),
+        feedbackResult: parseFeedbackResult(feedback?.result),
+        metrics: {
+          wallTimeMs: Number(report?.metrics?.wallTimeMs || 0),
+          toolCallsTotal: Number(report?.metrics?.toolCallsTotal || 0),
+          failuresTotal: Number(report?.metrics?.failuresTotal || 0),
+          retriesTotal: Number(report?.metrics?.retriesTotal || 0),
+          timeoutsTotal: Number(report?.metrics?.timeoutsTotal || 0),
+          turnsStarted: Number(report?.metrics?.toolCallsByOp?.turn_started || 0),
+          commentaryMessages: Number(report?.nativeResult?.commentaryMessagesObserved || 0),
+          reasoningItems: Number(report?.nativeResult?.reasoningItemsObserved || 0),
+          tokensTotal: Number(report?.tokenEstimates?.totalTokens || 0),
+          resultSource: String(report?.nativeResult?.resultSource || ""),
+        },
+        trace,
+      });
+    }
   }
 
-  attempts.sort((x, y) => x.missionIndex - y.missionIndex);
+  attempts.sort((x, y) => {
+    if (x.missionIndex !== y.missionIndex) {
+      return x.missionIndex - y.missionIndex;
+    }
+    if (x.flowId !== y.flowId) {
+      return x.flowId.localeCompare(y.flowId);
+    }
+    return x.attemptId.localeCompare(y.attemptId);
+  });
 
   const statusCounts = {
     valid: 0,
@@ -218,6 +298,8 @@ function main() {
   };
 
   const missions = attempts.map((row) => ({
+    flowId: row.flowId,
+    agentSlot: row.agentSlot,
     missionIndex: row.missionIndex,
     missionId: row.missionId,
     status: row.status,
@@ -252,6 +334,8 @@ function main() {
     .sort((a, b) => b.durationMs - a.durationMs)
     .slice(0, args.topSlow)
     .map((row) => ({
+      flowId: row.flowId,
+      agentSlot: row.agentSlot,
       missionId: row.missionId,
       attemptId: row.attemptId,
       durationMs: row.durationMs,
@@ -264,7 +348,13 @@ function main() {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     label: args.label,
-    flowId: args.flowId,
+    flowId: selectedFlowIds.length === 1 ? selectedFlowIds[0] : "",
+    flowSelection: {
+      kind: flowSelection.selectionKind,
+      selector: flowSelection.flowSelector,
+      flowIds: selectedFlowIds,
+      flowCount: selectedFlowIds.length,
+    },
     campaign: {
       campaignId: String(runState.campaignId || ""),
       runId: String(runState.runId || ""),
@@ -280,6 +370,8 @@ function main() {
     missions,
     topSlowCommands,
     attemptRefs: attempts.map((row) => ({
+      flowId: row.flowId,
+      agentSlot: row.agentSlot,
       missionId: row.missionId,
       attemptId: row.attemptId,
       attemptDir: row.attemptDir,
@@ -298,6 +390,8 @@ function main() {
   csvRows.push(
     [
       "missionIndex",
+      "flowId",
+      "agentSlot",
       "missionId",
       "status",
       "verifiedOk",
@@ -322,6 +416,8 @@ function main() {
     csvRows.push(
       [
         mission.missionIndex,
+        mission.flowId,
+        mission.agentSlot,
         mission.missionId,
         mission.status,
         mission.verifiedOk,
@@ -358,7 +454,8 @@ function main() {
 
   const output = {
     ok: true,
-    flowId: args.flowId,
+    flowId: selectedFlowIds.length === 1 ? selectedFlowIds[0] : "",
+    flowSelection: metrics.flowSelection,
     metricsJsonPath,
     metricsMdPath,
     missionCsvPath,

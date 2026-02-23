@@ -234,7 +234,7 @@ function buildResultSheetMarkdown(summary) {
   lines.push(`- missionSet: \`${missionSetLabel(summary.scopeMissionIds)}\``);
   lines.push(`- generatedAt: \`${summary.generatedAt}\``);
   lines.push(`- iterations: \`${summary.iterations.length}\``);
-  lines.push("- mode: `one campaign per run, one mission scope per run, fresh agent per attempt`");
+  lines.push("- mode: `one campaign per run, one mission scope per run, fresh agent per flow+mission attempt`");
   lines.push("");
 
   const baselineRefs = summary.config?.baselineReferences || {};
@@ -246,12 +246,12 @@ function buildResultSheetMarkdown(summary) {
 
   lines.push("## Iterations");
   lines.push("");
-  lines.push("| iter | label | outcome | verified | tokens | wall ms | tools | dTokens vs prev | dWall vs prev | why (hypothesis) | change | evidence |");
-  lines.push("|---:|---|---|---:|---:|---:|---:|---:|---:|---|---|---|");
+  lines.push("| iter | agents | label | outcome | verified | tokens | wall ms | tools | dTokens vs prev | dWall vs prev | why (hypothesis) | change | evidence |");
+  lines.push("|---:|---:|---|---|---:|---:|---:|---:|---:|---:|---|---|---|");
   for (const row of summary.iterations) {
     const verifiedCell = row.metrics.attempts > 0 ? `${row.metrics.verifiedOk}/${row.metrics.attempts}` : "-";
     lines.push(
-      `| ${row.iteration} | ${row.label || ""} | ${row.outcome} | ${verifiedCell} | ${row.metrics.tokensTotal || 0} | ${row.metrics.wallTimeMsTotal || 0} | ${row.metrics.toolCallsTotal || 0} | ${fmtPct(row.deltas.vsPrev.tokensPct)} | ${fmtPct(row.deltas.vsPrev.wallPct)} | ${row.hypothesis || ""} | ${row.change || ""} | ${row.evidence || ""} |`,
+      `| ${row.iteration} | ${row.agentsPerMission || 1} | ${row.label || ""} | ${row.outcome} | ${verifiedCell} | ${row.metrics.tokensTotal || 0} | ${row.metrics.wallTimeMsTotal || 0} | ${row.metrics.toolCallsTotal || 0} | ${fmtPct(row.deltas.vsPrev.tokensPct)} | ${fmtPct(row.deltas.vsPrev.wallPct)} | ${row.hypothesis || ""} | ${row.change || ""} | ${row.evidence || ""} |`,
     );
   }
   lines.push("");
@@ -261,6 +261,8 @@ function buildResultSheetMarkdown(summary) {
     lines.push("## Latest Snapshot");
     lines.push("");
     lines.push(`- iteration: \`#${latest.iteration}\` (${latest.label || "unlabeled"})`);
+    lines.push(`- agentsPerMission: \`${latest.agentsPerMission || 1}\``);
+    lines.push(`- flowIds: \`${(latest.flowIds || []).join(",")}\``);
     lines.push(`- outcome: \`${latest.outcome}\``);
     lines.push(`- verified: \`${latest.metrics.verifiedOk}/${latest.metrics.attempts}\``);
     lines.push(`- tokens: \`${latest.metrics.tokensTotal}\``);
@@ -284,6 +286,7 @@ function buildNextTaskMarkdown(summary) {
   lines.push("## Guardrails");
   lines.push("");
   lines.push("- Use one mission scope and one new campaign for the next run.");
+  lines.push("- Keep `agentsPerMission` explicit per scope (`bench/agent-loop/config.json` or `--agents-per-mission`).");
   lines.push("- Keep model pinned to gpt-5.3-codex-spark / medium / best_effort.");
   lines.push("- No commit/push unless explicitly requested.");
   lines.push("- Keep run artifacts under tmp/ only.");
@@ -298,6 +301,7 @@ function buildNextTaskMarkdown(summary) {
   const nextLabel = `exp-${String(latest.iteration + 1).padStart(2, "0")}`;
   const ids = summary.scopeMissionIds || [];
   const missionArg = ids.length === 1 ? `--mission-id ${ids[0]}` : `--mission-ids ${ids.join(",")}`;
+  const agentsPerMission = Number(latest.agentsPerMission || summary.config?.agentsPerMission || 1);
 
   lines.push("## Latest");
   lines.push("");
@@ -313,6 +317,7 @@ function buildNextTaskMarkdown(summary) {
   lines.push("pnpm bench:loop:run \\");
   lines.push(`  --label \"${nextLabel}\" \\`);
   lines.push(`  ${missionArg} \\`);
+  lines.push(`  --agents-per-mission ${agentsPerMission} \\`);
   lines.push("  --hypothesis \"<why this should improve>\" \\");
   lines.push("  --change \"<what changed>\" \\");
   lines.push("  --tags <tag1>,<tag2>");
@@ -403,6 +408,8 @@ function main() {
     scopeId: String(row.scopeId || scopeId),
     missionScopeType: String(row.missionScopeType || (Array.isArray(row.missionIds) && row.missionIds.length > 1 ? "cluster" : "single")),
     missionIds: Array.isArray(row.missionIds) && row.missionIds.length > 0 ? row.missionIds.map((v) => String(v)) : (row.missionId ? [String(row.missionId)] : scopeMissionIds),
+    agentsPerMission: Number(row.agentsPerMission || (Array.isArray(row.flowIds) ? row.flowIds.length : 0) || 1),
+    flowIds: Array.isArray(row.flowIds) ? row.flowIds.map((v) => String(v)) : [],
     label: String(row.label || ""),
     hypothesis: String(row.hypothesis || ""),
     change: String(row.change || ""),

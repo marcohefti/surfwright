@@ -118,6 +118,16 @@ When the user asks to "spawn agents", "zero context test", or evaluate fresh-age
 - Keep a hard concurrency cap of `6` live subagents unless the user explicitly overrides it.
 - Do not replace zero-context discovery with scripted mission solvers; mission completion should come from fresh subagents, not hardcoded pipelines.
 
+### Benchmark Loop Iteration Contract
+
+When running the SurfWright benchmark loop (`bench/agent-loop/*`, `pnpm bench:loop:run`):
+
+- Treat "iteration" as an optimize iteration by default.
+- Optimize iteration means: one concrete change, one run, then artifact-based evaluation before the next change.
+- Do not reinterpret requested iteration counts as no-change variance sampling.
+- Use `--mode sample` only when the operator explicitly asks for baseline/variance samples.
+- Treat `agentsPerMission` as the per-run parallel fan-out knob (one fresh agent per `flow+mission` attempt); honor config or explicit CLI override.
+
 ## Commit Message Rule
 
 - Always use Conventional Commits with an explicit scope.

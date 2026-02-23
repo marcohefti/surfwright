@@ -105,9 +105,12 @@ Budget source: `test/fixtures/perf/zcl-efficiency-budgets.json`.
 For repeated SurfWright-only optimization cycles, use the versioned loop harness:
 
 ```bash
-pnpm bench:loop:run --label baseline --mission-id 018-infinite-scroll-chunks
+pnpm bench:loop:run --mode optimize --label exp-1 --mission-id 018-infinite-scroll-chunks --hypothesis "<why>" --change "<what changed>"
 pnpm bench:loop:history --mission-id 018-infinite-scroll-chunks
 ```
+
+Interpretation rule: "iteration" means optimize iteration by default (`change -> run -> evaluate`). Use `--mode sample` only for explicit no-change variance runs.
+Use `agentsPerMission` (config or `--agents-per-mission`) when a scope should run parallel fresh-agent attempts in one campaign run.
 
 Versioned loop assets:
 

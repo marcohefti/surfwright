@@ -91,9 +91,12 @@ All notable changes to SurfWright are documented here.
 - [zcl] Switched the versioned browser-control campaign to `promptMode=exam` with split mission sources (`promptSource` + `oracleSource`) and `evaluation.mode=oracle` via script evaluator.
 - [skill] Reduced the SurfWright runtime skill surface to a single bootstrap file (`skills/surfwright/SKILL.md`) and moved non-runtime guidance to maintainer docs.
 - [bench] Reworked benchmark execution to one-campaign-per-scope semantics with explicit `--mission-id` / `--mission-ids`, per-scope history isolation, and fresh-agent enforcement per attempt.
+- [bench] `bench:loop:run` now supports explicit iteration modes (`--mode optimize|sample`, `--sample`) and defaults to optimize semantics (`change -> run -> evaluate`).
+- [bench] `bench:loop:run` now supports configurable per-mission parallel fan-out via `agentsPerMission` (config) and `--agents-per-mission` (CLI), generating parallel SurfWright flow shards within one campaign run.
 - [bench] Added headless guard wiring for benchmark runs (campaign-level shim rewrites `--browser-mode headed` to headless and flags headed trace calls).
 - [bench] Reworked history summarization into repository-native per-scope result sheets (`bench/agent-loop/scopes/<scopeId>/RESULT_SHEET.*`) focused on change intent, outcome, and evidence deltas.
 - [bench] Removed `bench:loop:run --reset-history`; scope ledgers are append-only by default.
+- [bench] `bench:loop:score` now supports flow-family aggregation (`--flow-prefix`) so sharded SurfWright fan-out runs are scored as one iteration, with per-attempt `flowId`/slot evidence in CSV/markdown outputs.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
@@ -109,6 +112,7 @@ All notable changes to SurfWright are documented here.
 - [run] Fixed deterministic plan template resolution for object payloads by removing duplicate nested assignment in `resolveTemplateInValue`.
 - [state] Hardened `sessionId`/`targetId` sanitization to reject placeholder handles (`undefined`, `null`, `nan`) early.
 - [target] `target download` now waits for `domcontentloaded` before click query evaluation to reduce commit-stage race misses after `open --allow-download`.
+- [bench] Prevented optimize-loop misuse by rejecting no-change optimize runs when there is no detectable change since the previous iteration (unless `--allow-no-change` is set, or `--mode sample` is used).
 
 ### Deprecated
 - None.

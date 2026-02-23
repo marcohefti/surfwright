@@ -106,9 +106,12 @@ pnpm zcl:efficiency:check --run <runDir>
 5. For iterative SurfWright optimization, run one mission-scoped campaign per change and update the result sheet:
 
 ```bash
-pnpm bench:loop:run --label baseline --mission-id 018-infinite-scroll-chunks
+pnpm bench:loop:run --mode optimize --label exp-1 --mission-id 018-infinite-scroll-chunks --hypothesis "<why>" --change "<what changed>"
 pnpm bench:loop:history --mission-id 018-infinite-scroll-chunks
 ```
+
+Iteration meaning is strict: optimize by default (`change -> run -> evaluate`). Use `--mode sample` only when explicit variance sampling is requested.
+Set parallel run fan-out with `agentsPerMission` in `bench/agent-loop/config.json` (or `--agents-per-mission`) when one mission should be sampled by multiple fresh agents in one run.
 
 ### Bugfix TDD loop (recommended)
 

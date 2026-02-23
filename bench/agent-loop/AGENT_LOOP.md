@@ -8,18 +8,37 @@ Run an agent-improvement loop where each cycle is:
 
 1. one new ZCL campaign,
 2. one mission scope (single mission or cluster),
-3. fresh agent per mission attempt,
+3. one fresh agent per `flow+mission` attempt,
 4. one concrete code change between runs.
+
+## Iteration Semantics (Strict)
+
+- `iteration` means an `optimize` iteration by default.
+- `optimize` iteration contract:
+  - one concrete change is required,
+  - one run is executed,
+  - artifacts are evaluated before the next change.
+- `sample` run means no-change variance/baseline measurement.
+- If a user says "run N iterations", interpret it as `N` optimize iterations unless they explicitly request sampling.
 
 ## Hard Rules
 
 - No commit/push unless explicitly requested.
 - Runs/artifacts stay out of git under `tmp/`.
 - Use mission-only exam prompts (no oracle leakage).
+- `agentsPerMission` controls parallel fresh-agent fan-out per mission in one run.
 - Keep model pinned:
   - `gpt-5.3-codex-spark`
   - reasoning effort `medium`
   - reasoning policy `best_effort`
+
+## Config Knobs
+
+In `bench/agent-loop/config.json`:
+
+- `agentsPerMission`: default parallel flow fan-out per mission (`1` = one agent).
+- `nativeMaxInflightPerStrategy`: native runner concurrency cap (must be `>= agentsPerMission`).
+- `nativeMinStartIntervalMs`: native runner start staggering.
 
 ## Scope Model
 
@@ -34,38 +53,64 @@ Examples:
 
 - single mission scope: `--mission-id 018-infinite-scroll-chunks`
 - cluster scope: `--mission-ids 001-docs-install-command,006-multimatch-disambiguation,013-new-window-spawn,017-dynamic-loading,018-infinite-scroll-chunks`
+- agent fan-out (per run): `--agents-per-mission 3` or `bench/agent-loop/config.json -> agentsPerMission`
 
 ## Commands
 
 Default mission baseline (from config):
 
 ```bash
-pnpm bench:loop:run --label baseline
+pnpm bench:loop:run --mode sample --label baseline --hypothesis "baseline sample" --change "no code change" --tags sample
 ```
 
 Explicit single mission scope:
 
 ```bash
-pnpm bench:loop:run --label baseline --mission-id 018-infinite-scroll-chunks
+pnpm bench:loop:run --mode sample --label baseline --mission-id 018-infinite-scroll-chunks --hypothesis "baseline sample" --change "no code change" --tags sample
 ```
+
+Single mission with 3 parallel agents in one run:
+
+```bash
+pnpm bench:loop:run --mode sample --label baseline-a3 --mission-id 018-infinite-scroll-chunks --agents-per-mission 3 --hypothesis "variance with 3 agents" --change "no code change" --tags sample
+```
+
+Scoring note: `run-iteration` calls `score-iteration` with `--flow-prefix surfwright`, so all `surfwright*` fan-out flows are aggregated into one iteration metric set.
 
 Explicit 5-mission cluster scope:
 
 ```bash
 pnpm bench:loop:run \
+  --mode sample \
   --label baseline-5 \
-  --mission-ids 001-docs-install-command,006-multimatch-disambiguation,013-new-window-spawn,017-dynamic-loading,018-infinite-scroll-chunks
+  --mission-ids 001-docs-install-command,006-multimatch-disambiguation,013-new-window-spawn,017-dynamic-loading,018-infinite-scroll-chunks \
+  --hypothesis "baseline sample" \
+  --change "no code change" \
+  --tags sample
 ```
 
 Run next iteration after a real code change:
 
 ```bash
 pnpm bench:loop:run \
+  --mode optimize \
   --label exp-1 \
   --mission-id 018-infinite-scroll-chunks \
   --hypothesis "<why this change should help>" \
   --change "<what changed>" \
   --tags <tag1>,<tag2>
+```
+
+Run an explicit no-change sample (only when requested):
+
+```bash
+pnpm bench:loop:run \
+  --mode sample \
+  --label sample-1 \
+  --mission-id 018-infinite-scroll-chunks \
+  --hypothesis "variance sample" \
+  --change "no code change" \
+  --tags sample
 ```
 
 Rebuild result sheet for a scope:

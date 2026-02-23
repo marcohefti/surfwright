@@ -9,6 +9,9 @@ export function parseRunIterationArgs(argv, die) {
     scopeId: "",
     missionId: "",
     missionIdsCsv: "",
+    agentsPerMission: "",
+    iterationMode: "",
+    allowNoChange: false,
     label: "",
     hypothesis: "",
     change: "",
@@ -50,6 +53,24 @@ export function parseRunIterationArgs(argv, die) {
     if (token === "--mission-ids") {
       out.missionIdsCsv = argv[i + 1] || out.missionIdsCsv;
       i += 1;
+      continue;
+    }
+    if (token === "--agents-per-mission") {
+      out.agentsPerMission = argv[i + 1] || out.agentsPerMission;
+      i += 1;
+      continue;
+    }
+    if (token === "--mode") {
+      out.iterationMode = argv[i + 1] || out.iterationMode;
+      i += 1;
+      continue;
+    }
+    if (token === "--sample") {
+      out.iterationMode = "sample";
+      continue;
+    }
+    if (token === "--allow-no-change") {
+      out.allowNoChange = true;
       continue;
     }
     if (token === "--label") {
@@ -110,6 +131,10 @@ export function parseRunIterationArgs(argv, die) {
           "  --scope-id <id>                 Override scope id (default derived from mission ids)",
           "  --mission-id <id>               Run one mission",
           "  --mission-ids <csv>             Run mission cluster (comma-separated)",
+          "  --agents-per-mission <n>        Fan out N fresh agents per mission in one run",
+          "  --mode <optimize|sample>        Run mode (default from config, then optimize)",
+          "  --sample                        Shortcut for --mode sample",
+          "  --allow-no-change               Bypass optimize-mode change guard",
           "  --label <text>                  Iteration label",
           "  --hypothesis <text>             Hypothesis note",
           "  --change <text>                 Change summary",

@@ -13,3 +13,5 @@ Versioned campaign assets for repeatable agent-evaluation workflows.
   - Runbook: `docs/campaigns/browser-control-surfwright-loop.md`
   - Loop config: `bench/agent-loop/config.json`
   - Scope histories/results: `bench/agent-loop/scopes/<scopeId>/...`
+  - Iteration semantics: default optimize (`change -> run -> evaluate`), sample only when explicit (`--mode sample`)
+  - Agent fan-out: configurable `agentsPerMission` (parallel fresh agents per mission in one run)

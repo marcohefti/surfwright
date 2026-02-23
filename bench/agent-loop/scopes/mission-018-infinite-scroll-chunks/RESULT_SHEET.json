@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-02-23T10:13:04.105Z",
+  "generatedAt": "2026-02-23T10:47:33.013Z",
   "loopId": "surfwright-benchmark-loop",
   "scopeId": "mission-018-infinite-scroll-chunks",
   "scopeMissionIds": [
@@ -13,6 +13,10 @@
     "defaultMissionIds": [
       "018-infinite-scroll-chunks"
     ],
+    "agentsPerMission": 1,
+    "nativeMaxInflightPerStrategy": 6,
+    "nativeMinStartIntervalMs": 150,
+    "defaultIterationMode": "optimize",
     "model": "gpt-5.3-codex-spark",
     "reasoningEffort": "medium",
     "reasoningPolicy": "best_effort",
@@ -41,6 +45,8 @@
       "missionIds": [
         "018-infinite-scroll-chunks"
       ],
+      "agentsPerMission": 1,
+      "flowIds": [],
       "label": "baseline-scope",
       "hypothesis": "scope history baseline",
       "change": "no code change",
@@ -82,22 +88,183 @@
       },
       "outcome": "baseline",
       "evidence": "baseline"
+    },
+    {
+      "iteration": 2,
+      "iterationId": "20260223T102143Z-i002",
+      "createdAt": "2026-02-23T10:22:35.880Z",
+      "scopeId": "mission-018-infinite-scroll-chunks",
+      "missionScopeType": "single",
+      "missionIds": [
+        "018-infinite-scroll-chunks"
+      ],
+      "agentsPerMission": 1,
+      "flowIds": [],
+      "label": "iter-002-sample",
+      "hypothesis": "measure post-commit variance",
+      "change": "no code change",
+      "changeTags": [
+        "sample"
+      ],
+      "runStatus": "valid",
+      "metrics": {
+        "attempts": 1,
+        "verifiedOk": 1,
+        "mismatchCount": 0,
+        "retriesTotal": 0,
+        "timeoutsTotal": 0,
+        "wallTimeMsTotal": 48589,
+        "tokensTotal": 79535,
+        "toolCallsTotal": 299,
+        "reasoningItemsTotal": 19,
+        "commentaryMessagesTotal": 4,
+        "execCallsTotal": 17,
+        "mcpToolCallsTotal": 0,
+        "surfwrightCliCallsTotal": 12,
+        "headedBrowserModeCallsTotal": 0
+      },
+      "artifacts": {
+        "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102143Z-i002",
+        "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102143Z-i002/report/metrics.full.json",
+        "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102143Z-i002/report/metrics.summary.md",
+        "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102143Z-i002/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i002-20260223t102143z-i002/campaign.run.state.json"
+      },
+      "deltas": {
+        "vsPrev": {
+          "tokensPct": -0.05949199441856065,
+          "wallPct": 0.0959018427047387
+        },
+        "vsBaseline": {
+          "tokensPct": -0.05949199441856065,
+          "wallPct": 0.0959018427047387
+        }
+      },
+      "outcome": "mixed",
+      "evidence": "tokens -5031; wallMs +4252ms; toolCalls +50"
+    },
+    {
+      "iteration": 3,
+      "iterationId": "20260223T102244Z-i003",
+      "createdAt": "2026-02-23T10:24:44.501Z",
+      "scopeId": "mission-018-infinite-scroll-chunks",
+      "missionScopeType": "single",
+      "missionIds": [
+        "018-infinite-scroll-chunks"
+      ],
+      "agentsPerMission": 1,
+      "flowIds": [],
+      "label": "iter-003-sample",
+      "hypothesis": "sample second post-commit run",
+      "change": "no code change",
+      "changeTags": [
+        "sample"
+      ],
+      "runStatus": "valid",
+      "metrics": {
+        "attempts": 1,
+        "verifiedOk": 1,
+        "mismatchCount": 0,
+        "retriesTotal": 0,
+        "timeoutsTotal": 0,
+        "wallTimeMsTotal": 115428,
+        "tokensTotal": 156614,
+        "toolCallsTotal": 628,
+        "reasoningItemsTotal": 45,
+        "commentaryMessagesTotal": 5,
+        "execCallsTotal": 45,
+        "mcpToolCallsTotal": 0,
+        "surfwrightCliCallsTotal": 41,
+        "headedBrowserModeCallsTotal": 0
+      },
+      "artifacts": {
+        "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102244Z-i003",
+        "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102244Z-i003/report/metrics.full.json",
+        "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102244Z-i003/report/metrics.summary.md",
+        "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102244Z-i003/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i003-20260223t102244z-i003/campaign.run.state.json"
+      },
+      "deltas": {
+        "vsPrev": {
+          "tokensPct": 0.9691205129817062,
+          "wallPct": 1.375599415505567
+        },
+        "vsBaseline": {
+          "tokensPct": 0.8519736064139252,
+          "wallPct": 1.6034237769808513
+        }
+      },
+      "outcome": "regressed",
+      "evidence": "tokens +77079; wallMs +66839ms; toolCalls +329"
+    },
+    {
+      "iteration": 4,
+      "iterationId": "20260223T102457Z-i004",
+      "createdAt": "2026-02-23T10:27:02.120Z",
+      "scopeId": "mission-018-infinite-scroll-chunks",
+      "missionScopeType": "single",
+      "missionIds": [
+        "018-infinite-scroll-chunks"
+      ],
+      "agentsPerMission": 1,
+      "flowIds": [],
+      "label": "iter-004-sample",
+      "hypothesis": "sample third post-commit run",
+      "change": "no code change",
+      "changeTags": [
+        "sample"
+      ],
+      "runStatus": "valid",
+      "metrics": {
+        "attempts": 1,
+        "verifiedOk": 1,
+        "mismatchCount": 0,
+        "retriesTotal": 0,
+        "timeoutsTotal": 0,
+        "wallTimeMsTotal": 120089,
+        "tokensTotal": 203122,
+        "toolCallsTotal": 543,
+        "reasoningItemsTotal": 37,
+        "commentaryMessagesTotal": 5,
+        "execCallsTotal": 41,
+        "mcpToolCallsTotal": 0,
+        "surfwrightCliCallsTotal": 21,
+        "headedBrowserModeCallsTotal": 0
+      },
+      "artifacts": {
+        "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004",
+        "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004/report/metrics.full.json",
+        "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004/report/metrics.summary.md",
+        "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i004-20260223t102457z-i004/campaign.run.state.json"
+      },
+      "deltas": {
+        "vsPrev": {
+          "tokensPct": 0.29695940337390014,
+          "wallPct": 0.040380150396784144
+        },
+        "vsBaseline": {
+          "tokensPct": 1.4019345836388146,
+          "wallPct": 1.7085504206419018
+        }
+      },
+      "outcome": "mixed",
+      "evidence": "tokens +46508; wallMs +4661ms; toolCalls -85"
     }
   ],
   "latest": {
-    "iteration": 1,
-    "iterationId": "20260223T101215Z-i001",
-    "createdAt": "2026-02-23T10:13:03.999Z",
+    "iteration": 4,
+    "iterationId": "20260223T102457Z-i004",
+    "createdAt": "2026-02-23T10:27:02.120Z",
     "scopeId": "mission-018-infinite-scroll-chunks",
     "missionScopeType": "single",
     "missionIds": [
       "018-infinite-scroll-chunks"
     ],
-    "label": "baseline-scope",
-    "hypothesis": "scope history baseline",
+    "agentsPerMission": 1,
+    "flowIds": [],
+    "label": "iter-004-sample",
+    "hypothesis": "sample third post-commit run",
     "change": "no code change",
     "changeTags": [
-      "baseline"
+      "sample"
     ],
     "runStatus": "valid",
     "metrics": {
@@ -106,33 +273,33 @@
       "mismatchCount": 0,
       "retriesTotal": 0,
       "timeoutsTotal": 0,
-      "wallTimeMsTotal": 44337,
-      "tokensTotal": 84566,
-      "toolCallsTotal": 249,
-      "reasoningItemsTotal": 15,
-      "commentaryMessagesTotal": 4,
-      "execCallsTotal": 17,
+      "wallTimeMsTotal": 120089,
+      "tokensTotal": 203122,
+      "toolCallsTotal": 543,
+      "reasoningItemsTotal": 37,
+      "commentaryMessagesTotal": 5,
+      "execCallsTotal": 41,
       "mcpToolCallsTotal": 0,
-      "surfwrightCliCallsTotal": 14,
+      "surfwrightCliCallsTotal": 21,
       "headedBrowserModeCallsTotal": 0
     },
     "artifacts": {
-      "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001",
-      "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001/report/metrics.full.json",
-      "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001/report/metrics.summary.md",
-      "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i001-20260223t101215z-i001/campaign.run.state.json"
+      "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004",
+      "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004/report/metrics.full.json",
+      "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004/report/metrics.summary.md",
+      "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i004-20260223t102457z-i004/campaign.run.state.json"
     },
     "deltas": {
       "vsPrev": {
-        "tokensPct": null,
-        "wallPct": null
+        "tokensPct": 0.29695940337390014,
+        "wallPct": 0.040380150396784144
       },
       "vsBaseline": {
-        "tokensPct": 0,
-        "wallPct": 0
+        "tokensPct": 1.4019345836388146,
+        "wallPct": 1.7085504206419018
       }
     },
-    "outcome": "baseline",
-    "evidence": "baseline"
+    "outcome": "mixed",
+    "evidence": "tokens +46508; wallMs +4661ms; toolCalls -85"
   }
 }

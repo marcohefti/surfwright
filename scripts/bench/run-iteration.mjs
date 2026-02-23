@@ -18,11 +18,18 @@ import { getCoreMetrics, buildDelta } from "./lib/run-iteration-metrics.mjs";
 import { buildCampaignSpec } from "./lib/run-iteration-spec.mjs";
 import { parseRunIterationArgs } from "./lib/run-iteration-args.mjs";
 import {
+  buildFlowIds,
   buildScopeId,
   ensureHistoryFileHeader,
   ensureMissionAssets,
+  extractChangedPath,
+  isLoopDataPath,
+  looksLikeNoChange,
   makeHeadlessShim,
+  resolveAgentsPerMission,
+  resolveIterationMode,
   resolveMissionSelection,
+  resolveNativeScheduling,
   scopePaths,
 } from "./lib/run-iteration-support.mjs";
 
@@ -39,6 +46,17 @@ function main() {
   const loopId = args.loopId || String(config.loopId || "").trim();
   if (!loopId) {
     die("loop id missing (set in config or --loop-id)");
+  }
+
+  let iterationMode;
+  let agentsPerMission;
+  let nativeScheduling;
+  try {
+    iterationMode = resolveIterationMode(args, config);
+    agentsPerMission = resolveAgentsPerMission(config, args);
+    nativeScheduling = resolveNativeScheduling(config, agentsPerMission);
+  } catch (error) {
+    die(error instanceof Error ? error.message : String(error));
   }
 
   let missionIds;
@@ -87,11 +105,34 @@ function main() {
   fs.mkdirSync(metadataDir, { recursive: true });
 
   const stageDurations = {};
+  const flowIds = buildFlowIds(agentsPerMission, "surfwright");
 
   try {
     const gitHead = runShell("git rev-parse HEAD", { logPath: path.join(logsDir, "git-head.json") }).stdout.trim();
     const gitStatus = runShell("git status --porcelain", { logPath: path.join(logsDir, "git-status.json") }).stdout.trim();
     const changedFiles = gitStatus ? gitStatus.split(/\r?\n/).map((line) => line.trim()).filter(Boolean) : [];
+    const changedPaths = changedFiles.map((line) => extractChangedPath(line)).filter(Boolean);
+    const nonLoopDataChanges = changedPaths.filter((filePath) => !isLoopDataPath(filePath));
+    const previousHistoryRow = historyRows.length > 0 ? historyRows[historyRows.length - 1] : null;
+
+    if (iterationMode === "optimize" && !args.allowNoChange) {
+      const hypothesis = String(args.hypothesis || "").trim();
+      const change = String(args.change || "").trim();
+      if (!hypothesis) {
+        throw new Error("optimize mode requires --hypothesis (or pass --mode sample)");
+      }
+      if (!change || looksLikeNoChange(change)) {
+        throw new Error("optimize mode requires a real --change description (not 'no code change'); use --mode sample for variance runs");
+      }
+      if (previousHistoryRow) {
+        const previousHead = String(previousHistoryRow?.git?.head || "").trim();
+        const headChanged = Boolean(previousHead) && previousHead !== gitHead;
+        if (!headChanged && nonLoopDataChanges.length === 0) {
+          throw new Error("optimize mode detected no change since previous iteration (same git head and no non-loop file changes). Apply a change or run with --mode sample.");
+        }
+      }
+    }
+
     fs.writeFileSync(path.join(metadataDir, "git.status.porcelain.txt"), `${gitStatus}\n`, "utf8");
     runShell(`git diff --binary > ${JSON.stringify(path.join(metadataDir, "git.diff.patch"))}`, {
       logPath: path.join(logsDir, "git-diff-worktree.json"),
@@ -130,6 +171,9 @@ function main() {
       loopId,
       campaignId,
       missionIds,
+      flowIds,
+      maxInflightPerStrategy: nativeScheduling.maxInflightPerStrategy,
+      minStartIntervalMs: nativeScheduling.minStartIntervalMs,
       outRoot,
       repoRoot,
       reportDir,
@@ -149,6 +193,9 @@ function main() {
         iteration,
         iterationId,
         label,
+        iterationMode,
+        agentsPerMission,
+        flowIds,
         campaignId,
         historyPath: path.relative(repoRoot, historyPath),
         specPath: path.relative(repoRoot, specPath),
@@ -201,7 +248,7 @@ function main() {
       [
         "node scripts/bench/score-iteration.mjs",
         `--state ${JSON.stringify(runStatePath)}`,
-        "--flow surfwright",
+        "--flow-prefix surfwright",
         `--out-dir ${JSON.stringify(reportDir)}`,
         `--label ${JSON.stringify(label)}`,
         "--json",
@@ -240,11 +287,14 @@ function main() {
       missionScopeType: missionIds.length === 1 ? "single" : "cluster",
       missionId: missionIds.length === 1 ? missionIds[0] : "",
       missionIds,
+      agentsPerMission,
+      flowIds,
       comparisonScope: "same-scope",
       iteration,
       iterationId,
       createdAt: new Date().toISOString(),
       label,
+      iterationMode,
       hypothesis: args.hypothesis || "",
       change: args.change || "",
       changeTags: toTagList(args.tags),
@@ -263,6 +313,7 @@ function main() {
         status: String(reportJson?.status || ""),
         gatesPassed: Number(reportJson?.gatesPassed || 0),
         gatesFailed: Number(reportJson?.gatesFailed || 0),
+        flowIds,
         outRoot: path.relative(repoRoot, outRoot),
         specPath: path.relative(repoRoot, specPath),
       },
@@ -311,9 +362,12 @@ function main() {
       loopId,
       scopeId,
       missionIds,
+      agentsPerMission,
+      flowIds,
       iteration,
       iterationId,
       label,
+      iterationMode,
       historyPath: path.relative(repoRoot, historyPath),
       campaignId,
       runStatePath: path.relative(repoRoot, runStatePath),
@@ -341,6 +395,8 @@ function main() {
       missionScopeType: missionIds.length === 1 ? "single" : "cluster",
       missionId: missionIds.length === 1 ? missionIds[0] : "",
       missionIds,
+      agentsPerMission,
+      flowIds,
       comparisonScope: "same-scope",
       iteration,
       iterationId,
@@ -348,6 +404,7 @@ function main() {
       label,
       hypothesis: args.hypothesis || "",
       change: args.change || "",
+      iterationMode,
       changeTags: toTagList(args.tags),
       noCommitPush: true,
       status: "failed",
@@ -382,9 +439,12 @@ function main() {
       loopId,
       scopeId,
       missionIds,
+      agentsPerMission,
+      flowIds,
       iteration,
       iterationId,
       label,
+      iterationMode,
       historyPath: path.relative(repoRoot, historyPath),
       error: errorMessage,
     };

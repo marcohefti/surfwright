@@ -5,6 +5,10 @@
   "defaultMissionIds": [
     "018-infinite-scroll-chunks"
   ],
+  "agentsPerMission": 1,
+  "nativeMaxInflightPerStrategy": 6,
+  "nativeMinStartIntervalMs": 150,
+  "defaultIterationMode": "optimize",
   "model": "gpt-5.3-codex-spark",
   "reasoningEffort": "medium",
   "reasoningPolicy": "best_effort",

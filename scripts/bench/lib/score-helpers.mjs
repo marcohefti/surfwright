@@ -193,6 +193,8 @@ export function round(value) {
 
 export function buildMarkdown(metrics) {
   const lines = [];
+  const flowSelection = metrics.flowSelection || {};
+  const flowIds = Array.isArray(flowSelection.flowIds) ? flowSelection.flowIds : [];
   lines.push("# SurfWright Iteration Metrics");
   lines.push("");
   lines.push(`- label: \`${metrics.label || ""}\``);
@@ -200,6 +202,9 @@ export function buildMarkdown(metrics) {
   lines.push(`- runId: \`${metrics.campaign.runId}\``);
   lines.push(`- status: \`${metrics.campaign.status}\``);
   lines.push(`- missionsCompleted: \`${metrics.campaign.missionsCompleted}/${metrics.campaign.totalMissions}\``);
+  if (flowIds.length > 0) {
+    lines.push(`- flows: \`${flowIds.join(",")}\``);
+  }
   lines.push("");
   lines.push("## Aggregate");
   lines.push("");
@@ -222,11 +227,11 @@ export function buildMarkdown(metrics) {
   lines.push("");
   lines.push("## Mission Table");
   lines.push("");
-  lines.push("| missionId | status | verified | wall ms | tokens | tool calls | reasoning | commentary | exec | surf cli | headed | mcp | output chars |");
-  lines.push("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+  lines.push("| flowId | slot | missionId | status | verified | wall ms | tokens | tool calls | reasoning | commentary | exec | surf cli | headed | mcp | output chars |");
+  lines.push("|---|---:|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
   for (const mission of metrics.missions) {
     lines.push(
-      `| ${mission.missionId} | ${mission.status} | ${mission.verifiedOk} | ${mission.wallTimeMs} | ${mission.tokensTotal} | ${mission.toolCallsTotal} | ${mission.reasoningItems} | ${mission.commentaryMessages} | ${mission.trace.execCommandBegin} | ${mission.trace.surfwrightCliCalls} | ${mission.trace.headedBrowserModeCalls} | ${mission.trace.mcpToolCallBegin} | ${mission.trace.commandOutputDeltaChars} |`,
+      `| ${mission.flowId || ""} | ${mission.agentSlot || 0} | ${mission.missionId} | ${mission.status} | ${mission.verifiedOk} | ${mission.wallTimeMs} | ${mission.tokensTotal} | ${mission.toolCallsTotal} | ${mission.reasoningItems} | ${mission.commentaryMessages} | ${mission.trace.execCommandBegin} | ${mission.trace.surfwrightCliCalls} | ${mission.trace.headedBrowserModeCalls} | ${mission.trace.mcpToolCallBegin} | ${mission.trace.commandOutputDeltaChars} |`,
     );
   }
   lines.push("");
@@ -246,7 +251,7 @@ export function buildMarkdown(metrics) {
     lines.push("- none");
   } else {
     for (const row of metrics.topSlowCommands) {
-      lines.push(`- [${row.missionId}] ${row.durationMs}ms :: ${row.commandPreview}`);
+      lines.push(`- [${row.flowId || "?"}|${row.missionId}] ${row.durationMs}ms :: ${row.commandPreview}`);
     }
   }
   lines.push("");

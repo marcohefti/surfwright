@@ -77,13 +77,14 @@ All notable changes to SurfWright are documented here.
 - [cli] JSON output remains default and now also accepts explicit `--json` as a no-op compatibility flag.
 - [cli] `target <subcommand> --target <id>` is now accepted as a compatibility alias for positional `targetId` on target subcommands.
 - [zcl] Switched the versioned browser-control campaign to `promptMode=exam` with split mission sources (`promptSource` + `oracleSource`) and `evaluation.mode=oracle` via script evaluator.
+- [skill] Reduced the SurfWright runtime skill surface to a single bootstrap file (`skills/surfwright/SKILL.md`) and moved non-runtime guidance to maintainer docs.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
 - [errors] `E_BROWSER_START_FAILED`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_IO`, and `E_STATE_LOCK_TIMEOUT` now include bounded hints/hintContext for faster operator triage.
 - [target] Stale `targetId` errors now include stronger replacement-target hints and hint context to speed recovery in concurrent session flows.
 - [target] Upload wait-stage timeout failures now return typed `E_WAIT_TIMEOUT` instead of leaking as `E_INTERNAL` when wait conditions are not satisfied in time.
-- [cli] Commander unknown-option failures for `contract` now include focused alternatives for `--search` and `--compact` to reduce cold-start option probing loops.
+- [cli] Commander unknown-option failures for `contract` now include focused alternatives for `--search` and `--full` to reduce cold-start option probing loops.
 - [browser] Managed startup retry wait-plan is now explicitly exported/tested to guard first-attempt and retry envelopes against regression.
 - [cli] Commander parse failures now map to typed JSON `E_QUERY_INVALID` responses (with bounded hints/hintContext) in JSON mode.
 - [target] `target eval` timeout handling now performs best-effort CDP termination/stop-loading recovery so follow-up commands remain stable after `E_EVAL_TIMEOUT`.
@@ -104,6 +105,7 @@ All notable changes to SurfWright are documented here.
 - [target] Removed `target style` output aliases `element` and `computed`; use `inspected` and `values`.
 - [target] Removed `target spawn` output alias `childTargetId`; use canonical `targetId`.
 - [state] Removed state schema migration layer; incompatible state versions now reset to empty state.
+- [skill] Removed `skills/surfwright/references/*`; runtime agent guidance now lives only in `skills/surfwright/SKILL.md`.
 
 ## [0.1.2] - 2026-02-17
 

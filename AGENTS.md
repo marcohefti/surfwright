@@ -40,7 +40,7 @@ surfwright contract
 - Changing maintainer process/policy:
   update `docs/agent-dev-flow.md` and/or `docs/maintaining-agent-surface.md`.
 - Changing runtime agent guidance:
-  update `skills/surfwright/SKILL.md` or `skills/surfwright/references/*`.
+  update `skills/surfwright/SKILL.md` (runtime guidance stays in this single file).
 - Adding automation:
   use `docs/agent-dev-flow.md` script gate to decide `scripts/` vs `skills/surfwright/scripts/`.
 - Changing release/publish/update policy:

@@ -35,14 +35,14 @@ Use this matrix before editing docs/skills.
 
 | Change type | Must update | Usually update | Usually no change |
 |---|---|---|---|
-| Command added/removed/renamed | feature `manifest.ts` + `register-commands.ts`, contract tests/snapshot, `README.md` commands section, skill workflow reference | `docs/maintaining-agent-surface.md` if process changed | `AGENTS.md` unless routing changed |
-| Flag/default/timeout semantic change | contract payload if user-facing, tests, skill workflow reference | `README.md` examples | architecture docs |
-| Output JSON shape change | contract payload, tests, skill references that parse/use fields | `README.md` examples | unrelated docs |
-| Error code or retryability change | contract payload, tests, `skills/surfwright/references/error-handling.md` | `README.md` typed error examples | `AGENTS.md` |
+| Command added/removed/renamed | feature `manifest.ts` + `register-commands.ts`, contract tests/snapshot, `README.md` commands section, skill bootstrap | `docs/maintaining-agent-surface.md` if process changed | `AGENTS.md` unless routing changed |
+| Flag/default/timeout semantic change | contract payload if user-facing, tests, skill bootstrap | `README.md` examples | architecture docs |
+| Output JSON shape change | contract payload, tests, skill bootstrap rules that parse/use fields | `README.md` examples | unrelated docs |
+| Error code or retryability change | contract payload, tests, skill bootstrap failure-routing rule | `README.md` typed error examples | `AGENTS.md` |
 | New edge case discovered in real browser run | ingress fixture + integration test, `docs/fixture-ingress-workflow.md` | `README.md` examples if user-visible | contract payload unless behavior changed |
-| Internal refactor with no behavior change | tests if coverage shifts | docs only if architecture/process changed | skill refs |
-| New operator troubleshooting workflow | skill references | `README.md` if common | contract payload |
-| Dev process change (how we maintain) | `docs/maintaining-agent-surface.md` or this file | `AGENTS.md` routing section | skill references |
+| Internal refactor with no behavior change | tests if coverage shifts | docs only if architecture/process changed | skill bootstrap |
+| New operator troubleshooting workflow | `docs/*.md` | `README.md` if common | contract payload |
+| Dev process change (how we maintain) | `docs/maintaining-agent-surface.md` or this file | `AGENTS.md` routing section | skill bootstrap |
 
 ## Decision Rules: `docs/` vs `skills/` vs scripts
 
@@ -52,17 +52,10 @@ Use this matrix before editing docs/skills.
 - Content is about architecture, process, release discipline, or repository policy.
 - The information is not required at runtime for an agent to execute CLI tasks.
 
-### Create/update `skills/surfwright/references/*.md` when
-
-- Audience is runtime agent using the shipped CLI.
-- Content improves action quality in active loops (workflows, error handling, retry policy, runbooks).
-- Details are too specific/long for `SKILL.md` but should be discoverable by the skill.
-
 ### Create/update `skills/surfwright/SKILL.md` when
 
 - Invocation conditions change.
 - Core operating loop or mandatory guardrails change.
-- Reference map changes.
 
 Keep this file concise and procedural.
 
@@ -95,7 +88,7 @@ If fewer than two are true, prefer documentation over new script surface.
 1. Update code.
 2. Update `surfwright contract` producer if user-facing behavior changed.
 3. Update tests.
-4. Update skill references used by runtime agents.
+4. Update runtime skill bootstrap (`skills/surfwright/SKILL.md`) used by runtime agents.
 5. Update `README.md` examples if user-visible flows changed.
 6. Run validation commands.
 
@@ -164,7 +157,7 @@ surfwright target snapshot <targetId>
 ## Drift Policy
 
 - Runtime contract + tests are authoritative for machine behavior.
-- Skill references must reflect current contract semantics.
+- Runtime skill bootstrap must reflect current contract semantics.
 - If docs disagree with code, fix docs in the same change window.
 
 ## Policy Rules

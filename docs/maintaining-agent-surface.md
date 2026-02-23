@@ -11,7 +11,7 @@ Update these in the same PR:
 2. Runtime behavior in `src/core/*` used by those features
 3. Contract composition in `src/core/cli-contract.ts` (manifest aggregation only)
 4. Contract tests in `test/commands.contract.test.mjs` and snapshot fixture at `test/fixtures/contract/contract.snapshot.json`
-5. Skill references in `skills/surfwright/references/*` when workflows/errors change
+5. Runtime skill bootstrap in `skills/surfwright/SKILL.md` when agent protocol changes
 
 ## 2) Validate before merge
 

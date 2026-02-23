@@ -15,8 +15,8 @@ const disallowedTopLevelDocs = new Set([
 ]);
 
 const surfwrightSkillPolicy = {
-  maxBytes: 2600,
-  maxLines: 80,
+  maxBytes: 1800,
+  maxLines: 45,
   requiredSnippets: [
     "surfwright contract --search",
     "session fresh",
@@ -27,6 +27,7 @@ const surfwrightSkillPolicy = {
   disallowedPatterns: [
     /\bsurfwright\b[^\n`]*\s--help\b/i,
     /surfwright\s+help\b/i,
+    /references\//i,
   ],
 };
 
@@ -166,6 +167,7 @@ function validateSkillDir(skillDirPath) {
 }
 
 function validateSurfwrightSkill(skillFilePath, skillBody) {
+  const skillDirPath = path.dirname(skillFilePath);
   const byteSize = Buffer.byteLength(skillBody, "utf8");
   const lineCount = skillBody.split(/\r?\n/).length;
 
@@ -193,6 +195,11 @@ function validateSurfwrightSkill(skillFilePath, skillBody) {
     if (!lower.includes(snippet.toLowerCase())) {
       fail(`${skillFilePath}: SurfWright SKILL.md missing required guidance snippet: ${snippet}`);
     }
+  }
+
+  const referencesDir = path.join(skillDirPath, "references");
+  if (fs.existsSync(referencesDir)) {
+    fail(`${skillDirPath}: SurfWright skill must not include references/ docs; keep runtime guidance in SKILL.md only`);
   }
 }
 

@@ -127,6 +127,8 @@ When running the SurfWright benchmark loop (`bench/agent-loop/*`, `pnpm bench:lo
 - Do not reinterpret requested iteration counts as no-change variance sampling.
 - Use `--mode sample` only when the operator explicitly asks for baseline/variance samples.
 - Treat `agentsPerMission` as the per-run parallel fan-out knob (one fresh agent per `flow+mission` attempt); honor config or explicit CLI override.
+- Run loop work on a dedicated feature branch (never directly on `main`) so iteration commits stay traceable.
+- For optimize iterations, keep one commit per evaluated change and include scope/iteration context in commit messages.
 
 ## Commit Message Rule
 

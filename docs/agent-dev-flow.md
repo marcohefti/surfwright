@@ -112,6 +112,7 @@ pnpm bench:loop:history --mission-id 018-infinite-scroll-chunks
 
 Iteration meaning is strict: optimize by default (`change -> run -> evaluate`). Use `--mode sample` only when explicit variance sampling is requested.
 Set parallel run fan-out with `agentsPerMission` in `bench/agent-loop/config.json` (or `--agents-per-mission`) when one mission should be sampled by multiple fresh agents in one run.
+Run optimize loop development on a feature branch and keep one commit per evaluated change so future sessions can audit iteration history quickly.
 
 ### Bugfix TDD loop (recommended)
 

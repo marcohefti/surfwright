@@ -23,7 +23,9 @@ Run an agent-improvement loop where each cycle is:
 
 ## Hard Rules
 
-- No commit/push unless explicitly requested.
+- Use a dedicated feature branch for loop work; do not run optimize loop development directly on `main`.
+- Keep one commit per optimize iteration change so later sessions can trace what changed and why.
+- Push is optional and operator-controlled; do not push unless explicitly requested.
 - Runs/artifacts stay out of git under `tmp/`.
 - Use mission-only exam prompts (no oracle leakage).
 - `agentsPerMission` controls parallel fresh-agent fan-out per mission in one run.
@@ -118,6 +120,19 @@ Rebuild result sheet for a scope:
 ```bash
 pnpm bench:loop:history --mission-id 018-infinite-scroll-chunks
 pnpm bench:loop:history --scope-id mission-018-infinite-scroll-chunks
+```
+
+Branch + commit trace setup:
+
+```bash
+git checkout -b feature/bench-loop-<scope-or-theme>
+```
+
+After each optimize iteration is evaluated:
+
+```bash
+git add <changed-files>
+git commit -m "feat(bench): <scope> iNNN <change-summary>"
 ```
 
 ## Versioned Outputs (in repo)

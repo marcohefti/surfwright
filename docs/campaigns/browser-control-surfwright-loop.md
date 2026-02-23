@@ -120,7 +120,9 @@ If any headed call still appears in traces, the iteration fails with a headless-
 
 ## Session Policy
 
-- No commit/push during loop runs unless explicitly requested.
+- Run optimize loop development on a feature branch (not `main`).
+- Keep one commit per optimize iteration change to preserve a clean historical chain.
+- Do not push unless explicitly requested.
 - High-risk refactors are allowed when backed by iteration evidence.
 - Keep prompts mission-only/exam-style (no oracle leakage).
 - Scope histories are append-only (no reset command).

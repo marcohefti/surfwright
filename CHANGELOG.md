@@ -97,6 +97,7 @@ All notable changes to SurfWright are documented here.
 - [bench] Reworked history summarization into repository-native per-scope result sheets (`bench/agent-loop/scopes/<scopeId>/RESULT_SHEET.*`) focused on change intent, outcome, and evidence deltas.
 - [bench] Removed `bench:loop:run --reset-history`; scope ledgers are append-only by default.
 - [bench] `bench:loop:score` now supports flow-family aggregation (`--flow-prefix`) so sharded SurfWright fan-out runs are scored as one iteration, with per-attempt `flowId`/slot evidence in CSV/markdown outputs.
+- [bench] Documented branch-first loop policy: run optimize iterations on feature branches with commit-per-change traceability, and push only when explicitly requested.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.

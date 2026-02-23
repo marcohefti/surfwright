@@ -3,8 +3,8 @@
 - loopId: `surfwright-benchmark-loop`
 - scopeId: `mission-018-infinite-scroll-chunks`
 - missionSet: `018-infinite-scroll-chunks`
-- generatedAt: `2026-02-23T12:09:09.086Z`
-- iterations: `6`
+- generatedAt: `2026-02-23T12:13:23.356Z`
+- iterations: `7`
 - mode: `one campaign per run, one mission scope per run, fresh agent per flow+mission attempt`
 
 ## Baseline References
@@ -22,18 +22,19 @@
 | 4 | 1 | iter-004-sample | mixed | 1/1 | 203122 | 120089 | 543 | +29.7% | +4.0% | sample third post-commit run | no code change | tokens +46508; wallMs +4661ms; toolCalls -85 |
 | 5 | 1 | exp-01 | mixed | 1/1 | 154482 | 166510 | 556 | -23.9% | +38.7% | Core contract search should return scroll primitives in one call to cut discovery retries. | Expanded contract --core command set with scroll primitives and scroll-plan guidance. | tokens -48640; wallMs +46421ms; toolCalls +13 |
 | 6 | 1 | exp-02 | regressed | 1/1 | 372221 | 204222 | 682 | +140.9% | +22.6% | Bundling selector-count sampling into scroll-plan should reduce repeated scroll-watch/count loops and wall time. | Added scroll-plan count-query options and per-step count summary in deterministic output. | tokens +217739; wallMs +37712ms; toolCalls +126 |
+| 7 | 1 | exp-03 | regressed | 0/1 | 78971 | 99692 | 278 | -78.8% | -51.2% | Providing explicit run step schema/examples in contract guidance should reduce run-plan trial-and-error and source probing. | Added run guidance to contract with supported step ids and plan-json examples. | tokens -293250; wallMs -104530ms; toolCalls -404 |
 
 ## Latest Snapshot
 
-- iteration: `#6` (exp-02)
+- iteration: `#7` (exp-03)
 - agentsPerMission: `1`
 - flowIds: `surfwright`
 - outcome: `regressed`
-- verified: `1/1`
-- tokens: `372221`
-- wall ms: `204222`
-- tool calls: `682`
+- verified: `0/1`
+- tokens: `78971`
+- wall ms: `99692`
+- tool calls: `278`
 - headed browser calls: `0`
-- run state: `tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T120540Z-i006/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i006-20260223t120540z-i006/campaign.run.state.json`
-- metrics: `tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T120540Z-i006/report/metrics.full.json`
+- run state: `tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T121139Z-i007/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i007-20260223t121139z-i007/campaign.run.state.json`
+- metrics: `tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T121139Z-i007/report/metrics.full.json`
 

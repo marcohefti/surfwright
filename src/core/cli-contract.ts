@@ -139,6 +139,17 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
     ],
     proofSchema: null,
   },
+  {
+    id: "run",
+    signature: "run(plan) -> { steps[], stepsById, stepResults[] }",
+    examples: [
+      "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"snapshot\"}]}'",
+      "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"count\",\"selector\":\"a\",\"as\":\"links\"}]}'",
+      "surfwright run --doctor --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"eval\",\"expression\":\"return document.title\"}]}'",
+      "Supported step ids: open,list,snapshot,find,count,click,click-read,fill,upload,read,eval,wait,extract",
+    ],
+    proofSchema: null,
+  },
 ];
 
 function contractFingerprintInput(): string {

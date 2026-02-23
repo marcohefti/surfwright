@@ -196,6 +196,18 @@ test("contract --core returns focused bootstrap payload", () => {
   assert.equal(payload.commands.some((entry) => entry.id === "target.count"), true);
 });
 
+test("contract --core --search run exposes runnable plan guidance", () => {
+  const result = runCli(["contract", "--core", "--search", "run"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.commands.some((entry) => entry.id === "run"), true);
+  const runGuidance = payload.guidance.find((entry) => entry.id === "run");
+  assert.notEqual(runGuidance, undefined);
+  assert.equal(Array.isArray(runGuidance.examples), true);
+  assert.equal(runGuidance.examples.some((entry) => entry.includes("Supported step ids:")), true);
+});
+
 test("contract rejects incompatible mode flags", () => {
   const result = runCli(["contract", "--core", "--full"]);
   assert.equal(result.status, 1);

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-02-23T12:09:09.086Z",
+  "generatedAt": "2026-02-23T12:13:23.356Z",
   "loopId": "surfwright-benchmark-loop",
   "scopeId": "mission-018-infinite-scroll-chunks",
   "scopeMissionIds": [
@@ -361,12 +361,69 @@
       },
       "outcome": "regressed",
       "evidence": "tokens +217739; wallMs +37712ms; toolCalls +126"
+    },
+    {
+      "iteration": 7,
+      "iterationId": "20260223T121139Z-i007",
+      "createdAt": "2026-02-23T12:13:23.239Z",
+      "scopeId": "mission-018-infinite-scroll-chunks",
+      "missionScopeType": "single",
+      "missionIds": [
+        "018-infinite-scroll-chunks"
+      ],
+      "agentsPerMission": 1,
+      "flowIds": [
+        "surfwright"
+      ],
+      "label": "exp-03",
+      "hypothesis": "Providing explicit run step schema/examples in contract guidance should reduce run-plan trial-and-error and source probing.",
+      "change": "Added run guidance to contract with supported step ids and plan-json examples.",
+      "changeTags": [
+        "contract",
+        "run-guidance",
+        "discovery"
+      ],
+      "runStatus": "invalid",
+      "metrics": {
+        "attempts": 1,
+        "verifiedOk": 0,
+        "mismatchCount": 1,
+        "retriesTotal": 0,
+        "timeoutsTotal": 0,
+        "wallTimeMsTotal": 99692,
+        "tokensTotal": 78971,
+        "toolCallsTotal": 278,
+        "reasoningItemsTotal": 14,
+        "commentaryMessagesTotal": 4,
+        "execCallsTotal": 10,
+        "mcpToolCallsTotal": 0,
+        "surfwrightCliCallsTotal": 1,
+        "headedBrowserModeCallsTotal": 0
+      },
+      "artifacts": {
+        "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T121139Z-i007",
+        "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T121139Z-i007/report/metrics.full.json",
+        "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T121139Z-i007/report/metrics.summary.md",
+        "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T121139Z-i007/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i007-20260223t121139z-i007/campaign.run.state.json"
+      },
+      "deltas": {
+        "vsPrev": {
+          "tokensPct": -0.7878384078276078,
+          "wallPct": -0.5118449530412982
+        },
+        "vsBaseline": {
+          "tokensPct": -0.06616134143745714,
+          "wallPct": 1.248505762681282
+        }
+      },
+      "outcome": "regressed",
+      "evidence": "tokens -293250; wallMs -104530ms; toolCalls -404"
     }
   ],
   "latest": {
-    "iteration": 6,
-    "iterationId": "20260223T120540Z-i006",
-    "createdAt": "2026-02-23T12:09:08.981Z",
+    "iteration": 7,
+    "iterationId": "20260223T121139Z-i007",
+    "createdAt": "2026-02-23T12:13:23.239Z",
     "scopeId": "mission-018-infinite-scroll-chunks",
     "missionScopeType": "single",
     "missionIds": [
@@ -376,48 +433,48 @@
     "flowIds": [
       "surfwright"
     ],
-    "label": "exp-02",
-    "hypothesis": "Bundling selector-count sampling into scroll-plan should reduce repeated scroll-watch/count loops and wall time.",
-    "change": "Added scroll-plan count-query options and per-step count summary in deterministic output.",
+    "label": "exp-03",
+    "hypothesis": "Providing explicit run step schema/examples in contract guidance should reduce run-plan trial-and-error and source probing.",
+    "change": "Added run guidance to contract with supported step ids and plan-json examples.",
     "changeTags": [
-      "scroll-plan",
-      "count-sampling",
-      "efficiency"
+      "contract",
+      "run-guidance",
+      "discovery"
     ],
-    "runStatus": "valid",
+    "runStatus": "invalid",
     "metrics": {
       "attempts": 1,
-      "verifiedOk": 1,
-      "mismatchCount": 0,
+      "verifiedOk": 0,
+      "mismatchCount": 1,
       "retriesTotal": 0,
       "timeoutsTotal": 0,
-      "wallTimeMsTotal": 204222,
-      "tokensTotal": 372221,
-      "toolCallsTotal": 682,
-      "reasoningItemsTotal": 50,
-      "commentaryMessagesTotal": 8,
-      "execCallsTotal": 50,
+      "wallTimeMsTotal": 99692,
+      "tokensTotal": 78971,
+      "toolCallsTotal": 278,
+      "reasoningItemsTotal": 14,
+      "commentaryMessagesTotal": 4,
+      "execCallsTotal": 10,
       "mcpToolCallsTotal": 0,
-      "surfwrightCliCallsTotal": 0,
+      "surfwrightCliCallsTotal": 1,
       "headedBrowserModeCallsTotal": 0
     },
     "artifacts": {
-      "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T120540Z-i006",
-      "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T120540Z-i006/report/metrics.full.json",
-      "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T120540Z-i006/report/metrics.summary.md",
-      "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T120540Z-i006/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i006-20260223t120540z-i006/campaign.run.state.json"
+      "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T121139Z-i007",
+      "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T121139Z-i007/report/metrics.full.json",
+      "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T121139Z-i007/report/metrics.summary.md",
+      "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T121139Z-i007/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i007-20260223t121139z-i007/campaign.run.state.json"
     },
     "deltas": {
       "vsPrev": {
-        "tokensPct": 1.409478126901516,
-        "wallPct": 0.22648489580205394
+        "tokensPct": -0.7878384078276078,
+        "wallPct": -0.5118449530412982
       },
       "vsBaseline": {
-        "tokensPct": 3.401544355887709,
-        "wallPct": 3.6061303200487176
+        "tokensPct": -0.06616134143745714,
+        "wallPct": 1.248505762681282
       }
     },
     "outcome": "regressed",
-    "evidence": "tokens +217739; wallMs +37712ms; toolCalls +126"
+    "evidence": "tokens -293250; wallMs -104530ms; toolCalls -404"
   }
 }

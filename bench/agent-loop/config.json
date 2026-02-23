@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "loopId": "surfwright-benchmark-loop",
+  "defaultMissionId": "018-infinite-scroll-chunks",
+  "defaultMissionIds": [
+    "018-infinite-scroll-chunks"
+  ],
+  "model": "gpt-5.3-codex-spark",
+  "reasoningEffort": "medium",
+  "reasoningPolicy": "best_effort",
+  "attemptTimeoutMs": 240000,
+  "campaignGlobalTimeoutMs": 7200000,
+  "mcpMaxToolCalls": 120,
+  "mcpIdleTimeoutMs": 45000,
+  "freshAgentPerAttempt": true,
+  "regenerateExamPack": false,
+  "preflightCommands": [
+    "pnpm -s build",
+    "pnpm -s skill:validate"
+  ],
+  "baselineReferences": {
+    "chromeMcpMetricsJson": "tmp/zcl/mcp-comparison/output/20260223-073509Z-5m/FULL_RUN_METRICS.json",
+    "surfwrightCanarySummaryJson": "tmp/zerocontext/mcp-comparison-surfwright-only/runs/20260222-221805Z-f9b7cc/suite.run.summary.json"
+  }
+}

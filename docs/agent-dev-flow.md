@@ -103,6 +103,13 @@ If fewer than two are true, prefer documentation over new script surface.
 pnpm zcl:efficiency:check --run <runDir>
 ```
 
+5. For iterative SurfWright optimization, run one mission-scoped campaign per change and update the result sheet:
+
+```bash
+pnpm bench:loop:run --label baseline --mission-id 018-infinite-scroll-chunks
+pnpm bench:loop:history --mission-id 018-infinite-scroll-chunks
+```
+
 ### Bugfix TDD loop (recommended)
 
 When fixing a bug or regression, default to the TDD workflow:

@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-02-23T10:13:04.105Z",
+  "loopId": "surfwright-benchmark-loop",
+  "scopeId": "mission-018-infinite-scroll-chunks",
+  "scopeMissionIds": [
+    "018-infinite-scroll-chunks"
+  ],
+  "config": {
+    "schemaVersion": 1,
+    "loopId": "surfwright-benchmark-loop",
+    "defaultMissionId": "018-infinite-scroll-chunks",
+    "defaultMissionIds": [
+      "018-infinite-scroll-chunks"
+    ],
+    "model": "gpt-5.3-codex-spark",
+    "reasoningEffort": "medium",
+    "reasoningPolicy": "best_effort",
+    "attemptTimeoutMs": 240000,
+    "campaignGlobalTimeoutMs": 7200000,
+    "mcpMaxToolCalls": 120,
+    "mcpIdleTimeoutMs": 45000,
+    "freshAgentPerAttempt": true,
+    "regenerateExamPack": false,
+    "preflightCommands": [
+      "pnpm -s build",
+      "pnpm -s skill:validate"
+    ],
+    "baselineReferences": {
+      "chromeMcpMetricsJson": "tmp/zcl/mcp-comparison/output/20260223-073509Z-5m/FULL_RUN_METRICS.json",
+      "surfwrightCanarySummaryJson": "tmp/zerocontext/mcp-comparison-surfwright-only/runs/20260222-221805Z-f9b7cc/suite.run.summary.json"
+    }
+  },
+  "iterations": [
+    {
+      "iteration": 1,
+      "iterationId": "20260223T101215Z-i001",
+      "createdAt": "2026-02-23T10:13:03.999Z",
+      "scopeId": "mission-018-infinite-scroll-chunks",
+      "missionScopeType": "single",
+      "missionIds": [
+        "018-infinite-scroll-chunks"
+      ],
+      "label": "baseline-scope",
+      "hypothesis": "scope history baseline",
+      "change": "no code change",
+      "changeTags": [
+        "baseline"
+      ],
+      "runStatus": "valid",
+      "metrics": {
+        "attempts": 1,
+        "verifiedOk": 1,
+        "mismatchCount": 0,
+        "retriesTotal": 0,
+        "timeoutsTotal": 0,
+        "wallTimeMsTotal": 44337,
+        "tokensTotal": 84566,
+        "toolCallsTotal": 249,
+        "reasoningItemsTotal": 15,
+        "commentaryMessagesTotal": 4,
+        "execCallsTotal": 17,
+        "mcpToolCallsTotal": 0,
+        "surfwrightCliCallsTotal": 14,
+        "headedBrowserModeCallsTotal": 0
+      },
+      "artifacts": {
+        "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001",
+        "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001/report/metrics.full.json",
+        "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001/report/metrics.summary.md",
+        "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i001-20260223t101215z-i001/campaign.run.state.json"
+      },
+      "deltas": {
+        "vsPrev": {
+          "tokensPct": null,
+          "wallPct": null
+        },
+        "vsBaseline": {
+          "tokensPct": 0,
+          "wallPct": 0
+        }
+      },
+      "outcome": "baseline",
+      "evidence": "baseline"
+    }
+  ],
+  "latest": {
+    "iteration": 1,
+    "iterationId": "20260223T101215Z-i001",
+    "createdAt": "2026-02-23T10:13:03.999Z",
+    "scopeId": "mission-018-infinite-scroll-chunks",
+    "missionScopeType": "single",
+    "missionIds": [
+      "018-infinite-scroll-chunks"
+    ],
+    "label": "baseline-scope",
+    "hypothesis": "scope history baseline",
+    "change": "no code change",
+    "changeTags": [
+      "baseline"
+    ],
+    "runStatus": "valid",
+    "metrics": {
+      "attempts": 1,
+      "verifiedOk": 1,
+      "mismatchCount": 0,
+      "retriesTotal": 0,
+      "timeoutsTotal": 0,
+      "wallTimeMsTotal": 44337,
+      "tokensTotal": 84566,
+      "toolCallsTotal": 249,
+      "reasoningItemsTotal": 15,
+      "commentaryMessagesTotal": 4,
+      "execCallsTotal": 17,
+      "mcpToolCallsTotal": 0,
+      "surfwrightCliCallsTotal": 14,
+      "headedBrowserModeCallsTotal": 0
+    },
+    "artifacts": {
+      "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001",
+      "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001/report/metrics.full.json",
+      "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001/report/metrics.summary.md",
+      "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T101215Z-i001/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i001-20260223t101215z-i001/campaign.run.state.json"
+    },
+    "deltas": {
+      "vsPrev": {
+        "tokensPct": null,
+        "wallPct": null
+      },
+      "vsBaseline": {
+        "tokensPct": 0,
+        "wallPct": 0
+      }
+    },
+    "outcome": "baseline",
+    "evidence": "baseline"
+  }
+}

@@ -53,6 +53,11 @@ All notable changes to SurfWright are documented here.
 - [docs] Pinned the native browser-control ZCL campaign to `runner.model=gpt-5.3-codex-spark` with `runner.modelReasoningEffort=medium` and `runner.modelReasoningPolicy=best_effort`.
 - [zcl] Added browser-control exam-mode asset tooling: `scripts/zcl/build-browser-control-exam-pack.mjs` (split prompt/oracle generation) and `scripts/zcl/eval-browser-control-oracle.mjs` (host-side oracle evaluator).
 - [zcl] Added generated browser-control prompt set (`missions/browser-control/prompts/*.md`) and oracle set (`missions/browser-control/oracles/*.json`) for 20 mission IDs.
+- [bench] Added SurfWright benchmark loop assets: `bench/agent-loop/config.json`, `bench/agent-loop/AGENT_LOOP.md`, and versioned per-scope outputs under `bench/agent-loop/scopes/<scopeId>/` (`history.jsonl`, `RESULT_SHEET.md`, `RESULT_SHEET.json`, `NEXT_ITERATION_TASK.md`).
+- [bench] Added `scripts/bench/run-iteration.mjs` to run pinned SurfWright-only ZCL campaign iterations end-to-end (preflight, lint, doctor, run, report, score, history append).
+- [bench] Added `scripts/bench/score-iteration.mjs` for raw attempt/trace extraction (mission metrics, exec/MCP counts, subcommand frequency, slow command hotspots).
+- [bench] Added `scripts/bench/summarize-history.mjs` to convert scope-ledger data into result sheets and next-iteration briefs.
+- [cli] Added npm scripts `bench:loop:run`, `bench:loop:score`, and `bench:loop:history`.
 
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
@@ -85,6 +90,10 @@ All notable changes to SurfWright are documented here.
 - [cli] `target <subcommand> --target <id>` is now accepted as a compatibility alias for positional `targetId` on target subcommands.
 - [zcl] Switched the versioned browser-control campaign to `promptMode=exam` with split mission sources (`promptSource` + `oracleSource`) and `evaluation.mode=oracle` via script evaluator.
 - [skill] Reduced the SurfWright runtime skill surface to a single bootstrap file (`skills/surfwright/SKILL.md`) and moved non-runtime guidance to maintainer docs.
+- [bench] Reworked benchmark execution to one-campaign-per-scope semantics with explicit `--mission-id` / `--mission-ids`, per-scope history isolation, and fresh-agent enforcement per attempt.
+- [bench] Added headless guard wiring for benchmark runs (campaign-level shim rewrites `--browser-mode headed` to headless and flags headed trace calls).
+- [bench] Reworked history summarization into repository-native per-scope result sheets (`bench/agent-loop/scopes/<scopeId>/RESULT_SHEET.*`) focused on change intent, outcome, and evidence deltas.
+- [bench] Removed `bench:loop:run --reset-history`; scope ledgers are append-only by default.
 
 ### Fixed
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
@@ -156,6 +165,7 @@ All notable changes to SurfWright are documented here.
 - [contract] `open` and `session` JSON outputs now include `profile` when a workspace profile is in use.
 - [cli] JSON output is now the default for all commands; use `--no-json` for human-friendly summaries and `--pretty` for multiline JSON.
 - [docs] Documented headed/headless defaults and a minimal human login handoff recipe (README + skill).
+- [docs] Added benchmark loop runbook `docs/campaigns/browser-control-surfwright-loop.md` and linked loop assets from campaign docs.
 - [target] `target snapshot` now accepts `0` for `--max-chars`, `--max-headings`, `--max-buttons`, and `--max-links` to omit categories.
 - [target] `target extract --kind blog/news/docs/generic` DOM presets now prioritize semantic tags/ARIA roles over site-shaped class selectors.
 - [target] `target eval --script-file` now supports `--mode expr` to align return-value semantics with `--expr` (expression vs program).

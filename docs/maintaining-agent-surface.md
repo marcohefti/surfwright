@@ -100,6 +100,26 @@ pnpm zcl:efficiency:check --run <runDir>
 
 Budget source: `test/fixtures/perf/zcl-efficiency-budgets.json`.
 
+## 5c) Benchmark verification loop
+
+For repeated SurfWright-only optimization cycles, use the versioned loop harness:
+
+```bash
+pnpm bench:loop:run --label baseline --mission-id 018-infinite-scroll-chunks
+pnpm bench:loop:history --mission-id 018-infinite-scroll-chunks
+```
+
+Versioned loop assets:
+
+- `bench/agent-loop/config.json`
+- `bench/agent-loop/AGENT_LOOP.md`
+- `bench/agent-loop/scopes/<scopeId>/history.jsonl`
+- `bench/agent-loop/scopes/<scopeId>/RESULT_SHEET.md`
+
+Non-versioned per-iteration artifacts:
+
+- `tmp/zerocontext/bench-loop/<loopId>/<scopeId>/<iterationId>/...`
+
 ## 6) Edge-case fixture policy
 
 When real-world behavior reveals a new edge case, add a deterministic ingress fixture and test coverage in the same change window.

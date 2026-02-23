@@ -30,6 +30,7 @@ export type TargetScrollPlanReport = {
   sessionSource: SessionSource;
   targetId: string;
   actionId: string;
+  mode: "absolute" | "relative";
   settleMs: number;
   maxScroll: number;
   viewport: { width: number; height: number };

@@ -19,15 +19,18 @@ export const SUPPORTED_STEP_IDS = new Set([
   "extract",
 ]);
 
+export type PipelineAssertionInput = {
+  equals?: Record<string, unknown>;
+  contains?: Record<string, unknown>;
+  truthy?: unknown;
+  exists?: unknown;
+  gte?: Record<string, unknown>;
+};
+
 export type PipelineStepInput = {
   id: string;
   as?: string;
-  assert?: {
-    equals?: Record<string, unknown>;
-    contains?: Record<string, unknown>;
-    truthy?: unknown;
-    exists?: unknown;
-  };
+  assert?: PipelineAssertionInput;
   targetId?: string;
   url?: string;
   reuse?: string;
@@ -49,7 +52,9 @@ export type PipelineStepInput = {
   untilPath?: string;
   untilEquals?: unknown;
   untilGte?: number;
+  untilDeltaGte?: number;
   untilChanged?: boolean;
+  scrollMode?: string;
   index?: number;
   nth?: number;
   first?: boolean;
@@ -132,6 +137,7 @@ export type PipelineOps = {
     targetId: string;
     timeoutMs: number;
     sessionId?: string;
+    modeInput?: string;
     stepsCsv?: string;
     settleMs?: number;
     countSelectorQuery?: string;
@@ -291,5 +297,6 @@ export type LoadedPlan = {
   plan: {
     steps: PipelineStepInput[];
     result?: PipelineResultMap;
+    require?: PipelineAssertionInput;
   };
 };

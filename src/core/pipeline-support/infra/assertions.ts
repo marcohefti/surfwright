@@ -1,9 +1,15 @@
-import type { PipelineStepInput } from "./plan.js";
+import type { PipelineAssertionInput, PipelineStepInput } from "./plan-types.js";
 import { readPathValue } from "./plan.js";
 
-export function evaluateAssertions(step: PipelineStepInput, report: Record<string, unknown>) {
-  const assert = step.assert;
-  const checks: Array<{ kind: string; path: string; ok: boolean; message: string }> = [];
+export type PipelineAssertionCheck = {
+  kind: string;
+  path: string;
+  ok: boolean;
+  message: string;
+};
+
+export function evaluateAssertionSpec(assert: PipelineAssertionInput | undefined, report: Record<string, unknown>) {
+  const checks: PipelineAssertionCheck[] = [];
   if (!assert || typeof assert !== "object") {
     return { total: 0, failed: 0, checks };
   }
@@ -11,14 +17,39 @@ export function evaluateAssertions(step: PipelineStepInput, report: Record<strin
   for (const [pathExpr, expected] of Object.entries(equals)) {
     const actual = readPathValue(report, pathExpr);
     const ok = Object.is(actual, expected);
-    checks.push({ kind: "equals", path: pathExpr, ok, message: ok ? "ok" : `expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}` });
+    checks.push({
+      kind: "equals",
+      path: pathExpr,
+      ok,
+      message: ok ? "ok" : `expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}`,
+    });
   }
   const contains = typeof assert.contains === "object" && assert.contains !== null ? assert.contains : {};
   for (const [pathExpr, needle] of Object.entries(contains)) {
     const actual = readPathValue(report, pathExpr);
     const text = typeof actual === "string" ? actual : "";
     const expectedText = typeof needle === "string" ? needle : JSON.stringify(needle);
-    checks.push({ kind: "contains", path: pathExpr, ok: text.includes(expectedText), message: text.includes(expectedText) ? "ok" : `expected string to include ${JSON.stringify(expectedText)}` });
+    const ok = text.includes(expectedText);
+    checks.push({
+      kind: "contains",
+      path: pathExpr,
+      ok,
+      message: ok ? "ok" : `expected string to include ${JSON.stringify(expectedText)}`,
+    });
+  }
+  const gte = typeof assert.gte === "object" && assert.gte !== null ? assert.gte : {};
+  for (const [pathExpr, thresholdRaw] of Object.entries(gte)) {
+    const actual = readPathValue(report, pathExpr);
+    const threshold = typeof thresholdRaw === "number" ? thresholdRaw : Number.NaN;
+    const ok = Number.isFinite(threshold) && typeof actual === "number" && actual >= threshold;
+    checks.push({
+      kind: "gte",
+      path: pathExpr,
+      ok,
+      message: ok
+        ? "ok"
+        : `expected number >= ${JSON.stringify(thresholdRaw)} but got ${JSON.stringify(actual)}`,
+    });
   }
   const truthy = Array.isArray(assert.truthy) ? assert.truthy : [];
   for (const pathExpr of truthy) {
@@ -37,4 +68,8 @@ export function evaluateAssertions(step: PipelineStepInput, report: Record<strin
     checks.push({ kind: "exists", path: pathExpr, ok, message: ok ? "ok" : "expected path to exist" });
   }
   return { total: checks.length, failed: checks.filter((entry) => !entry.ok).length, checks };
+}
+
+export function evaluateAssertions(step: PipelineStepInput, report: Record<string, unknown>) {
+  return evaluateAssertionSpec(step.assert, report);
 }

@@ -6,7 +6,7 @@ import { saveTargetSnapshot } from "../../state/index.js";
 import { parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
-import { parseSettleMs, parseStepsCsv } from "./parse.js";
+import { parseScrollPlanMode, parseSettleMs, parseStepsCsv } from "./parse.js";
 import type { TargetScrollPlanReport } from "./types.js";
 
 const DEFAULT_SCROLL_PLAN_SETTLE_MS = 300;
@@ -30,6 +30,7 @@ export async function targetScrollPlan(opts: {
   timeoutMs: number;
   sessionId?: string;
   persistState?: boolean;
+  modeInput?: string;
   stepsCsv?: string;
   settleMs?: number;
   countSelectorQuery?: string;
@@ -38,6 +39,7 @@ export async function targetScrollPlan(opts: {
 }): Promise<TargetScrollPlanReport> {
   const startedAt = Date.now();
   const requestedTargetId = sanitizeTargetId(opts.targetId);
+  const mode = parseScrollPlanMode(opts.modeInput);
   const requestedSteps = parseStepsCsv(opts.stepsCsv);
   const settleMs = parseSettleMs(opts.settleMs, DEFAULT_SCROLL_PLAN_SETTLE_MS);
   const countSelectorQuery = typeof opts.countSelectorQuery === "string" ? opts.countSelectorQuery.trim() : "";
@@ -106,17 +108,20 @@ export async function targetScrollPlan(opts: {
       const maxScroll = Math.max(0, Math.round(scrollHeight - innerHeight));
       return {
         maxScroll,
+        currentScrollY: Math.max(0, Math.round(runtime.window?.scrollY ?? 0)),
         viewportWidth: runtime.window?.innerWidth ?? 0,
         viewportHeight: runtime.window?.innerHeight ?? 0,
       };
     });
 
     const steps: TargetScrollPlanReport["steps"] = [];
+    let currentScrollY = Math.max(0, Math.min(runtimeInfo.currentScrollY, runtimeInfo.maxScroll));
     for (let idx = 0; idx < requestedSteps.length; idx += 1) {
       const requestedY = requestedSteps[idx];
       const requestedUnit: TargetScrollPlanReport["steps"][number]["requestedUnit"] =
         requestedY > 0 && requestedY <= 1 ? "ratio" : "px";
-      const requestedAbsolute = requestedUnit === "ratio" ? Math.round(runtimeInfo.maxScroll * requestedY) : requestedY;
+      const requestedDistance = requestedUnit === "ratio" ? Math.round(runtimeInfo.maxScroll * requestedY) : requestedY;
+      const requestedAbsolute = mode === "relative" ? currentScrollY + requestedDistance : requestedDistance;
       const appliedY = Math.max(0, Math.min(requestedAbsolute, runtimeInfo.maxScroll));
       await evaluator.evaluate(
         ({ y }: { y: number }) => {
@@ -140,6 +145,7 @@ export async function targetScrollPlan(opts: {
         };
         return Math.round(runtime.window?.scrollY ?? 0);
       });
+      currentScrollY = Math.max(0, Math.min(achievedY, runtimeInfo.maxScroll));
       const count = countLocator ? await countMatches(countLocator, countQuery?.visibleOnly ?? false) : null;
       steps.push({
         index: idx,
@@ -172,6 +178,7 @@ export async function targetScrollPlan(opts: {
       sessionSource,
       targetId: requestedTargetId,
       actionId: newActionId(),
+      mode,
       settleMs,
       maxScroll: runtimeInfo.maxScroll,
       viewport: {

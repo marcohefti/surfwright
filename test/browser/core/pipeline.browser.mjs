@@ -169,6 +169,37 @@ test("run executes fill and upload steps with deterministic step reports", () =>
   assert.equal(payload.steps[3].report.text.includes("uploaded:1"), true);
 });
 
+test("run enforces top-level require assertions against projected result", () => {
+  requireBrowser();
+
+  const html = `<title>Pipeline Require</title><main><a href="#1">One</a><a href="#2">Two</a></main>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const planPath = path.join(TEST_STATE_DIR, "plan-require.json");
+  const plan = {
+    steps: [
+      { id: "open", url: dataUrl, timeoutMs: 5000 },
+      { id: "count", selector: "a", as: "links", timeoutMs: 5000, noPersist: true },
+    ],
+    result: {
+      linkCount: "steps.links.count",
+    },
+    require: {
+      gte: {
+        "result.linkCount": 2,
+      },
+    },
+  };
+  fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
+
+  const result = runCli(["run", "--plan", planPath, "--timeout-ms", "5000"]);
+  assert.equal(result.status, 0, result.stdout || result.stderr);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.result.linkCount, 2);
+  assert.equal(payload.require.failed, 0);
+  assert.equal(payload.require.total, 1);
+});
+
 test("run upload step honors submitSelector and upload result verification options", () => {
   requireBrowser();
 

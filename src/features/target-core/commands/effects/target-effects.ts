@@ -87,6 +87,7 @@ export const targetScrollPlanCommandSpec: TargetCommandSpec = {
       .command("scroll-plan")
       .description(scrollPlanMeta.summary)
       .argument("<targetId>", "Target handle returned by open/target list")
+      .option("--mode <mode>", "Scroll mode: absolute positions or relative deltas", "absolute")
       .option("--steps <csv>", "Comma-separated requested scrollY positions", "0,300,600,900")
       .option("--count-selector <query>", "Optional selector query to count at each scroll step")
       .option("--count-contains <text>", "Optional contains filter applied to --count-selector matches")
@@ -98,6 +99,7 @@ export const targetScrollPlanCommandSpec: TargetCommandSpec = {
       .action(async (
         targetId: string,
         options: {
+          mode: string;
           steps: string;
           countSelector?: string;
           countContains?: string;
@@ -116,6 +118,7 @@ export const targetScrollPlanCommandSpec: TargetCommandSpec = {
             targetId,
             timeoutMs: options.timeoutMs,
             sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
+            modeInput: options.mode,
             stepsCsv: options.steps,
             countSelectorQuery: options.countSelector,
             countContainsQuery: options.countContains,

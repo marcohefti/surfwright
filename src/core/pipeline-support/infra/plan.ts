@@ -9,7 +9,14 @@ import {
 } from "./plan-types.js";
 
 export { SUPPORTED_STEP_IDS };
-export type { LoadedPlan, PipelineLintIssue, PipelineOps, PipelineResultMap, PipelineStepInput } from "./plan-types.js";
+export type {
+  LoadedPlan,
+  PipelineAssertionInput,
+  PipelineLintIssue,
+  PipelineOps,
+  PipelineResultMap,
+  PipelineStepInput,
+} from "./plan-types.js";
 
 const TEMPLATE_EXACT_RE = /^\{\{\s*([^{}]+?)\s*\}\}$/;
 const TEMPLATE_EMBEDDED_RE = /\{\{\s*([^{}]+?)\s*\}\}/g;
@@ -154,7 +161,97 @@ export function parseOptionalStringOrStringArray(input: unknown, pathLabel: stri
   return out;
 }
 
-export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<string, unknown> }): PipelineLintIssue[] {
+function lintAssertionSpec(opts: {
+  input: unknown;
+  path: string;
+  issues: PipelineLintIssue[];
+  isTemplateString: (value: unknown) => boolean;
+}): void {
+  const { input, path, issues, isTemplateString } = opts;
+  if (typeof input === "undefined") {
+    return;
+  }
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    issues.push({ level: "error", path, message: `${path} must be an object` });
+    return;
+  }
+  const assertion = input as {
+    equals?: unknown;
+    contains?: unknown;
+    truthy?: unknown;
+    exists?: unknown;
+    gte?: unknown;
+  };
+  if (
+    typeof assertion.equals !== "undefined" &&
+    (typeof assertion.equals !== "object" || assertion.equals === null || Array.isArray(assertion.equals))
+  ) {
+    issues.push({ level: "error", path: `${path}.equals`, message: `${path}.equals must be an object map` });
+  }
+  if (
+    typeof assertion.contains !== "undefined" &&
+    (typeof assertion.contains !== "object" || assertion.contains === null || Array.isArray(assertion.contains))
+  ) {
+    issues.push({ level: "error", path: `${path}.contains`, message: `${path}.contains must be an object map` });
+  }
+  if (
+    typeof assertion.gte !== "undefined" &&
+    (typeof assertion.gte !== "object" || assertion.gte === null || Array.isArray(assertion.gte))
+  ) {
+    issues.push({ level: "error", path: `${path}.gte`, message: `${path}.gte must be an object map` });
+  } else if (typeof assertion.gte === "object" && assertion.gte !== null) {
+    for (const [expr, threshold] of Object.entries(assertion.gte)) {
+      if (typeof threshold !== "number" && !isTemplateString(threshold)) {
+        issues.push({
+          level: "error",
+          path: `${path}.gte.${expr}`,
+          message: `${path}.gte values must be numbers`,
+        });
+      }
+      if (typeof threshold === "number" && !Number.isFinite(threshold)) {
+        issues.push({
+          level: "error",
+          path: `${path}.gte.${expr}`,
+          message: `${path}.gte values must be finite numbers`,
+        });
+      }
+    }
+  }
+  if (typeof assertion.truthy !== "undefined") {
+    if (!Array.isArray(assertion.truthy)) {
+      issues.push({ level: "error", path: `${path}.truthy`, message: `${path}.truthy must be a string[]` });
+    } else {
+      for (let idx = 0; idx < assertion.truthy.length; idx += 1) {
+        const item = assertion.truthy[idx];
+        if (typeof item !== "string" || item.trim().length === 0) {
+          issues.push({
+            level: "error",
+            path: `${path}.truthy[${idx}]`,
+            message: `${path}.truthy entries must be non-empty strings`,
+          });
+        }
+      }
+    }
+  }
+  if (typeof assertion.exists !== "undefined") {
+    if (!Array.isArray(assertion.exists)) {
+      issues.push({ level: "error", path: `${path}.exists`, message: `${path}.exists must be a string[]` });
+    } else {
+      for (let idx = 0; idx < assertion.exists.length; idx += 1) {
+        const item = assertion.exists[idx];
+        if (typeof item !== "string" || item.trim().length === 0) {
+          issues.push({
+            level: "error",
+            path: `${path}.exists[${idx}]`,
+            message: `${path}.exists entries must be non-empty strings`,
+          });
+        }
+      }
+    }
+  }
+}
+
+export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<string, unknown>; require?: unknown }): PipelineLintIssue[] {
   const issues: PipelineLintIssue[] = [];
   const aliases = new Set<string>();
 
@@ -195,6 +292,21 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
       issues.push({ level: "error", path: `steps[${index}].value`, message: "value is required for fill" });
     }
     if (step.id === "scroll-plan" || step.id === "scrollPlan") {
+      if (typeof step.scrollMode !== "undefined" && typeof step.scrollMode !== "string" && !isTemplateString(step.scrollMode)) {
+        issues.push({ level: "error", path: `steps[${index}].scrollMode`, message: "scrollMode must be a string" });
+      }
+      if (
+        typeof step.scrollMode === "string" &&
+        !isTemplateString(step.scrollMode) &&
+        step.scrollMode !== "absolute" &&
+        step.scrollMode !== "relative"
+      ) {
+        issues.push({
+          level: "error",
+          path: `steps[${index}].scrollMode`,
+          message: "scrollMode must be one of: absolute, relative",
+        });
+      }
       if (typeof step.steps !== "undefined" && typeof step.steps !== "string" && !isTemplateString(step.steps)) {
         issues.push({ level: "error", path: `steps[${index}].steps`, message: "steps must be a csv string" });
       }
@@ -296,6 +408,7 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
       }
       const hasUntilEquals = Object.prototype.hasOwnProperty.call(step, "untilEquals");
       const hasUntilGte = Object.prototype.hasOwnProperty.call(step, "untilGte");
+      const hasUntilDeltaGte = Object.prototype.hasOwnProperty.call(step, "untilDeltaGte");
       const hasUntilChanged = Object.prototype.hasOwnProperty.call(step, "untilChanged");
       const enabledUntilChanged = step.untilChanged === true || isTemplateString(step.untilChanged);
       if (hasUntilGte && typeof step.untilGte !== "number" && !isTemplateString(step.untilGte)) {
@@ -303,6 +416,20 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
       }
       if (typeof step.untilGte === "number" && !Number.isInteger(step.untilGte)) {
         issues.push({ level: "error", path: `steps[${index}].untilGte`, message: "untilGte must be an integer" });
+      }
+      if (hasUntilDeltaGte && typeof step.untilDeltaGte !== "number" && !isTemplateString(step.untilDeltaGte)) {
+        issues.push({
+          level: "error",
+          path: `steps[${index}].untilDeltaGte`,
+          message: "untilDeltaGte must be an integer",
+        });
+      }
+      if (typeof step.untilDeltaGte === "number" && !Number.isInteger(step.untilDeltaGte)) {
+        issues.push({
+          level: "error",
+          path: `steps[${index}].untilDeltaGte`,
+          message: "untilDeltaGte must be an integer",
+        });
       }
       if (hasUntilChanged && typeof step.untilChanged !== "boolean" && !isTemplateString(step.untilChanged)) {
         issues.push({
@@ -318,12 +445,12 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
           message: "untilChanged must be true when provided",
         });
       }
-      const conditionCount = Number(hasUntilEquals) + Number(hasUntilGte) + Number(enabledUntilChanged);
+      const conditionCount = Number(hasUntilEquals) + Number(hasUntilGte) + Number(hasUntilDeltaGte) + Number(enabledUntilChanged);
       if (conditionCount !== 1) {
         issues.push({
           level: "error",
           path: `steps[${index}]`,
-          message: "repeat-until requires exactly one condition: untilEquals, untilGte, or untilChanged=true",
+          message: "repeat-until requires exactly one condition: untilEquals, untilGte, untilDeltaGte, or untilChanged=true",
         });
       }
     }
@@ -357,18 +484,12 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
         aliases.add(step.as);
       }
     }
-    if (typeof step.assert !== "undefined") {
-      if (typeof step.assert !== "object" || step.assert === null) {
-        issues.push({ level: "error", path: `steps[${index}].assert`, message: "assert must be an object" });
-      } else {
-        if (typeof step.assert.equals !== "undefined" && (typeof step.assert.equals !== "object" || step.assert.equals === null || Array.isArray(step.assert.equals))) {
-          issues.push({ level: "error", path: `steps[${index}].assert.equals`, message: "assert.equals must be an object map" });
-        }
-        if (typeof step.assert.contains !== "undefined" && (typeof step.assert.contains !== "object" || step.assert.contains === null || Array.isArray(step.assert.contains))) {
-          issues.push({ level: "error", path: `steps[${index}].assert.contains`, message: "assert.contains must be an object map" });
-        }
-      }
-    }
+    lintAssertionSpec({
+      input: step.assert,
+      path: `steps[${index}].assert`,
+      issues,
+      isTemplateString,
+    });
   }
   if (typeof input.result !== "undefined") {
     if (typeof input.result !== "object" || input.result === null || Array.isArray(input.result)) {
@@ -396,24 +517,40 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
       }
     }
   }
+  lintAssertionSpec({
+    input: input.require,
+    path: "require",
+    issues,
+    isTemplateString,
+  });
   return issues;
 }
 
-function parsePlanObject(raw: unknown, source: string): { steps: PipelineStepInput[]; result?: PipelineResultMap } {
+function parsePlanObject(raw: unknown, source: string): {
+  steps: PipelineStepInput[];
+  result?: PipelineResultMap;
+  require?: PipelineStepInput["assert"];
+} {
   if (typeof raw !== "object" || raw === null) {
     throw new CliError("E_QUERY_INVALID", `${source} must be a JSON object`);
   }
-  const record = raw as { steps?: unknown; result?: unknown };
+  const record = raw as { steps?: unknown; result?: unknown; require?: unknown };
   if (!Array.isArray(record.steps) || record.steps.length === 0) {
     throw new CliError("E_QUERY_INVALID", "plan.steps must be a non-empty array");
   }
-  if (typeof record.result === "undefined") {
-    return { steps: record.steps as PipelineStepInput[] };
-  }
-  if (typeof record.result !== "object" || record.result === null || Array.isArray(record.result)) {
+  if (typeof record.result !== "undefined" && (typeof record.result !== "object" || record.result === null || Array.isArray(record.result))) {
     throw new CliError("E_QUERY_INVALID", "plan.result must be an object map");
   }
-  return { steps: record.steps as PipelineStepInput[], result: record.result as PipelineResultMap };
+  if (typeof record.require !== "undefined" && (typeof record.require !== "object" || record.require === null || Array.isArray(record.require))) {
+    throw new CliError("E_QUERY_INVALID", "plan.require must be an object");
+  }
+  return {
+    steps: record.steps as PipelineStepInput[],
+    ...(typeof record.result === "undefined" ? {} : { result: record.result as PipelineResultMap }),
+    ...(typeof record.require === "undefined"
+      ? {}
+      : { require: record.require as PipelineStepInput["assert"] }),
+  };
 }
 
 function parseJsonWithContext(raw: string, source: string): unknown {

@@ -132,10 +132,11 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
   },
   {
     id: "target.scroll-plan",
-    signature: "scroll-plan(targetId, steps(px|ratio)?, countSelector?) -> { steps[], countSummary?, maxScroll }",
+    signature: "scroll-plan(targetId, mode?, steps(px|ratio)?, countSelector?) -> { mode, steps[], countSummary?, maxScroll }",
     examples: [
       "surfwright target scroll-plan <targetId> --steps 0,600,1200,1800 --settle-ms 300",
       "surfwright target scroll-plan <targetId> --steps 0,1,1 --count-selector '.chunk' --settle-ms 500",
+      "surfwright target scroll-plan <targetId> --mode relative --steps 800,800,800 --count-selector '.item' --settle-ms 350",
       "surfwright target scroll-plan <targetId> --steps 0,800,1600 --count-selector '.item' --count-visible-only",
     ],
     proofSchema: null,
@@ -147,7 +148,9 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
       "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"snapshot\"}]}'",
       "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"count\",\"selector\":\"a\",\"as\":\"links\"}]}'",
       "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"repeat-until\",\"step\":{\"id\":\"count\",\"selector\":\".row\"},\"untilPath\":\"count\",\"untilGte\":3}]}'",
+      "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"repeat-until\",\"step\":{\"id\":\"scroll-plan\",\"scrollMode\":\"relative\",\"steps\":\"900,900,900\",\"countSelector\":\".chunk\"},\"untilPath\":\"countSummary.delta\",\"untilDeltaGte\":1,\"maxAttempts\":4}]}'",
       "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"count\",\"selector\":\"a\",\"as\":\"links\"}],\"result\":{\"linkCount\":\"steps.links.count\"}}'",
+      "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"count\",\"selector\":\".chunk\",\"as\":\"chunks\"}],\"result\":{\"chunksLoaded\":\"steps.chunks.count\"},\"require\":{\"gte\":{\"result.chunksLoaded\":2}}}'",
       "surfwright run --doctor --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"eval\",\"expression\":\"return document.title\"}]}'",
       "Supported step ids: open,list,snapshot,find,count,scroll-plan,repeat-until,click,click-read,fill,upload,read,eval,wait,extract",
     ],

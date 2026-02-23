@@ -9,6 +9,8 @@ const MAX_SAMPLE_COUNT = 1000;
 const MAX_PROPERTY_NAME_CHARS = 80;
 const MAX_PROPERTIES_COUNT = 12;
 
+export type ScrollPlanMode = "absolute" | "relative";
+
 export function parseStepsCsv(input: string | undefined): number[] {
   const raw = typeof input === "string" ? input.trim() : "";
   if (raw.length === 0) {
@@ -38,6 +40,17 @@ export function parseStepsCsv(input: string | undefined): number[] {
     values.push(value);
   }
   return values;
+}
+
+export function parseScrollPlanMode(input: string | undefined): ScrollPlanMode {
+  const raw = typeof input === "string" ? input.trim().toLowerCase() : "";
+  if (raw.length === 0 || raw === "absolute") {
+    return "absolute";
+  }
+  if (raw === "relative") {
+    return "relative";
+  }
+  throw new CliError("E_QUERY_INVALID", "mode must be one of: absolute, relative");
 }
 
 export function parseSettleMs(input: number | undefined, fallback: number): number {

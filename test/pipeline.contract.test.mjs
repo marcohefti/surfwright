@@ -305,3 +305,107 @@ test("run doctor rejects result projection with non-string path", () => {
   assert.equal(payload.mode, "doctor");
   assert.equal(payload.valid, false);
 });
+
+test("run doctor accepts repeat-until untilDeltaGte condition", () => {
+  const plan = {
+    steps: [
+      { id: "open", url: "https://example.com" },
+      {
+        id: "repeat-until",
+        step: { id: "count", selector: ".row" },
+        untilPath: "count",
+        untilDeltaGte: 1,
+        maxAttempts: 4,
+      },
+    ],
+  };
+  const result = runCli(["run",
+    "--doctor",
+    "--plan-json",
+    JSON.stringify(plan),
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "doctor");
+  assert.equal(payload.valid, true);
+});
+
+test("run doctor rejects repeat-until with multiple conditions", () => {
+  const plan = {
+    steps: [
+      { id: "open", url: "https://example.com" },
+      {
+        id: "repeat-until",
+        step: { id: "count", selector: ".row" },
+        untilPath: "count",
+        untilGte: 2,
+        untilDeltaGte: 1,
+      },
+    ],
+  };
+  const result = runCli(["run",
+    "--doctor",
+    "--plan-json",
+    JSON.stringify(plan),
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "doctor");
+  assert.equal(payload.valid, false);
+});
+
+test("run doctor accepts plan require assertions and reports check count", () => {
+  const plan = {
+    steps: [
+      { id: "open", url: "https://example.com" },
+      { id: "count", selector: "a", as: "links" },
+    ],
+    result: {
+      linkCount: "steps.links.count",
+    },
+    require: {
+      gte: { "result.linkCount": 1 },
+      exists: ["sessionId"],
+    },
+  };
+  const result = runCli(["run",
+    "--doctor",
+    "--plan-json",
+    JSON.stringify(plan),
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "doctor");
+  assert.equal(payload.valid, true);
+  assert.equal(payload.requireChecks, 2);
+});
+
+test("run doctor rejects require gte threshold that is not numeric", () => {
+  const plan = {
+    steps: [{ id: "open", url: "https://example.com" }],
+    require: {
+      gte: { "sessionId.length": "two" },
+    },
+  };
+  const result = runCli(["run",
+    "--doctor",
+    "--plan-json",
+    JSON.stringify(plan),
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "doctor");
+  assert.equal(payload.valid, false);
+});

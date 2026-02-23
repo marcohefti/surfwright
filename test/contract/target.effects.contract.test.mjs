@@ -61,6 +61,21 @@ test("target scroll-plan validates count filters before session resolution", () 
   assert.equal(payload.code, "E_QUERY_INVALID");
 });
 
+test("target scroll-plan validates mode before session resolution", () => {
+  const result = runCli(["target",
+    "scroll-plan",
+    "ABCDEF123456",
+    "--mode",
+    "diagonal",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+});
+
 test("target transition-trace validates max-events before session resolution", () => {
   const result = runCli(["target",
     "transition-trace",

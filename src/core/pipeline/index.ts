@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import { CliError } from "../errors.js";
 import {
   SUPPORTED_STEP_IDS,
+  evaluateAssertionSpec,
   evaluateAssertions,
   lintPlan,
   parseOptionalBoolean,
@@ -48,6 +49,20 @@ type PipelineStepExecutorInput = {
 
 const REPEAT_UNTIL_DEFAULT_ATTEMPTS = 5;
 const REPEAT_UNTIL_MAX_ATTEMPTS = 25;
+
+function countAssertionChecks(input: PipelineStepInput["assert"] | undefined): number {
+  if (!input || typeof input !== "object") {
+    return 0;
+  }
+  const equalsCount =
+    typeof input.equals === "object" && input.equals !== null ? Object.keys(input.equals).length : 0;
+  const containsCount =
+    typeof input.contains === "object" && input.contains !== null ? Object.keys(input.contains).length : 0;
+  const gteCount = typeof input.gte === "object" && input.gte !== null ? Object.keys(input.gte).length : 0;
+  const truthyCount = Array.isArray(input.truthy) ? input.truthy.filter((entry) => typeof entry === "string").length : 0;
+  const existsCount = Array.isArray(input.exists) ? input.exists.filter((entry) => typeof entry === "string").length : 0;
+  return equalsCount + containsCount + gteCount + truthyCount + existsCount;
+}
 
 function projectRunResult(resultMap: PipelineResultMap | undefined, scope: Record<string, unknown>): Record<string, unknown> | undefined {
   if (typeof resultMap === "undefined") {
@@ -126,6 +141,7 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
       targetId: requireStepTargetId(stepTargetId, index),
       timeoutMs,
       sessionId,
+      modeInput: parseOptionalString(step.scrollMode, `steps[${index}].scrollMode`),
       stepsCsv: parseOptionalString(step.steps, `steps[${index}].steps`),
       settleMs: parseOptionalInteger(step.settleMs, `steps[${index}].settleMs`),
       countSelectorQuery: parseOptionalString(step.countSelector, `steps[${index}].countSelector`),
@@ -159,19 +175,27 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
     }
     const hasUntilEquals = Object.prototype.hasOwnProperty.call(step, "untilEquals");
     const hasUntilGte = Object.prototype.hasOwnProperty.call(step, "untilGte");
+    const hasUntilDeltaGte = Object.prototype.hasOwnProperty.call(step, "untilDeltaGte");
     const untilChanged = parseOptionalBoolean(step.untilChanged, `steps[${index}].untilChanged`);
     const hasUntilChanged = untilChanged === true;
-    const conditionCount = Number(hasUntilEquals) + Number(hasUntilGte) + Number(hasUntilChanged);
+    const conditionCount = Number(hasUntilEquals) + Number(hasUntilGte) + Number(hasUntilDeltaGte) + Number(hasUntilChanged);
     if (conditionCount !== 1) {
       throw new CliError(
         "E_QUERY_INVALID",
-        `steps[${index}] repeat-until requires exactly one condition: untilEquals, untilGte, or untilChanged=true`,
+        `steps[${index}] repeat-until requires exactly one condition: untilEquals, untilGte, untilDeltaGte, or untilChanged=true`,
       );
     }
 
     const untilGte = hasUntilGte ? parseOptionalInteger(step.untilGte, `steps[${index}].untilGte`) : undefined;
     if (hasUntilGte && typeof untilGte !== "number") {
       throw new CliError("E_QUERY_INVALID", `steps[${index}].untilGte must be an integer`);
+    }
+    const untilDeltaGte = hasUntilDeltaGte ? parseOptionalInteger(step.untilDeltaGte, `steps[${index}].untilDeltaGte`) : undefined;
+    if (hasUntilDeltaGte && typeof untilDeltaGte !== "number") {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].untilDeltaGte must be an integer`);
+    }
+    if (typeof untilDeltaGte === "number" && untilDeltaGte < 0) {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].untilDeltaGte must be >= 0`);
     }
 
     const maxAttemptsRaw = parseOptionalInteger(step.maxAttempts, `steps[${index}].maxAttempts`);
@@ -230,11 +254,19 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
       }
 
       const currentValue = readPathValue(nestedReport, untilPath);
+      const currentDelta =
+        typeof currentValue === "number" && typeof previousValue === "number" ? currentValue - previousValue : null;
       let matched = false;
       if (hasUntilEquals) {
         matched = isDeepStrictEqual(currentValue, step.untilEquals);
       } else if (hasUntilGte) {
         matched = typeof currentValue === "number" && typeof untilGte === "number" && currentValue >= untilGte;
+      } else if (hasUntilDeltaGte) {
+        matched =
+          attempt > 1 &&
+          typeof currentDelta === "number" &&
+          typeof untilDeltaGte === "number" &&
+          currentDelta >= untilDeltaGte;
       } else if (hasUntilChanged) {
         matched = attempt > 1 && !isDeepStrictEqual(currentValue, previousValue);
       }
@@ -243,6 +275,7 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
         attempt,
         matched,
         value: typeof currentValue === "undefined" ? null : currentValue,
+        ...(typeof currentDelta === "number" ? { delta: currentDelta } : {}),
       });
       previousValue = currentValue;
       lastReport = nestedReport;
@@ -257,6 +290,8 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
         ? { kind: "equals", path: untilPath, expected: step.untilEquals }
         : hasUntilGte
           ? { kind: "gte", path: untilPath, threshold: untilGte ?? null }
+          : hasUntilDeltaGte
+            ? { kind: "delta-gte", path: untilPath, threshold: untilDeltaGte ?? null }
           : { kind: "changed", path: untilPath };
 
     return {
@@ -471,6 +506,7 @@ export async function executePipelinePlan(opts: {
       source: loaded.source,
       stepCount: loaded.plan.steps.length,
       resultMapFields: loaded.plan.result ? Object.keys(loaded.plan.result).length : 0,
+      requireChecks: countAssertionChecks(loaded.plan.require),
       valid: lintErrors.length === 0,
       supportedSteps: [...SUPPORTED_STEP_IDS],
       issues: lintIssues,
@@ -648,6 +684,22 @@ export async function executePipelinePlan(opts: {
     steps: aliases,
   };
   const projectedResult = projectRunResult(loaded.plan.result as PipelineResultMap | undefined, resultScope);
+  const requireScope: Record<string, unknown> =
+    typeof projectedResult === "undefined"
+      ? resultScope
+      : {
+          ...resultScope,
+          result: projectedResult,
+        };
+  const resolvedRequire = resolveTemplateInValue(loaded.plan.require, requireScope, "require") as PipelineStepInput["assert"] | undefined;
+  const requireAssertions = evaluateAssertionSpec(resolvedRequire, requireScope);
+  if (requireAssertions.failed > 0) {
+    const failed = requireAssertions.checks.find((entry) => !entry.ok);
+    throw new CliError(
+      "E_ASSERT_FAILED",
+      `Assertion failed at require ${failed?.path ?? ""}: ${failed?.message ?? "unknown"}`.trim(),
+    );
+  }
 
   const report: Record<string, unknown> = {
     ok: true,
@@ -659,6 +711,7 @@ export async function executePipelinePlan(opts: {
     timeline,
     totalMs: finishedAt - startedAt,
     ...(typeof projectedResult === "undefined" ? {} : { result: projectedResult }),
+    ...(typeof loaded.plan.require === "undefined" ? {} : { require: requireAssertions }),
   };
   if (ndjsonPath) {
     report.logNdjson = { path: ndjsonPath, mode: ndjsonMode };
@@ -680,6 +733,7 @@ export async function executePipelinePlan(opts: {
         timeline,
         totalMs: finishedAt - startedAt,
         ...(typeof projectedResult === "undefined" ? {} : { result: projectedResult }),
+        ...(typeof loaded.plan.require === "undefined" ? {} : { require: requireAssertions }),
       },
     });
   }

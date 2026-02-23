@@ -35,7 +35,9 @@ All notable changes to SurfWright are documented here.
 - [target] Added additive `blockType` classification to `target url-assert` reports for auth/captcha/consent-aware URL assertions.
 - [run] Added `run` plan-step support for `fill` and `upload` so multi-step plans can execute full form workflows without eval glue.
 - [run] Added `run` plan-step support for bounded `repeat-until` loops (`step`, `untilPath`, one condition, `maxAttempts`) to replace ad-hoc shell retry loops.
+- [run] Added `repeat-until.untilDeltaGte` condition for bounded "progress delta" completion checks between attempts.
 - [run] Added top-level `run` plan `result` projection map (`outputField -> sourcePath`) for direct mission-field extraction from step aliases without post-run `jq` glue.
+- [run] Added top-level `run` plan `require` assertions (`equals|contains|gte|truthy|exists`) for deterministic final-output correctness gates.
 - [target] Added `target click-read` as a composed primitive to click and then read bounded text in one deterministic command.
 - [target] Added `target extract --summary` for compact summary/proof fields (`itemCount`, `totalRawCount`, `firstTitle`, `firstUrl`, `firstCommand`, `source`).
 - [open] Added `open --ensure-session <off|if-missing|fresh>` to let `open` bootstrap or fork managed sessions without separate `session` orchestration.
@@ -49,6 +51,7 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target select-option` for first-class native `<select>` control (`--value|--label|--option-index`) with deterministic selected proof fields.
 - [target] Added `target click --proof-check-state` for checkbox/radio proof deltas (`proof.checkState.before/after/changed`).
 - [target] Added `target spawn --proof --assert-title <text>` for compact spawn evidence and title assertion in new-window flows.
+- [target] Added `target scroll-plan --mode <absolute|relative>` for deterministic absolute-position or relative-delta scroll execution in one command.
 - [target] Added `target count --count-only` for compact `{ok,count}` output mode in low-token loops.
 - [state] Added `state disk-prune` for bounded cleanup of run artifacts, capture artifacts, and orphan profile storage (`--dry-run` supported; workspace profile pruning opt-in).
 - [docs] Added a versioned native ZCL browser-control campaign package (`docs/campaigns/browser-control-native-codex.yaml` + `docs/campaigns/browser-control-zcl-native.md`) for repeatable 20-mission feedback runs.
@@ -83,6 +86,7 @@ All notable changes to SurfWright are documented here.
 - [run] Pipeline step execution is now table-driven to keep step parsing/dispatch behavior centralized and reduce drift risk as steps are added.
 - [run] `run` click-step support now forwards deterministic click controls (`within`, `frameScope`, `index|nth`, wait budget, proof/delta/count-after/assert fields) instead of dropping them.
 - [run] Upload plan steps now forward upload action fields `submitSelector`, `expectUploadedFilename`, and result-verification controls (`waitForResult`, `resultSelector`, `resultTextContains`, `resultFilenameRegex`) instead of dropping them.
+- [run] `run --doctor` now reports `requireChecks` to expose final-plan assertion coverage.
 - [target] `target style` now emits a compact additive `proof` payload so `--output-shape proof` is directly actionable without extra parsing.
 - [target] `target style --proof` now includes mission-friendly compact fields (`found`, `targetText`, `styleBg`, `styleColor`, `styleFontSize`, `styleRadius`).
 - [target] `target extract --summary` now includes a `count` alias (same value as `totalRawCount`) for simpler success checks.

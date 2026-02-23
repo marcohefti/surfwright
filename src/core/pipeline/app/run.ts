@@ -135,6 +135,7 @@ export async function runPipeline(opts: {
       targetId: string;
       timeoutMs: number;
       sessionId?: string;
+      modeInput?: string;
       stepsCsv?: string;
       settleMs?: number;
       countSelectorQuery?: string;
@@ -146,6 +147,7 @@ export async function runPipeline(opts: {
         targetId: input.targetId,
         timeoutMs: input.timeoutMs,
         sessionId: input.sessionId,
+        modeInput: input.modeInput,
         stepsCsv: input.stepsCsv,
         settleMs: input.settleMs,
         countSelectorQuery: input.countSelectorQuery,

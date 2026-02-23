@@ -165,6 +165,34 @@ test("target scroll-plan can sample selector counts per step", () => {
   assert.equal(payload.countSummary.last, payload.steps[payload.steps.length - 1].count);
 });
 
+test("target scroll-plan supports relative mode deltas", () => {
+  requireBrowser();
+  const html = `<title>Scroll Plan Relative</title><main style="height:5000px"><h1>scroll-page</h1></main>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openPayload = openTarget(dataUrl);
+
+  const planResult = runCli(["target",
+    "scroll-plan",
+    openPayload.targetId,
+    "--mode",
+    "relative",
+    "--steps",
+    "250,250,250",
+    "--settle-ms",
+    "0",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(planResult.status, 0);
+  const payload = parseJson(planResult.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "relative");
+  assert.equal(payload.steps.length, 3);
+  assert.equal(payload.steps[0].requestedUnit, "px");
+  assert.equal(payload.steps[1].achievedY >= payload.steps[0].achievedY, true);
+  assert.equal(payload.steps[2].achievedY >= payload.steps[1].achievedY, true);
+});
+
 test("target transition-trace captures transition events after click", () => {
   requireBrowser();
   const html = `<!doctype html>

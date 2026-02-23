@@ -33,7 +33,27 @@ export type TargetScrollPlanReport = {
   settleMs: number;
   maxScroll: number;
   viewport: { width: number; height: number };
-  steps: Array<{ index: number; requestedY: number; appliedY: number; achievedY: number; deltaY: number }>;
+  countQuery: {
+    selector: string;
+    contains: string | null;
+    visibleOnly: boolean;
+  } | null;
+  countSummary: {
+    sampleCount: number;
+    first: number;
+    last: number;
+    delta: number;
+    min: number;
+    max: number;
+  } | null;
+  steps: Array<{
+    index: number;
+    requestedY: number;
+    appliedY: number;
+    achievedY: number;
+    deltaY: number;
+    count: number | null;
+  }>;
   timingMs: ActionTimingMs;
 };
 

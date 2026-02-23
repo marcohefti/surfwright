@@ -171,8 +171,8 @@ export const targetCommandManifest: CliCommandContract[] = [
   {
     id: "target.scroll-plan",
     usage:
-      "surfwright target scroll-plan <targetId> [--steps <csv>] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
-    summary: "execute deterministic scroll steps and report requested vs achieved positions",
+      "surfwright target scroll-plan <targetId> [--steps <csv>] [--count-selector <query>] [--count-contains <text>] [--count-visible-only] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+    summary: "execute deterministic scroll steps and optionally report selector count deltas per step",
   },
   {
     id: "target.scroll-sample",

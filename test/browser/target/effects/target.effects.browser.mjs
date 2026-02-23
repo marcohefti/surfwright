@@ -100,9 +100,66 @@ test("target scroll-plan returns deterministic shape", () => {
   assert.equal(typeof payload.maxScroll, "number");
   assert.equal(typeof payload.viewport.width, "number");
   assert.equal(typeof payload.viewport.height, "number");
+  assert.equal(payload.countQuery, null);
+  assert.equal(payload.countSummary, null);
   assert.equal(payload.steps[0].requestedY, 0);
+  assert.equal(payload.steps[0].count, null);
   assert.equal(typeof payload.steps[2].achievedY, "number");
   assert.equal(typeof payload.steps[2].deltaY, "number");
+});
+
+test("target scroll-plan can sample selector counts per step", () => {
+  requireBrowser();
+  const html = `<!doctype html>
+  <html><head><title>Scroll Plan Count</title></head>
+  <body style="height:3600px;margin:0">
+  <main id="list" style="padding-top:1200px"></main>
+  <script>
+    const list = document.getElementById("list");
+    const addChunk = (n) => {
+      const el = document.createElement("div");
+      el.className = "chunk";
+      el.textContent = "chunk-" + n;
+      el.style.height = "60px";
+      list.appendChild(el);
+    };
+    for (let i = 1; i <= 3; i += 1) addChunk(i);
+    let loaded = false;
+    window.addEventListener("scroll", () => {
+      if (!loaded && window.scrollY > 300) {
+        addChunk(4);
+        addChunk(5);
+        loaded = true;
+      }
+    }, { passive: true });
+  </script>
+  </body></html>`;
+  const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
+  const openPayload = openTarget(dataUrl);
+
+  const planResult = runCli(["target",
+    "scroll-plan",
+    openPayload.targetId,
+    "--steps",
+    "0,450,900",
+    "--count-selector",
+    ".chunk",
+    "--settle-ms",
+    "150",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(planResult.status, 0);
+  const payload = parseJson(planResult.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.targetId, openPayload.targetId);
+  assert.equal(payload.countQuery.selector, ".chunk");
+  assert.equal(payload.countQuery.visibleOnly, false);
+  assert.equal(payload.steps.length, 3);
+  assert.equal(typeof payload.steps[0].count, "number");
+  assert.equal(payload.steps[0].count <= payload.steps[2].count, true);
+  assert.equal(payload.countSummary.sampleCount, payload.steps.length);
+  assert.equal(payload.countSummary.last, payload.steps[payload.steps.length - 1].count);
 });
 
 test("target transition-trace captures transition events after click", () => {

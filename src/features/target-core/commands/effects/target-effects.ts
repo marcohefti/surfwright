@@ -88,11 +88,26 @@ export const targetScrollPlanCommandSpec: TargetCommandSpec = {
       .description(scrollPlanMeta.summary)
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--steps <csv>", "Comma-separated requested scrollY positions", "0,300,600,900")
+      .option("--count-selector <query>", "Optional selector query to count at each scroll step")
+      .option("--count-contains <text>", "Optional contains filter applied to --count-selector matches")
+      .option("--count-visible-only", "Only include visible matches when using --count-selector", false)
       .option("--settle-ms <ms>", "Settle delay after each scroll step in milliseconds", "300")
       .option("--timeout-ms <ms>", "Command timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_TARGET_TIMEOUT_MS)
       .option("--no-persist", "Skip writing target metadata to local state")
       .option("--fields <csv>", "Return only selected top-level fields")
-      .action(async (targetId: string, options: { steps: string; settleMs: string; timeoutMs: number; persist?: boolean; fields?: string }) => {
+      .action(async (
+        targetId: string,
+        options: {
+          steps: string;
+          countSelector?: string;
+          countContains?: string;
+          countVisibleOnly?: boolean;
+          settleMs: string;
+          timeoutMs: number;
+          persist?: boolean;
+          fields?: string;
+        },
+      ) => {
         const output = ctx.globalOutputOpts();
         const globalOpts = ctx.program.opts<{ session?: string }>();
         const fields = parseFieldsCsv(options.fields);
@@ -102,6 +117,9 @@ export const targetScrollPlanCommandSpec: TargetCommandSpec = {
             timeoutMs: options.timeoutMs,
             sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
             stepsCsv: options.steps,
+            countSelectorQuery: options.countSelector,
+            countContainsQuery: options.countContains,
+            countVisibleOnly: Boolean(options.countVisibleOnly),
             settleMs: Number.parseInt(options.settleMs, 10),
             persistState: options.persist !== false,
           });

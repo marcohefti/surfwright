@@ -132,8 +132,11 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
   },
   {
     id: "target.scroll-plan",
-    signature: "scroll-plan(targetId, steps?) -> { requested[], samples[], completedSteps, maxY }",
-    examples: ["surfwright target scroll-plan <targetId> --steps 0,600,1200,1800 --settle-ms 300"],
+    signature: "scroll-plan(targetId, steps?, countSelector?) -> { steps[], countSummary?, maxScroll }",
+    examples: [
+      "surfwright target scroll-plan <targetId> --steps 0,600,1200,1800 --settle-ms 300",
+      "surfwright target scroll-plan <targetId> --steps 0,800,1600 --count-selector '.item' --count-visible-only",
+    ],
     proofSchema: null,
   },
 ];

@@ -127,7 +127,9 @@ export async function targetEval(opts: {
   persistState?: boolean;
   expression?: string;
   expr?: string;
+  exprB64?: string;
   scriptFile?: string;
+  scriptB64?: string;
   mode?: "expr" | "script";
   argJson?: string;
   captureConsole?: boolean;
@@ -140,7 +142,9 @@ export async function targetEval(opts: {
     {
       expression: opts.expression,
       expr: opts.expr,
+      exprB64: opts.exprB64,
       scriptFile: opts.scriptFile,
+      scriptB64: opts.scriptB64,
       mode: opts.mode,
     },
     {

@@ -12,7 +12,7 @@ import {
 } from "../../core/session/public.js";
 import { workspaceInfo, workspaceInit, workspaceProfileLockClear, workspaceProfileLocks } from "../../core/workspace/public.js";
 import { runPipeline } from "../../core/pipeline/public.js";
-import { parseFieldsCsv, projectReportFields } from "../../core/target/public.js";
+import { parseFieldsCsv, projectReportFields, queryInvalid } from "../../core/target/public.js";
 import {
   DEFAULT_OPEN_TIMEOUT_MS,
   DEFAULT_SESSION_TIMEOUT_MS,
@@ -72,16 +72,22 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .command("contract")
     .description(contractMeta.summary)
     .option("--compact", "Deprecated alias for default compact output", false)
+    .option("--core", "Return compact core bootstrap payload", false)
     .option("--full", "Return full contract payload (larger output)", false)
     .option("--search <term>", "Filter contract commands/errors/guidance by id/code/usage text")
-    .action((options: { compact?: boolean; full?: boolean; search?: string }) => {
+    .action((options: { compact?: boolean; core?: boolean; full?: boolean; search?: string }) => {
       const output = ctx.globalOutputOpts();
       try {
+        if (Boolean(options.core) && Boolean(options.full)) {
+          throw queryInvalid("contract accepts at most one mode flag: --core or --full");
+        }
+        // --compact is retained as a no-op alias for back-compat; compact remains default mode.
+        void options.compact;
         const report = getCliContractReport(ctx.readPackageVersion());
-        const compact = !Boolean(options.full);
+        const mode = options.full ? "full" : options.core ? "core" : "compact";
         const outReport = buildContractOutput({
           report,
-          compact,
+          mode,
           search: options.search,
         });
         printContractReport(outReport as Record<string, unknown>, output);

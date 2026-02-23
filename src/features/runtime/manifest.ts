@@ -8,7 +8,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   },
   {
     id: "contract",
-    usage: "surfwright contract [--search <term>] [--full] [--no-json] [--pretty]",
+    usage: "surfwright contract [--search <term>] [--core] [--full] [--no-json] [--pretty]",
     summary: "emit machine-readable CLI contract metadata (compact by default)",
   },
   {

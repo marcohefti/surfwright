@@ -15,9 +15,11 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
       .description(meta.summary)
       .argument("<targetId>", "Target handle returned by open/target list")
       .option("--expr <js>", "JavaScript expression to evaluate and return")
+      .option("--expr-b64 <base64>", "Base64-encoded JavaScript expression to evaluate and return")
       .option("--expression <js>", "JavaScript function body to run in page context (use return to yield a value)")
       .option("--script-file <path>", "Read JavaScript from file (defaults to script mode; use --mode expr to treat as expression)")
-      .option("--mode <mode>", "Mode for --script-file: expr|script")
+      .option("--script-b64 <base64>", "Base64-encoded JavaScript source (defaults to script mode; use --mode expr to treat as expression)")
+      .option("--mode <mode>", "Mode for --script-file/--script-b64: expr|script")
       .option("--arg-json <json>", "JSON value passed as arg to the expression")
       .option("--frame-id <id>", "Frame handle returned by target frames (default: f-0)")
       .option("--capture-console", "Capture console output during evaluation", false)
@@ -43,8 +45,10 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
           targetId: string,
           options: {
             expr?: string;
+            exprB64?: string;
             expression?: string;
             scriptFile?: string;
+            scriptB64?: string;
             mode?: string;
             argJson?: string;
             frameId?: string;
@@ -66,8 +70,10 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
               timeoutMs: options.timeoutMs,
               sessionId: typeof globalOpts.session === "string" ? globalOpts.session : undefined,
               expr: options.expr,
+              exprB64: options.exprB64,
               expression: options.expression,
               scriptFile: options.scriptFile,
+              scriptB64: options.scriptB64,
               mode: options.mode === "expr" || options.mode === "script" ? (options.mode as "expr" | "script") : undefined,
               argJson: options.argJson,
               frameId: options.frameId,

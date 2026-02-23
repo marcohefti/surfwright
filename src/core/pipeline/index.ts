@@ -18,7 +18,7 @@ import {
 } from "../pipeline-support/index.js";
 import { writeRunArtifact } from "../pipeline-support/index.js";
 import { appendNdjsonLogLine, initNdjsonLogFile, resolveNdjsonLogPath } from "./infra/ndjson-log.js";
-
+import { parseClickIndexFromStep, requireStepTargetId } from "./infra/step-parse.js";
 export type { PipelineOps, PipelineStepInput } from "../pipeline-support/index.js";
 
 export function loadPipelinePlan(input: {
@@ -42,13 +42,6 @@ type PipelineStepExecutorInput = {
   sessionId: string | undefined;
   ops: PipelineOps;
 };
-
-function requireStepTargetId(stepTargetId: string | undefined, stepIndex: number): string {
-  if (!stepTargetId) {
-    throw new CliError("E_QUERY_INVALID", `steps[${stepIndex}] requires targetId (or previous step must set one)`);
-  }
-  return stepTargetId;
-}
 
 const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput) => Promise<Record<string, unknown>>> = {
   open: async ({ step, index, timeoutMs, sessionId, ops }) => {
@@ -92,8 +85,8 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
       limit: parseOptionalInteger(step.limit, `steps[${index}].limit`),
       persistState: !Boolean(step.noPersist),
     }),
-  click: async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) =>
-    await ops.click({
+  count: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
+    await ops.count({
       targetId: requireStepTargetId(stepTargetId, index),
       timeoutMs,
       sessionId,
@@ -101,12 +94,41 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
       selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
       containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
       visibleOnly: Boolean(step.visibleOnly),
+      frameScope: stepFrameScope,
+      persistState: !Boolean(step.noPersist),
+    }),
+  click: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) => {
+    const expectCountAfter = parseOptionalInteger(step.expectCountAfter, `steps[${index}].expectCountAfter`);
+    if (typeof expectCountAfter === "number" && expectCountAfter < 0) {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].expectCountAfter must be a non-negative integer`);
+    }
+    return await ops.click({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      textQuery: parseOptionalString(step.text, `steps[${index}].text`),
+      selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
+      containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
+      visibleOnly: Boolean(step.visibleOnly),
+      withinSelector: parseOptionalString(step.within, `steps[${index}].within`),
+      frameScope: stepFrameScope,
+      index: parseClickIndexFromStep(step, index),
       waitForText: parseOptionalString(step.waitForText, `steps[${index}].waitForText`),
       waitForSelector: parseOptionalString(step.waitForSelector, `steps[${index}].waitForSelector`),
       waitNetworkIdle: Boolean(step.waitNetworkIdle),
+      waitTimeoutMs: parseOptionalInteger(step.waitTimeoutMs, `steps[${index}].waitTimeoutMs`),
       snapshot: Boolean(step.snapshot),
+      delta: Boolean(step.delta),
+      proof: Boolean(step.proof),
+      countAfter: Boolean(step.countAfter) || typeof expectCountAfter === "number",
+      expectCountAfter,
+      proofCheckState: Boolean(step.proofCheckState),
+      assertUrlPrefix: parseOptionalString(step.assertUrlPrefix, `steps[${index}].assertUrlPrefix`),
+      assertSelector: parseOptionalString(step.assertSelector, `steps[${index}].assertSelector`),
+      assertText: parseOptionalString(step.assertText, `steps[${index}].assertText`),
       persistState: !Boolean(step.noPersist),
-    }),
+    });
+  },
   "click-read": async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
     await ops.clickRead({
       targetId: requireStepTargetId(stepTargetId, index),

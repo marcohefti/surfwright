@@ -44,6 +44,7 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
       "surfwright --output-shape compact target click <targetId> --text \"Delete\" --visible-only --repeat 3",
       "surfwright target click <targetId> --text \"Pricing\" --visible-only --proof",
       "surfwright target click <targetId> --selector '#agree' --proof --proof-check-state",
+      "surfwright target click <targetId> --selector '.todo-item' --nth 2 --count-after",
     ],
     proofSchema: {
       action: "click",
@@ -63,6 +64,7 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
       "surfwright target style <targetId> --selector '.btn.btn-primary' --kind button-primary",
       "surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1",
       "surfwright --output-shape compact target eval <targetId> --expr 'document.title'",
+      "surfwright target eval <targetId> --expr-b64 ZG9jdW1lbnQudGl0bGU=",
     ],
     proofSchema: null,
   },

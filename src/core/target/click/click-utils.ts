@@ -67,7 +67,7 @@ export function queryMismatchError(opts: {
     hints.push("Retry without --visible-only to inspect hidden matches");
   }
   if (opts.reason === "index_out_of_range") {
-    hints.push("Use --explain or target find first to inspect matchCount before choosing --index");
+    hints.push("Use --explain or target find first to inspect matchCount before choosing --index/--nth");
   }
   if (opts.reason === "no_match" || opts.reason === "click_resolution_failed") {
     hints.push("Retry with --explain to inspect candidate/rejection evidence");
@@ -145,6 +145,54 @@ export function parseMatchIndex(input: number | undefined): number | null {
     throw new CliError("E_QUERY_INVALID", "index must be a non-negative integer");
   }
   return input;
+}
+
+export function parseExpectedCountAfter(input: number | undefined): number | null {
+  if (typeof input !== "number") {
+    return null;
+  }
+  if (!Number.isFinite(input) || !Number.isInteger(input) || input < 0) {
+    throw new CliError("E_QUERY_INVALID", "expect-count-after must be a non-negative integer");
+  }
+  return input;
+}
+
+export function assertExpectedCountAfter(opts: {
+  expectedCountAfter: number | null;
+  countAfter: number | null;
+  queryMode: "text" | "selector" | "handle";
+  selector: string | null;
+}): void {
+  if (opts.expectedCountAfter === null) {
+    return;
+  }
+  if (opts.queryMode !== "selector") {
+    throw new CliError("E_QUERY_INVALID", "--expect-count-after requires selector query mode");
+  }
+  if (opts.countAfter === null) {
+    throw new CliError("E_ASSERT_FAILED", "assertion failed: count-after unavailable", {
+      hints: ["Retry once after navigation settles", "Use --proof to capture additional post-click evidence"],
+      hintContext: {
+        assertionId: "count-after",
+        expected: opts.expectedCountAfter,
+        actual: null,
+        queryMode: opts.queryMode,
+        selector: opts.selector,
+      },
+    });
+  }
+  if (opts.countAfter !== opts.expectedCountAfter) {
+    throw new CliError("E_ASSERT_FAILED", "assertion failed: count-after", {
+      hints: ["Verify selector specificity", "Use --count-after to inspect post-click count without assertion"],
+      hintContext: {
+        assertionId: "count-after",
+        expected: opts.expectedCountAfter,
+        actual: opts.countAfter,
+        queryMode: opts.queryMode,
+        selector: opts.selector,
+      },
+    });
+  }
 }
 
 export async function resolveFirstMatch(opts: {

@@ -182,3 +182,24 @@ test("contract unknown option includes focused alternatives for compact/search",
   assert.equal(payload.hintContext?.commandPath, "contract");
   assert.equal(payload.hintContext?.unknownOption, "--kind");
 });
+
+test("contract --core returns focused bootstrap payload", () => {
+  const result = runCli(["contract", "--core"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "core");
+  assert.equal(Array.isArray(payload.commands), true);
+  assert.equal(Array.isArray(payload.errors), true);
+  assert.equal(Array.isArray(payload.guidance), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.click"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.count"), true);
+});
+
+test("contract rejects incompatible mode flags", () => {
+  const result = runCli(["contract", "--core", "--full"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+});

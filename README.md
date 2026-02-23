@@ -92,7 +92,7 @@ surfwright contract
 ```
 
 `contract` now includes additive `guidance` entries with command signatures, examples, and proof schemas for high-traffic workflows.
-Use `surfwright contract --compact` for summary-only output, and `surfwright contract --search <term>` to filter commands/errors/guidance.
+Use `surfwright contract --core` for low-token bootstrap output, and `surfwright contract --search <term>` to filter commands/errors/guidance.
 
 Set global output shaping when you want smaller payloads without changing command behavior:
 
@@ -184,6 +184,8 @@ surfwright target fill <targetId> --selector "#search" --value "surfwright" --ev
 surfwright target select-option <targetId> --selector "#role" --label "Editor" --proof
 surfwright target click <targetId> --text "Sort" --within "#results-table" --proof
 surfwright target click <targetId> --selector "#agree" --proof --proof-check-state
+surfwright target click <targetId> --selector ".todo-item" --nth 2 --count-after
+surfwright target click <targetId> --selector ".todo-item" --nth 2 --expect-count-after 4
 surfwright target click-read <targetId> --text "Pricing" --read-selector main --chunk-size 1200 --chunk 1
 surfwright target keypress <targetId> --key Enter --selector "#search" --wait-for-selector ".results" --proof
 surfwright target upload <targetId> --selector "input[type=file]" --file ./fixture.txt --submit-selector "button[type=submit]" --expect-uploaded-filename fixture.txt --wait-for-result --result-selector "#uploaded-files" --result-filename-regex "fixture\\.txt"
@@ -202,6 +204,7 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 `open --ensure-session <off|if-missing|fresh>` can bootstrap/fork managed sessions for `open` without a separate `session` command (`--profile` cannot be combined).
 `target snapshot --mode orient` now includes additive counters (`headingsCount`, `buttonsCount`, `linksCount`, `navCount`) and optional count controls (`--count-scope <full|bounded>`, `--count-filter headings,buttons,links,nav`).
 `target click --proof` now includes additive `proof.countAfter` for selector-mode clicks (when post-action counting is available).
+`target click --count-after` adds additive top-level `countAfter` without enabling full proof payloads; pair with `--expect-count-after <n>` for typed post-click assertions.
 `target click --proof-check-state` adds additive checkbox/radio state evidence (`proof.checkState.before/after/changed`) for toggle workflows.
 `target click --repeat <n>` executes repeated deterministic clicks and returns final click fields plus `repeat` metadata (`requested`, `completed`, `actionIds`, `pickedIndices`).
 `target click` mismatch failures now include bounded candidate samples and `withinSelector` context for faster disambiguation.
@@ -220,7 +223,7 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 `run` pipeline step coverage includes `fill`, `upload`, and `click-read` (not just read/click/eval/snapshot), so plans can execute full form workflows without `target eval` glue.
 `run` upload steps now honor `submitSelector`, `expectUploadedFilename`, and result-verification fields (`waitForResult`, `resultSelector`, `resultTextContains`, `resultFilenameRegex`) for deterministic attach+submit+verify flows.
 CLI compatibility for cold-start agents: `--json` is accepted as an explicit no-op (JSON remains default), and `target <subcommand> --target <targetId>` is accepted as an alias for positional `targetId`.
-Prefer `target extract`, `target style`, and `target read` before `target eval`; when you need eval, `--output-shape compact` keeps payloads lean.
+Prefer `target extract`, `target style`, and `target read` before `target eval`; when you need eval, `--expr-b64`/`--script-b64` avoid shell escaping overhead and `--output-shape compact` keeps payloads lean.
 
 Use workspace profile for persistent login state:
 

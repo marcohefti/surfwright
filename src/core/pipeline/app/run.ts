@@ -5,6 +5,7 @@ import { openUrl } from "../../session/public.js";
 import {
   resolveSessionForAction,
   targetClick,
+  targetCount,
   targetEval,
   targetExtract,
   targetFill,
@@ -18,7 +19,6 @@ import {
 import type { TargetClickReport } from "../../types.js";
 import type { SessionReport } from "../../types.js";
 import { executePipelinePlan, loadPipelinePlan } from "../index.js";
-
 export async function runPipeline(opts: {
   planPath?: string;
   planJson?: string;
@@ -51,7 +51,6 @@ export async function runPipeline(opts: {
     stdinPlan: opts.stdinPlan,
     replayPath: opts.replayPath,
   });
-
   const ops = {
     open: async (input: { url: string; timeoutMs: number; sessionId?: string; reuseModeInput?: string }) =>
       (await openUrl({
@@ -109,6 +108,28 @@ export async function runPipeline(opts: {
         limit: input.limit,
         persistState: input.persistState,
       })) as unknown as Record<string, unknown>,
+    count: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      textQuery?: string;
+      selectorQuery?: string;
+      containsQuery?: string;
+      visibleOnly: boolean;
+      frameScope?: string;
+      persistState: boolean;
+    }) =>
+      (await targetCount({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        textQuery: input.textQuery,
+        selectorQuery: input.selectorQuery,
+        containsQuery: input.containsQuery,
+        visibleOnly: input.visibleOnly,
+        frameScope: input.frameScope,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
     click: async (input: {
       targetId: string;
       timeoutMs: number;
@@ -117,10 +138,22 @@ export async function runPipeline(opts: {
       selectorQuery?: string;
       containsQuery?: string;
       visibleOnly: boolean;
+      withinSelector?: string;
+      frameScope?: string;
+      index?: number;
       waitForText?: string;
       waitForSelector?: string;
       waitNetworkIdle: boolean;
+      waitTimeoutMs?: number;
       snapshot: boolean;
+      delta: boolean;
+      proof: boolean;
+      countAfter: boolean;
+      expectCountAfter?: number;
+      proofCheckState: boolean;
+      assertUrlPrefix?: string;
+      assertSelector?: string;
+      assertText?: string;
       persistState: boolean;
     }) =>
       (await targetClick({
@@ -131,10 +164,22 @@ export async function runPipeline(opts: {
         selectorQuery: input.selectorQuery,
         containsQuery: input.containsQuery,
         visibleOnly: input.visibleOnly,
+        withinSelector: input.withinSelector,
+        frameScope: input.frameScope,
+        index: input.index,
         waitForText: input.waitForText,
         waitForSelector: input.waitForSelector,
         waitNetworkIdle: input.waitNetworkIdle,
+        waitTimeoutMs: input.waitTimeoutMs,
         snapshot: input.snapshot,
+        delta: input.delta,
+        proof: input.proof,
+        countAfter: input.countAfter,
+        expectCountAfter: input.expectCountAfter,
+        proofCheckState: input.proofCheckState,
+        assertUrlPrefix: input.assertUrlPrefix,
+        assertSelector: input.assertSelector,
+        assertText: input.assertText,
         persistState: input.persistState,
       })) as unknown as Record<string, unknown>,
     clickRead: async (input: {
@@ -383,7 +428,6 @@ export async function runPipeline(opts: {
         persistState: input.persistState,
       })) as unknown as Record<string, unknown>,
   };
-
   if (opts.doctor) {
     return await executePipelinePlan({
       timeoutMs: opts.timeoutMs,

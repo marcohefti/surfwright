@@ -11,6 +11,8 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target click --proof` to emit a compact one-shot evidence payload (implies `--snapshot` + `--delta`).
 - [target] Added `target click --repeat <n>` (1-25) to execute repeated deterministic clicks in one command, returning final click fields plus additive `repeat` metadata (`requested`, `completed`, `actionIds`, `pickedIndices`).
 - [target] Added additive `target click --proof.countAfter` for selector-mode clicks (post-action selector cardinality when available).
+- [target] Added `target click --nth <n>` (1-based) as an explicit disambiguation alias over `--index`.
+- [target] Added `target click --count-after` and `--expect-count-after <n>` for typed post-click selector-count evidence/assertions without requiring full proof payloads.
 - [target] Added `target extract --include-actionable` with per-item actionable metadata (`handle`, `selectorHint`, `frameId`, `href`) for deterministic extract-to-action chaining.
 - [target] Added `target extract --kind docs-commands` with command-oriented fields (`command`, `language`, `section`) for docs/codeblock extraction.
 - [target] Added `target extract --kind command-lines` for normalized runnable command-line entries from docs/code blocks.
@@ -20,6 +22,7 @@ All notable changes to SurfWright are documented here.
 - [target] Added additive `target click.handoff` metadata (`sameTarget`, `openedTargetId`, `openedUrl`, `openedTitle`) for deterministic post-click target chaining.
 - [contract] Added additive `contract.guidance[]` with command signatures, runnable examples, and proof schema hints for high-traffic flows.
 - [contract] Added `contract --compact` and `contract --search <term>` for low-token contract introspection and focused lookups.
+- [contract] Added `contract --core` for low-token bootstrap payloads (focused command/error/guidance subset).
 - [cli] Added global `--output-shape <full|compact|proof>` (and `SURFWRIGHT_OUTPUT_SHAPE`) to project JSON outputs without changing command semantics.
 - [target] Added `--proof` support to `target fill`, `target keypress`, `target upload`, `target drag-drop`, and `target dialog` with a shared compact evidence shape.
 - [actions] Added post-action assertions (`--assert-url-prefix`, `--assert-selector`, `--assert-text`) and additive `proofEnvelope` support across `open`, `target click`, `target fill`, `target keypress`, `target upload`, `target drag-drop`, `target dialog`, `target download`, and `target wait`.
@@ -38,6 +41,7 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target download --allow-missing-download-event` for deterministic non-started result envelopes when browser download events are suppressed.
 - [target] Added `target download --fallback-to-fetch` to capture artifacts deterministically when browser download events are missed.
 - [run] Added `run` plan-step support for `click-read`/`clickRead` (composed click then bounded read).
+- [run] Added `run` plan-step support for `count`.
 - [target] Added `target upload --submit-selector <query>` for atomic attach+submit upload flows.
 - [target] Added upload result-verification controls: `target upload --wait-for-result`, `--result-selector`, `--result-text-contains`, and `--result-filename-regex` for deterministic post-upload confirmation in one action.
 - [target] Added `target select-option` for first-class native `<select>` control (`--value|--label|--option-index`) with deterministic selected proof fields.
@@ -53,6 +57,8 @@ All notable changes to SurfWright are documented here.
 ### Changed
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
 - [target] `target eval --help` now surfaces typed alternatives (`target extract`, `target style`, `target read`) plus compact-output usage for lower-token operator loops.
+- [target] `target eval` now accepts base64 script inputs via `--expr-b64` and `--script-b64` to reduce shell-quoting overhead in agent loops.
+- [target] `target eval` now validates JavaScript syntax before session/browser resolution to fail fast with typed query errors.
 - [target] `target wait` now includes a structured `wait` payload (`mode`, `value`, `timeoutMs`, `elapsedMs`, `satisfied`) while keeping existing top-level `mode`/`value`.
 - [target] `target snapshot --mode orient|snapshot` now includes additive aggregate counters (`headingsCount`, `buttonsCount`, `linksCount`), plus `navCount` for orient mode.
 - [errors] Typed failures can now include optional bounded `hints` and `hintContext` fields (additive; `code` + `message` contract preserved).
@@ -68,6 +74,7 @@ All notable changes to SurfWright are documented here.
 - [target] `target download` payload now includes additive capture provenance/alias fields (`downloadMethod`, `downloadedFilename`, `downloadedBytes`) across event, fetch-fallback, and non-started envelopes.
 - [errors] `target click` mismatch failures now include stronger disambiguation context (`withinSelector`, bounded candidate sample) for faster recovery without blind retries.
 - [run] Pipeline step execution is now table-driven to keep step parsing/dispatch behavior centralized and reduce drift risk as steps are added.
+- [run] `run` click-step support now forwards deterministic click controls (`within`, `frameScope`, `index|nth`, wait budget, proof/delta/count-after/assert fields) instead of dropping them.
 - [run] Upload plan steps now forward upload action fields `submitSelector`, `expectUploadedFilename`, and result-verification controls (`waitForResult`, `resultSelector`, `resultTextContains`, `resultFilenameRegex`) instead of dropping them.
 - [target] `target style` now emits a compact additive `proof` payload so `--output-shape proof` is directly actionable without extra parsing.
 - [target] `target style --proof` now includes mission-friendly compact fields (`found`, `targetText`, `styleBg`, `styleColor`, `styleFontSize`, `styleRadius`).

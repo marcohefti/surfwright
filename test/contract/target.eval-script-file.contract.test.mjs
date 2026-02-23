@@ -83,3 +83,49 @@ test("target eval rejects combining --script-file with inline expression", () =>
   assert.equal(evalPayload.ok, false);
   assert.equal(evalPayload.code, "E_QUERY_INVALID");
 });
+
+test("target eval accepts --expr-b64 option", () => {
+  const evalResult = runCli(["target",
+    "eval",
+    "ABCDEF123456",
+    "--expr-b64",
+    "MSArIDE=",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(evalResult.status, 1);
+  const evalPayload = parseJson(evalResult.stdout);
+  assert.equal(evalPayload.ok, false);
+  assert.equal(evalPayload.code, "E_TARGET_SESSION_UNKNOWN");
+});
+
+test("target eval validates --script-b64 size before session resolution", () => {
+  const oversizedScriptB64 = Buffer.from("x".repeat(70 * 1024), "utf8").toString("base64");
+  const evalResult = runCli(["target",
+    "eval",
+    "ABCDEF123456",
+    "--script-b64",
+    oversizedScriptB64,
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(evalResult.status, 1);
+  const evalPayload = parseJson(evalResult.stdout);
+  assert.equal(evalPayload.ok, false);
+  assert.equal(evalPayload.code, "E_EVAL_SCRIPT_TOO_LARGE");
+});
+
+test("target eval fails invalid JavaScript syntax before session resolution", () => {
+  const evalResult = runCli(["target",
+    "eval",
+    "ABCDEF123456",
+    "--expr",
+    "document.",
+    "--timeout-ms",
+    "1000",
+  ]);
+  assert.equal(evalResult.status, 1);
+  const evalPayload = parseJson(evalResult.stdout);
+  assert.equal(evalPayload.ok, false);
+  assert.equal(evalPayload.code, "E_QUERY_INVALID");
+});

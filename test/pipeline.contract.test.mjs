@@ -163,3 +163,24 @@ test("run doctor accepts click-read step shape", () => {
   assert.equal(payload.mode, "doctor");
   assert.equal(payload.valid, true);
 });
+
+test("run doctor accepts count step shape", () => {
+  const plan = {
+    steps: [
+      { id: "open", url: "https://example.com" },
+      { id: "count", selector: ".row", visibleOnly: true },
+    ],
+  };
+  const result = runCli(["run",
+    "--doctor",
+    "--plan-json",
+    JSON.stringify(plan),
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "doctor");
+  assert.equal(payload.valid, true);
+});

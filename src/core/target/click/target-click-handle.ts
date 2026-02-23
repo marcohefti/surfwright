@@ -33,6 +33,7 @@ export async function targetClickByHandle(opts: {
   snapshot: boolean;
   includeDelta: boolean;
   includeProof: boolean;
+  includeCountAfter: boolean;
   proofCheckState: boolean;
   parsedAssertions: ParsedActionAssertions;
   persistState: boolean;
@@ -184,6 +185,7 @@ export async function targetClickByHandle(opts: {
     title: await safePageTitle(opts.page, opts.timeoutMs),
     wait: waited,
     snapshot: postSnapshot,
+    ...(opts.includeCountAfter ? { countAfter: null } : {}),
     ...(proof ? { proof } : {}),
     ...(proofEnvelope ? { proofEnvelope } : {}),
     ...(assertions ? { assertions } : {}),

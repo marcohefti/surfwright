@@ -3,6 +3,7 @@ export const SUPPORTED_STEP_IDS = new Set([
   "list",
   "snapshot",
   "find",
+  "count",
   "click",
   "click-read",
   "clickRead",
@@ -32,8 +33,10 @@ export type PipelineStepInput = {
   selector?: string;
   contains?: string;
   visibleOnly?: boolean;
+  within?: string;
   frameScope?: string;
   index?: number;
+  nth?: number;
   first?: boolean;
   limit?: number;
   chunkSize?: number;
@@ -51,6 +54,10 @@ export type PipelineStepInput = {
   resultFilenameRegex?: string;
   waitTimeoutMs?: number;
   proof?: boolean;
+  delta?: boolean;
+  proofCheckState?: boolean;
+  countAfter?: boolean;
+  expectCountAfter?: number;
   assertUrlPrefix?: string;
   assertSelector?: string;
   assertText?: string;
@@ -95,6 +102,17 @@ export type PipelineOps = {
     limit?: number;
     persistState: boolean;
   }) => Promise<Record<string, unknown>>;
+  count: (opts: {
+    targetId: string;
+    timeoutMs: number;
+    sessionId?: string;
+    textQuery?: string;
+    selectorQuery?: string;
+    containsQuery?: string;
+    visibleOnly: boolean;
+    frameScope?: string;
+    persistState: boolean;
+  }) => Promise<Record<string, unknown>>;
   click: (opts: {
     targetId: string;
     timeoutMs: number;
@@ -103,10 +121,22 @@ export type PipelineOps = {
     selectorQuery?: string;
     containsQuery?: string;
     visibleOnly: boolean;
+    withinSelector?: string;
+    frameScope?: string;
+    index?: number;
     waitForText?: string;
     waitForSelector?: string;
     waitNetworkIdle: boolean;
+    waitTimeoutMs?: number;
     snapshot: boolean;
+    delta: boolean;
+    proof: boolean;
+    countAfter: boolean;
+    expectCountAfter?: number;
+    proofCheckState: boolean;
+    assertUrlPrefix?: string;
+    assertSelector?: string;
+    assertText?: string;
     persistState: boolean;
   }) => Promise<Record<string, unknown>>;
   clickRead: (opts: {

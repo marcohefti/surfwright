@@ -179,7 +179,7 @@ export function lintPlan(input: { steps: PipelineStepInput[] }): PipelineLintIss
       issues.push({ level: "error", path: `steps[${index}].url`, message: "url is required for open" });
     }
     if (
-      (step.id === "click" || step.id === "click-read" || step.id === "clickRead" || step.id === "find" || step.id === "fill") &&
+      (step.id === "click" || step.id === "click-read" || step.id === "clickRead" || step.id === "find" || step.id === "count" || step.id === "fill") &&
       (!step.text || (typeof step.text !== "string" && !isTemplateString(step.text))) &&
       (!step.selector || (typeof step.selector !== "string" && !isTemplateString(step.selector)))
     ) {

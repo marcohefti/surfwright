@@ -96,6 +96,7 @@ export function buildClickReport(opts: {
   title: string;
   wait: ClickWaitResult | null;
   snapshot: TargetClickReport["snapshot"];
+  countAfter?: number | null;
   proof: TargetClickReport["proof"] | undefined;
   proofEnvelope: TargetClickReport["proofEnvelope"] | undefined;
   assertions: TargetClickReport["assertions"];
@@ -124,6 +125,7 @@ export function buildClickReport(opts: {
     title: opts.title,
     wait: opts.wait,
     snapshot: opts.snapshot,
+    ...(typeof opts.countAfter !== "undefined" ? { countAfter: opts.countAfter } : {}),
     ...(opts.proof ? { proof: opts.proof } : {}),
     ...(opts.proofEnvelope ? { proofEnvelope: opts.proofEnvelope } : {}),
     ...(opts.assertions ? { assertions: opts.assertions } : {}),

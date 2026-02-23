@@ -91,4 +91,17 @@ test("target eval supports --expr to return expression values without explicit r
   assert.equal(exprPayload.result.type, "string");
   assert.equal(exprPayload.result.value, "Eval Expr");
   assert.equal(exprPayload.context.evaluatedFrameId, "f-0");
+
+  const exprB64Result = runCli(["target",
+    "eval",
+    openPayload.targetId,
+    "--expr-b64",
+    "ZG9jdW1lbnQudGl0bGU=",
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(exprB64Result.status, 0);
+  const exprB64Payload = parseJson(exprB64Result.stdout);
+  assert.equal(exprB64Payload.result.type, "string");
+  assert.equal(exprB64Payload.result.value, "Eval Expr");
 });

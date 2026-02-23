@@ -48,6 +48,7 @@ function compactKeys(): string[] {
     "selector",
     "matchCount",
     "pickedIndex",
+    "countAfter",
     "repeat",
     "wait",
     "proofEnvelope",

@@ -8,7 +8,7 @@ import { parseFrameScope } from "../infra/target-find.js";
 import { readPageTargetId, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import type { TargetClickDeltaEvidence, TargetClickExplainReport, TargetClickReport } from "../../types.js";
-import { CLICK_EXPLAIN_MAX_REJECTED, parseMatchIndex, parseWaitAfterClick, queryMismatchError, readPostSnapshot, resolveWaitTimeoutMs, summarizeCandidatePreviews } from "./click-utils.js";
+import { CLICK_EXPLAIN_MAX_REJECTED, assertExpectedCountAfter, parseExpectedCountAfter, parseMatchIndex, parseWaitAfterClick, queryMismatchError, readPostSnapshot, resolveWaitTimeoutMs, summarizeCandidatePreviews } from "./click-utils.js";
 import { cdpQueryOp } from "./cdp-query-op.js";
 import { buildClickExplainReport } from "./click-explain.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
@@ -40,6 +40,8 @@ export async function targetClick(opts: {
   snapshot?: boolean;
   delta?: boolean;
   proof?: boolean;
+  countAfter?: boolean;
+  expectCountAfter?: number;
   proofCheckState?: boolean;
   assertUrlPrefix?: string;
   assertSelector?: string;
@@ -67,9 +69,11 @@ export async function targetClick(opts: {
     assertSelector: opts.assertSelector,
     assertText: opts.assertText,
   });
+  const expectedCountAfter = parseExpectedCountAfter(opts.expectCountAfter);
   const includeProofCheckState = Boolean(opts.proofCheckState);
   const includeDelta = Boolean(opts.delta) || includeProof;
   const includeSnapshot = Boolean(opts.snapshot) || includeProof;
+  const includeCountAfter = Boolean(opts.countAfter) || expectedCountAfter !== null;
   const waitAfter = parseWaitAfterClick({
     waitForText: opts.waitForText,
     waitForSelector: opts.waitForSelector,
@@ -84,11 +88,12 @@ export async function targetClick(opts: {
     if (requestedIndex !== null) throw new CliError("E_QUERY_INVALID", "--index cannot be combined with --handle");
     if (Boolean(opts.visibleOnly)) throw new CliError("E_QUERY_INVALID", "--visible-only cannot be combined with --handle");
     if (withinSelector.length > 0) throw new CliError("E_QUERY_INVALID", "--within cannot be combined with --handle");
+    if (expectedCountAfter !== null) throw new CliError("E_QUERY_INVALID", "--expect-count-after requires selector query mode");
   }
   if (explain) {
     if (hasHandle) throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with --handle");
-    const hasPostClickEvidence = includeSnapshot || includeDelta || waitAfter !== null || includeProof;
-    if (hasPostClickEvidence) throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with post-click wait options, --snapshot, --delta, or --proof");
+    const hasPostClickEvidence = includeSnapshot || includeDelta || waitAfter !== null || includeProof || includeCountAfter;
+    if (hasPostClickEvidence) throw new CliError("E_QUERY_INVALID", "--explain cannot be combined with post-click wait options, --snapshot, --delta, --proof, or --count-after");
   }
   const { session, sessionSource } = await resolveSessionForAction({
     sessionHint: opts.sessionId,
@@ -150,6 +155,7 @@ export async function targetClick(opts: {
         snapshot: includeSnapshot,
         includeDelta,
         includeProof,
+        includeCountAfter,
         proofCheckState: includeProofCheckState,
         parsedAssertions,
         persistState: opts.persistState !== false,
@@ -410,7 +416,7 @@ export async function targetClick(opts: {
       });
     }
     const countAfter = await readSelectorCountAfter({
-      enabled: includeProof,
+      enabled: includeProof || includeCountAfter,
       cdp,
       worldCache,
       queryMode,
@@ -420,6 +426,7 @@ export async function targetClick(opts: {
       selector,
       contains,
     });
+    assertExpectedCountAfter({ expectedCountAfter, countAfter, queryMode, selector });
     const checkState = buildClickCheckStateProof({ before: checkStateBefore, after: checkStateAfter });
     const urlAfterClick = target.page.url();
     const { proof, proofEnvelope } = buildClickProofArtifacts({ includeProof, requestedTargetId, urlBeforeClick, urlAfterClick, openedTargetId, openedPageDetected: openedPage !== null, matchCount, pickedIndex, waitAfter, waitTimeoutMs, waited, assertions, countAfter, postSnapshot, delta, clickedText: clickedPreview.text, clickedSelectorHint: clickedPreview.selectorHint, checkState });
@@ -446,6 +453,7 @@ export async function targetClick(opts: {
       title: await safePageTitle(target.page, opts.timeoutMs),
       wait: waited,
       snapshot: postSnapshot,
+      ...(includeCountAfter ? { countAfter } : {}),
       proof,
       proofEnvelope,
       assertions,

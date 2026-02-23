@@ -145,6 +145,81 @@ test("target click supports --index for deterministic multi-match selection", ()
   assert.equal(outPayload.code, "E_QUERY_INVALID");
 });
 
+test("target click supports --nth and --count-after selector evidence", () => {
+  requireBrowser();
+  const html = `<!doctype html>
+    <html><head><meta charset="utf-8"><title>Click Nth CountAfter</title></head>
+      <body>
+        <main>
+          <button id="add">Add Element</button>
+          <div id="container"></div>
+        </main>
+        <script>
+          const container = document.getElementById('container');
+          document.getElementById('add').addEventListener('click', () => {
+            const btn = document.createElement('button');
+            btn.className = 'added-manually';
+            btn.textContent = 'Delete';
+            btn.addEventListener('click', () => btn.remove());
+            container.appendChild(btn);
+          });
+        </script>
+      </body></html>`;
+  const url = `data:text/html,${encodeURIComponent(html)}`;
+  const openResult = runCli(["open", url, "--timeout-ms", "20000"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+
+  for (let idx = 0; idx < 3; idx += 1) {
+    const addResult = runCli(["target",
+      "click",
+      openPayload.targetId,
+      "--text",
+      "Add Element",
+      "--visible-only",
+      "--timeout-ms",
+      "20000",
+    ]);
+    assert.equal(addResult.status, 0);
+  }
+
+  const clickWithNth = runCli(["target",
+    "click",
+    openPayload.targetId,
+    "--selector",
+    "button.added-manually",
+    "--nth",
+    "2",
+    "--count-after",
+    "--expect-count-after",
+    "2",
+    "--timeout-ms",
+    "20000",
+  ]);
+  assert.equal(clickWithNth.status, 0);
+  const nthPayload = parseJson(clickWithNth.stdout);
+  assert.equal(nthPayload.ok, true);
+  assert.equal(nthPayload.pickedIndex, 1);
+  assert.equal(nthPayload.clicked.index, 1);
+  assert.equal(nthPayload.countAfter, 2);
+
+  const failedExpectation = runCli(["target",
+    "click",
+    openPayload.targetId,
+    "--selector",
+    "button.added-manually",
+    "--count-after",
+    "--expect-count-after",
+    "999",
+    "--timeout-ms",
+    "20000",
+  ]);
+  assert.equal(failedExpectation.status, 1);
+  const failedPayload = parseJson(failedExpectation.stdout);
+  assert.equal(failedPayload.ok, false);
+  assert.equal(failedPayload.code, "E_ASSERT_FAILED");
+});
+
 test("target click supports --repeat for deterministic multi-action loops", () => {
   requireBrowser();
   const html = `<!doctype html>

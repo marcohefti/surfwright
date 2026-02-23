@@ -174,6 +174,7 @@ export type TargetClickReport = {
   snapshot: {
     textPreview: string;
   } | null;
+  countAfter?: number | null;
   proof?: {
     urlChanged: boolean;
     targetChanged: boolean;

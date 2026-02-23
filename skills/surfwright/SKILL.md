@@ -11,9 +11,10 @@ Deterministic browser control via CLI JSON outputs and explicit handles.
 
 Use contract lookup first:
 
-`surfwright contract --search <term>`
+`surfwright contract --core --search <term>`
 
-Use `surfwright contract --full --search <term>` only for explicit debug.
+Use `surfwright contract --search <term>` when you need a broader list.
+Use `surfwright contract --full --search <term>` only for explicit debug/audit.
 
 ## Runtime Rules
 
@@ -21,4 +22,9 @@ Use `surfwright contract --full --search <term>` only for explicit debug.
 - Treat non-zero exits as typed failures and branch on `code` (and `retryable` when present).
 - Use one unique `--agent-id` per task.
 - Standard lifecycle: `session fresh` -> `open` -> act/verify -> `session clear`.
+- Prefer typed primitives over eval:
+  - `target count` for cardinality checks.
+  - `target click --nth <n>` for deterministic disambiguation.
+  - `target click --count-after` (or `--expect-count-after`) for post-action selector checks.
+- Prefer multi-step bundling with `run --plan-json` when a task requires multiple deterministic actions.
 - Return final answers only in the required JSON schema.

@@ -25,6 +25,36 @@ function parseRepeatCount(input: string | undefined): number {
   return parsed;
 }
 
+function parseNonNegativeIntegerOption(input: string | undefined, label: string): number | undefined {
+  if (typeof input !== "string" || input.trim().length === 0) {
+    return undefined;
+  }
+  const raw = input.trim();
+  if (!/^\d+$/u.test(raw)) {
+    throw queryInvalid(`${label} must be a non-negative integer`);
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw queryInvalid(`${label} must be a non-negative integer`);
+  }
+  return parsed;
+}
+
+function parsePositiveIntegerOption(input: string | undefined, label: string): number | undefined {
+  if (typeof input !== "string" || input.trim().length === 0) {
+    return undefined;
+  }
+  const raw = input.trim();
+  if (!/^\d+$/u.test(raw)) {
+    throw queryInvalid(`${label} must be a positive integer`);
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    throw queryInvalid(`${label} must be a positive integer`);
+  }
+  return parsed;
+}
+
 const meta = targetCommandMeta("target.click");
 export const targetClickCommandSpec: TargetCommandSpec = {
   id: meta.id,
@@ -43,6 +73,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--within <selector>", "Scope query resolution to descendants of selector")
       .option("--frame-scope <scope>", "Frame scope: main|all", "main")
       .option("--index <n>", "Pick the Nth match (0-based) instead of first match")
+      .option("--nth <n>", "Pick the Nth match (1-based) instead of first match")
       .option("--repeat <n>", "Repeat click action N times (1-25); returns final click report plus repeat metadata")
       .option("--explain", "Explain match selection/rejection without clicking", false)
       .option("--wait-for-text <text>", "After click, wait until text becomes visible")
@@ -52,6 +83,8 @@ export const targetClickCommandSpec: TargetCommandSpec = {
       .option("--snapshot", "Include compact post-click text preview")
       .option("--delta", "Include bounded evidence-based delta after click", false)
       .option("--proof", "Include one-shot evidence payload (implies --snapshot and --delta)", false)
+      .option("--count-after", "Include post-click selector count (selector mode)")
+      .option("--expect-count-after <n>", "Post-click assertion: selector count must equal N")
       .option("--proof-check-state", "Include checkbox/radio check-state evidence in proof payload", false)
       .option("--assert-url-prefix <prefix>", "Post-click assertion: final URL must start with prefix")
       .option("--assert-selector <query>", "Post-click assertion: selector must be visible")
@@ -71,6 +104,7 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             within?: string;
             frameScope?: string;
             index?: string;
+            nth?: string;
             repeat?: string;
             explain?: boolean;
             waitForText?: string;
@@ -80,6 +114,8 @@ export const targetClickCommandSpec: TargetCommandSpec = {
             snapshot?: boolean;
             delta?: boolean;
             proof?: boolean;
+            countAfter?: boolean;
+            expectCountAfter?: string;
             proofCheckState?: boolean;
             assertUrlPrefix?: string;
             assertSelector?: string;
@@ -92,7 +128,13 @@ export const targetClickCommandSpec: TargetCommandSpec = {
           const output = ctx.globalOutputOpts();
           const globalOpts = ctx.program.opts<{ session?: string }>();
           const fields = parseFieldsCsv(options.fields);
-          const index = typeof options.index === "string" ? Number.parseInt(options.index, 10) : undefined;
+          const indexOption = parseNonNegativeIntegerOption(options.index, "index");
+          const nthOption = parsePositiveIntegerOption(options.nth, "nth");
+          if (typeof indexOption === "number" && typeof nthOption === "number") {
+            throw queryInvalid("--index and --nth cannot be combined");
+          }
+          const index = typeof nthOption === "number" ? nthOption - 1 : indexOption;
+          const expectCountAfter = parseNonNegativeIntegerOption(options.expectCountAfter, "expect-count-after");
           const repeat = parseRepeatCount(options.repeat);
           try {
             if (Boolean(options.explain) && repeat > 1) {
@@ -117,6 +159,8 @@ export const targetClickCommandSpec: TargetCommandSpec = {
               snapshot: Boolean(options.snapshot),
               delta: Boolean(options.delta),
               proof: Boolean(options.proof),
+              countAfter: Boolean(options.countAfter) || typeof expectCountAfter === "number",
+              expectCountAfter,
               proofCheckState: Boolean(options.proofCheckState),
               assertUrlPrefix: options.assertUrlPrefix,
               assertSelector: options.assertSelector,

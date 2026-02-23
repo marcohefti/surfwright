@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-02-23T12:25:35.093Z",
+  "generatedAt": "2026-02-23T12:41:36.809Z",
   "loopId": "surfwright-benchmark-loop",
   "scopeId": "mission-018-infinite-scroll-chunks",
   "scopeMissionIds": [
@@ -496,6 +496,63 @@
         "pipeline",
         "run",
         "scroll-plan"
+      ],
+      "runStatus": "failed",
+      "metrics": {
+        "attempts": 0,
+        "verifiedOk": 0,
+        "mismatchCount": 0,
+        "retriesTotal": 0,
+        "timeoutsTotal": 0,
+        "wallTimeMsTotal": 0,
+        "tokensTotal": 0,
+        "toolCallsTotal": 0,
+        "reasoningItemsTotal": 0,
+        "commentaryMessagesTotal": 0,
+        "execCallsTotal": 0,
+        "mcpToolCallsTotal": 0,
+        "surfwrightCliCallsTotal": 0,
+        "headedBrowserModeCallsTotal": 0
+      },
+      "artifacts": {
+        "iterationDir": "",
+        "metricsJsonPath": "",
+        "metricsMdPath": "",
+        "runStatePath": ""
+      },
+      "deltas": {
+        "vsPrev": {
+          "tokensPct": null,
+          "wallPct": null
+        },
+        "vsBaseline": {
+          "tokensPct": null,
+          "wallPct": null
+        }
+      },
+      "outcome": "failed",
+      "evidence": "no metrics"
+    },
+    {
+      "iteration": 10,
+      "iterationId": "20260223T123815Z-i010",
+      "createdAt": "2026-02-23T12:41:36.688Z",
+      "scopeId": "mission-018-infinite-scroll-chunks",
+      "missionScopeType": "single",
+      "missionIds": [
+        "018-infinite-scroll-chunks"
+      ],
+      "agentsPerMission": 1,
+      "flowIds": [
+        "surfwright"
+      ],
+      "label": "exp-06",
+      "hypothesis": "A bounded repeat-until run step should reduce ad-hoc shell retry loops and cut token/tool overhead for dynamic scroll verification.",
+      "change": "Added run repeat-until step with bounded maxAttempts and path-based completion conditions.",
+      "changeTags": [
+        "run",
+        "repeat-until",
+        "looping"
       ],
       "runStatus": "failed",
       "metrics": {

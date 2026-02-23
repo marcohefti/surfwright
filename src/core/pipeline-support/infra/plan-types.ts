@@ -6,6 +6,8 @@ export const SUPPORTED_STEP_IDS = new Set([
   "count",
   "scroll-plan",
   "scrollPlan",
+  "repeat-until",
+  "repeatUntil",
   "click",
   "click-read",
   "clickRead",
@@ -42,6 +44,12 @@ export type PipelineStepInput = {
   countSelector?: string;
   countContains?: string;
   countVisibleOnly?: boolean;
+  step?: PipelineStepInput;
+  maxAttempts?: number;
+  untilPath?: string;
+  untilEquals?: unknown;
+  untilGte?: number;
+  untilChanged?: boolean;
   index?: number;
   nth?: number;
   first?: boolean;

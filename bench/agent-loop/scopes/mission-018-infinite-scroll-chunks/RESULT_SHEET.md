@@ -3,8 +3,8 @@
 - loopId: `surfwright-benchmark-loop`
 - scopeId: `mission-018-infinite-scroll-chunks`
 - missionSet: `018-infinite-scroll-chunks`
-- generatedAt: `2026-02-23T12:25:35.093Z`
-- iterations: `9`
+- generatedAt: `2026-02-23T12:41:36.809Z`
+- iterations: `10`
 - mode: `one campaign per run, one mission scope per run, fresh agent per flow+mission attempt`
 
 ## Baseline References
@@ -25,6 +25,7 @@
 | 7 | 1 | exp-03 | regressed | 0/1 | 78971 | 99692 | 278 | -78.8% | -51.2% | Providing explicit run step schema/examples in contract guidance should reduce run-plan trial-and-error and source probing. | Added run guidance to contract with supported step ids and plan-json examples. | tokens -293250; wallMs -104530ms; toolCalls -404 |
 | 8 | 1 | exp-04 | mixed | 1/1 | 154341 | 56397 | 307 | +95.4% | -43.4% | Treating scroll-plan steps in (0,1] as ratio-to-bottom should make agent step=1 loops actually load chunks and improve verification reliability. | Added ratio step semantics to scroll-plan with requestedUnit reporting and updated guidance/examples. | tokens +75370; wallMs -43295ms; toolCalls +29 |
 | 9 | 1 | exp-05 | failed | - | 0 | 0 | 0 | n/a | n/a | Allowing scroll-plan inside run plans should reduce ad-hoc eval loops and make multi-step scroll counting more deterministic. | Added scroll-plan pipeline step support in run plan lint/executor/runtime and updated run guidance step ids. | no metrics |
+| 10 | 1 | exp-06 | failed | - | 0 | 0 | 0 | n/a | n/a | A bounded repeat-until run step should reduce ad-hoc shell retry loops and cut token/tool overhead for dynamic scroll verification. | Added run repeat-until step with bounded maxAttempts and path-based completion conditions. | no metrics |
 
 ## Latest Snapshot
 

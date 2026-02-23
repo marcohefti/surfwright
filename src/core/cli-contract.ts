@@ -146,8 +146,9 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
     examples: [
       "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"snapshot\"}]}'",
       "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"count\",\"selector\":\"a\",\"as\":\"links\"}]}'",
+      "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"repeat-until\",\"step\":{\"id\":\"count\",\"selector\":\".row\"},\"untilPath\":\"count\",\"untilGte\":3}]}'",
       "surfwright run --doctor --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"eval\",\"expression\":\"return document.title\"}]}'",
-      "Supported step ids: open,list,snapshot,find,count,scroll-plan,click,click-read,fill,upload,read,eval,wait,extract",
+      "Supported step ids: open,list,snapshot,find,count,scroll-plan,repeat-until,click,click-read,fill,upload,read,eval,wait,extract",
     ],
     proofSchema: null,
   },

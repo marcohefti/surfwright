@@ -231,6 +231,96 @@ export function lintPlan(input: { steps: PipelineStepInput[] }): PipelineLintIss
         });
       }
     }
+    if (step.id === "repeat-until" || step.id === "repeatUntil") {
+      if (typeof step.step !== "object" || step.step === null || Array.isArray(step.step)) {
+        issues.push({ level: "error", path: `steps[${index}].step`, message: "step must be an object" });
+      } else {
+        const nested = step.step as PipelineStepInput;
+        if (typeof nested.id !== "string" || nested.id.trim().length === 0) {
+          issues.push({ level: "error", path: `steps[${index}].step.id`, message: "nested step id is required" });
+        } else if (!SUPPORTED_STEP_IDS.has(nested.id)) {
+          issues.push({
+            level: "error",
+            path: `steps[${index}].step.id`,
+            message: `unsupported nested step id: ${nested.id}`,
+          });
+        } else if (nested.id === "repeat-until" || nested.id === "repeatUntil") {
+          issues.push({
+            level: "error",
+            path: `steps[${index}].step.id`,
+            message: "nested repeat-until is not supported",
+          });
+        }
+        if (typeof nested.as !== "undefined") {
+          issues.push({
+            level: "error",
+            path: `steps[${index}].step.as`,
+            message: "nested step must not define as; use top-level step.as",
+          });
+        }
+      }
+      if (
+        typeof step.maxAttempts !== "undefined" &&
+        typeof step.maxAttempts !== "number" &&
+        !isTemplateString(step.maxAttempts)
+      ) {
+        issues.push({ level: "error", path: `steps[${index}].maxAttempts`, message: "maxAttempts must be an integer" });
+      }
+      if (
+        typeof step.maxAttempts === "number" &&
+        (step.maxAttempts < 1 || step.maxAttempts > 25 || !Number.isInteger(step.maxAttempts))
+      ) {
+        issues.push({
+          level: "error",
+          path: `steps[${index}].maxAttempts`,
+          message: "maxAttempts must be an integer between 1 and 25",
+        });
+      }
+      const untilPathProvided = typeof step.untilPath !== "undefined";
+      if (
+        !untilPathProvided ||
+        (typeof step.untilPath !== "string" && !isTemplateString(step.untilPath)) ||
+        (typeof step.untilPath === "string" && step.untilPath.trim().length === 0)
+      ) {
+        issues.push({
+          level: "error",
+          path: `steps[${index}].untilPath`,
+          message: "untilPath is required and must be a non-empty string",
+        });
+      }
+      const hasUntilEquals = Object.prototype.hasOwnProperty.call(step, "untilEquals");
+      const hasUntilGte = Object.prototype.hasOwnProperty.call(step, "untilGte");
+      const hasUntilChanged = Object.prototype.hasOwnProperty.call(step, "untilChanged");
+      const enabledUntilChanged = step.untilChanged === true || isTemplateString(step.untilChanged);
+      if (hasUntilGte && typeof step.untilGte !== "number" && !isTemplateString(step.untilGte)) {
+        issues.push({ level: "error", path: `steps[${index}].untilGte`, message: "untilGte must be an integer" });
+      }
+      if (typeof step.untilGte === "number" && !Number.isInteger(step.untilGte)) {
+        issues.push({ level: "error", path: `steps[${index}].untilGte`, message: "untilGte must be an integer" });
+      }
+      if (hasUntilChanged && typeof step.untilChanged !== "boolean" && !isTemplateString(step.untilChanged)) {
+        issues.push({
+          level: "error",
+          path: `steps[${index}].untilChanged`,
+          message: "untilChanged must be a boolean",
+        });
+      }
+      if (hasUntilChanged && step.untilChanged === false) {
+        issues.push({
+          level: "error",
+          path: `steps[${index}].untilChanged`,
+          message: "untilChanged must be true when provided",
+        });
+      }
+      const conditionCount = Number(hasUntilEquals) + Number(hasUntilGte) + Number(enabledUntilChanged);
+      if (conditionCount !== 1) {
+        issues.push({
+          level: "error",
+          path: `steps[${index}]`,
+          message: "repeat-until requires exactly one condition: untilEquals, untilGte, or untilChanged=true",
+        });
+      }
+    }
     if (step.id === "upload") {
       const selectorValid = typeof step.selector === "string" || isTemplateString(step.selector);
       if (!selectorValid) {

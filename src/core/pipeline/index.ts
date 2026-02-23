@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import { CliError } from "../errors.js";
 import {
   SUPPORTED_STEP_IDS,
@@ -9,6 +10,7 @@ import {
   parseOptionalStringOrStringArray,
   parseStepAlias,
   parseStepTimeoutMs,
+  readPathValue,
   resolvePlanSource,
   resolveTemplateInValue,
   type LoadedPlan,
@@ -42,6 +44,9 @@ type PipelineStepExecutorInput = {
   sessionId: string | undefined;
   ops: PipelineOps;
 };
+
+const REPEAT_UNTIL_DEFAULT_ATTEMPTS = 5;
+const REPEAT_UNTIL_MAX_ATTEMPTS = 25;
 
 const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput) => Promise<Record<string, unknown>>> = {
   open: async ({ step, index, timeoutMs, sessionId, ops }) => {
@@ -110,6 +115,146 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
       persistState: !Boolean(step.noPersist),
     }),
   scrollPlan: async (input) => await PIPELINE_STEP_EXECUTORS["scroll-plan"](input),
+  "repeat-until": async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) => {
+    const nestedInput = step.step;
+    if (!nestedInput || typeof nestedInput !== "object" || Array.isArray(nestedInput)) {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].step must be an object`);
+    }
+    const nestedStep = nestedInput as PipelineStepInput;
+    if (typeof nestedStep.id !== "string" || nestedStep.id.trim().length === 0) {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].step.id is required`);
+    }
+    if (!SUPPORTED_STEP_IDS.has(nestedStep.id)) {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].step.id unsupported: ${nestedStep.id}`);
+    }
+    if (nestedStep.id === "repeat-until" || nestedStep.id === "repeatUntil") {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].step.id nested repeat-until is not supported`);
+    }
+    if (typeof nestedStep.as !== "undefined") {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].step.as is not supported; use steps[${index}].as`);
+    }
+
+    const untilPath = parseOptionalString(step.untilPath, `steps[${index}].untilPath`);
+    if (typeof untilPath !== "string" || untilPath.trim().length === 0) {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].untilPath is required`);
+    }
+    const hasUntilEquals = Object.prototype.hasOwnProperty.call(step, "untilEquals");
+    const hasUntilGte = Object.prototype.hasOwnProperty.call(step, "untilGte");
+    const untilChanged = parseOptionalBoolean(step.untilChanged, `steps[${index}].untilChanged`);
+    const hasUntilChanged = untilChanged === true;
+    const conditionCount = Number(hasUntilEquals) + Number(hasUntilGte) + Number(hasUntilChanged);
+    if (conditionCount !== 1) {
+      throw new CliError(
+        "E_QUERY_INVALID",
+        `steps[${index}] repeat-until requires exactly one condition: untilEquals, untilGte, or untilChanged=true`,
+      );
+    }
+
+    const untilGte = hasUntilGte ? parseOptionalInteger(step.untilGte, `steps[${index}].untilGte`) : undefined;
+    if (hasUntilGte && typeof untilGte !== "number") {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].untilGte must be an integer`);
+    }
+
+    const maxAttemptsRaw = parseOptionalInteger(step.maxAttempts, `steps[${index}].maxAttempts`);
+    const maxAttempts = maxAttemptsRaw ?? REPEAT_UNTIL_DEFAULT_ATTEMPTS;
+    if (maxAttempts < 1 || maxAttempts > REPEAT_UNTIL_MAX_ATTEMPTS) {
+      throw new CliError(
+        "E_QUERY_INVALID",
+        `steps[${index}].maxAttempts must be between 1 and ${REPEAT_UNTIL_MAX_ATTEMPTS}`,
+      );
+    }
+
+    const nestedExecutor = PIPELINE_STEP_EXECUTORS[nestedStep.id];
+    if (!nestedExecutor) {
+      throw new CliError("E_QUERY_INVALID", `steps[${index}].step.id unsupported: ${nestedStep.id}`);
+    }
+
+    let currentSessionId = sessionId;
+    let currentTargetId = stepTargetId;
+    let previousValue: unknown = undefined;
+    let satisfied = false;
+    let lastReport: Record<string, unknown> | null = null;
+    const attempts: Array<Record<string, unknown>> = [];
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const nestedTimeoutMs = parseStepTimeoutMs(
+        nestedStep.timeoutMs,
+        timeoutMs,
+        index,
+      );
+      const nestedStepTargetId = parseOptionalString(nestedStep.targetId, `steps[${index}].step.targetId`) ?? currentTargetId;
+      const nestedStepFrameScope = parseOptionalString(nestedStep.frameScope, `steps[${index}].step.frameScope`) ?? stepFrameScope;
+      const nestedReport = await nestedExecutor({
+        step: nestedStep,
+        index,
+        timeoutMs: nestedTimeoutMs,
+        stepTargetId: nestedStepTargetId,
+        stepFrameScope: nestedStepFrameScope,
+        sessionId: currentSessionId,
+        ops,
+      });
+
+      if (typeof nestedReport.sessionId === "string") {
+        currentSessionId = nestedReport.sessionId;
+      }
+      if (typeof nestedReport.targetId === "string") {
+        currentTargetId = nestedReport.targetId;
+      }
+
+      const nestedAssertions = evaluateAssertions(nestedStep, nestedReport);
+      if (nestedAssertions.failed > 0) {
+        const failed = nestedAssertions.checks.find((entry) => !entry.ok);
+        throw new CliError(
+          "E_ASSERT_FAILED",
+          `Assertion failed at steps[${index}].step ${failed?.path ?? ""}: ${failed?.message ?? "unknown"}`.trim(),
+        );
+      }
+
+      const currentValue = readPathValue(nestedReport, untilPath);
+      let matched = false;
+      if (hasUntilEquals) {
+        matched = isDeepStrictEqual(currentValue, step.untilEquals);
+      } else if (hasUntilGte) {
+        matched = typeof currentValue === "number" && typeof untilGte === "number" && currentValue >= untilGte;
+      } else if (hasUntilChanged) {
+        matched = attempt > 1 && !isDeepStrictEqual(currentValue, previousValue);
+      }
+
+      attempts.push({
+        attempt,
+        matched,
+        value: typeof currentValue === "undefined" ? null : currentValue,
+      });
+      previousValue = currentValue;
+      lastReport = nestedReport;
+      if (matched) {
+        satisfied = true;
+        break;
+      }
+    }
+
+    const until =
+      hasUntilEquals
+        ? { kind: "equals", path: untilPath, expected: step.untilEquals }
+        : hasUntilGte
+          ? { kind: "gte", path: untilPath, threshold: untilGte ?? null }
+          : { kind: "changed", path: untilPath };
+
+    return {
+      ok: true,
+      sessionId: currentSessionId ?? null,
+      targetId: currentTargetId ?? null,
+      repeat: {
+        maxAttempts,
+        attemptsRun: attempts.length,
+        satisfied,
+        until,
+      },
+      attempts,
+      last: lastReport,
+    };
+  },
+  repeatUntil: async (input) => await PIPELINE_STEP_EXECUTORS["repeat-until"](input),
   click: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) => {
     const expectCountAfter = parseOptionalInteger(step.expectCountAfter, `steps[${index}].expectCountAfter`);
     if (typeof expectCountAfter === "number" && expectCountAfter < 0) {

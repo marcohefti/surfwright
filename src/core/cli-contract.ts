@@ -147,7 +147,7 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
       "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"snapshot\"}]}'",
       "surfwright run --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"count\",\"selector\":\"a\",\"as\":\"links\"}]}'",
       "surfwright run --doctor --plan-json '{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"},{\"id\":\"eval\",\"expression\":\"return document.title\"}]}'",
-      "Supported step ids: open,list,snapshot,find,count,click,click-read,fill,upload,read,eval,wait,extract",
+      "Supported step ids: open,list,snapshot,find,count,scroll-plan,click,click-read,fill,upload,read,eval,wait,extract",
     ],
     proofSchema: null,
   },

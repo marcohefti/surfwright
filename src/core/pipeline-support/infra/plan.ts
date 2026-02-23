@@ -188,6 +188,49 @@ export function lintPlan(input: { steps: PipelineStepInput[] }): PipelineLintIss
     if (step.id === "fill" && typeof step.value !== "string" && !isTemplateString(step.value)) {
       issues.push({ level: "error", path: `steps[${index}].value`, message: "value is required for fill" });
     }
+    if (step.id === "scroll-plan" || step.id === "scrollPlan") {
+      if (typeof step.steps !== "undefined" && typeof step.steps !== "string" && !isTemplateString(step.steps)) {
+        issues.push({ level: "error", path: `steps[${index}].steps`, message: "steps must be a csv string" });
+      }
+      if (typeof step.settleMs !== "undefined" && typeof step.settleMs !== "number" && !isTemplateString(step.settleMs)) {
+        issues.push({ level: "error", path: `steps[${index}].settleMs`, message: "settleMs must be an integer" });
+      }
+      if (
+        typeof step.countSelector !== "undefined" &&
+        typeof step.countSelector !== "string" &&
+        !isTemplateString(step.countSelector)
+      ) {
+        issues.push({ level: "error", path: `steps[${index}].countSelector`, message: "countSelector must be a string" });
+      }
+      if (
+        typeof step.countContains !== "undefined" &&
+        typeof step.countContains !== "string" &&
+        !isTemplateString(step.countContains)
+      ) {
+        issues.push({ level: "error", path: `steps[${index}].countContains`, message: "countContains must be a string" });
+      }
+      if (
+        typeof step.countContains !== "undefined" &&
+        typeof step.countSelector === "undefined" &&
+        !isTemplateString(step.countContains)
+      ) {
+        issues.push({ level: "error", path: `steps[${index}].countContains`, message: "countContains requires countSelector" });
+      }
+      if (typeof step.countVisibleOnly !== "undefined" && typeof step.countVisibleOnly !== "boolean" && !isTemplateString(step.countVisibleOnly)) {
+        issues.push({ level: "error", path: `steps[${index}].countVisibleOnly`, message: "countVisibleOnly must be a boolean" });
+      }
+      if (
+        step.countVisibleOnly === true &&
+        typeof step.countSelector === "undefined" &&
+        !isTemplateString(step.countVisibleOnly)
+      ) {
+        issues.push({
+          level: "error",
+          path: `steps[${index}].countVisibleOnly`,
+          message: "countVisibleOnly requires countSelector",
+        });
+      }
+    }
     if (step.id === "upload") {
       const selectorValid = typeof step.selector === "string" || isTemplateString(step.selector);
       if (!selectorValid) {

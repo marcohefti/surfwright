@@ -4,6 +4,8 @@ export const SUPPORTED_STEP_IDS = new Set([
   "snapshot",
   "find",
   "count",
+  "scroll-plan",
+  "scrollPlan",
   "click",
   "click-read",
   "clickRead",
@@ -35,6 +37,11 @@ export type PipelineStepInput = {
   visibleOnly?: boolean;
   within?: string;
   frameScope?: string;
+  steps?: string;
+  settleMs?: number;
+  countSelector?: string;
+  countContains?: string;
+  countVisibleOnly?: boolean;
   index?: number;
   nth?: number;
   first?: boolean;
@@ -111,6 +118,17 @@ export type PipelineOps = {
     containsQuery?: string;
     visibleOnly: boolean;
     frameScope?: string;
+    persistState: boolean;
+  }) => Promise<Record<string, unknown>>;
+  scrollPlan: (opts: {
+    targetId: string;
+    timeoutMs: number;
+    sessionId?: string;
+    stepsCsv?: string;
+    settleMs?: number;
+    countSelectorQuery?: string;
+    countContainsQuery?: string;
+    countVisibleOnly: boolean;
     persistState: boolean;
   }) => Promise<Record<string, unknown>>;
   click: (opts: {

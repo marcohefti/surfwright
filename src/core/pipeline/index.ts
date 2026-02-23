@@ -97,6 +97,19 @@ const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput)
       frameScope: stepFrameScope,
       persistState: !Boolean(step.noPersist),
     }),
+  "scroll-plan": async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) =>
+    await ops.scrollPlan({
+      targetId: requireStepTargetId(stepTargetId, index),
+      timeoutMs,
+      sessionId,
+      stepsCsv: parseOptionalString(step.steps, `steps[${index}].steps`),
+      settleMs: parseOptionalInteger(step.settleMs, `steps[${index}].settleMs`),
+      countSelectorQuery: parseOptionalString(step.countSelector, `steps[${index}].countSelector`),
+      countContainsQuery: parseOptionalString(step.countContains, `steps[${index}].countContains`),
+      countVisibleOnly: Boolean(step.countVisibleOnly),
+      persistState: !Boolean(step.noPersist),
+    }),
+  scrollPlan: async (input) => await PIPELINE_STEP_EXECUTORS["scroll-plan"](input),
   click: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) => {
     const expectCountAfter = parseOptionalInteger(step.expectCountAfter, `steps[${index}].expectCountAfter`);
     if (typeof expectCountAfter === "number" && expectCountAfter < 0) {

@@ -12,6 +12,7 @@ import {
   targetFind,
   targetList,
   targetRead,
+  targetScrollPlan,
   targetSnapshot,
   targetUpload,
   targetWait,
@@ -128,6 +129,28 @@ export async function runPipeline(opts: {
         containsQuery: input.containsQuery,
         visibleOnly: input.visibleOnly,
         frameScope: input.frameScope,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    scrollPlan: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      stepsCsv?: string;
+      settleMs?: number;
+      countSelectorQuery?: string;
+      countContainsQuery?: string;
+      countVisibleOnly: boolean;
+      persistState: boolean;
+    }) =>
+      (await targetScrollPlan({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        stepsCsv: input.stepsCsv,
+        settleMs: input.settleMs,
+        countSelectorQuery: input.countSelectorQuery,
+        countContainsQuery: input.countContainsQuery,
+        countVisibleOnly: input.countVisibleOnly,
         persistState: input.persistState,
       })) as unknown as Record<string, unknown>,
     click: async (input: {

@@ -12,14 +12,14 @@
 
 - scope: mission-018-infinite-scroll-chunks
 - missionSet: 018-infinite-scroll-chunks
-- outcome: mixed
-- evidence: tokens +75370; wallMs -43295ms; toolCalls +29
+- outcome: regressed
+- evidence: tokens -105716; wallMs -10274ms; toolCalls -151
 
 ## Next Command
 
 ```bash
 pnpm bench:loop:run \
-  --label "exp-09" \
+  --label "exp-12" \
   --mission-id 018-infinite-scroll-chunks \
   --agents-per-mission 1 \
   --hypothesis "<why this should improve>" \

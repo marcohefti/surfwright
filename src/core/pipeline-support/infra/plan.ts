@@ -1,9 +1,15 @@
 import { CliError } from "../../errors.js";
 import { providers } from "../../providers/index.js";
-import { SUPPORTED_STEP_IDS, type LoadedPlan, type PipelineLintIssue, type PipelineStepInput } from "./plan-types.js";
+import {
+  SUPPORTED_STEP_IDS,
+  type LoadedPlan,
+  type PipelineLintIssue,
+  type PipelineResultMap,
+  type PipelineStepInput,
+} from "./plan-types.js";
 
 export { SUPPORTED_STEP_IDS };
-export type { LoadedPlan, PipelineLintIssue, PipelineOps, PipelineStepInput } from "./plan-types.js";
+export type { LoadedPlan, PipelineLintIssue, PipelineOps, PipelineResultMap, PipelineStepInput } from "./plan-types.js";
 
 const TEMPLATE_EXACT_RE = /^\{\{\s*([^{}]+?)\s*\}\}$/;
 const TEMPLATE_EMBEDDED_RE = /\{\{\s*([^{}]+?)\s*\}\}/g;
@@ -148,7 +154,7 @@ export function parseOptionalStringOrStringArray(input: unknown, pathLabel: stri
   return out;
 }
 
-export function lintPlan(input: { steps: PipelineStepInput[] }): PipelineLintIssue[] {
+export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<string, unknown> }): PipelineLintIssue[] {
   const issues: PipelineLintIssue[] = [];
   const aliases = new Set<string>();
 
@@ -364,18 +370,50 @@ export function lintPlan(input: { steps: PipelineStepInput[] }): PipelineLintIss
       }
     }
   }
+  if (typeof input.result !== "undefined") {
+    if (typeof input.result !== "object" || input.result === null || Array.isArray(input.result)) {
+      issues.push({ level: "error", path: "result", message: "result must be an object map of outputField -> sourcePath" });
+    } else {
+      const entries = Object.entries(input.result);
+      if (entries.length < 1) {
+        issues.push({ level: "error", path: "result", message: "result map must include at least one key" });
+      }
+      for (const [key, value] of entries) {
+        if (!STEP_ALIAS_RE.test(key)) {
+          issues.push({
+            level: "error",
+            path: `result.${key}`,
+            message: "result output field must match /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/",
+          });
+        }
+        if (typeof value !== "string" || value.trim().length === 0) {
+          issues.push({
+            level: "error",
+            path: `result.${key}`,
+            message: "result source path must be a non-empty string",
+          });
+        }
+      }
+    }
+  }
   return issues;
 }
 
-function parsePlanObject(raw: unknown, source: string): { steps: PipelineStepInput[] } {
+function parsePlanObject(raw: unknown, source: string): { steps: PipelineStepInput[]; result?: PipelineResultMap } {
   if (typeof raw !== "object" || raw === null) {
     throw new CliError("E_QUERY_INVALID", `${source} must be a JSON object`);
   }
-  const record = raw as { steps?: unknown };
+  const record = raw as { steps?: unknown; result?: unknown };
   if (!Array.isArray(record.steps) || record.steps.length === 0) {
     throw new CliError("E_QUERY_INVALID", "plan.steps must be a non-empty array");
   }
-  return { steps: record.steps as PipelineStepInput[] };
+  if (typeof record.result === "undefined") {
+    return { steps: record.steps as PipelineStepInput[] };
+  }
+  if (typeof record.result !== "object" || record.result === null || Array.isArray(record.result)) {
+    throw new CliError("E_QUERY_INVALID", "plan.result must be an object map");
+  }
+  return { steps: record.steps as PipelineStepInput[], result: record.result as PipelineResultMap };
 }
 
 function parseJsonWithContext(raw: string, source: string): unknown {

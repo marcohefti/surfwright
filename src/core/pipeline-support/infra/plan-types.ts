@@ -279,6 +279,8 @@ export type PipelineLintIssue = {
   message: string;
 };
 
+export type PipelineResultMap = Record<string, string>;
+
 export type LoadedPlan = {
   source: string;
   replay: {
@@ -288,5 +290,6 @@ export type LoadedPlan = {
   } | null;
   plan: {
     steps: PipelineStepInput[];
+    result?: PipelineResultMap;
   };
 };

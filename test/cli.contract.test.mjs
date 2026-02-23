@@ -207,6 +207,7 @@ test("contract --core --search run exposes runnable plan guidance", () => {
   assert.equal(Array.isArray(runGuidance.examples), true);
   assert.equal(runGuidance.examples.some((entry) => entry.includes("Supported step ids:")), true);
   assert.equal(runGuidance.examples.some((entry) => entry.includes("repeat-until")), true);
+  assert.equal(runGuidance.examples.some((entry) => entry.includes("\"result\"")), true);
 });
 
 test("contract rejects incompatible mode flags", () => {

@@ -16,6 +16,7 @@ import {
   type LoadedPlan,
   type PipelineLintIssue,
   type PipelineOps,
+  type PipelineResultMap,
   type PipelineStepInput,
 } from "../pipeline-support/index.js";
 import { writeRunArtifact } from "../pipeline-support/index.js";
@@ -47,6 +48,24 @@ type PipelineStepExecutorInput = {
 
 const REPEAT_UNTIL_DEFAULT_ATTEMPTS = 5;
 const REPEAT_UNTIL_MAX_ATTEMPTS = 25;
+
+function projectRunResult(resultMap: PipelineResultMap | undefined, scope: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (typeof resultMap === "undefined") {
+    return undefined;
+  }
+  const projected: Record<string, unknown> = {};
+  for (const [key, pathExpr] of Object.entries(resultMap)) {
+    if (typeof pathExpr !== "string" || pathExpr.trim().length === 0) {
+      throw new CliError("E_QUERY_INVALID", `plan.result.${key} must be a non-empty string path`);
+    }
+    const resolved = readPathValue(scope, pathExpr);
+    if (typeof resolved === "undefined") {
+      throw new CliError("E_QUERY_INVALID", `plan.result.${key} unresolved path: ${pathExpr}`);
+    }
+    projected[key] = resolved;
+  }
+  return projected;
+}
 
 const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecutorInput) => Promise<Record<string, unknown>>> = {
   open: async ({ step, index, timeoutMs, sessionId, ops }) => {
@@ -451,6 +470,7 @@ export async function executePipelinePlan(opts: {
       mode: "doctor",
       source: loaded.source,
       stepCount: loaded.plan.steps.length,
+      resultMapFields: loaded.plan.result ? Object.keys(loaded.plan.result).length : 0,
       valid: lintErrors.length === 0,
       supportedSteps: [...SUPPORTED_STEP_IDS],
       issues: lintIssues,
@@ -621,6 +641,13 @@ export async function executePipelinePlan(opts: {
     sessionId: ctx.sessionId ?? null,
     targetId: ctx.targetId ?? null,
   });
+  const resultScope: Record<string, unknown> = {
+    sessionId: ctx.sessionId ?? null,
+    targetId: ctx.targetId ?? null,
+    last: results.length > 0 ? (results[results.length - 1].report as Record<string, unknown>) : null,
+    steps: aliases,
+  };
+  const projectedResult = projectRunResult(loaded.plan.result as PipelineResultMap | undefined, resultScope);
 
   const report: Record<string, unknown> = {
     ok: true,
@@ -631,6 +658,7 @@ export async function executePipelinePlan(opts: {
     steps: results,
     timeline,
     totalMs: finishedAt - startedAt,
+    ...(typeof projectedResult === "undefined" ? {} : { result: projectedResult }),
   };
   if (ndjsonPath) {
     report.logNdjson = { path: ndjsonPath, mode: ndjsonMode };
@@ -651,6 +679,7 @@ export async function executePipelinePlan(opts: {
         steps: results,
         timeline,
         totalMs: finishedAt - startedAt,
+        ...(typeof projectedResult === "undefined" ? {} : { result: projectedResult }),
       },
     });
   }

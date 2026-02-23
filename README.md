@@ -220,7 +220,7 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 `target style --proof` includes compact fields (`found`, `targetText`, `styleBg`, `styleColor`, `styleFontSize`, `styleRadius`) for mission checks.
 `target extract --summary` adds compact summary/proof fields (`itemCount`, `totalRawCount`, `count`, `firstTitle`, `firstUrl`, `firstCommand`) for direct proof collection.
 `--output-shape proof` now also projects compact `target extract` proof fields without requiring `--summary`.
-`run` pipeline step coverage includes `fill`, `upload`, `click-read`, and bounded `repeat-until` loops, so plans can execute full form workflows and retry-until checks without shell-loop glue.
+`run` pipeline step coverage includes `fill`, `upload`, `click-read`, bounded `repeat-until` loops, and top-level `result` projections (`outputField -> sourcePath`), so plans can execute full form workflows and emit mission fields without shell-loop + jq glue.
 `run` upload steps now honor `submitSelector`, `expectUploadedFilename`, and result-verification fields (`waitForResult`, `resultSelector`, `resultTextContains`, `resultFilenameRegex`) for deterministic attach+submit+verify flows.
 CLI compatibility for cold-start agents: `--json` is accepted as an explicit no-op (JSON remains default), and `target <subcommand> --target <targetId>` is accepted as an alias for positional `targetId`.
 Prefer `target extract`, `target style`, and `target read` before `target eval`; when you need eval, `--expr-b64`/`--script-b64` avoid shell escaping overhead and `--output-shape compact` keeps payloads lean.

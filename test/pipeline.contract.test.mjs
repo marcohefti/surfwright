@@ -257,3 +257,51 @@ test("run doctor rejects repeat-until without condition", () => {
   assert.equal(payload.mode, "doctor");
   assert.equal(payload.valid, false);
 });
+
+test("run doctor accepts result projection map shape", () => {
+  const plan = {
+    steps: [
+      { id: "open", url: "https://example.com" },
+      { id: "count", selector: "a", as: "links" },
+    ],
+    result: {
+      linkCount: "steps.links.count",
+    },
+  };
+  const result = runCli(["run",
+    "--doctor",
+    "--plan-json",
+    JSON.stringify(plan),
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "doctor");
+  assert.equal(payload.valid, true);
+  assert.equal(payload.resultMapFields, 1);
+});
+
+test("run doctor rejects result projection with non-string path", () => {
+  const plan = {
+    steps: [
+      { id: "open", url: "https://example.com" },
+    ],
+    result: {
+      linkCount: 42,
+    },
+  };
+  const result = runCli(["run",
+    "--doctor",
+    "--plan-json",
+    JSON.stringify(plan),
+    "--timeout-ms",
+    "5000",
+  ]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "doctor");
+  assert.equal(payload.valid, false);
+});

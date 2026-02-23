@@ -35,6 +35,7 @@ All notable changes to SurfWright are documented here.
 - [target] Added additive `blockType` classification to `target url-assert` reports for auth/captcha/consent-aware URL assertions.
 - [run] Added `run` plan-step support for `fill` and `upload` so multi-step plans can execute full form workflows without eval glue.
 - [run] Added `run` plan-step support for bounded `repeat-until` loops (`step`, `untilPath`, one condition, `maxAttempts`) to replace ad-hoc shell retry loops.
+- [run] Added top-level `run` plan `result` projection map (`outputField -> sourcePath`) for direct mission-field extraction from step aliases without post-run `jq` glue.
 - [target] Added `target click-read` as a composed primitive to click and then read bounded text in one deterministic command.
 - [target] Added `target extract --summary` for compact summary/proof fields (`itemCount`, `totalRawCount`, `firstTitle`, `firstUrl`, `firstCommand`, `source`).
 - [open] Added `open --ensure-session <off|if-missing|fresh>` to let `open` bootstrap or fork managed sessions without separate `session` orchestration.

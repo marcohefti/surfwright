@@ -1,5 +1,5 @@
 import { nowIso, stateRootDir } from "../../state/index.js";
-import type { LoadedPlan, PipelineStepInput } from "./plan.js";
+import type { LoadedPlan, PipelineResultMap, PipelineStepInput } from "./plan.js";
 import { providers } from "../../providers/index.js";
 
 const RUN_ARTIFACT_LABEL_MAX = 64;
@@ -24,7 +24,7 @@ export function writeRunArtifact(opts: {
   label?: string;
   source: string;
   replay: LoadedPlan["replay"];
-  plan: { steps: PipelineStepInput[] };
+  plan: { steps: PipelineStepInput[]; result?: PipelineResultMap };
   report: Record<string, unknown>;
 }) {
   const { fs, path } = providers();

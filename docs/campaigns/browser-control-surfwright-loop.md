@@ -115,8 +115,8 @@ pnpm bench:loop:history --mission-id 018-infinite-scroll-chunks
 
 ## Headless Guard
 
-Loop runs include a `surfwright` wrapper in campaign env that rewrites `--browser-mode headed` to `headless`.
-If any headed call still appears in traces, the iteration fails with a headless-guard error.
+Loop runs include a `surfwright` wrapper in campaign env that hard-fails any `--browser-mode headed` command before launch.
+Headless guard scoring counts successful headed executions; blocked headed commands fail fast and do not count as headed launches.
 
 ## Session Policy
 

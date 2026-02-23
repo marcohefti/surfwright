@@ -85,9 +85,6 @@ export function parseTraceStats(toolCallsPath, missionId, attemptId) {
       const cmd = extractExecCommand(ev);
       if (cmd && /^surfwright(\s|$)/.test(cmd)) {
         stats.surfwrightCliCalls += 1;
-        if (/(^|\s)--browser-mode\s+headed(\s|$)/.test(cmd)) {
-          stats.headedBrowserModeCalls += 1;
-        }
         const sub = extractSurfwrightSubcommand(cmd);
         if (sub) {
           stats.surfwrightSubcommands[sub] = (stats.surfwrightSubcommands[sub] || 0) + 1;
@@ -118,12 +115,17 @@ export function parseTraceStats(toolCallsPath, missionId, attemptId) {
     if (ev.op === "item_completed") {
       const item = ev?.input?.payload?.item;
       if (item?.type === "commandExecution") {
+        const commandText = String(item.command || "");
+        const exitCode = Number(item.exitCode ?? 0);
+        if (exitCode === 0 && /\bsurfwright\b/.test(commandText) && /--browser-mode\s+headed\b/.test(commandText)) {
+          stats.headedBrowserModeCalls += 1;
+        }
         stats.commandEvents.push({
           missionId,
           attemptId,
           durationMs: Number(item.durationMs || 0),
-          exitCode: Number(item.exitCode ?? 0),
-          command: String(item.command || ""),
+          exitCode,
+          command: commandText,
         });
       }
     }

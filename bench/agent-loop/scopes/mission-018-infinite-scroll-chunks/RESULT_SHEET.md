@@ -3,8 +3,8 @@
 - loopId: `surfwright-benchmark-loop`
 - scopeId: `mission-018-infinite-scroll-chunks`
 - missionSet: `018-infinite-scroll-chunks`
-- generatedAt: `2026-02-23T12:52:31.282Z`
-- iterations: `11`
+- generatedAt: `2026-02-23T12:55:39.207Z`
+- iterations: `12`
 - mode: `one campaign per run, one mission scope per run, fresh agent per flow+mission attempt`
 
 ## Baseline References
@@ -27,18 +27,19 @@
 | 9 | 1 | exp-05 | failed | - | 0 | 0 | 0 | n/a | n/a | Allowing scroll-plan inside run plans should reduce ad-hoc eval loops and make multi-step scroll counting more deterministic. | Added scroll-plan pipeline step support in run plan lint/executor/runtime and updated run guidance step ids. | no metrics |
 | 10 | 1 | exp-06 | failed | - | 0 | 0 | 0 | n/a | n/a | A bounded repeat-until run step should reduce ad-hoc shell retry loops and cut token/tool overhead for dynamic scroll verification. | Added run repeat-until step with bounded maxAttempts and path-based completion conditions. | no metrics |
 | 11 | 1 | exp-07 | regressed | 0/1 | 48625 | 46123 | 156 | -68.5% | -18.2% | Run-level result projection should reduce post-run jq/probe commands and lower tool-call/token overhead. | Added plan.result output-field projection map from run alias/last scope into deterministic run.result payload. | tokens -105716; wallMs -10274ms; toolCalls -151 |
+| 12 | 1 | exp-08 | improved | 0/1 | 48410 | 31773 | 134 | -0.4% | -31.1% | Hard-failing headed mode in the bench shim plus successful-only headed guard scoring should eliminate false guard failures and stabilize iteration completion. | Bench headless wrapper now rejects headed mode pre-launch and scoring counts only successful headed executions for guard checks. | wallMs -14350ms; tokens -215; toolCalls -22 |
 
 ## Latest Snapshot
 
-- iteration: `#11` (exp-07)
+- iteration: `#12` (exp-08)
 - agentsPerMission: `1`
 - flowIds: `surfwright`
-- outcome: `regressed`
+- outcome: `improved`
 - verified: `0/1`
-- tokens: `48625`
-- wall ms: `46123`
-- tool calls: `156`
+- tokens: `48410`
+- wall ms: `31773`
+- tool calls: `134`
 - headed browser calls: `0`
-- run state: `tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125139Z-i011/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i011-20260223t125139z-i011/campaign.run.state.json`
-- metrics: `tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125139Z-i011/report/metrics.full.json`
+- run state: `tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125503Z-i012/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i012-20260223t125503z-i012/campaign.run.state.json`
+- metrics: `tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125503Z-i012/report/metrics.full.json`
 

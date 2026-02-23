@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-02-23T12:52:31.282Z",
+  "generatedAt": "2026-02-23T12:55:39.207Z",
   "loopId": "surfwright-benchmark-loop",
   "scopeId": "mission-018-infinite-scroll-chunks",
   "scopeMissionIds": [
@@ -646,12 +646,69 @@
       },
       "outcome": "regressed",
       "evidence": "tokens -105716; wallMs -10274ms; toolCalls -151"
+    },
+    {
+      "iteration": 12,
+      "iterationId": "20260223T125503Z-i012",
+      "createdAt": "2026-02-23T12:55:39.093Z",
+      "scopeId": "mission-018-infinite-scroll-chunks",
+      "missionScopeType": "single",
+      "missionIds": [
+        "018-infinite-scroll-chunks"
+      ],
+      "agentsPerMission": 1,
+      "flowIds": [
+        "surfwright"
+      ],
+      "label": "exp-08",
+      "hypothesis": "Hard-failing headed mode in the bench shim plus successful-only headed guard scoring should eliminate false guard failures and stabilize iteration completion.",
+      "change": "Bench headless wrapper now rejects headed mode pre-launch and scoring counts only successful headed executions for guard checks.",
+      "changeTags": [
+        "bench",
+        "headless-guard",
+        "wrapper"
+      ],
+      "runStatus": "invalid",
+      "metrics": {
+        "attempts": 1,
+        "verifiedOk": 0,
+        "mismatchCount": 1,
+        "retriesTotal": 0,
+        "timeoutsTotal": 0,
+        "wallTimeMsTotal": 31773,
+        "tokensTotal": 48410,
+        "toolCallsTotal": 134,
+        "reasoningItemsTotal": 8,
+        "commentaryMessagesTotal": 2,
+        "execCallsTotal": 7,
+        "mcpToolCallsTotal": 0,
+        "surfwrightCliCallsTotal": 2,
+        "headedBrowserModeCallsTotal": 0
+      },
+      "artifacts": {
+        "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125503Z-i012",
+        "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125503Z-i012/report/metrics.full.json",
+        "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125503Z-i012/report/metrics.summary.md",
+        "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125503Z-i012/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i012-20260223t125503z-i012/campaign.run.state.json"
+      },
+      "deltas": {
+        "vsPrev": {
+          "tokensPct": -0.00442159383033419,
+          "wallPct": -0.31112460160874184
+        },
+        "vsBaseline": {
+          "tokensPct": -0.4275477142113852,
+          "wallPct": -0.2833750592056296
+        }
+      },
+      "outcome": "improved",
+      "evidence": "wallMs -14350ms; tokens -215; toolCalls -22"
     }
   ],
   "latest": {
-    "iteration": 11,
-    "iterationId": "20260223T125139Z-i011",
-    "createdAt": "2026-02-23T12:52:31.159Z",
+    "iteration": 12,
+    "iterationId": "20260223T125503Z-i012",
+    "createdAt": "2026-02-23T12:55:39.093Z",
     "scopeId": "mission-018-infinite-scroll-chunks",
     "missionScopeType": "single",
     "missionIds": [
@@ -661,13 +718,13 @@
     "flowIds": [
       "surfwright"
     ],
-    "label": "exp-07",
-    "hypothesis": "Run-level result projection should reduce post-run jq/probe commands and lower tool-call/token overhead.",
-    "change": "Added plan.result output-field projection map from run alias/last scope into deterministic run.result payload.",
+    "label": "exp-08",
+    "hypothesis": "Hard-failing headed mode in the bench shim plus successful-only headed guard scoring should eliminate false guard failures and stabilize iteration completion.",
+    "change": "Bench headless wrapper now rejects headed mode pre-launch and scoring counts only successful headed executions for guard checks.",
     "changeTags": [
-      "run",
-      "result-map",
-      "projection"
+      "bench",
+      "headless-guard",
+      "wrapper"
     ],
     "runStatus": "invalid",
     "metrics": {
@@ -676,33 +733,33 @@
       "mismatchCount": 1,
       "retriesTotal": 0,
       "timeoutsTotal": 0,
-      "wallTimeMsTotal": 46123,
-      "tokensTotal": 48625,
-      "toolCallsTotal": 156,
-      "reasoningItemsTotal": 9,
-      "commentaryMessagesTotal": 3,
-      "execCallsTotal": 8,
+      "wallTimeMsTotal": 31773,
+      "tokensTotal": 48410,
+      "toolCallsTotal": 134,
+      "reasoningItemsTotal": 8,
+      "commentaryMessagesTotal": 2,
+      "execCallsTotal": 7,
       "mcpToolCallsTotal": 0,
-      "surfwrightCliCallsTotal": 3,
+      "surfwrightCliCallsTotal": 2,
       "headedBrowserModeCallsTotal": 0
     },
     "artifacts": {
-      "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125139Z-i011",
-      "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125139Z-i011/report/metrics.full.json",
-      "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125139Z-i011/report/metrics.summary.md",
-      "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125139Z-i011/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i011-20260223t125139z-i011/campaign.run.state.json"
+      "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125503Z-i012",
+      "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125503Z-i012/report/metrics.full.json",
+      "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125503Z-i012/report/metrics.summary.md",
+      "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T125503Z-i012/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i012-20260223t125503z-i012/campaign.run.state.json"
     },
     "deltas": {
       "vsPrev": {
-        "tokensPct": -0.6849508555730492,
-        "wallPct": -0.18217281061049348
+        "tokensPct": -0.00442159383033419,
+        "wallPct": -0.31112460160874184
       },
       "vsBaseline": {
-        "tokensPct": -0.42500532128751506,
-        "wallPct": 0.040282382660080746
+        "tokensPct": -0.4275477142113852,
+        "wallPct": -0.2833750592056296
       }
     },
-    "outcome": "regressed",
-    "evidence": "tokens -105716; wallMs -10274ms; toolCalls -151"
+    "outcome": "improved",
+    "evidence": "wallMs -14350ms; tokens -215; toolCalls -22"
   }
 }

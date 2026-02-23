@@ -95,7 +95,7 @@ All notable changes to SurfWright are documented here.
 - [bench] Reworked benchmark execution to one-campaign-per-scope semantics with explicit `--mission-id` / `--mission-ids`, per-scope history isolation, and fresh-agent enforcement per attempt.
 - [bench] `bench:loop:run` now supports explicit iteration modes (`--mode optimize|sample`, `--sample`) and defaults to optimize semantics (`change -> run -> evaluate`).
 - [bench] `bench:loop:run` now supports configurable per-mission parallel fan-out via `agentsPerMission` (config) and `--agents-per-mission` (CLI), generating parallel SurfWright flow shards within one campaign run.
-- [bench] Added headless guard wiring for benchmark runs (campaign-level shim rewrites `--browser-mode headed` to headless and flags headed trace calls).
+- [bench] Tightened benchmark headless guard wiring: campaign shim now hard-fails `--browser-mode headed` before launch, and guard metrics count only successful headed executions.
 - [bench] Reworked history summarization into repository-native per-scope result sheets (`bench/agent-loop/scopes/<scopeId>/RESULT_SHEET.*`) focused on change intent, outcome, and evidence deltas.
 - [bench] Removed `bench:loop:run --reset-history`; scope ledgers are append-only by default.
 - [bench] `bench:loop:score` now supports flow-family aggregation (`--flow-prefix`) so sharded SurfWright fan-out runs are scored as one iteration, with per-attempt `flowId`/slot evidence in CSV/markdown outputs.

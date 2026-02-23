@@ -9,9 +9,14 @@ fi
 
 args=("$@")
 for ((i=0; i<${#args[@]}; i++)); do
+  if [[ "${args[$i]}" == "--browser-mode=headed" ]]; then
+    echo "bench-headless-wrapper: headed mode is not allowed in benchmark runs" >&2
+    exit 64
+  fi
   if [[ "${args[$i]}" == "--browser-mode" ]] && (( i + 1 < ${#args[@]} )); then
     if [[ "${args[$((i+1))]}" == "headed" ]]; then
-      args[$((i+1))]="headless"
+      echo "bench-headless-wrapper: headed mode is not allowed in benchmark runs" >&2
+      exit 64
     fi
   fi
 done

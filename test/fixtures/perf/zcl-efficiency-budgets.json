@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "defaults": {
+    "maxToolCallsTotal": 180,
+    "maxTotalTokens": 60000,
+    "maxFailuresTotal": 0,
+    "maxRetriesTotal": 0,
+    "maxTimeoutsTotal": 0,
+    "maxWallTimeMs": 40000,
+    "maxExecCommandBegin": 8,
+    "maxCommandOutputDeltaChars": 12000
+  },
+  "missions": {
+    "001-docs-install-command": {
+      "maxToolCallsTotal": 110,
+      "maxTotalTokens": 35000,
+      "maxWallTimeMs": 20000,
+      "maxExecCommandBegin": 5,
+      "maxCommandOutputDeltaChars": 7000
+    },
+    "002-homepage-pricing": {
+      "maxToolCallsTotal": 170,
+      "maxTotalTokens": 55000,
+      "maxWallTimeMs": 35000,
+      "maxExecCommandBegin": 8,
+      "maxCommandOutputDeltaChars": 6000
+    }
+  }
+}

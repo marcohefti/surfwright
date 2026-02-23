@@ -178,7 +178,7 @@ test("contract unknown option includes focused alternatives for compact/search",
   assert.equal(payload.code, "E_QUERY_INVALID");
   assert.equal(Array.isArray(payload.hints), true);
   assert.equal(payload.hints.some((hint) => hint.includes("Use --search <term>")), true);
-  assert.equal(payload.hints.some((hint) => hint.includes("Use --compact")), true);
+  assert.equal(payload.hints.some((hint) => hint.includes("add --full")), true);
   assert.equal(payload.hintContext?.commandPath, "contract");
   assert.equal(payload.hintContext?.unknownOption, "--kind");
 });

@@ -8,8 +8,8 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   },
   {
     id: "contract",
-    usage: "surfwright contract [--compact] [--search <term>] [--no-json] [--pretty]",
-    summary: "emit machine-readable CLI contract, guidance, and error codes",
+    usage: "surfwright contract [--search <term>] [--full] [--no-json] [--pretty]",
+    summary: "emit machine-readable CLI contract metadata (compact by default)",
   },
   {
     id: "workspace.info",

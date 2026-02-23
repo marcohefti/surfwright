@@ -53,8 +53,8 @@ function contractUnknownOptionHints(unknownOption: string | null, argv?: string[
   }
   return [
     "Use --search <term> to filter command/error/guidance entries.",
-    "Use --compact for low-token contract metadata.",
-    "Example: surfwright contract --search upload --compact",
+    "contract output is compact by default; add --full only when needed.",
+    "Example: surfwright contract --search upload",
   ];
 }
 

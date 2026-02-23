@@ -14,6 +14,22 @@ const disallowedTopLevelDocs = new Set([
   "QUICK_REFERENCE.md",
 ]);
 
+const surfwrightSkillPolicy = {
+  maxBytes: 2600,
+  maxLines: 80,
+  requiredSnippets: [
+    "surfwright contract --search",
+    "session fresh",
+    "session clear",
+    "typed failures",
+    "required JSON schema",
+  ],
+  disallowedPatterns: [
+    /\bsurfwright\b[^\n`]*\s--help\b/i,
+    /surfwright\s+help\b/i,
+  ],
+};
+
 function fail(message) {
   process.stderr.write(`${message}\n`);
   process.exitCode = 1;
@@ -74,6 +90,10 @@ function validateSkillDir(skillDirPath) {
   const frontmatter = parseFrontmatter(skillDirPath, skillBody);
   if (!frontmatter) {
     return;
+  }
+
+  if (frontmatter.name === "surfwright") {
+    validateSurfwrightSkill(skillFile, skillBody);
   }
 
   if (frontmatter.name !== skillDirName) {
@@ -142,6 +162,37 @@ function validateSkillDir(skillDirPath) {
     fail(`${manifestPath}: requires.contractFingerprint is required`);
   } else if (manifest.requires.contractFingerprint.includes("pending")) {
     fail(`${manifestPath}: requires.contractFingerprint cannot be pending`);
+  }
+}
+
+function validateSurfwrightSkill(skillFilePath, skillBody) {
+  const byteSize = Buffer.byteLength(skillBody, "utf8");
+  const lineCount = skillBody.split(/\r?\n/).length;
+
+  if (byteSize > surfwrightSkillPolicy.maxBytes) {
+    fail(
+      `${skillFilePath}: SurfWright SKILL.md must stay concise (${byteSize} bytes > ${surfwrightSkillPolicy.maxBytes})`,
+    );
+  }
+
+  if (lineCount > surfwrightSkillPolicy.maxLines) {
+    fail(
+      `${skillFilePath}: SurfWright SKILL.md must stay concise (${lineCount} lines > ${surfwrightSkillPolicy.maxLines})`,
+    );
+  }
+
+  for (const pattern of surfwrightSkillPolicy.disallowedPatterns) {
+    if (pattern.test(skillBody)) {
+      fail(`${skillFilePath}: SurfWright SKILL.md must not direct agents to --help discovery`);
+      break;
+    }
+  }
+
+  const lower = skillBody.toLowerCase();
+  for (const snippet of surfwrightSkillPolicy.requiredSnippets) {
+    if (!lower.includes(snippet.toLowerCase())) {
+      fail(`${skillFilePath}: SurfWright SKILL.md missing required guidance snippet: ${snippet}`);
+    }
   }
 }
 

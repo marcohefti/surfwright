@@ -1,13 +1,17 @@
 # Workflows
 
-## Preflight contract and health
+## Preflight health (default)
 
 ```bash
-surfwright contract
 surfwright doctor
 ```
 
-Use the live contract as authoritative command/flag/error truth.
+Optional runtime drift check (only when uncertain):
+
+```bash
+surfwright contract --search target.click
+surfwright contract --search target.url-assert
+```
 
 ## Handle recovery
 

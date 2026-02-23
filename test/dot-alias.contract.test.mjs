@@ -88,10 +88,12 @@ test("json shape lint for pure commands (keys only)", () => {
     "version",
     "contractSchemaVersion",
     "contractFingerprint",
+    "commandCount",
+    "errorCount",
     "guarantees",
-    "commands",
-    "errors",
-    "guidance",
+    "commandIds",
+    "errorCodes",
+    "search",
   ]);
 
   const doctorResult = runCli(["doctor"]);
@@ -118,8 +120,8 @@ test("json shape lint for pure commands (keys only)", () => {
 });
 
 test("handle-based state lint from contract usage strings", () => {
-  const contract = JSON.parse(fs.readFileSync(path.join(process.cwd(), "test/fixtures/contract/contract.snapshot.json"), "utf8"));
-  const byId = new Map((contract.commands ?? []).map((cmd) => [cmd.id, cmd]));
+  const fullContract = parseJson(runCli(["contract", "--full"]).stdout);
+  const byId = new Map((fullContract.commands ?? []).map((cmd) => [cmd.id, cmd]));
 
   const mustHaveTargetIdAndSession = [
     "target.snapshot",
@@ -204,7 +206,7 @@ function listRegisteredCommandIdsViaHelp() {
 
 test("contract truthfulness: contract ids match registered commander commands", () => {
   const helpIds = listRegisteredCommandIdsViaHelp();
-  const contractPayload = parseJson(runCli(["contract"]).stdout);
+  const contractPayload = parseJson(runCli(["contract", "--full"]).stdout);
   const contractIds = (contractPayload.commands ?? []).map((cmd) => cmd.id).sort();
 
   const helpSet = new Set(helpIds);

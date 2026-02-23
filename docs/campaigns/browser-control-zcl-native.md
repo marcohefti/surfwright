@@ -85,6 +85,12 @@ Generate run summary:
 zcl campaign report --spec "$SPEC" --out-root "$OUT_ROOT" --json
 ```
 
+Enforce SurfWright token-efficiency budgets on produced attempts:
+
+```bash
+pnpm zcl:efficiency:check --run "$OUT_ROOT/runs/<runId>"
+```
+
 List failing attempts:
 
 ```bash
@@ -109,4 +115,4 @@ zcl validate --strict --json <attemptDir>
 1. Aggregate top failure codes and repeated friction patterns from `campaign.report.json` + failed `attempt.report.json`.
 2. Map issues to generic SurfWright surface changes (commands/output/errors), not mission-specific shortcuts.
 3. Add/adjust contract tests first, then implement surface changes.
-4. Re-run canary before full mission sweep.
+4. Re-run canary before full mission sweep and keep `zcl:efficiency:check` green.

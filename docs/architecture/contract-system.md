@@ -21,6 +21,14 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
 - The contract is not generated from parsing `--help` output.
 - The contract is not a semantic versioning system. It’s a fingerprinted snapshot of surfaced ids and error codes.
 
+## Agent Discovery Policy
+
+- Agent discovery is contract-first:
+  - `surfwright contract --search <term>` is the default lookup path.
+  - `surfwright contract --full --search <term>` is debug/audit mode only.
+- `--help` remains human-facing and is intentionally non-authoritative for runtime agents.
+- Contract search responses must stay compact enough for repeated agent loops.
+
 ## Where the Logic Lives
 
 - Command manifests (the contract inputs):

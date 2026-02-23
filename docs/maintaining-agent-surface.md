@@ -30,6 +30,7 @@ Notes:
 - Browser-dependent contract tests live under `test/browser/` and are not part of `pnpm test`. Run `pnpm test:browser` locally when changing browser-executing commands.
 - For a fast operator-surface sanity pass across core browser commands, run `pnpm smoke` (deterministic `data:` pages + minimal network probes).
 - If `surfwright contract` changes intentionally, update the snapshot with `pnpm contract:snapshot:update` (this also auto-syncs skill `requires.contractFingerprint` in `skills/surfwright/skill.json` and `skills/surfwright.lock.json`).
+- `pnpm skill:validate` enforces a concise SurfWright SKILL protocol (contract-first lookup, no broad `--help` discovery drift).
 
 ## 3) Install/update local skill
 
@@ -88,6 +89,16 @@ Expect non-zero exit and `{"ok":false,"code":...}` payload.
 - If docs and code disagree, code + contract command win.
 - Fix docs/skill in the same change window; do not defer drift cleanup.
 - Do not ship deprecated compatibility aliases in output shapes/flags/commands. Remove obsolete surface area outright and update tests/docs/skill references atomically.
+
+## 5b) ZCL efficiency policy
+
+After browser-control campaign runs, enforce token-efficiency budgets before accepting baseline changes:
+
+```bash
+pnpm zcl:efficiency:check --run <runDir>
+```
+
+Budget source: `test/fixtures/perf/zcl-efficiency-budgets.json`.
 
 ## 6) Edge-case fixture policy
 

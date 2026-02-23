@@ -37,7 +37,7 @@ process.on("exit", () => {
 });
 
 test("contract command matches fixture-backed command surface", () => {
-  const result = runCli(["contract"]);
+  const result = runCli(["contract", "--full"]);
   assert.equal(result.status, 0);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);
@@ -63,4 +63,3 @@ test("contract command matches fixture-backed command surface", () => {
     assert.equal(seenErrors.has(code), true, `missing error code ${code}`);
   }
 });
-

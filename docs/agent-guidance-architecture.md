@@ -23,6 +23,7 @@ To keep both fast and maintainable, we separate guidance into explicit layers wi
 - Runtime behavior (verification): `test/*.contract.test.mjs` (core + feature suites)
 - Product/developer narrative (human): `README.md`, `AGENTS.md`, `docs/*.md`
 - Installed skill for active usage: `skills/surfwright/`
+- ZeroContext efficiency budgets (machine): `test/fixtures/perf/zcl-efficiency-budgets.json` + `scripts/zcl/check-efficiency-budgets.mjs`
 - Strict architecture gate (repo): `pnpm -s validate:strict` (fails until layering/providers invariants are satisfied)
 
 ## Storage model

@@ -63,7 +63,7 @@ process.on("exit", () => {
 });
 
 test("contract includes state maintenance commands", () => {
-  const result = runCli(["contract"]);
+  const result = runCli(["contract", "--full"]);
   assert.equal(result.status, 0);
   const payload = parseJson(result.stdout);
   const commandIds = new Set(payload.commands.map((entry) => entry.id));

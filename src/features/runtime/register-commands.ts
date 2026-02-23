@@ -71,15 +71,17 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
   ctx.program
     .command("contract")
     .description(contractMeta.summary)
-    .option("--compact", "Return compact contract metadata optimized for cold-start checks", false)
+    .option("--compact", "Deprecated alias for default compact output", false)
+    .option("--full", "Return full contract payload (larger output)", false)
     .option("--search <term>", "Filter contract commands/errors/guidance by id/code/usage text")
-    .action((options: { compact?: boolean; search?: string }) => {
+    .action((options: { compact?: boolean; full?: boolean; search?: string }) => {
       const output = ctx.globalOutputOpts();
       try {
         const report = getCliContractReport(ctx.readPackageVersion());
+        const compact = !Boolean(options.full);
         const outReport = buildContractOutput({
           report,
-          compact: Boolean(options.compact),
+          compact,
           search: options.search,
         });
         printContractReport(outReport as Record<string, unknown>, output);

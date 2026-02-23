@@ -130,6 +130,12 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
     examples: ["surfwright target wait <targetId> --for-selector '.loaded' --wait-timeout-ms 5000"],
     proofSchema: null,
   },
+  {
+    id: "target.scroll-plan",
+    signature: "scroll-plan(targetId, steps?) -> { requested[], samples[], completedSteps, maxY }",
+    examples: ["surfwright target scroll-plan <targetId> --steps 0,600,1200,1800 --settle-ms 300"],
+    proofSchema: null,
+  },
 ];
 
 function contractFingerprintInput(): string {

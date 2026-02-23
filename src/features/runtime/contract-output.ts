@@ -3,6 +3,7 @@ import type { CliContractReport } from "../../core/types.js";
 const CORE_COMMAND_IDS = new Set([
   "contract",
   "session.fresh",
+  "session.clear",
   "open",
   "target.snapshot",
   "target.find",
@@ -13,6 +14,9 @@ const CORE_COMMAND_IDS = new Set([
   "target.extract",
   "target.fill",
   "target.wait",
+  "target.scroll-plan",
+  "target.scroll-sample",
+  "target.scroll-watch",
   "run",
 ]);
 

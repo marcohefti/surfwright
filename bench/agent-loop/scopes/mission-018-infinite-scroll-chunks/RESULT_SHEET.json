@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-02-23T10:47:33.013Z",
+  "generatedAt": "2026-02-23T12:01:22.635Z",
   "loopId": "surfwright-benchmark-loop",
   "scopeId": "mission-018-infinite-scroll-chunks",
   "scopeMissionIds": [
@@ -247,24 +247,85 @@
       },
       "outcome": "mixed",
       "evidence": "tokens +46508; wallMs +4661ms; toolCalls -85"
+    },
+    {
+      "iteration": 5,
+      "iterationId": "20260223T115831Z-i005",
+      "createdAt": "2026-02-23T12:01:22.524Z",
+      "scopeId": "mission-018-infinite-scroll-chunks",
+      "missionScopeType": "single",
+      "missionIds": [
+        "018-infinite-scroll-chunks"
+      ],
+      "agentsPerMission": 1,
+      "flowIds": [
+        "surfwright"
+      ],
+      "label": "exp-01",
+      "hypothesis": "Core contract search should return scroll primitives in one call to cut discovery retries.",
+      "change": "Expanded contract --core command set with scroll primitives and scroll-plan guidance.",
+      "changeTags": [
+        "contract",
+        "core-discovery",
+        "scroll"
+      ],
+      "runStatus": "valid",
+      "metrics": {
+        "attempts": 1,
+        "verifiedOk": 1,
+        "mismatchCount": 0,
+        "retriesTotal": 0,
+        "timeoutsTotal": 0,
+        "wallTimeMsTotal": 166510,
+        "tokensTotal": 154482,
+        "toolCallsTotal": 556,
+        "reasoningItemsTotal": 36,
+        "commentaryMessagesTotal": 6,
+        "execCallsTotal": 37,
+        "mcpToolCallsTotal": 0,
+        "surfwrightCliCallsTotal": 31,
+        "headedBrowserModeCallsTotal": 0
+      },
+      "artifacts": {
+        "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T115831Z-i005",
+        "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T115831Z-i005/report/metrics.full.json",
+        "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T115831Z-i005/report/metrics.summary.md",
+        "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T115831Z-i005/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i005-20260223t115831z-i005/campaign.run.state.json"
+      },
+      "deltas": {
+        "vsPrev": {
+          "tokensPct": -0.23946199820797354,
+          "wallPct": 0.38655497172930076
+        },
+        "vsBaseline": {
+          "tokensPct": 0.8267625286758271,
+          "wallPct": 2.7555540519205177
+        }
+      },
+      "outcome": "mixed",
+      "evidence": "tokens -48640; wallMs +46421ms; toolCalls +13"
     }
   ],
   "latest": {
-    "iteration": 4,
-    "iterationId": "20260223T102457Z-i004",
-    "createdAt": "2026-02-23T10:27:02.120Z",
+    "iteration": 5,
+    "iterationId": "20260223T115831Z-i005",
+    "createdAt": "2026-02-23T12:01:22.524Z",
     "scopeId": "mission-018-infinite-scroll-chunks",
     "missionScopeType": "single",
     "missionIds": [
       "018-infinite-scroll-chunks"
     ],
     "agentsPerMission": 1,
-    "flowIds": [],
-    "label": "iter-004-sample",
-    "hypothesis": "sample third post-commit run",
-    "change": "no code change",
+    "flowIds": [
+      "surfwright"
+    ],
+    "label": "exp-01",
+    "hypothesis": "Core contract search should return scroll primitives in one call to cut discovery retries.",
+    "change": "Expanded contract --core command set with scroll primitives and scroll-plan guidance.",
     "changeTags": [
-      "sample"
+      "contract",
+      "core-discovery",
+      "scroll"
     ],
     "runStatus": "valid",
     "metrics": {
@@ -273,33 +334,33 @@
       "mismatchCount": 0,
       "retriesTotal": 0,
       "timeoutsTotal": 0,
-      "wallTimeMsTotal": 120089,
-      "tokensTotal": 203122,
-      "toolCallsTotal": 543,
-      "reasoningItemsTotal": 37,
-      "commentaryMessagesTotal": 5,
-      "execCallsTotal": 41,
+      "wallTimeMsTotal": 166510,
+      "tokensTotal": 154482,
+      "toolCallsTotal": 556,
+      "reasoningItemsTotal": 36,
+      "commentaryMessagesTotal": 6,
+      "execCallsTotal": 37,
       "mcpToolCallsTotal": 0,
-      "surfwrightCliCallsTotal": 21,
+      "surfwrightCliCallsTotal": 31,
       "headedBrowserModeCallsTotal": 0
     },
     "artifacts": {
-      "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004",
-      "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004/report/metrics.full.json",
-      "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004/report/metrics.summary.md",
-      "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T102457Z-i004/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i004-20260223t102457z-i004/campaign.run.state.json"
+      "iterationDir": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T115831Z-i005",
+      "metricsJsonPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T115831Z-i005/report/metrics.full.json",
+      "metricsMdPath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T115831Z-i005/report/metrics.summary.md",
+      "runStatePath": "tmp/zerocontext/bench-loop/surfwright-benchmark-loop/mission-018-infinite-scroll-chunks/20260223T115831Z-i005/zcl-out/campaigns/surfwright-benchmark-loop-mission-018-infinite-scroll-chunks-i005-20260223t115831z-i005/campaign.run.state.json"
     },
     "deltas": {
       "vsPrev": {
-        "tokensPct": 0.29695940337390014,
-        "wallPct": 0.040380150396784144
+        "tokensPct": -0.23946199820797354,
+        "wallPct": 0.38655497172930076
       },
       "vsBaseline": {
-        "tokensPct": 1.4019345836388146,
-        "wallPct": 1.7085504206419018
+        "tokensPct": 0.8267625286758271,
+        "wallPct": 2.7555540519205177
       }
     },
     "outcome": "mixed",
-    "evidence": "tokens +46508; wallMs +4661ms; toolCalls -85"
+    "evidence": "tokens -48640; wallMs +46421ms; toolCalls +13"
   }
 }

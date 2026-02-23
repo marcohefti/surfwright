@@ -172,7 +172,7 @@ export const targetCommandManifest: CliCommandContract[] = [
     id: "target.scroll-plan",
     usage:
       "surfwright target scroll-plan <targetId> [--steps <csv>] [--count-selector <query>] [--count-contains <text>] [--count-visible-only] [--settle-ms <ms>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
-    summary: "execute deterministic scroll steps and optionally report selector count deltas per step",
+    summary: "execute deterministic scroll steps (px or 0..1 ratios) and optionally report selector count deltas per step",
   },
   {
     id: "target.scroll-sample",

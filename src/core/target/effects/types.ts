@@ -48,6 +48,7 @@ export type TargetScrollPlanReport = {
   } | null;
   steps: Array<{
     index: number;
+    requestedUnit: "px" | "ratio";
     requestedY: number;
     appliedY: number;
     achievedY: number;

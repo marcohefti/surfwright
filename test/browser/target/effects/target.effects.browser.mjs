@@ -103,6 +103,7 @@ test("target scroll-plan returns deterministic shape", () => {
   assert.equal(payload.countQuery, null);
   assert.equal(payload.countSummary, null);
   assert.equal(payload.steps[0].requestedY, 0);
+  assert.equal(payload.steps[0].requestedUnit, "px");
   assert.equal(payload.steps[0].count, null);
   assert.equal(typeof payload.steps[2].achievedY, "number");
   assert.equal(typeof payload.steps[2].deltaY, "number");
@@ -141,7 +142,7 @@ test("target scroll-plan can sample selector counts per step", () => {
     "scroll-plan",
     openPayload.targetId,
     "--steps",
-    "0,450,900",
+    "0,1,1",
     "--count-selector",
     ".chunk",
     "--settle-ms",
@@ -156,6 +157,8 @@ test("target scroll-plan can sample selector counts per step", () => {
   assert.equal(payload.countQuery.selector, ".chunk");
   assert.equal(payload.countQuery.visibleOnly, false);
   assert.equal(payload.steps.length, 3);
+  assert.equal(payload.steps[1].requestedUnit, "ratio");
+  assert.equal(payload.steps[2].requestedUnit, "ratio");
   assert.equal(typeof payload.steps[0].count, "number");
   assert.equal(payload.steps[0].count <= payload.steps[2].count, true);
   assert.equal(payload.countSummary.sampleCount, payload.steps.length);

@@ -114,7 +114,10 @@ export async function targetScrollPlan(opts: {
     const steps: TargetScrollPlanReport["steps"] = [];
     for (let idx = 0; idx < requestedSteps.length; idx += 1) {
       const requestedY = requestedSteps[idx];
-      const appliedY = Math.max(0, Math.min(requestedY, runtimeInfo.maxScroll));
+      const requestedUnit: TargetScrollPlanReport["steps"][number]["requestedUnit"] =
+        requestedY > 0 && requestedY <= 1 ? "ratio" : "px";
+      const requestedAbsolute = requestedUnit === "ratio" ? Math.round(runtimeInfo.maxScroll * requestedY) : requestedY;
+      const appliedY = Math.max(0, Math.min(requestedAbsolute, runtimeInfo.maxScroll));
       await evaluator.evaluate(
         ({ y }: { y: number }) => {
           const runtime = globalThis as unknown as {
@@ -140,10 +143,11 @@ export async function targetScrollPlan(opts: {
       const count = countLocator ? await countMatches(countLocator, countQuery?.visibleOnly ?? false) : null;
       steps.push({
         index: idx,
+        requestedUnit,
         requestedY,
         appliedY,
         achievedY,
-        deltaY: achievedY - requestedY,
+        deltaY: achievedY - appliedY,
         count,
       });
     }

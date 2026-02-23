@@ -42,8 +42,10 @@ missionSource:
 evaluation:
   mode: oracle
   evaluator:
-    kind: script
-    command: ["node", "../../scripts/zcl/eval-browser-control-oracle.mjs"]
+    kind: builtin_rules
+  oraclePolicy:
+    mode: normalized
+    formatMismatch: warn
 
 execution:
   flowMode: sequence
@@ -66,7 +68,7 @@ flows:
       sessionIsolation: native
       runtimeStrategies: ["codex_app_server"]
       model: gpt-5.3-codex-spark
-      modelReasoningEffort: medium
+      modelReasoningEffort: low
       modelReasoningPolicy: best_effort
       feedbackPolicy: strict
       mode: discovery

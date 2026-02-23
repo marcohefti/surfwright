@@ -3,52 +3,17 @@
   "missionId": "007-style-inspection",
   "startUrl": "https://getbootstrap.com/docs/5.3/components/buttons/",
   "collectFields": [
-    "found",
-    "targetText",
-    "styleBg",
-    "styleColor",
-    "styleFontSize",
-    "styleRadius"
+    "paddingTopPx"
   ],
-  "successCheck": "found == true and targetText == \"Primary\" and styleBg == \"rgb(13, 110, 253)\" and styleColor == \"rgb(255, 255, 255)\" and styleFontSize == \"16px\" and styleRadius == \"6px\"",
+  "successCheck": "paddingTopPx == 6",
   "rules": [
     {
-      "field": "found",
+      "field": "paddingTopPx",
       "op": "eq",
-      "value": true
-    },
-    {
-      "field": "targetText",
-      "op": "eq",
-      "value": "Primary"
-    },
-    {
-      "field": "styleBg",
-      "op": "eq",
-      "value": "rgb(13, 110, 253)"
-    },
-    {
-      "field": "styleColor",
-      "op": "eq",
-      "value": "rgb(255, 255, 255)"
-    },
-    {
-      "field": "styleFontSize",
-      "op": "eq",
-      "value": "16px"
-    },
-    {
-      "field": "styleRadius",
-      "op": "eq",
-      "value": "6px"
+      "value": 6
     }
   ],
   "examplePayload": {
-    "found": true,
-    "targetText": "Primary",
-    "styleBg": "rgb(13, 110, 253)",
-    "styleColor": "rgb(255, 255, 255)",
-    "styleFontSize": "16px",
-    "styleRadius": "6px"
+    "paddingTopPx": 6
   }
 }

@@ -65,6 +65,8 @@ All notable changes to SurfWright are documented here.
 - [cli] Added npm scripts `bench:loop:run`, `bench:loop:score`, and `bench:loop:history`.
 
 ### Changed
+- [session] `session clear` now supports scoped teardown via `--session <id>`, clearing only the selected session and its related target/network metadata while preserving other sessions.
+- [cli] `session clear` now normalizes common cold-start wrapper forms: positional session scope (`session clear <id>`), boolean assignment (`--keep-processes=<bool>`), and no-op `--no-prompt`.
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
 - [target] `target eval --help` now surfaces typed alternatives (`target extract`, `target style`, `target read`) plus compact-output usage for lower-token operator loops.
 - [target] `target eval` now accepts base64 script inputs via `--expr-b64` and `--script-b64` to reduce shell-quoting overhead in agent loops.
@@ -106,6 +108,9 @@ All notable changes to SurfWright are documented here.
 - [bench] Documented branch-first loop policy: run optimize iterations on feature branches with commit-per-change traceability, and push only when explicitly requested.
 
 ### Fixed
+- [target] Session resolution for target-driven actions now attempts active/single-session recovery when target-to-session mappings are stale, reducing `E_TARGET_SESSION_UNKNOWN`/`E_SESSION_NOT_FOUND` churn in long runs.
+- [open] `open --reuse active` now reuses the current tab only for same-origin navigations (or blank tabs), avoiding unintended cross-site tab drift.
+- [cli] Commander parse failures for `session clear` now include focused remediation hints for scoped cleanup and keep-processes boolean syntax.
 - [target] `target click` query-mismatch failures now return bounded remediation hints and context for `E_QUERY_INVALID` paths to reduce blind retry loops.
 - [errors] `E_BROWSER_START_FAILED`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_IO`, and `E_STATE_LOCK_TIMEOUT` now include bounded hints/hintContext for faster operator triage.
 - [target] Stale `targetId` errors now include stronger replacement-target hints and hint context to speed recovery in concurrent session flows.

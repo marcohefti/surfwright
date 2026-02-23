@@ -9,27 +9,24 @@
 
 ## Intent
 
-- start_url: `http://example.com`
-- goal: `prove redirect from requested to final URL`
+- start_url: `https://github.com/marcohefti`
+- goal: `find profile homepage, open it, then report blog URL from the homepage`
 
 ## Proof Contract
 
 - collect_fields:
-  - `requestedUrl`
-  - `finalUrl`
-  - `wasRedirected`
+  - `profileHomepage`
+  - `blogUrl`
 
 ## Success Check (authoritative)
 
-- `requestedUrl starts with http://example.com and finalUrl == "https://example.com/" and wasRedirected == true`
+- `profileHomepage is non-empty and blogUrl == "https://blog.heftiweb.ch"`
 
 ## Example Proof Payload
 
 ```json
 {
-  "requestedUrl": "http://example.com",
-  "finalUrl": "https://example.com/",
-  "wasRedirected": true
+  "profileHomepage": "https://heftiweb.ch",
+  "blogUrl": "https://blog.heftiweb.ch"
 }
 ```
-

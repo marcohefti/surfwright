@@ -10,26 +10,23 @@
 ## Intent
 
 - start_url: `https://github.com`
-- goal: `navigate to pricing from homepage`
+- goal: `navigate to pricing and report whether Free plan includes standard support`
 
 ## Proof Contract
 
 - collect_fields:
   - `finalUrl`
-  - `finalTitle`
-  - `pricingPageOk`
+  - `freePlanStandardSupport`
 
 ## Success Check (authoritative)
 
-- `finalUrl == "https://github.com/pricing" and finalTitle == "Pricing · Plans for every developer · GitHub" and pricingPageOk == true`
+- `finalUrl == "https://github.com/pricing" and freePlanStandardSupport == false`
 
 ## Example Proof Payload
 
 ```json
 {
   "finalUrl": "https://github.com/pricing",
-  "finalTitle": "Pricing · Plans for every developer · GitHub",
-  "pricingPageOk": true
+  "freePlanStandardSupport": false
 }
 ```
-

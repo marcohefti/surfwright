@@ -2,13 +2,12 @@
 
 Task
 - Use SurfWright to complete this browser mission.
-- Start URL: https://jquerymodal.com/
-- Goal: open then close modal with evidence
+- Start URL: https://www.jquerymodal.com/
+- Goal: open Example 6 first modal, click through to third modal, and report third modal text
 
 Output format
 Return exactly one JSON object with these keys:
-- openSignal
-- closedSignal
+- thirdModalText
 
 Constraints
 - Use the exact key names listed above.

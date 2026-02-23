@@ -316,10 +316,11 @@ export function sessionList(): SessionListReport {
   };
 }
 
-export async function sessionClearAll(opts: { timeoutMs: number; keepProcesses?: boolean }) {
+export async function sessionClearAll(opts: { timeoutMs: number; keepProcesses?: boolean; sessionId?: string }) {
   return await sessionClear({
     timeoutMs: opts.timeoutMs,
     keepProcesses: Boolean(opts.keepProcesses),
+    sessionId: opts.sessionId,
   });
 }
 

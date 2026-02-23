@@ -58,6 +58,30 @@ function contractUnknownOptionHints(unknownOption: string | null, argv?: string[
   ];
 }
 
+function sessionClearFailureHints(input: {
+  commandPath: string[];
+  unknownOption: string | null;
+  tooManyArgs: boolean;
+}): string[] {
+  if (input.commandPath[0] !== "session" || input.commandPath[1] !== "clear") {
+    return [];
+  }
+  const hints: string[] = [];
+  if (input.tooManyArgs) {
+    hints.push("Use `surfwright session clear --session <id>` for scoped cleanup.");
+  }
+  if (input.unknownOption === "--no-prompt") {
+    hints.push("`session clear` is non-interactive; remove `--no-prompt`.");
+  }
+  if (typeof input.unknownOption === "string" && input.unknownOption.startsWith("--keep-processes=")) {
+    hints.push("Use `--keep-processes` for true, and omit the flag for false (not `--keep-processes=<bool>`).");
+  }
+  if (hints.length > 0) {
+    hints.push("Use `surfwright session list` first when you need to clear one known session.");
+  }
+  return hints;
+}
+
 export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure | null {
   if (typeof error !== "object" || error === null) {
     return null;
@@ -79,7 +103,8 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
     expectedArgs: missingArgMatch?.[1] ?? null,
     unknownOption: unknownOptionMatch?.[1] ?? null,
   };
-  const commandPath = Array.isArray(argv) ? parseCommandPath(argv).join(" ") : "";
+  const parsedCommandPath = Array.isArray(argv) ? parseCommandPath(argv) : [];
+  const commandPath = parsedCommandPath.join(" ");
   if (commandPath.length > 0) {
     hintContext.commandPath = commandPath;
   }
@@ -94,6 +119,11 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
   const hints = [
     didYouMean ? `Did you mean ${didYouMean}?` : null,
     example,
+    ...sessionClearFailureHints({
+      commandPath: parsedCommandPath,
+      unknownOption: unknownOptionMatch?.[1] ?? null,
+      tooManyArgs: Boolean(tooManyArgsMatch),
+    }),
     ...contractUnknownOptionHints(unknownOptionMatch?.[1] ?? null, argv),
     "Run the command with --help for usage examples",
   ].filter((entry): entry is string => typeof entry === "string" && entry.length > 0);

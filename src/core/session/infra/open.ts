@@ -1,4 +1,4 @@
-import { chromium } from "playwright-core";
+import { chromium, type Page } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
 import { resolveOpenSessionHint } from "../../session-isolation.js";
@@ -10,6 +10,18 @@ import { parseManagedBrowserMode } from "../app/browser-mode.js";
 import { buildActionProofEnvelope, evaluateActionAssertions, parseActionAssertions, toActionWaitEvidence } from "../../shared/index.js";
 import { buildRedirectEvidence, navigatePageWithEvidence, parseOpenReuseMode, parseOpenWaitUntil } from "./open-navigation.js";
 import { classifyNavigationBlockType } from "../../shared/index.js";
+
+function canReuseActivePageForRequestedUrl(page: Page, requestedUrl: URL): boolean {
+  const currentUrl = page.url().trim();
+  if (currentUrl.length === 0 || currentUrl === "about:blank") {
+    return true;
+  }
+  try {
+    return new URL(currentUrl).origin === requestedUrl.origin;
+  } catch {
+    return false;
+  }
+}
 
 export async function openUrl(opts: {
   inputUrl: string;
@@ -166,7 +178,10 @@ export async function openUrl(opts: {
     const page =
       (() => {
         if (reuseMode === "active" && existingPages.length > 0) {
-          return existingPages[existingPages.length - 1];
+          const activePage = existingPages[existingPages.length - 1];
+          if (canReuseActivePageForRequestedUrl(activePage, parsedUrl)) {
+            return activePage;
+          }
         }
         if (reuseMode === "origin") {
           const requestedOrigin = parsedUrl.origin;

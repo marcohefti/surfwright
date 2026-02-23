@@ -2,14 +2,13 @@
 
 Task
 - Use SurfWright to complete this browser mission.
-- Start URL: http://example.com
-- Goal: prove redirect from requested to final URL
+- Start URL: https://github.com/marcohefti
+- Goal: find profile homepage, open it, then report blog URL from the homepage
 
 Output format
 Return exactly one JSON object with these keys:
-- requestedUrl
-- finalUrl
-- wasRedirected
+- profileHomepage
+- blogUrl
 
 Constraints
 - Use the exact key names listed above.

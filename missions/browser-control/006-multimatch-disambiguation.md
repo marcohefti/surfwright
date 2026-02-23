@@ -9,23 +9,22 @@
 
 ## Intent
 
-- start_url: `https://the-internet.herokuapp.com/add_remove_elements/`
-- goal: `act on 2nd matching element deterministically`
+- start_url: `https://the-internet.herokuapp.com/jqueryui/menu#`
+- goal: `hover Enabled then Downloads and report visible submenu entries under Downloads`
 
 ## Proof Contract
 
 - collect_fields:
-  - `deleteButtonsAfter`
+  - `downloadsItems`
 
 ## Success Check (authoritative)
 
-- `deleteButtonsAfter == 2`
+- `downloadsItems == "PDF, CSV, Excel"`
 
 ## Example Proof Payload
 
 ```json
 {
-  "deleteButtonsAfter": 2
+  "downloadsItems": "PDF, CSV, Excel"
 }
 ```
-

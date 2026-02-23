@@ -10,7 +10,7 @@
 ## Intent
 
 - start_url: `https://docs.astral.sh/uv/getting-started/installation/`
-- goal: `find install command on docs page`
+- goal: `find curl install command on docs page`
 
 ## Proof Contract
 

@@ -1,33 +1,25 @@
 {
   "schemaVersion": 1,
   "missionId": "003-redirect-evidence",
-  "startUrl": "http://example.com",
+  "startUrl": "https://github.com/marcohefti",
   "collectFields": [
-    "requestedUrl",
-    "finalUrl",
-    "wasRedirected"
+    "profileHomepage",
+    "blogUrl"
   ],
-  "successCheck": "requestedUrl starts with http://example.com and finalUrl == \"https://example.com/\" and wasRedirected == true",
+  "successCheck": "profileHomepage is non-empty and blogUrl == \"https://blog.heftiweb.ch\"",
   "rules": [
     {
-      "field": "requestedUrl",
-      "op": "starts_with",
-      "value": "http://example.com"
+      "field": "profileHomepage",
+      "op": "non_empty"
     },
     {
-      "field": "finalUrl",
+      "field": "blogUrl",
       "op": "eq",
-      "value": "https://example.com/"
-    },
-    {
-      "field": "wasRedirected",
-      "op": "eq",
-      "value": true
+      "value": "https://blog.heftiweb.ch"
     }
   ],
   "examplePayload": {
-    "requestedUrl": "http://example.com",
-    "finalUrl": "https://example.com/",
-    "wasRedirected": true
+    "profileHomepage": "https://heftiweb.ch",
+    "blogUrl": "https://blog.heftiweb.ch"
   }
 }

@@ -3,7 +3,7 @@ import { chromium } from "playwright-core";
 import { CDP_HEALTHCHECK_TIMEOUT_MS, isCdpEndpointAlive, killManagedBrowserProcessTree } from "../../browser.js";
 import { CliError } from "../../errors.js";
 import { hasSessionLeaseExpired, withSessionHeartbeat } from "../../session/index.js";
-import { nowIso } from "./state-store.js";
+import { nowIso, sanitizeSessionId } from "./state-store.js";
 import { mutateState } from "../repo/mutations.js";
 import type { SessionPruneReport, SessionState, StateReconcileReport, TargetPruneReport } from "../../types.js";
 
@@ -17,9 +17,12 @@ const SESSION_CLEAR_SIGTERM_GRACE_MS = 500;
 
 export type SessionClearReport = {
   ok: true;
-  activeSessionId: null;
+  activeSessionId: string | null;
+  scope: "all" | "session";
+  requestedSessionId: string | null;
   scanned: number;
   cleared: number;
+  clearedSessionIds: string[];
   clearedManaged: number;
   clearedAttached: number;
   keepProcesses: boolean;
@@ -31,6 +34,7 @@ export type SessionClearReport = {
   targetsRemoved: number;
   networkCapturesRemoved: number;
   networkArtifactsRemoved: number;
+  warnings: string[];
 };
 
 function pidIsAlive(pid: number | null): boolean {
@@ -377,16 +381,42 @@ export async function sessionPrune(opts: {
 export async function sessionClear(opts: {
   timeoutMs: number;
   keepProcesses?: boolean;
+  sessionId?: string;
 }): Promise<SessionClearReport> {
   const timeoutMs = Math.max(
     CDP_HEALTHCHECK_TIMEOUT_MS,
     Math.min(opts.timeoutMs, SESSION_CLEAR_SHUTDOWN_TIMEOUT_CAP_MS),
   );
   const keepProcesses = Boolean(opts.keepProcesses);
+  const requestedSessionId =
+    typeof opts.sessionId === "string" && opts.sessionId.trim().length > 0 ? sanitizeSessionId(opts.sessionId) : null;
+  const scope: SessionClearReport["scope"] = requestedSessionId ? "session" : "all";
 
   return await mutateState(async (state) => {
-    const sessions = Object.values(state.sessions).sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+    const allSessions = Object.values(state.sessions).sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+    const sessions =
+      requestedSessionId === null
+        ? allSessions
+        : (() => {
+            const found = state.sessions[requestedSessionId];
+            if (!found) {
+              throw new CliError("E_SESSION_NOT_FOUND", `Session ${requestedSessionId} not found`, {
+                hints: [
+                  "Run `surfwright session list` to inspect known sessions",
+                  "Use `surfwright session clear` without --session to clear all sessions",
+                ],
+                hintContext: {
+                  requestedSessionId,
+                  activeSessionId: state.activeSessionId ?? null,
+                  knownSessionCount: allSessions.length,
+                },
+              });
+            }
+            return [found];
+          })();
     const scanned = sessions.length;
+    const clearedSessionIds = sessions.map((session) => session.sessionId);
+    const clearedSessionIdSet = new Set(clearedSessionIds);
     let clearedManaged = 0;
     let clearedAttached = 0;
     let shutdownRequested = 0;
@@ -411,21 +441,68 @@ export async function sessionClear(opts: {
       }
     }
 
-    const targetsRemoved = Object.keys(state.targets).length;
-    const networkCapturesRemoved = Object.keys(state.networkCaptures).length;
-    const networkArtifactsRemoved = Object.keys(state.networkArtifacts).length;
+    let targetsRemoved = 0;
+    let networkCapturesRemoved = 0;
+    let networkArtifactsRemoved = 0;
 
-    state.activeSessionId = null;
-    state.sessions = {};
-    state.targets = {};
-    state.networkCaptures = {};
-    state.networkArtifacts = {};
+    if (scope === "all") {
+      targetsRemoved = Object.keys(state.targets).length;
+      networkCapturesRemoved = Object.keys(state.networkCaptures).length;
+      networkArtifactsRemoved = Object.keys(state.networkArtifacts).length;
+      state.sessions = {};
+      state.targets = {};
+      state.networkCaptures = {};
+      state.networkArtifacts = {};
+    } else {
+      for (const sessionId of clearedSessionIds) {
+        delete state.sessions[sessionId];
+      }
+      for (const [targetId, target] of Object.entries(state.targets)) {
+        if (!clearedSessionIdSet.has(target.sessionId)) {
+          continue;
+        }
+        delete state.targets[targetId];
+        targetsRemoved += 1;
+      }
+      for (const [captureId, capture] of Object.entries(state.networkCaptures)) {
+        if (!clearedSessionIdSet.has(capture.sessionId)) {
+          continue;
+        }
+        delete state.networkCaptures[captureId];
+        networkCapturesRemoved += 1;
+      }
+      for (const [artifactId, artifact] of Object.entries(state.networkArtifacts)) {
+        if (!clearedSessionIdSet.has(artifact.sessionId)) {
+          continue;
+        }
+        delete state.networkArtifacts[artifactId];
+        networkArtifactsRemoved += 1;
+      }
+    }
+
+    if (state.activeSessionId && clearedSessionIdSet.has(state.activeSessionId)) {
+      state.activeSessionId = null;
+    }
+    const warnings: string[] = [];
+    if (scope === "all" && scanned >= 20) {
+      warnings.push(
+        `Cleared ${scanned} sessions in one pass; prefer --session <id> for scoped cleanup during active campaigns`,
+      );
+    }
+    if (!keepProcesses && shutdownFailed > 0) {
+      warnings.push(
+        `${shutdownFailed} session process shutdowns failed; run session prune/state reconcile to repair stale session mappings`,
+      );
+    }
 
     return {
       ok: true,
-      activeSessionId: null,
+      activeSessionId: state.activeSessionId,
+      scope,
+      requestedSessionId,
       scanned,
       cleared: scanned,
+      clearedSessionIds,
       clearedManaged,
       clearedAttached,
       keepProcesses,
@@ -437,6 +514,7 @@ export async function sessionClear(opts: {
       targetsRemoved,
       networkCapturesRemoved,
       networkArtifactsRemoved,
+      warnings,
     };
   });
 }

@@ -1,26 +1,19 @@
 {
   "schemaVersion": 1,
   "missionId": "009-checkbox-toggle",
-  "startUrl": "https://the-internet.herokuapp.com/checkboxes",
+  "startUrl": "https://the-internet.herokuapp.com/shifting_content",
   "collectFields": [
-    "checkedBefore",
-    "checkedAfter"
+    "imageSrc"
   ],
-  "successCheck": "checkedBefore == 1 and checkedAfter == 2",
+  "successCheck": "imageSrc == \"https://the-internet.herokuapp.com/img/avatar.jpg\"",
   "rules": [
     {
-      "field": "checkedBefore",
+      "field": "imageSrc",
       "op": "eq",
-      "value": 1
-    },
-    {
-      "field": "checkedAfter",
-      "op": "eq",
-      "value": 2
+      "value": "https://the-internet.herokuapp.com/img/avatar.jpg"
     }
   ],
   "examplePayload": {
-    "checkedBefore": 1,
-    "checkedAfter": 2
+    "imageSrc": "https://the-internet.herokuapp.com/img/avatar.jpg"
   }
 }

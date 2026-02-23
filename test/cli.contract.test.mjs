@@ -183,6 +183,17 @@ test("contract unknown option includes focused alternatives for compact/search",
   assert.equal(payload.hintContext?.unknownOption, "--kind");
 });
 
+test("session clear parse failures include focused compatibility hints", () => {
+  const result = runCli(["session", "clear", "--keep-processes=maybe"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+  assert.equal(Array.isArray(payload.hints), true);
+  assert.equal(payload.hints.some((hint) => hint.includes("omit the flag for false")), true);
+  assert.equal(payload.hintContext?.commandPath, "session clear");
+});
+
 test("contract --core returns focused bootstrap payload", () => {
   const result = runCli(["contract", "--core"]);
   assert.equal(result.status, 0);

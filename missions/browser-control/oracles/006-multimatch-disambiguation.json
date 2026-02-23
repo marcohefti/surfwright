@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
   "missionId": "006-multimatch-disambiguation",
-  "startUrl": "https://the-internet.herokuapp.com/add_remove_elements/",
+  "startUrl": "https://the-internet.herokuapp.com/jqueryui/menu#",
   "collectFields": [
-    "deleteButtonsAfter"
+    "downloadsItems"
   ],
-  "successCheck": "deleteButtonsAfter == 2",
+  "successCheck": "downloadsItems == \"PDF, CSV, Excel\"",
   "rules": [
     {
-      "field": "deleteButtonsAfter",
+      "field": "downloadsItems",
       "op": "eq",
-      "value": 2
+      "value": "PDF, CSV, Excel"
     }
   ],
   "examplePayload": {
-    "deleteButtonsAfter": 2
+    "downloadsItems": "PDF, CSV, Excel"
   }
 }

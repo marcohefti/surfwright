@@ -9,25 +9,22 @@
 
 ## Intent
 
-- start_url: `https://jquerymodal.com/`
-- goal: `open then close modal with evidence`
+- start_url: `https://www.jquerymodal.com/`
+- goal: `open Example 6 first modal, click through to third modal, and report third modal text`
 
 ## Proof Contract
 
 - collect_fields:
-  - `openSignal`
-  - `closedSignal`
+  - `thirdModalText`
 
 ## Success Check (authoritative)
 
-- `openSignal == 1 and closedSignal == 0`
+- `thirdModalText == "I'm the third modal. You get the idea."`
 
 ## Example Proof Payload
 
 ```json
 {
-  "openSignal": 1,
-  "closedSignal": 0
+  "thirdModalText": "I'm the third modal. You get the idea."
 }
 ```
-

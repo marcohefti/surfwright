@@ -9,29 +9,22 @@
 
 ## Intent
 
-- start_url: `https://www.w3.org/TR/WCAG22/`
-- goal: `bounded first-page orientation`
+- start_url: `https://developer.mozilla.org/en-US/`
+- goal: `count visible top-level main navigation items without hover`
 
 ## Proof Contract
 
 - collect_fields:
-  - `title`
-  - `h1`
-  - `headingsCount`
-  - `navCount`
+  - `navItemsCount`
 
 ## Success Check (authoritative)
 
-- `title == "Web Content Accessibility Guidelines (WCAG) 2.2" and h1 == "Web Content Accessibility Guidelines (WCAG) 2.2" and headingsCount == 8 and navCount == 10`
+- `navItemsCount == 9`
 
 ## Example Proof Payload
 
 ```json
 {
-  "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
-  "h1": "Web Content Accessibility Guidelines (WCAG) 2.2",
-  "headingsCount": 8,
-  "navCount": 10
+  "navItemsCount": 9
 }
 ```
-

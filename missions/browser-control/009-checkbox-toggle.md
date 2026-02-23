@@ -9,25 +9,22 @@
 
 ## Intent
 
-- start_url: `https://the-internet.herokuapp.com/checkboxes`
-- goal: `toggle first checkbox deterministically`
+- start_url: `https://the-internet.herokuapp.com/shifting_content`
+- goal: `open Example 2 and return absolute src URL of the rendered image`
 
 ## Proof Contract
 
 - collect_fields:
-  - `checkedBefore`
-  - `checkedAfter`
+  - `imageSrc`
 
 ## Success Check (authoritative)
 
-- `checkedBefore == 1 and checkedAfter == 2`
+- `imageSrc == "https://the-internet.herokuapp.com/img/avatar.jpg"`
 
 ## Example Proof Payload
 
 ```json
 {
-  "checkedBefore": 1,
-  "checkedAfter": 2
+  "imageSrc": "https://the-internet.herokuapp.com/img/avatar.jpg"
 }
 ```
-

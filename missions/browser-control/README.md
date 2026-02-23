@@ -22,16 +22,16 @@ This folder is the versioned, reusable mission pack for browser-control validati
 |---:|---|---|---|
 | 1 | docs-install-command | `001-docs-install-command.md` | `https://docs.astral.sh/uv/getting-started/installation/` |
 | 2 | homepage-pricing | `002-homepage-pricing.md` | `https://github.com` |
-| 3 | redirect-evidence | `003-redirect-evidence.md` | `http://example.com` |
-| 4 | first-pass-orientation | `004-first-pass-orientation.md` | `https://www.w3.org/TR/WCAG22/` |
-| 5 | modal-lifecycle | `005-modal-lifecycle.md` | `https://jquerymodal.com/` |
-| 6 | multimatch-disambiguation | `006-multimatch-disambiguation.md` | `https://the-internet.herokuapp.com/add_remove_elements/` |
+| 3 | redirect-evidence | `003-redirect-evidence.md` | `https://github.com/marcohefti` |
+| 4 | first-pass-orientation | `004-first-pass-orientation.md` | `https://developer.mozilla.org/en-US/` |
+| 5 | modal-lifecycle | `005-modal-lifecycle.md` | `https://www.jquerymodal.com/` |
+| 6 | multimatch-disambiguation | `006-multimatch-disambiguation.md` | `https://the-internet.herokuapp.com/jqueryui/menu#` |
 | 7 | style-inspection | `007-style-inspection.md` | `https://getbootstrap.com/docs/5.3/components/buttons/` |
 | 8 | login-success | `008-login-success.md` | `https://the-internet.herokuapp.com/login` |
-| 9 | checkbox-toggle | `009-checkbox-toggle.md` | `https://the-internet.herokuapp.com/checkboxes` |
+| 9 | checkbox-toggle | `009-checkbox-toggle.md` | `https://the-internet.herokuapp.com/shifting_content` |
 | 10 | dropdown-select | `010-dropdown-select.md` | `https://the-internet.herokuapp.com/dropdown` |
 | 11 | javascript-alert-dialog | `011-javascript-alert-dialog.md` | `https://the-internet.herokuapp.com/javascript_alerts` |
-| 12 | iframe-edit | `012-iframe-edit.md` | `https://the-internet.herokuapp.com/iframe` |
+| 12 | iframe-edit | `012-iframe-edit.md` | `https://www.w3schools.com/html/tryit.asp?filename=tryhtml_iframe_height_width` |
 | 13 | new-window-spawn | `013-new-window-spawn.md` | `https://the-internet.herokuapp.com/windows` |
 | 14 | table-sort-lastname | `014-table-sort-lastname.md` | `https://the-internet.herokuapp.com/tables` |
 | 15 | file-upload | `015-file-upload.md` | `https://the-internet.herokuapp.com/upload` |

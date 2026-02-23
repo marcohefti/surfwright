@@ -1,26 +1,19 @@
 {
   "schemaVersion": 1,
   "missionId": "012-iframe-edit",
-  "startUrl": "https://the-internet.herokuapp.com/iframe",
+  "startUrl": "https://www.w3schools.com/html/tryit.asp?filename=tryhtml_iframe_height_width",
   "collectFields": [
-    "ok",
-    "text"
+    "iframeText"
   ],
-  "successCheck": "ok == true and text == \"ZCL_IFRAME_TEST\"",
+  "successCheck": "iframeText == \"This page is displayed in an iframe\"",
   "rules": [
     {
-      "field": "ok",
+      "field": "iframeText",
       "op": "eq",
-      "value": true
-    },
-    {
-      "field": "text",
-      "op": "eq",
-      "value": "ZCL_IFRAME_TEST"
+      "value": "This page is displayed in an iframe"
     }
   ],
   "examplePayload": {
-    "ok": true,
-    "text": "ZCL_IFRAME_TEST"
+    "iframeText": "This page is displayed in an iframe"
   }
 }

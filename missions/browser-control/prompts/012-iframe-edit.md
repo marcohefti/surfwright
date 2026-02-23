@@ -2,13 +2,12 @@
 
 Task
 - Use SurfWright to complete this browser mission.
-- Start URL: https://the-internet.herokuapp.com/iframe
-- Goal: edit TinyMCE iframe body and verify content
+- Start URL: https://www.w3schools.com/html/tryit.asp?filename=tryhtml_iframe_height_width
+- Goal: from rendered output, report text displayed inside the iframe
 
 Output format
 Return exactly one JSON object with these keys:
-- ok
-- text
+- iframeText
 
 Constraints
 - Use the exact key names listed above.

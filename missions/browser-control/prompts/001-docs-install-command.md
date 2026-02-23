@@ -3,7 +3,7 @@
 Task
 - Use SurfWright to complete this browser mission.
 - Start URL: https://docs.astral.sh/uv/getting-started/installation/
-- Goal: find install command on docs page
+- Goal: find curl install command on docs page
 
 Output format
 Return exactly one JSON object with these keys:

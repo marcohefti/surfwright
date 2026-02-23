@@ -28,6 +28,8 @@ function printSessionClearSuccess(report: SessionClearReport, opts: OutputOpts) 
   process.stdout.write(
     [
       "ok",
+      `scope=${report.scope}`,
+      `requestedSessionId=${report.requestedSessionId ?? "none"}`,
       `activeSessionId=${report.activeSessionId ?? "none"}`,
       `scanned=${report.scanned}`,
       `cleared=${report.cleared}`,
@@ -43,12 +45,15 @@ export function registerSessionClearCommand(ctx: RegisterSessionClearCommandCont
     .description(ctx.commandMeta.summary)
     .option("--keep-processes", "Clear session state but keep browser processes running", false)
     .option("--timeout-ms <ms>", "Session/process shutdown timeout in milliseconds", ctx.parseTimeoutMs, DEFAULT_SESSION_TIMEOUT_MS)
-    .action(async (options: { keepProcesses?: boolean; timeoutMs: number }) => {
+    .action(async (options: { keepProcesses?: boolean; timeoutMs: number }, command: Command) => {
       const output = ctx.globalOutputOpts();
+      const globals = command.optsWithGlobals<{ session?: unknown }>();
+      const scopedSessionId = typeof globals.session === "string" && globals.session.trim().length > 0 ? globals.session : undefined;
       try {
         const report = await sessionClearAll({
           timeoutMs: options.timeoutMs,
           keepProcesses: Boolean(options.keepProcesses),
+          sessionId: scopedSessionId,
         });
         printSessionClearSuccess(report, output);
       } catch (error) {

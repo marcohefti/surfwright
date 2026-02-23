@@ -4,10 +4,9 @@
   "startUrl": "https://github.com",
   "collectFields": [
     "finalUrl",
-    "finalTitle",
-    "pricingPageOk"
+    "freePlanStandardSupport"
   ],
-  "successCheck": "finalUrl == \"https://github.com/pricing\" and finalTitle == \"Pricing · Plans for every developer · GitHub\" and pricingPageOk == true",
+  "successCheck": "finalUrl == \"https://github.com/pricing\" and freePlanStandardSupport == false",
   "rules": [
     {
       "field": "finalUrl",
@@ -15,19 +14,13 @@
       "value": "https://github.com/pricing"
     },
     {
-      "field": "finalTitle",
+      "field": "freePlanStandardSupport",
       "op": "eq",
-      "value": "Pricing · Plans for every developer · GitHub"
-    },
-    {
-      "field": "pricingPageOk",
-      "op": "eq",
-      "value": true
+      "value": false
     }
   ],
   "examplePayload": {
     "finalUrl": "https://github.com/pricing",
-    "finalTitle": "Pricing · Plans for every developer · GitHub",
-    "pricingPageOk": true
+    "freePlanStandardSupport": false
   }
 }

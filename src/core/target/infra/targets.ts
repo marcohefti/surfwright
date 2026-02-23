@@ -10,6 +10,7 @@ import {
   type ManagedBrowserMode,
   type SessionSource,
   type SessionState,
+  type SurfwrightState,
   type TargetListReport,
 } from "../../types.js";
 
@@ -90,6 +91,16 @@ export async function resolveSessionForAction(opts: {
   sessionSource: SessionSource;
 }> {
   const targetIdHint = typeof opts.targetIdHint === "string" && opts.targetIdHint.length > 0 ? sanitizeTargetId(opts.targetIdHint) : null;
+  const fallbackSessionIdForTargetRecovery = (snapshot: SurfwrightState): string | null => {
+    if (snapshot.activeSessionId && snapshot.sessions[snapshot.activeSessionId]) {
+      return snapshot.activeSessionId;
+    }
+    const knownSessionIds = Object.keys(snapshot.sessions).sort((a, b) => a.localeCompare(b));
+    if (knownSessionIds.length === 1) {
+      return knownSessionIds[0];
+    }
+    return null;
+  };
 
   const buildSessionNotFoundError = (sessionId: string): CliError => {
     const snapshot = readState();
@@ -110,11 +121,16 @@ export async function resolveSessionForAction(opts: {
 
   const buildTargetSessionUnknownError = (targetId: string): CliError => {
     const snapshot = readState();
+    const activeSessionHint =
+      snapshot.activeSessionId && snapshot.sessions[snapshot.activeSessionId]
+        ? `Retry with explicit session: \`--session ${snapshot.activeSessionId}\``
+        : null;
     return new CliError("E_TARGET_SESSION_UNKNOWN", `Target ${targetId} has no recorded session mapping`, {
       hints: [
         "Reacquire a live targetId with `surfwright target list --session <id>`",
         "If needed, open/reopen the page first with `surfwright open <url>`",
-      ],
+        activeSessionHint,
+      ].filter((entry): entry is string => typeof entry === "string" && entry.length > 0),
       hintContext: {
         requestedTargetId: targetId,
         activeSessionId: snapshot.activeSessionId ?? null,
@@ -149,12 +165,24 @@ export async function resolveSessionForAction(opts: {
     session: SessionState;
     sessionSource: SessionSource;
   }> => {
+    return await resolveExplicitSessionWithPolicy(sessionId, {
+      allowTargetSessionMismatch: false,
+    });
+  };
+
+  const resolveExplicitSessionWithPolicy = async (
+    sessionId: string,
+    policy: { allowTargetSessionMismatch: boolean },
+  ): Promise<{
+    session: SessionState;
+    sessionSource: SessionSource;
+  }> => {
     const snapshot = readState();
     const existing = snapshot.sessions[sessionId];
     if (!existing) {
       throw buildSessionNotFoundError(sessionId);
     }
-    if (targetIdHint) {
+    if (targetIdHint && !policy.allowTargetSessionMismatch) {
       const targetRecord = snapshot.targets[targetIdHint];
       if (!targetRecord) {
         throw buildTargetSessionUnknownError(targetIdHint);
@@ -190,9 +218,30 @@ export async function resolveSessionForAction(opts: {
     const snapshot = readState();
     const targetRecord = snapshot.targets[targetIdHint];
     if (!targetRecord) {
-      throw buildTargetSessionUnknownError(targetIdHint);
+      const fallbackSessionId = fallbackSessionIdForTargetRecovery(snapshot);
+      if (!fallbackSessionId) {
+        throw buildTargetSessionUnknownError(targetIdHint);
+      }
+      return await resolveExplicitSessionWithPolicy(fallbackSessionId, {
+        allowTargetSessionMismatch: true,
+      }).then((resolved) => ({
+        ...resolved,
+        sessionSource: "target-inferred",
+      }));
     }
     const sessionId = targetRecord.sessionId;
+    if (!snapshot.sessions[sessionId]) {
+      const fallbackSessionId = fallbackSessionIdForTargetRecovery(snapshot);
+      if (!fallbackSessionId) {
+        throw buildSessionNotFoundError(sessionId);
+      }
+      return await resolveExplicitSessionWithPolicy(fallbackSessionId, {
+        allowTargetSessionMismatch: true,
+      }).then((resolved) => ({
+        ...resolved,
+        sessionSource: "target-inferred",
+      }));
+    }
     return await resolveExplicitSession(sessionId).then((resolved) => ({
       ...resolved,
       sessionSource: "target-inferred",

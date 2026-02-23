@@ -9,25 +9,22 @@
 
 ## Intent
 
-- start_url: `https://the-internet.herokuapp.com/iframe`
-- goal: `edit TinyMCE iframe body and verify content`
+- start_url: `https://www.w3schools.com/html/tryit.asp?filename=tryhtml_iframe_height_width`
+- goal: `from rendered output, report text displayed inside the iframe`
 
 ## Proof Contract
 
 - collect_fields:
-  - `ok`
-  - `text`
+  - `iframeText`
 
 ## Success Check (authoritative)
 
-- `ok == true and text == "ZCL_IFRAME_TEST"`
+- `iframeText == "This page is displayed in an iframe"`
 
 ## Example Proof Payload
 
 ```json
 {
-  "ok": true,
-  "text": "ZCL_IFRAME_TEST"
+  "iframeText": "This page is displayed in an iframe"
 }
 ```
-

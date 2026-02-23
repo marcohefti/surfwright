@@ -3,12 +3,11 @@
 Task
 - Use SurfWright to complete this browser mission.
 - Start URL: https://the-internet.herokuapp.com/login
-- Goal: submit valid credentials and verify auth success state
+- Goal: submit valid credentials and report the secure-area h4 text
 
 Output format
 Return exactly one JSON object with these keys:
-- secureArea
-- flash
+- secureAreaH4
 
 Constraints
 - Use the exact key names listed above.

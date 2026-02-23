@@ -71,8 +71,8 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   },
   {
     id: "session.clear",
-    usage: "surfwright session clear [--keep-processes] [--timeout-ms <ms>] [--no-json] [--pretty]",
-    summary: "clear all sessions and, by default, shut down associated browser processes",
+    usage: "surfwright session clear [--session <id>] [--keep-processes] [--timeout-ms <ms>] [--no-json] [--pretty]",
+    summary: "clear all sessions (or one scoped session) and, by default, shut down associated browser processes",
   },
   {
     id: "session.cookie-copy",

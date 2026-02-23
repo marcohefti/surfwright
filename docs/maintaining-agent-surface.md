@@ -151,6 +151,7 @@ surfwright session clear
 ```
 
 - default behavior clears sessions/targets and shuts down associated browser processes
+- add `--session <id>` when you only want to clear one session (and related target/capture metadata) without dropping others
 - use `--keep-processes` only when you intentionally want state reset without process teardown
 
 For long-lived automation, use per-agent state namespaces with `SURFWRIGHT_AGENT_ID=<agentId>`.

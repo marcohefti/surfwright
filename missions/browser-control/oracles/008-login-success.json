@@ -3,24 +3,17 @@
   "missionId": "008-login-success",
   "startUrl": "https://the-internet.herokuapp.com/login",
   "collectFields": [
-    "secureArea",
-    "flash"
+    "secureAreaH4"
   ],
-  "successCheck": "secureArea == true and flash contains \"You logged into a secure area!\"",
+  "successCheck": "secureAreaH4 == \"Welcome to the Secure Area. When you are done click logout below.\"",
   "rules": [
     {
-      "field": "secureArea",
+      "field": "secureAreaH4",
       "op": "eq",
-      "value": true
-    },
-    {
-      "field": "flash",
-      "op": "contains",
-      "value": "You logged into a secure area!"
+      "value": "Welcome to the Secure Area. When you are done click logout below."
     }
   ],
   "examplePayload": {
-    "secureArea": true,
-    "flash": "You logged into a secure area!"
+    "secureAreaH4": "Welcome to the Secure Area. When you are done click logout below."
   }
 }

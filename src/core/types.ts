@@ -298,6 +298,14 @@ export type CliFailure = {
   ok: false;
   code: string;
   message: string;
+  retryable?: boolean;
+  phase?: string;
+  diagnostics?: {
+    unknownFlags?: string[];
+    expectedPositionals?: string[];
+    validFlags?: string[];
+    canonicalInvocation?: string;
+  };
   hints?: string[];
   hintContext?: Record<string, string | number | boolean | null>;
 };

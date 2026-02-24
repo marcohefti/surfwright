@@ -1,10 +1,43 @@
 import type { CliFailure } from "../core/types.js";
+import { findCommandContractByPath, usageRequiredPositionals, usageValidFlags } from "../core/cli-contract.js";
 import { parseCommandPath } from "./options.js";
 
 export type OutputOpts = {
   json: boolean;
   pretty: boolean;
 };
+
+function commanderDiagnostics(input: {
+  commandPath: string[];
+  unknownOption: string | null;
+  missingArg: string | null;
+  tooManyArgs: boolean;
+}): CliFailure["diagnostics"] {
+  const diagnostics: NonNullable<CliFailure["diagnostics"]> = {};
+  if (typeof input.unknownOption === "string" && input.unknownOption.length > 0) {
+    diagnostics.unknownFlags = [input.unknownOption];
+  }
+  if (typeof input.missingArg === "string" && input.missingArg.length > 0) {
+    diagnostics.expectedPositionals = [input.missingArg];
+  }
+
+  const contract = findCommandContractByPath(input.commandPath);
+  if (contract) {
+    const validFlags = usageValidFlags(contract.usage);
+    if (validFlags.length > 0) {
+      diagnostics.validFlags = validFlags;
+    }
+    diagnostics.canonicalInvocation = contract.usage;
+    if (!diagnostics.expectedPositionals && input.tooManyArgs) {
+      const expectedPositionals = usageRequiredPositionals(contract.usage);
+      if (expectedPositionals.length > 0) {
+        diagnostics.expectedPositionals = expectedPositionals;
+      }
+    }
+  }
+
+  return Object.keys(diagnostics).length > 0 ? diagnostics : undefined;
+}
 
 export function commanderExitCode(error: unknown): number | null {
   if (typeof error !== "object" || error === null) {
@@ -53,6 +86,7 @@ function contractUnknownOptionHints(unknownOption: string | null, argv?: string[
   }
   return [
     "Use --search <term> to filter command/error/guidance entries.",
+    "Use --command <id> for one compact command schema (flags/positionals/examples).",
     "contract output is compact by default; add --full only when needed.",
     "Example: surfwright contract --search upload",
   ];
@@ -97,11 +131,13 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
   const missingArgMatch = /missing required argument '([^']+)'/i.exec(rawMessage);
   const unknownOptionMatch = /unknown option '([^']+)'/i.exec(rawMessage);
   const tooManyArgsMatch = /too many arguments(?: for '([^']+)')?/i.exec(rawMessage);
+  const unknownOption = unknownOptionMatch?.[1] ?? null;
+  const expectedArg = missingArgMatch?.[1] ?? null;
   const hintContext: Record<string, string | number | boolean | null> = {
     commanderCode: maybe.code,
     didYouMean,
-    expectedArgs: missingArgMatch?.[1] ?? null,
-    unknownOption: unknownOptionMatch?.[1] ?? null,
+    expectedArgs: expectedArg,
+    unknownOption,
   };
   const parsedCommandPath = Array.isArray(argv) ? parseCommandPath(argv) : [];
   const commandPath = parsedCommandPath.join(" ");
@@ -121,17 +157,24 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
     example,
     ...sessionClearFailureHints({
       commandPath: parsedCommandPath,
-      unknownOption: unknownOptionMatch?.[1] ?? null,
+      unknownOption,
       tooManyArgs: Boolean(tooManyArgsMatch),
     }),
-    ...contractUnknownOptionHints(unknownOptionMatch?.[1] ?? null, argv),
+    ...contractUnknownOptionHints(unknownOption, argv),
     "Run the command with --help for usage examples",
   ].filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+  const diagnostics = commanderDiagnostics({
+    commandPath: parsedCommandPath,
+    unknownOption,
+    missingArg: expectedArg,
+    tooManyArgs: Boolean(tooManyArgsMatch),
+  });
 
   return {
     ok: false,
     code: "E_QUERY_INVALID",
     message: message.length > 0 ? message : "invalid command input",
+    ...(diagnostics ? { diagnostics } : {}),
     ...(hints.length > 0 ? { hints: hints.slice(0, 3) } : {}),
     hintContext,
   };

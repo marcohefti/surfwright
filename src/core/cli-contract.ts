@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { allCommandManifest } from "../features/registry.js";
 import { errorContracts } from "./contracts/error-contracts.js";
-import type { CliContractReport } from "./types.js";
+import type { CliCommandContract, CliContractReport } from "./types.js";
 
 export const CONTRACT_SCHEMA_VERSION = 1;
 
@@ -13,12 +13,108 @@ const guarantees = [
   "bounded runtime via explicit timeouts",
 ];
 
+function unique(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of values) {
+    if (seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+    out.push(value);
+  }
+  return out;
+}
+
+export function commandPathToId(commandPath: string[]): string | null {
+  if (!Array.isArray(commandPath) || commandPath.length === 0) {
+    return null;
+  }
+  if (commandPath.length === 1) {
+    return commandPath[0];
+  }
+  return `${commandPath[0]}.${commandPath[1]}`;
+}
+
+export function findCommandContractByPath(commandPath: string[]): CliCommandContract | null {
+  const id = commandPathToId(commandPath);
+  if (typeof id !== "string") {
+    return null;
+  }
+  return allCommandManifest.find((entry) => entry.id === id) ?? null;
+}
+
+export function usageCommandPath(usage: string): string[] {
+  const raw = String(usage ?? "").trim();
+  if (raw.length === 0) {
+    return [];
+  }
+  const tokens = raw.split(/\s+/g);
+  const start = tokens[0] === "surfwright" ? 1 : 0;
+  const out: string[] = [];
+  for (let idx = start; idx < tokens.length; idx += 1) {
+    const token = tokens[idx];
+    if (token.startsWith("[") || token.startsWith("<") || token.startsWith("--")) {
+      break;
+    }
+    out.push(token);
+  }
+  return out;
+}
+
+export function usageValidFlags(usage: string): string[] {
+  const text = String(usage ?? "");
+  const matches = text.match(/--[a-z][a-z0-9-]*/gi) ?? [];
+  return unique(matches);
+}
+
+export function usageRequiredPositionals(usage: string): string[] {
+  const text = String(usage ?? "");
+  const beforeOptional = text.split("[")[0] ?? text;
+  const positionals: string[] = [];
+  const regex = /<([^>\s]+)>/g;
+  for (const match of beforeOptional.matchAll(regex)) {
+    const name = typeof match[1] === "string" ? match[1].trim() : "";
+    if (name.length > 0) {
+      positionals.push(name);
+    }
+  }
+  return unique(positionals);
+}
+
+export function buildCommandSignature(opts: {
+  command: CliCommandContract;
+  examples?: string[];
+}): {
+  id: string;
+  commandPath: string;
+  usage: string;
+  canonicalInvocation: string;
+  summary: string;
+  flags: string[];
+  positionals: string[];
+  examples: string[];
+} {
+  const usage = String(opts.command.usage ?? "").trim();
+  return {
+    id: opts.command.id,
+    commandPath: usageCommandPath(usage).join(" "),
+    usage,
+    canonicalInvocation: usage,
+    summary: opts.command.summary,
+    flags: usageValidFlags(usage),
+    positionals: usageRequiredPositionals(usage),
+    examples: Array.isArray(opts.examples) ? opts.examples.slice(0, 5) : [],
+  };
+}
+
 const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
   {
     id: "contract",
-    signature: "contract(core|full, search?) -> { command ids, error codes, guidance }",
+    signature: "contract(compact|core|full|command, search?) -> { command ids, error codes, guidance }",
     examples: [
       "surfwright contract --core",
+      "surfwright contract --command target.download",
       "surfwright contract --core --search extract",
       "surfwright contract --full --search target.attr",
     ],

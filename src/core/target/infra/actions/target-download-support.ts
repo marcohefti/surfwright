@@ -186,7 +186,7 @@ export async function handleMissingDownloadEvent(opts: {
 }): Promise<TargetDownloadReport> {
   const timeoutReason =
     opts.downloadWaitError instanceof Error
-      ? opts.downloadWaitError.message
+      ? (opts.downloadWaitError.message.split("\n")[0]?.trim() || `download event not observed within timeout (${opts.timeoutMs}ms)`)
       : `download event not observed within timeout (${opts.timeoutMs}ms)`;
   const outDir = resolveDownloadOutDir(opts.downloadOutDir);
   let fallbackErrorReason: string | null = null;
@@ -307,7 +307,16 @@ export async function handleMissingDownloadEvent(opts: {
     const message = opts.fallbackToFetch && fallbackErrorReason
       ? `${timeoutReason}; fetch fallback failed: ${fallbackErrorReason}`
       : timeoutReason;
-    throw new CliError("E_INTERNAL", message);
+    throw new CliError("E_DOWNLOAD_TIMEOUT", message, {
+      retryable: true,
+      phase: "download_event_wait",
+      hintContext: {
+        phase: "download_event_wait",
+        retryable: true,
+        timeoutMs: opts.timeoutMs,
+        fallbackToFetch: opts.fallbackToFetch,
+      },
+    });
   }
 
   const assertions = await evaluateActionAssertions({

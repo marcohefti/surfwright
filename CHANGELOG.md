@@ -24,6 +24,7 @@ All notable changes to SurfWright are documented here.
 - [contract] Added additive `contract.guidance[]` with command signatures, runnable examples, and proof schema hints for high-traffic flows.
 - [contract] Added `contract --compact` and `contract --search <term>` for low-token contract introspection and focused lookups.
 - [contract] Added `contract --core` for low-token bootstrap payloads (focused command/error/guidance subset).
+- [contract] Added `contract --command <id>` for compact per-command lookup (`flags`, `positionals`, `examples`, canonical invocation) to reduce full-contract probing in agent loops.
 - [cli] Added global `--output-shape <full|compact|proof>` (and `SURFWRIGHT_OUTPUT_SHAPE`) to project JSON outputs without changing command semantics.
 - [target] Added `--proof` support to `target fill`, `target keypress`, `target upload`, `target drag-drop`, and `target dialog` with a shared compact evidence shape.
 - [actions] Added post-action assertions (`--assert-url-prefix`, `--assert-selector`, `--assert-text`) and additive `proofEnvelope` support across `open`, `target click`, `target fill`, `target keypress`, `target upload`, `target drag-drop`, `target dialog`, `target download`, and `target wait`.
@@ -75,6 +76,7 @@ All notable changes to SurfWright are documented here.
 - [target] `target wait` now includes a structured `wait` payload (`mode`, `value`, `timeoutMs`, `elapsedMs`, `satisfied`) while keeping existing top-level `mode`/`value`.
 - [target] `target snapshot --mode orient|snapshot` now includes additive aggregate counters (`headingsCount`, `buttonsCount`, `linksCount`), plus `navCount` for orient mode.
 - [errors] Typed failures can now include optional bounded `hints` and `hintContext` fields (additive; `code` + `message` contract preserved).
+- [errors] Commander-originated `E_QUERY_INVALID` failures now include additive machine-fix diagnostics (`unknownFlags`, `expectedPositionals`, `validFlags`, `canonicalInvocation`) for deterministic recovery.
 - [cli] Improved first-run discoverability: parse errors now show stronger suggestions/help.
 - [target] Unified post-action waits across interactive actions: `target fill|keypress|upload|drag-drop|dialog` now support `--wait-for-text|--wait-for-selector|--wait-network-idle` and `--wait-timeout-ms`.
 - [session] Reduced repeat command overhead in tight loops with short-lived CDP reachability caching during session health checks.
@@ -85,6 +87,7 @@ All notable changes to SurfWright are documented here.
 - [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage` to reduce startup flakes in constrained environments.
 - [target] `target download` payload now uses canonical nested proof fields (`fileName`, `bytes`) plus additive top-level projection fields (`downloadStarted`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`).
 - [target] `target download` payload now includes additive capture provenance/alias fields (`downloadMethod`, `downloadedFilename`, `downloadedBytes`) across event, fetch-fallback, and non-started envelopes.
+- [docs] Runtime skill/workflow guidance no longer prescribes manual `session clear` cleanup in the default agent loop; guidance now favors opportunistic runtime maintenance plus explicit maintainer-only state maintenance commands.
 - [errors] `target click` mismatch failures now include stronger disambiguation context (`withinSelector`, bounded candidate sample) for faster recovery without blind retries.
 - [run] Pipeline step execution is now table-driven to keep step parsing/dispatch behavior centralized and reduce drift risk as steps are added.
 - [run] `run` click-step support now forwards deterministic click controls (`within`, `frameScope`, `index|nth`, wait budget, proof/delta/count-after/assert fields) instead of dropping them.
@@ -117,6 +120,7 @@ All notable changes to SurfWright are documented here.
 - [errors] `E_BROWSER_START_FAILED`, `E_BROWSER_START_TIMEOUT`, `E_STATE_LOCK_IO`, and `E_STATE_LOCK_TIMEOUT` now include bounded hints/hintContext for faster operator triage.
 - [target] Stale `targetId` errors now include stronger replacement-target hints and hint context to speed recovery in concurrent session flows.
 - [target] Upload wait-stage timeout failures now return typed `E_WAIT_TIMEOUT` instead of leaking as `E_INTERNAL` when wait conditions are not satisfied in time.
+- [target] Download event wait timeouts now return typed `E_DOWNLOAD_TIMEOUT` (with `retryable=true` and `phase=download_event_wait`) instead of generic `E_INTERNAL`.
 - [cli] Commander unknown-option failures for `contract` now include focused alternatives for `--search` and `--full` to reduce cold-start option probing loops.
 - [browser] Managed startup retry wait-plan is now explicitly exported/tested to guard first-attempt and retry envelopes against regression.
 - [cli] Commander parse failures now map to typed JSON `E_QUERY_INVALID` responses (with bounded hints/hintContext) in JSON mode.

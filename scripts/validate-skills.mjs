@@ -19,8 +19,7 @@ const surfwrightSkillPolicy = {
   maxLines: 45,
   requiredSnippets: [
     "surfwright contract --search",
-    "session fresh",
-    "session clear",
+    "surfwright contract --command",
     "typed failures",
     "required JSON schema",
   ],

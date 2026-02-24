@@ -161,6 +161,47 @@ test("target download can return deterministic non-started envelope on timeout",
   });
 });
 
+test("target download maps missed download event timeout to typed E_DOWNLOAD_TIMEOUT", async () => {
+  requireBrowser();
+  await withHttpServer((req, res) => {
+    if (req.url === "/") {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(`<!doctype html>
+        <title>No Download Strict</title>
+        <main><a id="go" href="/plain">Open Plain</a></main>`);
+      return;
+    }
+    if (req.url === "/plain") {
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+      res.end("plain response");
+      return;
+    }
+    res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    res.end("not found");
+  }, async (baseUrl) => {
+    const openResult = await runCliAsync(["open", baseUrl, "--timeout-ms", "8000"]);
+    assert.equal(openResult.status, 0, openResult.stdout || openResult.stderr);
+    const openPayload = parseJson(openResult.stdout);
+
+    const dlResult = await runCliAsync(["target",
+      "download",
+      openPayload.targetId,
+      "--text",
+      "Open Plain",
+      "--timeout-ms",
+      "1000",
+    ]);
+    assert.equal(dlResult.status, 1);
+    const payload = parseJson(dlResult.stdout);
+    assert.equal(payload.ok, false);
+    assert.equal(payload.code, "E_DOWNLOAD_TIMEOUT");
+    assert.equal(payload.retryable, true);
+    assert.equal(payload.phase, "download_event_wait");
+    assert.equal(payload.hintContext?.phase, "download_event_wait");
+    assert.equal(payload.hintContext?.retryable, true);
+  });
+});
+
 test("target download --fallback-to-fetch captures deterministic artifact when download event is missing", async () => {
   requireBrowser();
   await withHttpServer((req, res) => {

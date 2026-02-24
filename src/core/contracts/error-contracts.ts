@@ -27,6 +27,7 @@ export const errorContracts: CliErrorContract[] = [
   { code: "E_QUERY_INVALID", message: "Query input is invalid or missing", retryable: false },
   { code: "E_ASSERT_FAILED", message: "Pipeline assertion failed", retryable: false },
   { code: "E_WAIT_TIMEOUT", message: "wait condition did not complete before timeout", retryable: true },
+  { code: "E_DOWNLOAD_TIMEOUT", message: "download did not start before timeout", retryable: true },
   { code: "E_EVAL_SCRIPT_TOO_LARGE", message: "Evaluation script exceeds maximum supported length", retryable: false },
   { code: "E_EVAL_TIMEOUT", message: "evaluation did not complete before timeout", retryable: true },
   { code: "E_EVAL_RUNTIME", message: "evaluation failed in page context", retryable: false },

@@ -93,6 +93,7 @@ surfwright contract
 
 `contract` now includes additive `guidance` entries with command signatures, examples, and proof schemas for high-traffic workflows.
 Use `surfwright contract --core` for low-token bootstrap output, and `surfwright contract --search <term>` to filter commands/errors/guidance.
+Use `surfwright contract --command <id>` for compact per-command flags/positionals/examples (low-token command lookup).
 
 Set global output shaping when you want smaller payloads without changing command behavior:
 
@@ -217,7 +218,7 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 `target spawn --proof --assert-title <text>` adds compact spawn proof fields and optional title assertion for deterministic new-window checks.
 `open|target click|target fill|target keypress|target upload|target drag-drop|target dialog|target download|target wait` support additive post-action assertions: `--assert-url-prefix`, `--assert-selector`, `--assert-text`.
 `open` and `target url-assert` include additive `blockType` (`auth|captcha|consent|unknown`) for navigation gating triage.
-`target download` includes additive top-level fields (`downloadStarted`, `downloadMethod`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`, `downloadedFilename`, `downloadedBytes`) and canonical nested `download.*` fields (`fileName`, `bytes`); use `--fallback-to-fetch` for event-missed downloads and `--allow-missing-download-event` for deterministic non-started envelopes.
+`target download` includes additive top-level fields (`downloadStarted`, `downloadMethod`, `downloadStatus`, `downloadFinalUrl`, `downloadFileName`, `downloadBytes`, `downloadedFilename`, `downloadedBytes`) and canonical nested `download.*` fields (`fileName`, `bytes`); use `--fallback-to-fetch` for event-missed downloads and `--allow-missing-download-event` for deterministic non-started envelopes. Strict timeout failures now return typed `E_DOWNLOAD_TIMEOUT` (`retryable=true`, `phase=download_event_wait`).
 `target extract --kind command-lines` emits normalized runnable command entries (`item.command`) from docs/code blocks for low-friction command harvesting.
 `target style --proof` includes compact fields (`found`, `targetText`, `styleBg`, `styleColor`, `styleFontSize`, `styleRadius`) for mission checks.
 `target extract --summary` adds compact summary/proof fields (`itemCount`, `totalRawCount`, `count`, `firstTitle`, `firstUrl`, `firstCommand`) for direct proof collection.

@@ -179,6 +179,12 @@ test("contract unknown option includes focused alternatives for compact/search",
   assert.equal(Array.isArray(payload.hints), true);
   assert.equal(payload.hints.some((hint) => hint.includes("Use --search <term>")), true);
   assert.equal(payload.hints.some((hint) => hint.includes("add --full")), true);
+  assert.equal(Array.isArray(payload.diagnostics?.unknownFlags), true);
+  assert.equal(payload.diagnostics?.unknownFlags?.includes("--kind"), true);
+  assert.equal(Array.isArray(payload.diagnostics?.validFlags), true);
+  assert.equal(payload.diagnostics?.validFlags?.includes("--search"), true);
+  assert.equal(typeof payload.diagnostics?.canonicalInvocation, "string");
+  assert.equal(payload.diagnostics?.canonicalInvocation?.includes("surfwright contract"), true);
   assert.equal(payload.hintContext?.commandPath, "contract");
   assert.equal(payload.hintContext?.unknownOption, "--kind");
 });
@@ -205,6 +211,20 @@ test("contract --core returns focused bootstrap payload", () => {
   assert.equal(Array.isArray(payload.guidance), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.click"), true);
   assert.equal(payload.commands.some((entry) => entry.id === "target.count"), true);
+});
+
+test("contract --command returns compact per-command schema", () => {
+  const result = runCli(["contract", "--command", "target.download"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "command");
+  assert.equal(payload.command.id, "target.download");
+  assert.equal(Array.isArray(payload.command.flags), true);
+  assert.equal(Array.isArray(payload.command.positionals), true);
+  assert.equal(Array.isArray(payload.command.examples), true);
+  assert.equal(payload.command.flags.includes("--download-out-dir"), true);
+  assert.equal(payload.command.positionals.includes("targetId"), true);
 });
 
 test("contract --core --search run exposes runnable plan guidance", () => {
@@ -237,6 +257,14 @@ test("contract --core --search attr exposes target.attr guidance", () => {
 
 test("contract rejects incompatible mode flags", () => {
   const result = runCli(["contract", "--core", "--full"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+});
+
+test("contract --command rejects incompatible mode flags", () => {
+  const result = runCli(["contract", "--command", "open", "--search", "open"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);

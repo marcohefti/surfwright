@@ -131,37 +131,18 @@ When real-world behavior reveals a new edge case, add a deterministic ingress fi
 - Store normalized SurfWright contract behavior, not raw Playwright/CDP payloads.
 - Use the fixture path convention under `test/fixtures/ingress/...`.
 
-## 7) State hygiene policy
-
-When a workstation restarts or browser processes are interrupted, run a maintenance pass before blaming command behavior:
-
-```bash
-surfwright state reconcile
-```
-
-This combines:
-
-- `session prune` (remove unreachable attached sessions; repair stale managed pid metadata)
-- `target prune` (remove orphaned/aged target metadata and enforce per-session cap)
-
-For explicit teardown, use:
-
-```bash
-surfwright session clear
-```
-
-- default behavior clears sessions/targets and shuts down associated browser processes
-- add `--session <id>` when you only want to clear one session (and related target/capture metadata) without dropping others
-- use `--keep-processes` only when you intentionally want state reset without process teardown
+## 7) Runtime Maintenance Policy
 
 For long-lived automation, use per-agent state namespaces with `SURFWRIGHT_AGENT_ID=<agentId>`.
 
-`session ensure` includes an automatic session hygiene pass for shared-session workflows, but a scheduled weekly `state reconcile` is still a good full cleanup baseline.
-
-SurfWright also runs a bounded detached opportunistic maintenance pass on normal command ingress to:
+SurfWright runs a bounded detached opportunistic maintenance pass on normal command ingress to:
 
 - park long-idle managed browser processes
 - prune stale disk artifacts (`runs/`, `captures/`, orphan `profiles/` dirs) with conservative caps
 
-Use `state disk-prune` for explicit deterministic disk cleanup (supports `--dry-run` and optional workspace profile pruning).
-`state reconcile` remains the state-shape/session/target maintenance command.
+Use `state reconcile` and `state disk-prune` only when doing explicit maintainer diagnostics or housekeeping:
+
+```bash
+surfwright state reconcile
+surfwright state disk-prune --dry-run
+```

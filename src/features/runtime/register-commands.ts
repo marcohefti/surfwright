@@ -74,21 +74,30 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .option("--compact", "Deprecated alias for default compact output", false)
     .option("--core", "Return compact core bootstrap payload", false)
     .option("--full", "Return full contract payload (larger output)", false)
+    .option("--command <id>", "Return compact schema for one command id (flags, positionals, examples)")
     .option("--search <term>", "Filter contract commands/errors/guidance by id/code/usage text")
-    .action((options: { compact?: boolean; core?: boolean; full?: boolean; search?: string }) => {
+    .action((options: { compact?: boolean; core?: boolean; full?: boolean; command?: string; search?: string }) => {
       const output = ctx.globalOutputOpts();
       try {
         if (Boolean(options.core) && Boolean(options.full)) {
           throw queryInvalid("contract accepts at most one mode flag: --core or --full");
         }
+        const commandId = typeof options.command === "string" ? options.command.trim() : "";
+        if (commandId.length > 0 && (Boolean(options.core) || Boolean(options.full) || typeof options.search === "string")) {
+          throw queryInvalid("contract --command cannot be combined with --core, --full, or --search");
+        }
         // --compact is retained as a no-op alias for back-compat; compact remains default mode.
         void options.compact;
         const report = getCliContractReport(ctx.readPackageVersion());
-        const mode = options.full ? "full" : options.core ? "core" : "compact";
+        if (commandId.length > 0 && !report.commands.some((entry) => entry.id === commandId)) {
+          throw queryInvalid(`unknown command id: ${commandId}`);
+        }
+        const mode = commandId.length > 0 ? "command" : options.full ? "full" : options.core ? "core" : "compact";
         const outReport = buildContractOutput({
           report,
           mode,
           search: options.search,
+          commandId,
         });
         printContractReport(outReport as Record<string, unknown>, output);
       } catch (error) {

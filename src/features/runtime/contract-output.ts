@@ -1,4 +1,5 @@
 import type { CliContractReport } from "../../core/types.js";
+import { buildCommandSignature } from "../../core/cli-contract.js";
 
 const CORE_COMMAND_IDS = new Set([
   "contract",
@@ -25,6 +26,7 @@ const CORE_ERROR_CODES = new Set([
   "E_QUERY_INVALID",
   "E_ASSERT_FAILED",
   "E_WAIT_TIMEOUT",
+  "E_DOWNLOAD_TIMEOUT",
   "E_TARGET_SESSION_UNKNOWN",
   "E_SELECTOR_INVALID",
   "E_CDP_UNREACHABLE",
@@ -86,9 +88,32 @@ function compactContractReport(report: CliContractReport, needle: string): Recor
 
 export function buildContractOutput(opts: {
   report: CliContractReport;
-  mode?: "compact" | "core" | "full";
+  mode?: "compact" | "core" | "full" | "command";
   search?: string;
+  commandId?: string;
 }): CliContractReport | Record<string, unknown> {
+  if (opts.mode === "command") {
+    const commandId = typeof opts.commandId === "string" ? opts.commandId.trim() : "";
+    const command = opts.report.commands.find((entry) => entry.id === commandId) ?? null;
+    if (!command) {
+      return compactContractReport(opts.report, "");
+    }
+    const examples = Array.isArray(opts.report.guidance)
+      ? opts.report.guidance.find((entry) => entry.id === commandId)?.examples ?? []
+      : [];
+    return {
+      ok: true,
+      name: opts.report.name,
+      version: opts.report.version,
+      contractSchemaVersion: opts.report.contractSchemaVersion,
+      contractFingerprint: opts.report.contractFingerprint,
+      mode: "command",
+      command: buildCommandSignature({
+        command,
+        examples,
+      }),
+    };
+  }
   const needle = typeof opts.search === "string" ? opts.search.trim().toLowerCase() : "";
   const filtered = filterContractReport(opts.report, needle);
   if (opts.mode === "core") {

@@ -29,6 +29,7 @@ import {
 } from "./effects/target-effect-assertions.js";
 import { targetEvalCommandSpec } from "./target-eval.js";
 import { targetFindCommandSpec } from "./target-find.js";
+import { targetAttrCommandSpec } from "./query/target-attr.js";
 import { targetCountCommandSpec } from "./query/target-count.js";
 import { targetFramesCommandSpec } from "./frames/target-frames.js";
 import { targetListCommandSpec } from "./target-list.js";
@@ -52,6 +53,7 @@ export const targetCommandSpecs: TargetCommandSpec[] = [
   targetFramesCommandSpec,
   targetSnapshotCommandSpec,
   targetSnapshotDiffCommandSpec,
+  targetAttrCommandSpec,
   targetCountCommandSpec,
   targetFindCommandSpec,
   targetClickCommandSpec,

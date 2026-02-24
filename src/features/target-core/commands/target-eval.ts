@@ -34,6 +34,7 @@ export const targetEvalCommandSpec: TargetCommandSpec = {
           "Typed alternatives (prefer before eval when possible):",
           "  surfwright target extract <targetId> --kind docs-commands --selector main --limit 10",
           "  surfwright target style <targetId> --selector '.btn.btn-primary' --kind button-primary",
+          "  surfwright target attr <targetId> --selector 'img.avatar' --name src",
           "  surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1",
           "",
           "Compact output tip:",

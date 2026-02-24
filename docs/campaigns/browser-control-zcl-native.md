@@ -13,7 +13,7 @@ This runbook defines the versioned ZCL workflow for SurfWright's browser-control
 - Campaign spec: `docs/campaigns/browser-control-native-codex.yaml`
 - Prompt set (agent-visible): `missions/browser-control/prompts/*.md`
 - Oracle set (host-evaluated): `missions/browser-control/oracles/*.json`
-- Oracle evaluator: `scripts/zcl/eval-browser-control-oracle.mjs`
+- Bench-loop oracle evaluator script: `scripts/zcl/eval-browser-control-oracle.mjs`
 - Prompt/oracle generator: `scripts/zcl/build-browser-control-exam-pack.mjs`
 - Mission authoring source: `missions/browser-control/*.md`
 
@@ -24,7 +24,7 @@ This runbook defines the versioned ZCL workflow for SurfWright's browser-control
   - `missionSource.oracleSource.path`: host-side oracle rules (not copied into prompts).
 - Finalization is `auto_from_result_json` with `resultChannel=file_json` (`mission.result.json`).
 - Mission selection is explicit by mission id to lock scope to exactly 20 missions and avoid accidental inclusion of non-mission markdown files.
-- Campaign evaluation is `oracle` with script evaluator (`scripts/zcl/eval-browser-control-oracle.mjs`).
+- Campaign evaluation is `oracle` with built-in rules and normalized matching (`evaluation.oraclePolicy.mode=normalized`).
 - Runtime is native (`runner.type=codex_app_server`, `sessionIsolation=native`), with deterministic fresh session per attempt.
 - Model is pinned in campaign config (`runner.model: gpt-5.3-codex-spark`).
 - Reasoning effort hint is pinned to `medium` with `runner.modelReasoningPolicy: best_effort` (fallback to runtime default if unsupported).

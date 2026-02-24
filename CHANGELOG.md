@@ -8,6 +8,7 @@ All notable changes to SurfWright are documented here.
 - [open] Added `open --wait-until <commit|domcontentloaded|load|networkidle>` and additive output fields `waitUntil`, `reuseMode`, `reusedTarget` for explicit navigation/readiness evidence.
 - [open] Added `open --reuse <off|url|origin|active>` for explicit tab-reuse policy.
 - [target] Added `target style` for first-class computed-style inspection without `target eval` scripting.
+- [target] Added `target attr` for deterministic attribute reads from matched elements (`--index|--nth`) with absolute URL normalization for URL-like attributes (`href`, `src`, `action`, ...).
 - [target] Added `target click --proof` to emit a compact one-shot evidence payload (implies `--snapshot` + `--delta`).
 - [target] Added `target click --repeat <n>` (1-25) to execute repeated deterministic clicks in one command, returning final click fields plus additive `repeat` metadata (`requested`, `completed`, `actionIds`, `pickedIndices`).
 - [target] Added additive `target click --proof.countAfter` for selector-mode clicks (post-action selector cardinality when available).
@@ -96,7 +97,8 @@ All notable changes to SurfWright are documented here.
 - [target] `target eval --output-shape proof` now consistently projects compact `proof.resultType` and `proof.resultValue` fields.
 - [cli] JSON output remains default and now also accepts explicit `--json` as a no-op compatibility flag.
 - [cli] `target <subcommand> --target <id>` is now accepted as a compatibility alias for positional `targetId` on target subcommands.
-- [zcl] Switched the versioned browser-control campaign to `promptMode=exam` with split mission sources (`promptSource` + `oracleSource`) and `evaluation.mode=oracle` via script evaluator.
+- [zcl] Switched the versioned browser-control campaign to `promptMode=exam` with split mission sources (`promptSource` + `oracleSource`) and `evaluation.mode=oracle` via normalized built-in rules.
+- [zcl] Oracle evaluator now accepts common equivalent encodings for strict mission values (for example URL trailing slash differences, `6` vs `6px`, shell prompt prefixes, and comma-list vs array representations).
 - [skill] Reduced the SurfWright runtime skill surface to a single bootstrap file (`skills/surfwright/SKILL.md`) and moved non-runtime guidance to maintainer docs.
 - [bench] Reworked benchmark execution to one-campaign-per-scope semantics with explicit `--mission-id` / `--mission-ids`, per-scope history isolation, and fresh-agent enforcement per attempt.
 - [bench] `bench:loop:run` now supports explicit iteration modes (`--mode optimize|sample`, `--sample`) and defaults to optimize semantics (`change -> run -> evaluate`).

@@ -223,6 +223,18 @@ test("contract --core --search run exposes runnable plan guidance", () => {
   assert.equal(runGuidance.examples.some((entry) => entry.includes("\"require\"")), true);
 });
 
+test("contract --core --search attr exposes target.attr guidance", () => {
+  const result = runCli(["contract", "--core", "--search", "attr"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.attr"), true);
+  const guidance = payload.guidance.find((entry) => entry.id === "target.attr");
+  assert.notEqual(guidance, undefined);
+  assert.equal(Array.isArray(guidance.examples), true);
+  assert.equal(guidance.examples.some((entry) => entry.includes("--name src")), true);
+});
+
 test("contract rejects incompatible mode flags", () => {
   const result = runCli(["contract", "--core", "--full"]);
   assert.equal(result.status, 1);

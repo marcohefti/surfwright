@@ -8,6 +8,7 @@ const CORE_COMMAND_IDS = new Set([
   "target.snapshot",
   "target.find",
   "target.count",
+  "target.attr",
   "target.click",
   "target.click-read",
   "target.read",

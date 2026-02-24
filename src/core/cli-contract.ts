@@ -15,6 +15,16 @@ const guarantees = [
 
 const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
   {
+    id: "contract",
+    signature: "contract(core|full, search?) -> { command ids, error codes, guidance }",
+    examples: [
+      "surfwright contract --core",
+      "surfwright contract --core --search extract",
+      "surfwright contract --full --search target.attr",
+    ],
+    proofSchema: null,
+  },
+  {
     id: "open",
     signature: "open(url) -> { sessionId, targetId, finalUrl, title, blockType }",
     examples: ["surfwright open https://example.com --reuse active --wait-until domcontentloaded"],
@@ -35,6 +45,16 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
     id: "target.snapshot",
     signature: "snapshot(targetId, mode?) -> { h1?, headings/buttons/links, *Count }",
     examples: ["surfwright target snapshot <targetId> --mode orient --max-headings 40 --max-links 40"],
+    proofSchema: null,
+  },
+  {
+    id: "target.attr",
+    signature: "attr(targetId, query, name) -> { value, attributePresent, pickedIndex }",
+    examples: [
+      "surfwright target attr <targetId> --selector 'img.avatar' --name src",
+      "surfwright target attr <targetId> --text 'Docs' --name href --visible-only",
+      "surfwright target attr <targetId> --selector '.menu a' --name href --nth 2",
+    ],
     proofSchema: null,
   },
   {
@@ -62,6 +82,7 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
     examples: [
       "surfwright target extract <targetId> --kind docs-commands --selector main --limit 10",
       "surfwright target style <targetId> --selector '.btn.btn-primary' --kind button-primary",
+      "surfwright target attr <targetId> --selector 'img' --name src --nth 1",
       "surfwright target read <targetId> --selector main --chunk-size 1200 --chunk 1",
       "surfwright --output-shape compact target eval <targetId> --expr 'document.title'",
       "surfwright target eval <targetId> --expr-b64 ZG9jdW1lbnQudGl0bGU=",

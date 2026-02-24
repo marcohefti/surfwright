@@ -10,6 +10,7 @@ export { targetClick, targetFill, targetSpawn } from "./infra/target-click.js";
 export { targetDownload } from "./infra/actions/target-download.js";
 export { targetClose, targetEval } from "./infra/target-eval.js";
 export { targetClickAt, targetEmulate, targetScreenshot } from "./infra/target-emulation.js";
+export { targetAttr } from "./infra/query/target-attr.js";
 export { targetCount } from "./infra/query/target-count.js";
 export { targetExtract } from "./infra/target-extract.js";
 export { targetFind } from "./infra/target-find.js";

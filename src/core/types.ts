@@ -222,6 +222,7 @@ export type {
   TargetUrlAssertReport,
   TargetWaitReport,
 } from "./types/target.js";
+export type { TargetAttrReport } from "./types/target-attr.js";
 export type { TargetSelectOptionReport } from "./types/target-select-option.js";
 export type { TargetConsoleTailReport, TargetHealthReport, TargetHudReport } from "./types/target-observability.js";
 export type {

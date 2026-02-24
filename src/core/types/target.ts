@@ -140,7 +140,6 @@ export type TargetCountReport = {
   count: number;
   timingMs: ActionTimingMs;
 };
-
 export type TargetClickReport = {
   ok: true;
   sessionId: string;

@@ -18,6 +18,7 @@
   { "id": "target.list", "usageMustContain": "target list" },
   { "id": "target.snapshot", "usageMustContain": "target snapshot" },
   { "id": "target.snapshot-diff", "usageMustContain": "target snapshot-diff" },
+  { "id": "target.attr", "usageMustContain": "target attr" },
   { "id": "target.find", "usageMustContain": "target find" },
   { "id": "target.click", "usageMustContain": "target click" },
   { "id": "target.click-read", "usageMustContain": "target click-read" },

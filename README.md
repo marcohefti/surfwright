@@ -191,6 +191,7 @@ surfwright target keypress <targetId> --key Enter --selector "#search" --wait-fo
 surfwright target upload <targetId> --selector "input[type=file]" --file ./fixture.txt --submit-selector "button[type=submit]" --expect-uploaded-filename fixture.txt --wait-for-result --result-selector "#uploaded-files" --result-filename-regex "fixture\\.txt"
 surfwright target spawn <targetId> --selector "a[target=_blank]" --proof --assert-title "Docs"
 surfwright target style <targetId> --selector ".btn.btn-primary" --properties background-color,color,font-size,border-radius
+surfwright target attr <targetId> --selector "img.avatar" --name src
 surfwright --output-shape proof target style <targetId> --selector ".btn.btn-primary"
 surfwright target extract <targetId> --kind docs-commands --selector main --limit 5
 surfwright target extract <targetId> --kind command-lines --selector main --limit 12
@@ -201,6 +202,7 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 ```
 
 `target find` match rows include `text`, `visible`, `selectorHint`, `href`, and `tag`.
+`target attr` reads one matched element attribute by deterministic index (`--index|--nth`) and resolves URL-like attributes (`href|src|action|...`) to absolute URLs.
 `open --ensure-session <off|if-missing|fresh>` can bootstrap/fork managed sessions for `open` without a separate `session` command (`--profile` cannot be combined).
 `target snapshot --mode orient` now includes additive counters (`headingsCount`, `buttonsCount`, `linksCount`, `navCount`) and optional count controls (`--count-scope <full|bounded>`, `--count-filter headings,buttons,links,nav`).
 `target click --proof` now includes additive `proof.countAfter` for selector-mode clicks (when post-action counting is available).
@@ -223,7 +225,7 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 `run` pipeline step coverage includes `fill`, `upload`, `click-read`, `scroll-plan` (including `scrollMode: "relative"`), bounded `repeat-until` loops (including `untilDeltaGte`), top-level `result` projections (`outputField -> sourcePath`), and top-level `require` assertions (`equals|contains|gte|truthy|exists`) so plans can execute full workflows and emit/validate mission fields without shell-loop + jq glue.
 `run` upload steps now honor `submitSelector`, `expectUploadedFilename`, and result-verification fields (`waitForResult`, `resultSelector`, `resultTextContains`, `resultFilenameRegex`) for deterministic attach+submit+verify flows.
 CLI compatibility for cold-start agents: `--json` is accepted as an explicit no-op (JSON remains default), `target <subcommand> --target <targetId>` is accepted as an alias for positional `targetId`, and `session clear` tolerates common wrapper forms (`session clear <id>`, `--keep-processes=<bool>`, `--no-prompt`).
-Prefer `target extract`, `target style`, and `target read` before `target eval`; when you need eval, `--expr-b64`/`--script-b64` avoid shell escaping overhead and `--output-shape compact` keeps payloads lean.
+Prefer `target extract`, `target style`, `target attr`, and `target read` before `target eval`; when you need eval, `--expr-b64`/`--script-b64` avoid shell escaping overhead and `--output-shape compact` keeps payloads lean.
 
 Use workspace profile for persistent login state:
 

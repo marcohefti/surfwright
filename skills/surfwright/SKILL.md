@@ -24,6 +24,7 @@ Use `surfwright contract --full --search <term>` only for explicit debug/audit.
 - Standard lifecycle: `session fresh` -> `open` -> act/verify -> `session clear`.
 - Prefer typed primitives over eval:
   - `target count` for cardinality checks.
+  - `target attr --name <attribute>` for deterministic DOM attribute reads (for example `href`, `src`).
   - `target click --nth <n>` for deterministic disambiguation.
   - `target click --count-after` (or `--expect-count-after`) for post-action selector checks.
 - Prefer multi-step bundling with `run --plan-json` when a task requires multiple deterministic actions.

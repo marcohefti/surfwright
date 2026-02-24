@@ -1,7 +1,7 @@
 {
   "name": "surfwright",
   "contractSchemaVersion": 1,
-  "contractFingerprint": "sha256:545360a9e8d0ef591aea6c272469430a478aaecbe1ed356774b03089c2b785a7",
+  "contractFingerprint": "sha256:17f94e8d6f08e1a0fd847afb56bfa4cbc59bf78c3a498cc6b424badb340199eb",
   "guarantees": [
     "deterministic output shape",
     "typed failures (code + message)",

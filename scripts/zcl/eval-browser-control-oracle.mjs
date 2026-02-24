@@ -118,7 +118,7 @@ function evaluateRule(rule, oracle, proof) {
 
   switch (op) {
     case 'eq':
-      if (!Object.is(actual, rule.value)) {
+      if (!equivalentValues(actual, rule.value)) {
         return `${field} expected ${valueAsString(rule.value)} got ${valueAsString(actual)}`;
       }
       return '';
@@ -126,36 +126,34 @@ function evaluateRule(rule, oracle, proof) {
     case 'eq_ref': {
       const ref = String(rule.ref || '').trim();
       const expected = oracle[ref];
-      if (!Object.is(actual, expected)) {
+      if (!equivalentValues(actual, expected)) {
         return `${field} expected ${valueAsString(expected)} from ${ref} got ${valueAsString(actual)}`;
       }
       return '';
     }
 
     case 'starts_with':
-      if (typeof actual !== 'string') {
-        return `${field} must be a string for starts_with`;
-      }
-      if (!actual.startsWith(String(rule.value))) {
+      if (!startsWithValue(actual, rule.value)) {
         return `${field} must start with ${valueAsString(rule.value)} got ${valueAsString(actual)}`;
       }
       return '';
 
     case 'contains':
-      if (typeof actual !== 'string') {
-        return `${field} must be a string for contains`;
-      }
-      if (!actual.includes(String(rule.value))) {
+      if (!containsValue(actual, rule.value)) {
         return `${field} must contain ${valueAsString(rule.value)} got ${valueAsString(actual)}`;
       }
       return '';
 
     case 'gte':
-      if (typeof actual !== 'number') {
-        return `${field} must be a number for gte`;
-      }
-      if (!(actual >= Number(rule.value))) {
-        return `${field} must be >= ${valueAsString(rule.value)} got ${valueAsString(actual)}`;
+      {
+        const actualNumber = toNumberLike(actual);
+        const expectedNumber = toNumberLike(rule.value);
+        if (actualNumber == null || expectedNumber == null) {
+          return `${field} must be a number for gte`;
+        }
+        if (!(actualNumber >= expectedNumber)) {
+          return `${field} must be >= ${valueAsString(rule.value)} got ${valueAsString(actual)}`;
+        }
       }
       return '';
 
@@ -168,6 +166,290 @@ function evaluateRule(rule, oracle, proof) {
     default:
       return `unsupported oracle op: ${op}`;
   }
+}
+
+function equivalentValues(actual, expected) {
+  if (Object.is(actual, expected)) {
+    return true;
+  }
+
+  if (typeof expected === 'boolean') {
+    const actualBool = toBooleanLike(actual);
+    return typeof actualBool === 'boolean' && actualBool === expected;
+  }
+
+  if (typeof expected === 'number') {
+    const actualNumber = toNumberLike(actual);
+    return typeof actualNumber === 'number' && Number.isFinite(actualNumber) && actualNumber === expected;
+  }
+
+  if (typeof expected === 'string') {
+    return equivalentStringLike(actual, expected);
+  }
+
+  if (Array.isArray(expected)) {
+    return equivalentArrayLike(actual, expected);
+  }
+
+  return false;
+}
+
+function equivalentStringLike(actual, expected) {
+  if (typeof actual !== 'string' && typeof actual !== 'number' && typeof actual !== 'boolean' && !Array.isArray(actual)) {
+    return false;
+  }
+
+  if (Array.isArray(actual)) {
+    const expectedTokens = toListTokens(expected);
+    const actualTokens = toListTokens(actual);
+    return expectedTokens != null && actualTokens != null && sameTokenSet(actualTokens, expectedTokens);
+  }
+
+  const actualText = String(actual);
+  if (actualText === expected) {
+    return true;
+  }
+
+  const actualLoose = normalizeLooseText(actualText);
+  const expectedLoose = normalizeLooseText(expected);
+  if (actualLoose === expectedLoose) {
+    return true;
+  }
+
+  const actualShell = normalizeLooseText(stripShellPrompt(actualText));
+  const expectedShell = normalizeLooseText(stripShellPrompt(expected));
+  if (actualShell === expectedShell) {
+    return true;
+  }
+
+  const actualNumber = toNumberLike(actualText);
+  const expectedNumber = toNumberLike(expected);
+  if (actualNumber != null && expectedNumber != null && actualNumber === expectedNumber) {
+    return true;
+  }
+
+  const actualUrl = canonicalizeUrl(actualText);
+  const expectedUrl = canonicalizeUrl(expected);
+  if (actualUrl && expectedUrl && actualUrl === expectedUrl) {
+    return true;
+  }
+
+  const actualTokens = toListTokens(actualText);
+  const expectedTokens = toListTokens(expected);
+  if (actualTokens != null && expectedTokens != null && sameTokenSet(actualTokens, expectedTokens)) {
+    return true;
+  }
+
+  return false;
+}
+
+function equivalentArrayLike(actual, expected) {
+  const expectedTokens = toListTokens(expected);
+  const actualTokens = toListTokens(actual);
+  if (!expectedTokens || !actualTokens) {
+    return false;
+  }
+  return sameTokenSet(actualTokens, expectedTokens);
+}
+
+function startsWithValue(actual, expected) {
+  if (typeof actual !== 'string' && typeof actual !== 'number' && typeof actual !== 'boolean') {
+    return false;
+  }
+  const actualText = String(actual);
+  const expectedText = String(expected);
+  if (actualText.startsWith(expectedText)) {
+    return true;
+  }
+  const actualLoose = normalizeLooseText(actualText);
+  const expectedLoose = normalizeLooseText(expectedText);
+  if (actualLoose.startsWith(expectedLoose)) {
+    return true;
+  }
+  const actualShell = normalizeLooseText(stripShellPrompt(actualText));
+  const expectedShell = normalizeLooseText(stripShellPrompt(expectedText));
+  if (actualShell.startsWith(expectedShell)) {
+    return true;
+  }
+  const actualUrl = canonicalizeUrl(actualText);
+  const expectedUrl = canonicalizeUrl(expectedText);
+  if (actualUrl && expectedUrl) {
+    return actualUrl.startsWith(expectedUrl);
+  }
+  return false;
+}
+
+function containsValue(actual, expected) {
+  if (typeof actual === 'string') {
+    const expectedText = String(expected);
+    if (actual.includes(expectedText)) {
+      return true;
+    }
+    if (normalizeLooseText(actual).includes(normalizeLooseText(expectedText))) {
+      return true;
+    }
+    if (normalizeLooseText(stripShellPrompt(actual)).includes(normalizeLooseText(stripShellPrompt(expectedText)))) {
+      return true;
+    }
+    return false;
+  }
+
+  const actualTokens = toListTokens(actual);
+  if (!actualTokens) {
+    return false;
+  }
+  const expectedTokens = toListTokens(expected);
+  if (expectedTokens && expectedTokens.length > 0) {
+    return expectedTokens.every((token) => actualTokens.includes(token));
+  }
+  const expectedScalar = normalizeToken(String(expected));
+  return actualTokens.includes(expectedScalar);
+}
+
+function normalizeLooseText(value) {
+  return String(value || '')
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function stripShellPrompt(value) {
+  return String(value || '').replace(/^\s*(?:\$|#|>|PS [^>]+>)\s*/i, '');
+}
+
+function toBooleanLike(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true') {
+    return true;
+  }
+  if (normalized === 'false') {
+    return false;
+  }
+  return null;
+}
+
+function toNumberLike(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length < 1) {
+    return null;
+  }
+  const direct = Number(trimmed);
+  if (Number.isFinite(direct)) {
+    return direct;
+  }
+  const unitMatch = trimmed.match(/^(-?\d+(?:\.\d+)?)\s*(?:px|em|rem|vh|vw|%)$/i);
+  if (unitMatch) {
+    return Number(unitMatch[1]);
+  }
+  return null;
+}
+
+function canonicalizeUrl(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return null;
+  }
+  try {
+    const url = new URL(trimmed);
+    if ((url.protocol === 'http:' && url.port === '80') || (url.protocol === 'https:' && url.port === '443')) {
+      url.port = '';
+    }
+    if (url.pathname !== '/') {
+      url.pathname = url.pathname.replace(/\/+$/g, '');
+      if (url.pathname.length < 1) {
+        url.pathname = '/';
+      }
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function toListTokens(value) {
+  if (Array.isArray(value)) {
+    const out = [];
+    for (const entry of value) {
+      if (entry == null) {
+        continue;
+      }
+      if (typeof entry === 'string' || typeof entry === 'number' || typeof entry === 'boolean') {
+        out.push(...splitListString(String(entry)));
+      } else {
+        return null;
+      }
+    }
+    return out.length > 0 ? out.map(normalizeToken).filter(Boolean) : null;
+  }
+
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length < 1) {
+    return null;
+  }
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return toListTokens(parsed);
+      }
+    } catch {
+      // ignore and continue with split logic below.
+    }
+  }
+  const split = splitListString(trimmed);
+  if (split.length < 2) {
+    return null;
+  }
+  return split.map(normalizeToken).filter(Boolean);
+}
+
+function splitListString(value) {
+  return String(value || '')
+    .split(/[,\n;]+/g)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function normalizeToken(value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) {
+    return '';
+  }
+  const unquoted = trimmed.replace(/^['"](.+)['"]$/g, '$1');
+  return normalizeLooseText(unquoted).toLowerCase();
+}
+
+function sameTokenSet(actual, expected) {
+  if (actual.length !== expected.length) {
+    return false;
+  }
+  const a = [...actual].sort();
+  const b = [...expected].sort();
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function isNonEmpty(value) {

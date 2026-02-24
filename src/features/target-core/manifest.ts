@@ -31,6 +31,12 @@ export const targetCommandManifest: CliCommandContract[] = [
     summary: "count matching elements by text or selector in a target",
   },
   {
+    id: "target.attr",
+    usage:
+      "surfwright target attr <targetId> (--text <query> | --selector <query>) [--contains <text>] --name <attribute> [--visible-only] [--frame-scope <scope>] [--index <n> | --nth <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",
+    summary: "read a matched element attribute with deterministic index selection",
+  },
+  {
     id: "target.find",
     usage:
       "surfwright target find <targetId> (--text <query> | --selector <query>) [--contains <text>] [--href-host <host>] [--href-path-prefix <prefix>] [--visible-only] [--frame-scope <scope>] [--first] [--limit <n>] [--timeout-ms <ms>] [--no-persist] [--fields <csv>] [--no-json] [--pretty] [--session <id>]",

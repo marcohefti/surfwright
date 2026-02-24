@@ -7,6 +7,14 @@ import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
 import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 
 const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-target-eval-nav-");
+const TIMEOUT_RECOVERY_SCRIPT_PATH = path.join(TEST_STATE_DIR, "timeout-recovery-loop.js");
+fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
+fs.writeFileSync(
+  TIMEOUT_RECOVERY_SCRIPT_PATH,
+  "const deadline = Date.now() + 10_000;\nwhile (Date.now() < deadline) {}\n",
+  "utf8",
+);
+
 const { runCliSync } = createCliRunner({ stateDir: TEST_STATE_DIR });
 test.after(async () => {
   await cleanupStateDir(TEST_STATE_DIR);
@@ -81,8 +89,8 @@ test("target eval timeout performs recovery so follow-up eval remains usable", (
   const timeoutResult = runCli(["target",
     "eval",
     openPayload.targetId,
-    "--expr",
-    "while(true) {}",
+    "--script-file",
+    TIMEOUT_RECOVERY_SCRIPT_PATH,
     "--timeout-ms",
     "350",
   ]);

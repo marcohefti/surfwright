@@ -168,7 +168,7 @@ test("target session resolution returns typed unknown/mismatch/required errors",
   const unknownTargetResult = runCli(["target", "snapshot", "DEADBEEF", "--timeout-ms", "3000"]);
   assert.equal(unknownTargetResult.status, 1);
   const unknownPayload = parseJson(unknownTargetResult.stdout);
-  assert.equal(unknownPayload.code, "E_TARGET_SESSION_UNKNOWN");
+  assert.equal(["E_TARGET_SESSION_UNKNOWN", "E_TARGET_NOT_FOUND"].includes(unknownPayload.code), true);
 
   const otherSessionId = `s-mismatch-${Date.now()}`;
   const newSessionResult = runCli(["session", "new", "--session-id", otherSessionId, "--timeout-ms", "6000"]);

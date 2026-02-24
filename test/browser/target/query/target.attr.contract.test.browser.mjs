@@ -38,12 +38,13 @@ test.after(async () => {
 });
 
 function fixtureUrl() {
+  const baseOrigin = "http://127.0.0.1";
   const html = `<!doctype html>
     <html>
       <head>
         <meta charset="utf-8" />
         <title>Attr Fixture</title>
-        <base href="https://example.com/docs/" />
+        <base href="${baseOrigin}/docs/" />
       </head>
       <body>
         <main>
@@ -104,7 +105,7 @@ test("target attr resolves relative URL attributes to absolute URLs", () => {
   assert.equal(payload.matchCount, 1);
   assert.equal(payload.pickedIndex, 0);
   assert.equal(payload.attributePresent, true);
-  assert.equal(payload.value, "https://example.com/img/avatar.jpg");
+  assert.equal(payload.value, "http://127.0.0.1/img/avatar.jpg");
   assert.equal(payload.picked.frameId, "f-0");
   assert.equal(payload.picked.tag, "img");
 });
@@ -130,7 +131,7 @@ test("target attr supports --nth for deterministic multi-match selection", () =>
   assert.equal(secondLink.status, 0);
   const secondPayload = parseJson(secondLink.stdout);
   assert.equal(secondPayload.pickedIndex, 1);
-  assert.equal(secondPayload.value, "https://example.com/enterprise");
+  assert.equal(secondPayload.value, "http://127.0.0.1/enterprise");
   assert.equal(secondPayload.picked.text, "Enterprise");
 
   const outOfRange = runCli(["target",

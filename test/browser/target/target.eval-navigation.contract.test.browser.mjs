@@ -11,7 +11,7 @@ const TIMEOUT_RECOVERY_SCRIPT_PATH = path.join(TEST_STATE_DIR, "timeout-recovery
 fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
 fs.writeFileSync(
   TIMEOUT_RECOVERY_SCRIPT_PATH,
-  "const deadline = Date.now() + 10_000;\nwhile (Date.now() < deadline) {}\n",
+  "return new Promise(() => {});\n",
   "utf8",
 );
 

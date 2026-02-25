@@ -112,7 +112,7 @@ test("trace scoring counts only successful headed executions", () => {
     },
   ];
   fs.writeFileSync(tracePath, `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`, "utf8");
-  const stats = parseTraceStats(tracePath, "018-infinite-scroll-chunks", "attempt-1");
+  const stats = parseTraceStats(tracePath, "014-infinite-scroll-chunks", "attempt-1");
   assert.equal(stats.surfwrightCliCalls, 2);
   assert.equal(stats.headedBrowserModeCalls, 1);
 });

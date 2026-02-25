@@ -23,7 +23,7 @@ This repo exists for one thing: a stable browser control surface that agents can
 9. `docs/release-governance.md` for locked release/update policy and required checks.
 10. `docs/contributor-release-routing.md` for release/docs/changelog routing rules.
 11. `docs/policy/feature-recommendation-groundrules.md` for mandatory recommendation/evaluation scope rules.
-12. `docs/campaigns/browser-control-zcl-native.md` for the versioned native ZCL campaign workflow (20 browser-control missions).
+12. `docs/campaigns/browser-control-zcl-native.md` for the versioned native ZCL campaign workflow (16 active browser-control missions).
 
 ## Runtime Source of Truth
 
@@ -113,7 +113,7 @@ When the user asks to "spawn agents", "zero context test", or evaluate fresh-age
 - Ensure runs are trace-backed (captured command artifacts/logs), then evaluate from those artifacts first.
 - Prefer evidence-based scoring: success/failure, command count, typed failures, and where agents got stuck.
 - Treat agent self-reports as secondary; ground conclusions in run outputs (tool-call trace JSONL, run artifacts, report).
-- Use `docs/campaigns/browser-control-zcl-native.md` as the baseline runbook for the versioned 20-mission browser-control campaign.
+- Use `docs/campaigns/browser-control-zcl-native.md` as the baseline runbook for the versioned 16-active-mission browser-control campaign.
 - For multi-mission comparisons, enforce one fresh subagent per `flow+mission`; never reuse a session across missions.
 - Keep a hard concurrency cap of `6` live subagents unless the user explicitly overrides it.
 - Do not replace zero-context discovery with scripted mission solvers; mission completion should come from fresh subagents, not hardcoded pipelines.

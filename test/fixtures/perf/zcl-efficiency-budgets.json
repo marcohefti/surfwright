@@ -11,14 +11,14 @@
     "maxCommandOutputDeltaChars": 12000
   },
   "missions": {
-    "001-docs-install-command": {
+    "001-first-pass-orientation": {
       "maxToolCallsTotal": 110,
       "maxTotalTokens": 35000,
       "maxWallTimeMs": 20000,
       "maxExecCommandBegin": 5,
       "maxCommandOutputDeltaChars": 7000
     },
-    "002-homepage-pricing": {
+    "002-modal-lifecycle": {
       "maxToolCallsTotal": 170,
       "maxTotalTokens": 55000,
       "maxWallTimeMs": 35000,

@@ -56,10 +56,10 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target scroll-plan --mode <absolute|relative>` for deterministic absolute-position or relative-delta scroll execution in one command.
 - [target] Added `target count --count-only` for compact `{ok,count}` output mode in low-token loops.
 - [state] Added `state disk-prune` for bounded cleanup of run artifacts, capture artifacts, and orphan profile storage (`--dry-run` supported; workspace profile pruning opt-in).
-- [docs] Added a versioned native ZCL browser-control campaign package (`docs/campaigns/browser-control-native-codex.yaml` + `docs/campaigns/browser-control-zcl-native.md`) for repeatable 20-mission feedback runs.
+- [docs] Added a versioned native ZCL browser-control campaign package (`docs/campaigns/browser-control-native-codex.yaml` + `docs/campaigns/browser-control-zcl-native.md`) for repeatable feedback runs.
 - [docs] Pinned the native browser-control ZCL campaign to `runner.model=gpt-5.3-codex-spark` with `runner.modelReasoningEffort=medium` and `runner.modelReasoningPolicy=best_effort`.
 - [zcl] Added browser-control exam-mode asset tooling: `scripts/zcl/build-browser-control-exam-pack.mjs` (split prompt/oracle generation) and `scripts/zcl/eval-browser-control-oracle.mjs` (host-side oracle evaluator).
-- [zcl] Added generated browser-control prompt set (`missions/browser-control/prompts/*.md`) and oracle set (`missions/browser-control/oracles/*.json`) for 20 mission IDs.
+- [zcl] Added generated browser-control prompt set (`missions/browser-control/prompts/*.md`) and oracle set (`missions/browser-control/oracles/*.json`) for versioned mission IDs.
 - [bench] Added SurfWright benchmark loop assets: `bench/agent-loop/config.json`, `bench/agent-loop/AGENT_LOOP.md`, and versioned per-scope outputs under `bench/agent-loop/scopes/<scopeId>/` (`history.jsonl`, `RESULT_SHEET.md`, `RESULT_SHEET.json`, `NEXT_ITERATION_TASK.md`).
 - [bench] Added `scripts/bench/run-iteration.mjs` to run pinned SurfWright-only ZCL campaign iterations end-to-end (preflight, lint, doctor, run, report, score, history append).
 - [bench] Added `scripts/bench/score-iteration.mjs` for raw attempt/trace extraction (mission metrics, exec/MCP counts, subcommand frequency, slow command hotspots).
@@ -111,6 +111,7 @@ All notable changes to SurfWright are documented here.
 - [bench] Removed `bench:loop:run --reset-history`; scope ledgers are append-only by default.
 - [bench] `bench:loop:score` now supports flow-family aggregation (`--flow-prefix`) so sharded SurfWright fan-out runs are scored as one iteration, with per-attempt `flowId`/slot evidence in CSV/markdown outputs.
 - [bench] Documented branch-first loop policy: run optimize iterations on feature branches with commit-per-change traceability, and push only when explicitly requested.
+- [missions] Updated browser-control campaign selection to 16 active missions, revised `first-pass-orientation`, `style-inspection`, `checkbox-toggle`, `iframe-edit`, and `docs-commands-extract`, and archived legacy mission definitions.
 
 ### Fixed
 - [target] Session resolution for target-driven actions now attempts active/single-session recovery when target-to-session mappings are stale, reducing `E_TARGET_SESSION_UNKNOWN`/`E_SESSION_NOT_FOUND` churn in long runs.

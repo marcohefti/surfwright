@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "missionId": "006-checkbox-toggle",
+  "startUrl": "https://the-internet.herokuapp.com/checkboxes",
+  "collectFields": [
+    "initiallyChecked",
+    "afterToggleChecked"
+  ],
+  "successCheck": "initiallyChecked == false and afterToggleChecked == true",
+  "rules": [
+    {
+      "field": "initiallyChecked",
+      "op": "eq",
+      "value": false
+    },
+    {
+      "field": "afterToggleChecked",
+      "op": "eq",
+      "value": true
+    }
+  ],
+  "examplePayload": {
+    "initiallyChecked": false,
+    "afterToggleChecked": true
+  }
+}

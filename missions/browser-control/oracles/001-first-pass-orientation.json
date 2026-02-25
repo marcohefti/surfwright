@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "missionId": "001-first-pass-orientation",
+  "startUrl": "https://the-internet.herokuapp.com/",
+  "collectFields": [
+    "featureCount",
+    "firstFeature",
+    "lastFeature"
+  ],
+  "successCheck": "featureCount >= 40 and firstFeature == \"A/B Testing\" and lastFeature == \"WYSIWYG Editor\"",
+  "rules": [
+    {
+      "field": "featureCount",
+      "op": "gte",
+      "value": 40
+    },
+    {
+      "field": "firstFeature",
+      "op": "eq",
+      "value": "A/B Testing"
+    },
+    {
+      "field": "lastFeature",
+      "op": "eq",
+      "value": "WYSIWYG Editor"
+    }
+  ],
+  "examplePayload": {
+    "featureCount": 44,
+    "firstFeature": "A/B Testing",
+    "lastFeature": "WYSIWYG Editor"
+  }
+}

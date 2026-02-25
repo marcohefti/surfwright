@@ -53,8 +53,8 @@ Each mission scope gets its own versioned history:
 
 Examples:
 
-- single mission scope: `--mission-id 018-infinite-scroll-chunks`
-- cluster scope: `--mission-ids 001-docs-install-command,006-multimatch-disambiguation,013-new-window-spawn,017-dynamic-loading,018-infinite-scroll-chunks`
+- single mission scope: `--mission-id 014-infinite-scroll-chunks`
+- cluster scope: `--mission-ids 003-multimatch-disambiguation,010-new-window-spawn,013-dynamic-loading,014-infinite-scroll-chunks,016-docs-commands-extract`
 - agent fan-out (per run): `--agents-per-mission 3` or `bench/agent-loop/config.json -> agentsPerMission`
 
 ## Commands
@@ -68,13 +68,13 @@ pnpm bench:loop:run --mode sample --label baseline --hypothesis "baseline sample
 Explicit single mission scope:
 
 ```bash
-pnpm bench:loop:run --mode sample --label baseline --mission-id 018-infinite-scroll-chunks --hypothesis "baseline sample" --change "no code change" --tags sample
+pnpm bench:loop:run --mode sample --label baseline --mission-id 014-infinite-scroll-chunks --hypothesis "baseline sample" --change "no code change" --tags sample
 ```
 
 Single mission with 3 parallel agents in one run:
 
 ```bash
-pnpm bench:loop:run --mode sample --label baseline-a3 --mission-id 018-infinite-scroll-chunks --agents-per-mission 3 --hypothesis "variance with 3 agents" --change "no code change" --tags sample
+pnpm bench:loop:run --mode sample --label baseline-a3 --mission-id 014-infinite-scroll-chunks --agents-per-mission 3 --hypothesis "variance with 3 agents" --change "no code change" --tags sample
 ```
 
 Scoring note: `run-iteration` calls `score-iteration` with `--flow-prefix surfwright`, so all `surfwright*` fan-out flows are aggregated into one iteration metric set.
@@ -85,7 +85,7 @@ Explicit 5-mission cluster scope:
 pnpm bench:loop:run \
   --mode sample \
   --label baseline-5 \
-  --mission-ids 001-docs-install-command,006-multimatch-disambiguation,013-new-window-spawn,017-dynamic-loading,018-infinite-scroll-chunks \
+  --mission-ids 003-multimatch-disambiguation,010-new-window-spawn,013-dynamic-loading,014-infinite-scroll-chunks,016-docs-commands-extract \
   --hypothesis "baseline sample" \
   --change "no code change" \
   --tags sample
@@ -97,7 +97,7 @@ Run next iteration after a real code change:
 pnpm bench:loop:run \
   --mode optimize \
   --label exp-1 \
-  --mission-id 018-infinite-scroll-chunks \
+  --mission-id 014-infinite-scroll-chunks \
   --hypothesis "<why this change should help>" \
   --change "<what changed>" \
   --tags <tag1>,<tag2>
@@ -109,7 +109,7 @@ Run an explicit no-change sample (only when requested):
 pnpm bench:loop:run \
   --mode sample \
   --label sample-1 \
-  --mission-id 018-infinite-scroll-chunks \
+  --mission-id 014-infinite-scroll-chunks \
   --hypothesis "variance sample" \
   --change "no code change" \
   --tags sample
@@ -118,8 +118,8 @@ pnpm bench:loop:run \
 Rebuild result sheet for a scope:
 
 ```bash
-pnpm bench:loop:history --mission-id 018-infinite-scroll-chunks
-pnpm bench:loop:history --scope-id mission-018-infinite-scroll-chunks
+pnpm bench:loop:history --mission-id 014-infinite-scroll-chunks
+pnpm bench:loop:history --scope-id mission-014-infinite-scroll-chunks
 ```
 
 Branch + commit trace setup:

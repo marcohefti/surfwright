@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "missionId": "014-infinite-scroll-chunks",
+  "startUrl": "https://the-internet.herokuapp.com/infinite_scroll",
+  "collectFields": [
+    "chunksLoaded"
+  ],
+  "successCheck": "chunksLoaded >= 2",
+  "rules": [
+    {
+      "field": "chunksLoaded",
+      "op": "gte",
+      "value": 2
+    }
+  ],
+  "examplePayload": {
+    "chunksLoaded": 2
+  }
+}

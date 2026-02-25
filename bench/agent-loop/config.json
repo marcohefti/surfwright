@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "loopId": "surfwright-benchmark-loop",
-  "defaultMissionId": "018-infinite-scroll-chunks",
+  "defaultMissionId": "014-infinite-scroll-chunks",
   "defaultMissionIds": [
-    "018-infinite-scroll-chunks"
+    "014-infinite-scroll-chunks"
   ],
   "agentsPerMission": 1,
   "nativeMaxInflightPerStrategy": 6,

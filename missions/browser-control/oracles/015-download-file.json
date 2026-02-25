@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "missionId": "015-download-file",
+  "startUrl": "https://the-internet.herokuapp.com/download",
+  "collectFields": [
+    "downloadStarted",
+    "downloadStatus",
+    "downloadFinalUrl",
+    "downloadFileName"
+  ],
+  "successCheck": "downloadStarted == true and downloadStatus == 200 and downloadFinalUrl starts with https://the-internet.herokuapp.com/download/ and downloadFileName is non-empty",
+  "rules": [
+    {
+      "field": "downloadStarted",
+      "op": "eq",
+      "value": true
+    },
+    {
+      "field": "downloadStatus",
+      "op": "eq",
+      "value": 200
+    },
+    {
+      "field": "downloadFinalUrl",
+      "op": "starts_with",
+      "value": "https://the-internet.herokuapp.com/download/"
+    },
+    {
+      "field": "downloadFileName",
+      "op": "non_empty"
+    }
+  ],
+  "examplePayload": {
+    "downloadStarted": true,
+    "downloadStatus": 200,
+    "downloadFinalUrl": "https://the-internet.herokuapp.com/download/some-file.txt",
+    "downloadFileName": "some-file.txt"
+  }
+}

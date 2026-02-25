@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "missionId": "008-javascript-alert-dialog",
+  "startUrl": "https://the-internet.herokuapp.com/javascript_alerts",
+  "collectFields": [
+    "dialogText",
+    "result"
+  ],
+  "successCheck": "dialogText == \"I am a JS Alert\" and result == \"You successfully clicked an alert\"",
+  "rules": [
+    {
+      "field": "dialogText",
+      "op": "eq",
+      "value": "I am a JS Alert"
+    },
+    {
+      "field": "result",
+      "op": "eq",
+      "value": "You successfully clicked an alert"
+    }
+  ],
+  "examplePayload": {
+    "dialogText": "I am a JS Alert",
+    "result": "You successfully clicked an alert"
+  }
+}

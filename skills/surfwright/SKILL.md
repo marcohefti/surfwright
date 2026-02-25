@@ -28,5 +28,3 @@ Use `surfwright contract --full --search <term>` only for explicit debug/audit.
   - `target attr --name <attribute>` for deterministic DOM attribute reads (for example `href`, `src`).
   - `target click --nth <n>` for deterministic disambiguation.
   - `target click --count-after` (or `--expect-count-after`) for post-action selector checks.
-- Prefer multi-step bundling with `run --plan-json` when a task requires multiple deterministic actions.
-- Return final answers only in the required JSON schema.

@@ -20,6 +20,7 @@ Use `surfwright contract --full --search <term>` only for explicit debug/audit.
 ## Runtime Rules
 
 - Keep default JSON output; do not parse prose.
+- Start SurfWright in headless mode by default unless explicitly instructed otherwise.
 - Treat non-zero exits as typed failures and branch on `code` (and `retryable` when present).
 - Use one unique `--agent-id` per task.
 - Prefer typed primitives over eval:

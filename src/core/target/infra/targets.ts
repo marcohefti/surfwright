@@ -10,9 +10,14 @@ import {
   type ManagedBrowserMode,
   type SessionSource,
   type SessionState,
-  type SurfwrightState,
   type TargetListReport,
 } from "../../types.js";
+import {
+  buildHandleTypeMismatchError,
+  buildSessionNotFoundError,
+  buildTargetSessionUnknownError,
+  fallbackSessionIdForTargetRecovery,
+} from "./errors/target-handle-errors.js";
 
 const TARGET_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
 
@@ -91,53 +96,7 @@ export async function resolveSessionForAction(opts: {
   sessionSource: SessionSource;
 }> {
   const targetIdHint = typeof opts.targetIdHint === "string" && opts.targetIdHint.length > 0 ? sanitizeTargetId(opts.targetIdHint) : null;
-  const fallbackSessionIdForTargetRecovery = (snapshot: SurfwrightState): string | null => {
-    if (snapshot.activeSessionId && snapshot.sessions[snapshot.activeSessionId]) {
-      return snapshot.activeSessionId;
-    }
-    const knownSessionIds = Object.keys(snapshot.sessions).sort((a, b) => a.localeCompare(b));
-    if (knownSessionIds.length === 1) {
-      return knownSessionIds[0];
-    }
-    return null;
-  };
-
-  const buildSessionNotFoundError = (sessionId: string): CliError => {
-    const snapshot = readState();
-    return new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`, {
-      hints: [
-        "Run `surfwright session list` to inspect active/known sessions",
-        "If no suitable session exists, run `surfwright session ensure` (or `session new`)",
-        "If this came from a stale target, reacquire targetId via `surfwright target list --session <id>`",
-      ],
-      hintContext: {
-        requestedSessionId: sessionId,
-        activeSessionId: snapshot.activeSessionId ?? null,
-        knownSessionCount: Object.keys(snapshot.sessions).length,
-        targetHint: targetIdHint ?? null,
-      },
-    });
-  };
-
-  const buildTargetSessionUnknownError = (targetId: string): CliError => {
-    const snapshot = readState();
-    const activeSessionHint =
-      snapshot.activeSessionId && snapshot.sessions[snapshot.activeSessionId]
-        ? `Retry with explicit session: \`--session ${snapshot.activeSessionId}\``
-        : null;
-    return new CliError("E_TARGET_SESSION_UNKNOWN", `Target ${targetId} has no recorded session mapping`, {
-      hints: [
-        "Reacquire a live targetId with `surfwright target list --session <id>`",
-        "If needed, open/reopen the page first with `surfwright open <url>`",
-        activeSessionHint,
-      ].filter((entry): entry is string => typeof entry === "string" && entry.length > 0),
-      hintContext: {
-        requestedTargetId: targetId,
-        activeSessionId: snapshot.activeSessionId ?? null,
-        knownTargetCount: Object.keys(snapshot.targets).length,
-      },
-    });
-  };
+  const sessionNotFoundError = (sessionId: string): CliError => buildSessionNotFoundError({ sessionId, targetIdHint });
 
   if (typeof opts.profileHint === "string" && opts.profileHint.trim().length > 0) {
     if (typeof opts.sessionHint === "string" && opts.sessionHint.trim().length > 0) {
@@ -180,7 +139,7 @@ export async function resolveSessionForAction(opts: {
     const snapshot = readState();
     const existing = snapshot.sessions[sessionId];
     if (!existing) {
-      throw buildSessionNotFoundError(sessionId);
+      throw sessionNotFoundError(sessionId);
     }
     if (targetIdHint && !policy.allowTargetSessionMismatch) {
       const targetRecord = snapshot.targets[targetIdHint];
@@ -188,7 +147,28 @@ export async function resolveSessionForAction(opts: {
         throw buildTargetSessionUnknownError(targetIdHint);
       }
       if (targetRecord.sessionId !== sessionId) {
-        throw new CliError("E_TARGET_SESSION_MISMATCH", `Target ${targetIdHint} belongs to session ${targetRecord.sessionId}`);
+        throw new CliError("E_TARGET_SESSION_MISMATCH", `Target ${targetIdHint} belongs to session ${targetRecord.sessionId}`, {
+          hints: [
+            `Retry with \`--session ${targetRecord.sessionId}\``,
+            `Or reacquire a target handle for session ${sessionId} via \`surfwright target list --session ${sessionId}\``,
+            "Use explicit handle pairs: (sessionId, targetId) from the same list/open result",
+          ],
+          hintContext: {
+            requestedSessionId: sessionId,
+            targetSessionId: targetRecord.sessionId,
+            requestedTargetId: targetIdHint,
+          },
+          recovery: {
+            strategy: "align-session-target",
+            nextCommand: `surfwright target list --session ${sessionId}`,
+            requiredFields: ["sessionId", "targetId"],
+            context: {
+              requestedSessionId: sessionId,
+              targetSessionId: targetRecord.sessionId,
+              requestedTargetId: targetIdHint,
+            },
+          },
+        });
       }
     }
     const ensured = await ensureSessionReachable(
@@ -198,7 +178,7 @@ export async function resolveSessionForAction(opts: {
     );
     await mutateState(async (state) => {
       if (!state.sessions[sessionId]) {
-        throw buildSessionNotFoundError(sessionId);
+        throw sessionNotFoundError(sessionId);
       }
       state.sessions[sessionId] = ensured.session;
       state.activeSessionId = sessionId;
@@ -233,7 +213,7 @@ export async function resolveSessionForAction(opts: {
     if (!snapshot.sessions[sessionId]) {
       const fallbackSessionId = fallbackSessionIdForTargetRecovery(snapshot);
       if (!fallbackSessionId) {
-        throw buildSessionNotFoundError(sessionId);
+        throw sessionNotFoundError(sessionId);
       }
       return await resolveExplicitSessionWithPolicy(fallbackSessionId, {
         allowTargetSessionMismatch: true,
@@ -318,6 +298,30 @@ export async function resolveTargetHandle(
   const target = handles.find((handle) => handle.targetId === targetId);
   if (!target) {
     const snapshot = readState();
+    if (snapshot.sessions[targetId]) {
+      throw new CliError("E_HANDLE_TYPE_MISMATCH", `Expected targetId but received sessionId handle: ${targetId}`, {
+        hints: [
+          `Use \`surfwright target list --session ${targetId}\` to get a live targetId`,
+          "Then rerun the command with that targetId as the positional handle",
+          "sessionId and targetId handles are different and not interchangeable",
+        ],
+        hintContext: {
+          expectedType: "targetId",
+          detectedType: "sessionId",
+          providedHandle: targetId,
+        },
+        recovery: {
+          strategy: "swap-handle-type",
+          nextCommand: `surfwright target list --session ${targetId}`,
+          requiredFields: ["targetId", "sessionId"],
+          context: {
+            expectedType: "targetId",
+            providedHandle: targetId,
+            sessionId: targetId,
+          },
+        },
+      });
+    }
     const known = snapshot.targets[targetId];
     const replacementByUrl =
       known && typeof known.url === "string" && known.url.length > 0
@@ -339,6 +343,16 @@ export async function resolveTargetHandle(
         activeTargets: handles.length,
         sampleTargetIds: handles.slice(0, 6).map((entry) => entry.targetId).join(","),
         replacementTargetId: replacement?.targetId ?? null,
+      },
+      recovery: {
+        strategy: "reacquire-target",
+        nextCommand: "surfwright target list --session <id>",
+        requiredFields: ["targetId", "sessionId"],
+        context: {
+          requestedTargetId: targetId,
+          replacementTargetId: replacement?.targetId ?? null,
+          knownUrl: known?.url ?? null,
+        },
       },
     });
   }

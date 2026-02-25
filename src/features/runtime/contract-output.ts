@@ -1,5 +1,5 @@
 import type { CliContractReport } from "../../core/types.js";
-import { buildCommandSignature } from "../../core/cli-contract.js";
+import { buildCommandSignature, usageCommandPath } from "../../core/cli-contract.js";
 
 const CORE_COMMAND_IDS = new Set([
   "contract",
@@ -27,6 +27,7 @@ const CORE_ERROR_CODES = new Set([
   "E_ASSERT_FAILED",
   "E_WAIT_TIMEOUT",
   "E_DOWNLOAD_TIMEOUT",
+  "E_HANDLE_TYPE_MISMATCH",
   "E_TARGET_SESSION_UNKNOWN",
   "E_SELECTOR_INVALID",
   "E_CDP_UNREACHABLE",
@@ -44,6 +45,21 @@ function filterContractReport(report: CliContractReport, needle: string): CliCon
     guidance: Array.isArray(report.guidance)
       ? report.guidance.filter((entry) => [entry.id, entry.signature, ...entry.examples].some((value) => value.toLowerCase().includes(needle)))
       : report.guidance,
+  };
+}
+
+function withCommandSurfaceFields(report: CliContractReport): CliContractReport {
+  return {
+    ...report,
+    commands: report.commands.map((entry) => {
+      const argvPath = usageCommandPath(entry.usage);
+      return {
+        ...entry,
+        commandPath: argvPath.join(" "),
+        argvPath,
+        dotAlias: entry.id.includes(".") ? entry.id : null,
+      };
+    }),
   };
 }
 
@@ -92,21 +108,20 @@ export function buildContractOutput(opts: {
   search?: string;
   commandId?: string;
 }): CliContractReport | Record<string, unknown> {
+  const surfaced = withCommandSurfaceFields(opts.report);
   if (opts.mode === "command") {
     const commandId = typeof opts.commandId === "string" ? opts.commandId.trim() : "";
-    const command = opts.report.commands.find((entry) => entry.id === commandId) ?? null;
+    const command = surfaced.commands.find((entry) => entry.id === commandId) ?? null;
     if (!command) {
-      return compactContractReport(opts.report, "");
+      return compactContractReport(surfaced, "");
     }
-    const examples = Array.isArray(opts.report.guidance)
-      ? opts.report.guidance.find((entry) => entry.id === commandId)?.examples ?? []
-      : [];
+    const examples = Array.isArray(surfaced.guidance) ? surfaced.guidance.find((entry) => entry.id === commandId)?.examples ?? [] : [];
     return {
       ok: true,
-      name: opts.report.name,
-      version: opts.report.version,
-      contractSchemaVersion: opts.report.contractSchemaVersion,
-      contractFingerprint: opts.report.contractFingerprint,
+      name: surfaced.name,
+      version: surfaced.version,
+      contractSchemaVersion: surfaced.contractSchemaVersion,
+      contractFingerprint: surfaced.contractFingerprint,
       mode: "command",
       command: buildCommandSignature({
         command,
@@ -115,7 +130,7 @@ export function buildContractOutput(opts: {
     };
   }
   const needle = typeof opts.search === "string" ? opts.search.trim().toLowerCase() : "";
-  const filtered = filterContractReport(opts.report, needle);
+  const filtered = filterContractReport(surfaced, needle);
   if (opts.mode === "core") {
     return coreContractReport(filtered, needle);
   }

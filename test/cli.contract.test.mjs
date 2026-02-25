@@ -23,6 +23,29 @@ function parseJson(stdout) {
   return JSON.parse(text);
 }
 
+function stateFilePath() {
+  return path.join(TEST_STATE_DIR, "state.json");
+}
+
+function baseState() {
+  return {
+    version: 4,
+    activeSessionId: null,
+    nextSessionOrdinal: 1,
+    nextCaptureOrdinal: 1,
+    nextArtifactOrdinal: 1,
+    sessions: {},
+    targets: {},
+    networkCaptures: {},
+    networkArtifacts: {},
+  };
+}
+
+function writeState(state) {
+  fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
+  fs.writeFileSync(stateFilePath(), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+}
+
 process.on("exit", () => {
   try {
     fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
@@ -263,10 +286,67 @@ test("contract rejects incompatible mode flags", () => {
   assert.equal(payload.code, "E_QUERY_INVALID");
 });
 
-test("contract --command rejects incompatible mode flags", () => {
-  const result = runCli(["contract", "--command", "open", "--search", "open"]);
+test("contract --command tolerates extra mode/search flags and still resolves command payload", () => {
+  const result = runCli(["contract", "--command", "open", "--search", "open", "--core"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "command");
+  assert.equal(payload.command.id, "open");
+});
+
+test("contract --command resolves CLI path form (space path)", () => {
+  const result = runCli(["contract", "--command", "target snapshot"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "command");
+  assert.equal(payload.command.id, "target.snapshot");
+  assert.equal(Array.isArray(payload.command.argvPath), true);
+  assert.equal(payload.command.argvPath[0], "target");
+  assert.equal(payload.command.argvPath[1], "snapshot");
+});
+
+test("contract --command unknown id returns recovery suggestions", () => {
+  const result = runCli(["contract", "--command", "target"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_QUERY_INVALID");
+  assert.equal(Array.isArray(payload.hints), true);
+  assert.equal(payload.hints.some((hint) => hint.includes("Closest command ids:")), true);
+  assert.equal(payload.recovery?.strategy, "discover-command-id");
+  assert.equal(typeof payload.recovery?.nextCommand, "string");
+});
+
+test("target commands detect swapped handle types with typed recovery", () => {
+  const state = baseState();
+  state.activeSessionId = "s-1";
+  state.sessions["s-1"] = {
+    sessionId: "s-1",
+    kind: "attached",
+    cdpOrigin: "http://127.0.0.1:1",
+    browserMode: "unknown",
+    profile: null,
+    debugPort: null,
+    userDataDir: null,
+    browserPid: null,
+    ownerId: null,
+    policy: "persistent",
+    leaseExpiresAt: null,
+    leaseTtlMs: null,
+    managedUnreachableSince: null,
+    managedUnreachableCount: 0,
+    createdAt: "2026-02-25T00:00:00.000Z",
+    lastSeenAt: "2026-02-25T00:00:00.000Z",
+  };
+  writeState(state);
+
+  const result = runCli(["target", "snapshot", "s-1", "--session", "s-1", "--timeout-ms", "200"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_HANDLE_TYPE_MISMATCH");
+  assert.equal(payload.recovery?.strategy, "swap-handle-type");
+  assert.equal(typeof payload.recovery?.nextCommand, "string");
 });

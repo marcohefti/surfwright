@@ -21,6 +21,7 @@ export const errorContracts: CliErrorContract[] = [
   { code: "E_SESSION_UNREACHABLE", message: "Attached session endpoint is not reachable", retryable: true },
   { code: "E_SESSION_CONFLICT", message: "Reserved default session id has conflicting kind", retryable: false },
   { code: "E_TARGET_ID_INVALID", message: "targetId contains invalid characters", retryable: false },
+  { code: "E_HANDLE_TYPE_MISMATCH", message: "Provided handle type does not match expected sessionId/targetId usage", retryable: false },
   { code: "E_TARGET_NOT_FOUND", message: "Requested target was not found in session", retryable: false },
   { code: "E_TARGET_SESSION_UNKNOWN", message: "targetId is not mapped to a known session", retryable: false },
   { code: "E_TARGET_SESSION_MISMATCH", message: "targetId does not belong to the requested session", retryable: false },

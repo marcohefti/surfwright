@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import net, { AddressInfo } from "node:net";
+import path from "node:path";
 import { CliError } from "./errors.js";
 import {
   CDP_HEALTHCHECK_TIMEOUT_MS,
@@ -211,6 +212,19 @@ function terminateBrowserProcess(browserPid: number | null): void {
   killManagedBrowserProcessTree(browserPid, "SIGTERM");
 }
 
+const MANAGED_STARTUP_PROFILE_ARTIFACTS = ["DevToolsActivePort", "SingletonLock", "SingletonSocket", "SingletonCookie"];
+
+function cleanupManagedStartupArtifacts(userDataDir: string): void {
+  for (const fileName of MANAGED_STARTUP_PROFILE_ARTIFACTS) {
+    const artifactPath = path.join(userDataDir, fileName);
+    try {
+      fs.rmSync(artifactPath, { force: true });
+    } catch {
+      // Best effort cleanup only.
+    }
+  }
+}
+
 export async function startManagedSession(
   opts: {
     sessionId: string;
@@ -281,6 +295,7 @@ export async function startManagedSession(
     return null;
   });
   if (started === null) {
+    cleanupManagedStartupArtifacts(opts.userDataDir);
     // Small backoff reduces repeated CDP start races on busy hosts.
     await new Promise((resolve) => setTimeout(resolve, startupPlan.retryBackoffMs));
     started = await attemptStart(await allocateFreePort(), startupPlan.retryAttemptStartupWaitMs);

@@ -25,6 +25,8 @@ All notable changes to SurfWright are documented here.
 - [contract] Added `contract --compact` and `contract --search <term>` for low-token contract introspection and focused lookups.
 - [contract] Added `contract --core` for low-token bootstrap payloads (focused command/error/guidance subset).
 - [contract] Added `contract --command <id>` for compact per-command lookup (`flags`, `positionals`, `examples`, canonical invocation) to reduce full-contract probing in agent loops.
+- [errors] Added `E_HANDLE_TYPE_MISMATCH` for explicit `sessionId`/`targetId` swap detection with typed recovery payloads.
+- [errors] Added additive `recovery` metadata on typed failures when deterministic next-command routing is available.
 - [cli] Added global `--output-shape <full|compact|proof>` (and `SURFWRIGHT_OUTPUT_SHAPE`) to project JSON outputs without changing command semantics.
 - [target] Added `--proof` support to `target fill`, `target keypress`, `target upload`, `target drag-drop`, and `target dialog` with a shared compact evidence shape.
 - [actions] Added post-action assertions (`--assert-url-prefix`, `--assert-selector`, `--assert-text`) and additive `proofEnvelope` support across `open`, `target click`, `target fill`, `target keypress`, `target upload`, `target drag-drop`, `target dialog`, `target download`, and `target wait`.
@@ -77,6 +79,8 @@ All notable changes to SurfWright are documented here.
 - [target] `target snapshot --mode orient|snapshot` now includes additive aggregate counters (`headingsCount`, `buttonsCount`, `linksCount`), plus `navCount` for orient mode.
 - [errors] Typed failures can now include optional bounded `hints` and `hintContext` fields (additive; `code` + `message` contract preserved).
 - [errors] Commander-originated `E_QUERY_INVALID` failures now include additive machine-fix diagnostics (`unknownFlags`, `expectedPositionals`, `validFlags`, `canonicalInvocation`) for deterministic recovery.
+- [contract] `contract --command` now accepts CLI path lookup forms (for example `target snapshot`) and tolerates extra mode/search flags while still returning `mode=command`.
+- [contract] Per-command contract output now includes additive machine-invocation fields (`argvPath`, `dotAlias`) for deterministic command execution.
 - [cli] Improved first-run discoverability: parse errors now show stronger suggestions/help.
 - [target] Unified post-action waits across interactive actions: `target fill|keypress|upload|drag-drop|dialog` now support `--wait-for-text|--wait-for-selector|--wait-network-idle` and `--wait-timeout-ms`.
 - [session] Reduced repeat command overhead in tight loops with short-lived CDP reachability caching during session health checks.
@@ -128,6 +132,7 @@ All notable changes to SurfWright are documented here.
 - [target] `target eval` timeout handling now performs best-effort CDP termination/stop-loading recovery so follow-up commands remain stable after `E_EVAL_TIMEOUT`.
 - [session] `session attach` unreachable failures now redact sensitive CDP query credentials in error text.
 - [errors] `E_SESSION_NOT_FOUND` and `E_TARGET_SESSION_UNKNOWN` now include bounded continuity hints/hintContext for faster recovery after stale session/target mappings.
+- [browser] Managed session startup now performs scoped profile startup-artifact cleanup before the single bounded retry after `E_BROWSER_START_TIMEOUT` (no timeout inflation).
 - [run] Fixed deterministic plan template resolution for object payloads by removing duplicate nested assignment in `resolveTemplateInValue`.
 - [state] Hardened `sessionId`/`targetId` sanitization to reject placeholder handles (`undefined`, `null`, `nan`) early.
 - [target] `target download` now waits for `domcontentloaded` before click query evaluation to reduce commit-stage race misses after `open --allow-download`.

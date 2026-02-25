@@ -300,6 +300,12 @@ export type CliFailure = {
   message: string;
   retryable?: boolean;
   phase?: string;
+  recovery?: {
+    strategy: string;
+    nextCommand?: string;
+    requiredFields?: string[];
+    context?: Record<string, string | number | boolean | null>;
+  };
   diagnostics?: {
     unknownFlags?: string[];
     expectedPositionals?: string[];

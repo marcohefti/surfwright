@@ -169,11 +169,48 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
     missingArg: expectedArg,
     tooManyArgs: Boolean(tooManyArgsMatch),
   });
+  const recovery: CliFailure["recovery"] = (() => {
+    if (didYouMean) {
+      return {
+        strategy: "retry-with-suggested-command",
+        nextCommand: `surfwright ${didYouMean}`,
+        requiredFields: ["commandPath"],
+        context: {
+          commandPath: commandPath.length > 0 ? commandPath : null,
+          unknownOption: unknownOption ?? null,
+        },
+      };
+    }
+    if (unknownOption) {
+      return {
+        strategy: "retry-with-valid-flags",
+        nextCommand: "surfwright <command> --help",
+        requiredFields: ["validFlags"],
+        context: {
+          unknownOption,
+          commandPath: commandPath.length > 0 ? commandPath : null,
+        },
+      };
+    }
+    if (expectedArg) {
+      return {
+        strategy: "retry-with-required-positionals",
+        nextCommand: "surfwright <command> --help",
+        requiredFields: ["expectedPositionals"],
+        context: {
+          commandPath: commandPath.length > 0 ? commandPath : null,
+          unknownOption: unknownOption ?? null,
+        },
+      };
+    }
+    return undefined;
+  })();
 
   return {
     ok: false,
     code: "E_QUERY_INVALID",
     message: message.length > 0 ? message : "invalid command input",
+    ...(recovery ? { recovery } : {}),
     ...(diagnostics ? { diagnostics } : {}),
     ...(hints.length > 0 ? { hints: hints.slice(0, 3) } : {}),
     hintContext,

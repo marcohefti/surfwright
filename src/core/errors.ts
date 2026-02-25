@@ -4,6 +4,12 @@ export class CliError extends Error {
   code: string;
   retryable?: boolean;
   phase?: string;
+  recovery?: {
+    strategy: string;
+    nextCommand?: string;
+    requiredFields?: string[];
+    context?: Record<string, string | number | boolean | null>;
+  };
   diagnostics?: {
     unknownFlags?: string[];
     expectedPositionals?: string[];
@@ -19,6 +25,12 @@ export class CliError extends Error {
     opts?: {
       retryable?: boolean;
       phase?: string;
+      recovery?: {
+        strategy: string;
+        nextCommand?: string;
+        requiredFields?: string[];
+        context?: Record<string, string | number | boolean | null>;
+      };
       diagnostics?: {
         unknownFlags?: string[];
         expectedPositionals?: string[];
@@ -36,6 +48,9 @@ export class CliError extends Error {
     }
     if (typeof opts?.phase === "string" && opts.phase.trim().length > 0) {
       this.phase = opts.phase.trim();
+    }
+    if (opts?.recovery && typeof opts.recovery === "object") {
+      this.recovery = opts.recovery;
     }
     if (opts?.diagnostics && typeof opts.diagnostics === "object") {
       this.diagnostics = opts.diagnostics;
@@ -73,6 +88,9 @@ export function toCliFailure(error: unknown): CliFailure {
     }
     if (typeof error.phase === "string" && error.phase.length > 0) {
       failure.phase = error.phase;
+    }
+    if (error.recovery && typeof error.recovery === "object") {
+      failure.recovery = error.recovery;
     }
     if (error.diagnostics && typeof error.diagnostics === "object") {
       failure.diagnostics = error.diagnostics;

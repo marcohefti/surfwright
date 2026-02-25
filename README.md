@@ -94,6 +94,7 @@ surfwright contract
 `contract` now includes additive `guidance` entries with command signatures, examples, and proof schemas for high-traffic workflows.
 Use `surfwright contract --core` for low-token bootstrap output, and `surfwright contract --search <term>` to filter commands/errors/guidance.
 Use `surfwright contract --command <id>` for compact per-command flags/positionals/examples (low-token command lookup).
+`contract --command` also accepts CLI path form (for example `target snapshot`) and returns `command.argvPath` for machine-executable command tokens.
 
 Set global output shaping when you want smaller payloads without changing command behavior:
 
@@ -226,6 +227,8 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 `run` pipeline step coverage includes `fill`, `upload`, `click-read`, `scroll-plan` (including `scrollMode: "relative"`), bounded `repeat-until` loops (including `untilDeltaGte`), top-level `result` projections (`outputField -> sourcePath`), and top-level `require` assertions (`equals|contains|gte|truthy|exists`) so plans can execute full workflows and emit/validate mission fields without shell-loop + jq glue.
 `run` upload steps now honor `submitSelector`, `expectUploadedFilename`, and result-verification fields (`waitForResult`, `resultSelector`, `resultTextContains`, `resultFilenameRegex`) for deterministic attach+submit+verify flows.
 CLI compatibility for cold-start agents: `--json` is accepted as an explicit no-op (JSON remains default), `target <subcommand> --target <targetId>` is accepted as an alias for positional `targetId`, and `session clear` tolerates common wrapper forms (`session clear <id>`, `--keep-processes=<bool>`, `--no-prompt`).
+Typed failures now include additive `recovery` metadata when deterministic next-step routing is available (for example command lookup, required positionals, and handle-type mismatch recovery).
+Handle misuse is now explicit: `E_HANDLE_TYPE_MISMATCH` is returned when `sessionId` and `targetId` are swapped.
 Prefer `target extract`, `target style`, `target attr`, and `target read` before `target eval`; when you need eval, `--expr-b64`/`--script-b64` avoid shell escaping overhead and `--output-shape compact` keeps payloads lean.
 
 Use workspace profile for persistent login state:

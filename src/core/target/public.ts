@@ -1,7 +1,14 @@
+import type { CliFailure } from "../types.js";
 import { CliError } from "../errors.js";
 
-export function queryInvalid(message: string): CliError {
-  return new CliError("E_QUERY_INVALID", message);
+type QueryInvalidOptions = {
+  hints?: string[];
+  hintContext?: Record<string, string | number | boolean | null>;
+  recovery?: CliFailure["recovery"];
+};
+
+export function queryInvalid(message: string, options?: QueryInvalidOptions): CliError {
+  return new CliError("E_QUERY_INVALID", message, options);
 }
 
 export { parseFieldsCsv, projectReportFields } from "../report-fields.js";

@@ -26,6 +26,10 @@ function unique(values: string[]): string[] {
   return out;
 }
 
+function normalizeLookupToken(input: string): string {
+  return input.trim().replace(/\s+/g, " ");
+}
+
 export function commandPathToId(commandPath: string[]): string | null {
   if (!Array.isArray(commandPath) || commandPath.length === 0) {
     return null;
@@ -62,6 +66,67 @@ export function usageCommandPath(usage: string): string[] {
   return out;
 }
 
+function commandUsagePathString(command: CliCommandContract): string {
+  return usageCommandPath(command.usage).join(" ");
+}
+
+export function resolveContractCommandId(
+  commandIdInput: string,
+  commands: CliCommandContract[],
+): { commandId: string | null; suggestions: string[] } {
+  const requestedRaw = normalizeLookupToken(commandIdInput);
+  if (requestedRaw.length === 0) {
+    return { commandId: null, suggestions: [] };
+  }
+
+  const requested = requestedRaw.toLowerCase();
+  const byId = new Map(commands.map((entry) => [entry.id, entry]));
+  if (byId.has(requestedRaw)) {
+    return { commandId: requestedRaw, suggestions: [] };
+  }
+
+  const byUsagePath = new Map(commands.map((entry) => [commandUsagePathString(entry), entry.id]));
+  const usageMatch = byUsagePath.get(requestedRaw);
+  if (typeof usageMatch === "string") {
+    return { commandId: usageMatch, suggestions: [] };
+  }
+
+  // Accept dotted alias conversion when operators pass "target snapshot" style ids.
+  const dottedLookup = requestedRaw.split(" ").slice(0, 2).join(".");
+  if (byId.has(dottedLookup)) {
+    return { commandId: dottedLookup, suggestions: [] };
+  }
+
+  const terminalSegmentMatches = commands.filter((entry) => entry.id.split(".").at(-1)?.toLowerCase() === requested);
+  if (terminalSegmentMatches.length === 1) {
+    return { commandId: terminalSegmentMatches[0].id, suggestions: [] };
+  }
+
+  const byPrefix = commands.filter((entry) => entry.id.toLowerCase().startsWith(`${requested}.`));
+  if (byPrefix.length === 1) {
+    return { commandId: byPrefix[0].id, suggestions: [] };
+  }
+
+  const rankedSuggestions = unique(
+    [
+      ...commands
+        .filter((entry) => entry.id.toLowerCase().startsWith(requested))
+        .map((entry) => entry.id),
+      ...commands
+        .filter((entry) => commandUsagePathString(entry).toLowerCase().startsWith(requested))
+        .map((entry) => entry.id),
+      ...commands
+        .filter((entry) => entry.id.toLowerCase().includes(requested))
+        .map((entry) => entry.id),
+      ...commands
+        .filter((entry) => commandUsagePathString(entry).toLowerCase().includes(requested))
+        .map((entry) => entry.id),
+    ].slice(0, 8),
+  );
+
+  return { commandId: null, suggestions: rankedSuggestions };
+}
+
 export function usageValidFlags(usage: string): string[] {
   const text = String(usage ?? "");
   const matches = text.match(/--[a-z][a-z0-9-]*/gi) ?? [];
@@ -88,6 +153,8 @@ export function buildCommandSignature(opts: {
 }): {
   id: string;
   commandPath: string;
+  argvPath: string[];
+  dotAlias: string | null;
   usage: string;
   canonicalInvocation: string;
   summary: string;
@@ -96,9 +163,12 @@ export function buildCommandSignature(opts: {
   examples: string[];
 } {
   const usage = String(opts.command.usage ?? "").trim();
+  const argvPath = usageCommandPath(usage);
   return {
     id: opts.command.id,
-    commandPath: usageCommandPath(usage).join(" "),
+    commandPath: argvPath.join(" "),
+    argvPath,
+    dotAlias: opts.command.id.includes(".") ? opts.command.id : null,
     usage,
     canonicalInvocation: usage,
     summary: opts.command.summary,

@@ -25,6 +25,7 @@ import { registerSessionClearCommand } from "./commands/session-clear.js";
 import { registerStateMaintenanceCommands } from "./commands/state-maintenance.js";
 import { registerUpdateLifecycleCommands } from "./commands/update-lifecycle.js";
 import { buildContractOutput } from "./contract-output.js";
+import { resolveContractCommandOrThrow } from "./contract-command.js";
 import {
   printContractReport,
   printDoctorReport,
@@ -79,18 +80,16 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .action((options: { compact?: boolean; core?: boolean; full?: boolean; command?: string; search?: string }) => {
       const output = ctx.globalOutputOpts();
       try {
-        if (Boolean(options.core) && Boolean(options.full)) {
+        const rawCommandLookup = typeof options.command === "string" ? options.command.trim() : "";
+        if (rawCommandLookup.length === 0 && Boolean(options.core) && Boolean(options.full)) {
           throw queryInvalid("contract accepts at most one mode flag: --core or --full");
-        }
-        const commandId = typeof options.command === "string" ? options.command.trim() : "";
-        if (commandId.length > 0 && (Boolean(options.core) || Boolean(options.full) || typeof options.search === "string")) {
-          throw queryInvalid("contract --command cannot be combined with --core, --full, or --search");
         }
         // --compact is retained as a no-op alias for back-compat; compact remains default mode.
         void options.compact;
         const report = getCliContractReport(ctx.readPackageVersion());
-        if (commandId.length > 0 && !report.commands.some((entry) => entry.id === commandId)) {
-          throw queryInvalid(`unknown command id: ${commandId}`);
+        let commandId = "";
+        if (rawCommandLookup.length > 0) {
+          commandId = resolveContractCommandOrThrow(rawCommandLookup, report.commands);
         }
         const mode = commandId.length > 0 ? "command" : options.full ? "full" : options.core ? "core" : "compact";
         const outReport = buildContractOutput({

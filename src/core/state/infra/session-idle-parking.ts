@@ -169,7 +169,7 @@ export async function sessionParkIdleManagedProcesses(opts: {
     }
   }
 
-  const parked = await mutateState(async (state) => {
+  const parked = await mutateState((state) => {
     let parkedCount = 0;
     for (const sessionId of candidateIds) {
       const existing = state.sessions[sessionId];

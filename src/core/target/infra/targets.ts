@@ -1,10 +1,10 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
-import { allocateFreePort, ensureSessionReachable, startManagedSession } from "../../browser.js";
+import { allocateFreePort, ensureSessionReachable, killManagedBrowserProcessTree, startManagedSession } from "../../browser.js";
 import { CliError } from "../../errors.js";
 import { ensureProfileManagedSession } from "../../profile/index.js";
 import { withSessionHeartbeat } from "../../session/index.js";
 import { defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId } from "../../state/index.js";
-import { allocateSessionIdForState, mutateState, saveTargetSnapshot } from "../../state/index.js";
+import { allocateSessionIdForState, assertSessionDoesNotExist, mutateState, saveTargetSnapshot } from "../../state/index.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
   type ManagedBrowserMode,
@@ -56,32 +56,38 @@ export async function ensureValidSelector(page: Page, selectorQuery: string): Pr
 }
 
 async function createImplicitManagedSession(timeoutMs: number, browserMode: ManagedBrowserMode | undefined): Promise<SessionState> {
-  return await mutateState(async (state) => {
-    const sessionId = allocateSessionIdForState(state, "s");
-    const debugPort = await allocateFreePort();
-    const created = await startManagedSession(
-      {
-        sessionId,
-        debugPort,
-        userDataDir: defaultSessionUserDataDir(sessionId),
-        policy: "ephemeral",
-        browserMode: browserMode ?? "headless",
-        createdAt: nowIso(),
-      },
-      timeoutMs,
-    );
-    const session = withSessionHeartbeat(
-      {
-        ...created,
-        policy: "ephemeral",
-        leaseTtlMs: DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
-      },
-      created.lastSeenAt,
-    );
-    state.sessions[sessionId] = session;
-    state.activeSessionId = sessionId;
-    return session;
-  });
+  const sessionId = await mutateState((state) => allocateSessionIdForState(state, "s"));
+  const debugPort = await allocateFreePort();
+  const created = await startManagedSession(
+    {
+      sessionId,
+      debugPort,
+      userDataDir: defaultSessionUserDataDir(sessionId),
+      policy: "ephemeral",
+      browserMode: browserMode ?? "headless",
+      createdAt: nowIso(),
+    },
+    timeoutMs,
+  );
+  const session = withSessionHeartbeat(
+    {
+      ...created,
+      policy: "ephemeral",
+      leaseTtlMs: DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
+    },
+    created.lastSeenAt,
+  );
+  try {
+    return await mutateState((state) => {
+      assertSessionDoesNotExist(state, sessionId);
+      state.sessions[sessionId] = session;
+      state.activeSessionId = sessionId;
+      return session;
+    });
+  } catch (error) {
+    killManagedBrowserProcessTree(created.browserPid ?? null, "SIGTERM");
+    throw error;
+  }
 }
 
 export async function resolveSessionForAction(opts: {
@@ -110,7 +116,7 @@ export async function resolveSessionForAction(opts: {
       timeoutMs: opts.timeoutMs,
       browserMode: opts.browserMode,
     });
-    await mutateState(async (state) => {
+    await mutateState((state) => {
       state.sessions[ensured.session.sessionId] = ensured.session;
       state.activeSessionId = ensured.session.sessionId;
     });
@@ -176,7 +182,7 @@ export async function resolveSessionForAction(opts: {
       opts.timeoutMs,
       opts.browserMode ? { browserMode: opts.browserMode } : undefined,
     );
-    await mutateState(async (state) => {
+    await mutateState((state) => {
       if (!state.sessions[sessionId]) {
         throw sessionNotFoundError(sessionId);
       }

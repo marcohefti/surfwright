@@ -35,6 +35,8 @@ const CDP_STARTUP_INITIAL_WAIT_MS = 6000;
 const CDP_STARTUP_MAX_WAIT_MS = 30000;
 const CDP_STARTUP_POLL_MS = 125;
 const CDP_STARTUP_RETRY_BACKOFF_MS = 250;
+const MANAGED_STARTUP_TERMINATE_GRACE_MS = 500;
+const MANAGED_STARTUP_KILL_WAIT_MS = 250;
 
 export function managedStartupWaitPlan(timeoutMs: number): {
   firstAttemptStartupWaitMs: number;
@@ -212,6 +214,44 @@ function terminateBrowserProcess(browserPid: number | null): void {
   killManagedBrowserProcessTree(browserPid, "SIGTERM");
 }
 
+function managedBrowserPidAlive(browserPid: number | null): boolean {
+  if (typeof browserPid !== "number" || !Number.isFinite(browserPid) || browserPid <= 0) {
+    return false;
+  }
+  try {
+    process.kill(browserPid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function terminateBrowserProcessStrict(browserPid: number | null, graceMs: number): Promise<boolean> {
+  if (!managedBrowserPidAlive(browserPid)) {
+    return true;
+  }
+  terminateBrowserProcess(browserPid);
+  const termDeadline = Date.now() + Math.max(100, graceMs);
+  while (Date.now() < termDeadline) {
+    if (!managedBrowserPidAlive(browserPid)) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  if (!managedBrowserPidAlive(browserPid)) {
+    return true;
+  }
+  killManagedBrowserProcessTree(browserPid, "SIGKILL");
+  const killDeadline = Date.now() + MANAGED_STARTUP_KILL_WAIT_MS;
+  while (Date.now() < killDeadline) {
+    if (!managedBrowserPidAlive(browserPid)) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return !managedBrowserPidAlive(browserPid);
+}
+
 const MANAGED_STARTUP_PROFILE_ARTIFACTS = ["DevToolsActivePort", "SingletonLock", "SingletonSocket", "SingletonCookie"];
 
 function cleanupManagedStartupArtifacts(userDataDir: string): void {
@@ -248,6 +288,7 @@ export async function startManagedSession(
   const attemptStart = async (
     debugPort: number,
     startupWaitMs: number,
+    startupAttempt: 1 | 2,
   ): Promise<{ browserPid: number; debugPort: number; cdpOrigin: string }> => {
     const browserPid = launchDetachedBrowser({
       executablePath,
@@ -269,7 +310,7 @@ export async function startManagedSession(
     const cdpOrigin = `http://127.0.0.1:${debugPort}`;
     const isReady = await waitForCdpEndpoint(cdpOrigin, startupWaitMs);
     if (!isReady) {
-      terminateBrowserProcess(browserPid);
+      const shutdownSucceeded = await terminateBrowserProcessStrict(browserPid, MANAGED_STARTUP_TERMINATE_GRACE_MS);
       throw new CliError("E_BROWSER_START_TIMEOUT", "Browser launched but CDP endpoint did not become ready in time", {
         hints: [
           "Run `surfwright doctor` and confirm the selected browser starts cleanly.",
@@ -280,15 +321,17 @@ export async function startManagedSession(
           cdpOrigin,
           debugPort,
           startupWaitMs,
+          startupAttempt,
           browserMode,
           userDataDir: opts.userDataDir,
+          shutdownSucceeded,
         },
       });
     }
     return { browserPid, debugPort, cdpOrigin };
   };
 
-  let started = await attemptStart(opts.debugPort, startupPlan.firstAttemptStartupWaitMs).catch((error: unknown) => {
+  let started = await attemptStart(opts.debugPort, startupPlan.firstAttemptStartupWaitMs, 1).catch((error: unknown) => {
     if (!(error instanceof CliError) || error.code !== "E_BROWSER_START_TIMEOUT") {
       throw error;
     }
@@ -298,7 +341,7 @@ export async function startManagedSession(
     cleanupManagedStartupArtifacts(opts.userDataDir);
     // Small backoff reduces repeated CDP start races on busy hosts.
     await new Promise((resolve) => setTimeout(resolve, startupPlan.retryBackoffMs));
-    started = await attemptStart(await allocateFreePort(), startupPlan.retryAttemptStartupWaitMs);
+    started = await attemptStart(await allocateFreePort(), startupPlan.retryAttemptStartupWaitMs, 2);
   }
 
   const createdAt = opts.createdAt ?? nowIso();
@@ -337,7 +380,7 @@ export async function ensureSessionReachable(
 }> {
   const desiredMode = opts?.browserMode;
   if (session.kind === "managed" && desiredMode && session.browserMode !== desiredMode) {
-    terminateBrowserProcess(session.browserPid);
+    await terminateBrowserProcessStrict(session.browserPid, MANAGED_STARTUP_TERMINATE_GRACE_MS);
     const debugPort = session.debugPort ?? (await allocateFreePort());
     const userDataDir = session.userDataDir ?? defaultSessionUserDataDir(session.sessionId);
     return {

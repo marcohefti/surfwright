@@ -86,6 +86,9 @@ All notable changes to SurfWright are documented here.
 - [session] Reduced repeat command overhead in tight loops with short-lived CDP reachability caching during session health checks.
 - [session] Added opportunistic idle managed-process parking on command ingress (detached worker, bounded sweep) to prevent Chrome accumulation without introducing a persistent daemon.
 - [state] Opportunistic maintenance now also prunes stale disk artifacts (`runs`, `captures`, orphan `profiles`) with conservative retention caps; workspace profile pruning remains explicit opt-in.
+- [state] Session lifecycle maintenance (`session prune`, `session clear`) now runs external reachability/process shutdown work outside the state-file lock and commits state mutations in short lock windows.
+- [session] Managed session creation paths now reserve session handles first and perform browser startup outside state mutation locks before a short commit step.
+- [daemon] Daemon bootstrap now uses a startup singleflight lock to avoid parallel spawn/meta races when multiple commands cold-start concurrently.
 - [session] `session attach --cdp` now accepts `ws://`/`wss://` endpoints and supports HTTP(S) discovery URLs with path/query (resolved to websocket endpoints for runtime attach).
 - [session] CDP attach health checks now split discovery and websocket-connect stages for clearer remote endpoint handling under variable latency.
 - [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage` to reduce startup flakes in constrained environments.
@@ -132,6 +135,8 @@ All notable changes to SurfWright are documented here.
 - [target] `target eval` timeout handling now performs best-effort CDP termination/stop-loading recovery so follow-up commands remain stable after `E_EVAL_TIMEOUT`.
 - [session] `session attach` unreachable failures now redact sensitive CDP query credentials in error text.
 - [errors] `E_SESSION_NOT_FOUND` and `E_TARGET_SESSION_UNKNOWN` now include bounded continuity hints/hintContext for faster recovery after stale session/target mappings.
+- [state] State lock stale detection now checks lock-owner PID liveness and lock timeouts now emit additive lock diagnostics (`waitMs`, `lockOwnerPid`, `lockOwnerAlive`, `stateRoot`).
+- [browser] Managed startup timeout recovery now performs bounded TERM->KILL shutdown verification before retrying, reducing leaked Chrome process/profile races.
 - [browser] Managed session startup now performs scoped profile startup-artifact cleanup before the single bounded retry after `E_BROWSER_START_TIMEOUT` (no timeout inflation).
 - [run] Fixed deterministic plan template resolution for object payloads by removing duplicate nested assignment in `resolveTemplateInValue`.
 - [state] Hardened `sessionId`/`targetId` sanitization to reject placeholder handles (`undefined`, `null`, `nan`) early.

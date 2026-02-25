@@ -3,7 +3,7 @@ import { chromium } from "playwright-core";
 import { CDP_HEALTHCHECK_TIMEOUT_MS, isCdpEndpointAlive, killManagedBrowserProcessTree } from "../../browser.js";
 import { CliError } from "../../errors.js";
 import { hasSessionLeaseExpired, withSessionHeartbeat } from "../../session/index.js";
-import { nowIso, sanitizeSessionId } from "./state-store.js";
+import { nowIso, readState, sanitizeSessionId } from "./state-store.js";
 import { mutateState } from "../repo/mutations.js";
 import type { SessionPruneReport, SessionState, StateReconcileReport, TargetPruneReport } from "../../types.js";
 
@@ -158,6 +158,17 @@ type SessionMaintenanceSummary = {
   repairedManagedPid: number;
 };
 
+function sessionFingerprint(session: SessionState): string {
+  return [
+    session.kind,
+    session.cdpOrigin,
+    session.debugPort ?? "",
+    session.userDataDir ?? "",
+    session.browserPid ?? "",
+    session.lastSeenAt,
+  ].join("|");
+}
+
 async function sessionPruneInternal(opts: {
   timeoutMs: number;
   dropManagedUnreachable: boolean;
@@ -167,30 +178,59 @@ async function sessionPruneInternal(opts: {
     CDP_HEALTHCHECK_TIMEOUT_MS,
     Math.min(opts.timeoutMs, SESSION_PRUNE_REACHABILITY_TIMEOUT_CAP_MS),
   );
-  return await mutateState(async (state) => {
-    const sessionIds = Object.keys(state.sessions).sort((a, b) => a.localeCompare(b));
+  const snapshot = readState();
+  const snapshotSessions = Object.values(snapshot.sessions).sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+  const reachabilityBySessionId = new Map<
+    string,
+    {
+      fingerprint: string;
+      reachable: boolean;
+    }
+  >();
+  for (const session of snapshotSessions) {
+    if (hasSessionLeaseExpired(session)) {
+      continue;
+    }
+    const reachable = await isCdpEndpointAlive(session.cdpOrigin, Math.max(CDP_HEALTHCHECK_TIMEOUT_MS, timeoutMs));
+    reachabilityBySessionId.set(session.sessionId, {
+      fingerprint: sessionFingerprint(session),
+      reachable,
+    });
+  }
 
+  const applied = await mutateState((state) => {
+    const sessionIds = snapshotSessions.map((session) => session.sessionId);
     let removedByLeaseExpired = 0;
     let removedAttachedUnreachable = 0;
     let removedManagedUnreachable = 0;
     let removedManagedByGrace = 0;
     let removedManagedByFlag = 0;
     let repairedManagedPid = 0;
+    const managedSessionsToStop: SessionState[] = [];
 
     for (const sessionId of sessionIds) {
       const session = state.sessions[sessionId];
       if (!session) {
         continue;
       }
+      const probe = reachabilityBySessionId.get(sessionId);
+      if (probe && probe.fingerprint !== sessionFingerprint(session)) {
+        continue;
+      }
 
       if (hasSessionLeaseExpired(session)) {
-        stopManagedSessionProcess(session);
+        if (session.kind === "managed") {
+          managedSessionsToStop.push(session);
+        }
         delete state.sessions[sessionId];
         removedByLeaseExpired += 1;
         continue;
       }
 
-      const reachable = await isCdpEndpointAlive(session.cdpOrigin, Math.max(CDP_HEALTHCHECK_TIMEOUT_MS, timeoutMs));
+      const reachable = probe?.reachable;
+      if (typeof reachable !== "boolean") {
+        continue;
+      }
       if (reachable) {
         state.sessions[sessionId] = withSessionHeartbeat(session);
         continue;
@@ -217,7 +257,7 @@ async function sessionPruneInternal(opts: {
         repairedManagedPid += 1;
       }
       if (shouldDropManaged) {
-        stopManagedSessionProcess(session);
+        managedSessionsToStop.push(session);
         delete state.sessions[sessionId];
         removedManagedUnreachable += 1;
         if (opts.dropManagedUnreachable) {
@@ -244,18 +284,25 @@ async function sessionPruneInternal(opts: {
     const removed = removedByLeaseExpired + removedAttachedUnreachable + removedManagedUnreachable;
 
     return {
-      activeSessionId: state.activeSessionId,
-      scanned,
-      kept,
-      removed,
-      removedByLeaseExpired,
-      removedAttachedUnreachable,
-      removedManagedUnreachable,
-      removedManagedByGrace,
-      removedManagedByFlag,
-      repairedManagedPid,
+      summary: {
+        activeSessionId: state.activeSessionId,
+        scanned,
+        kept,
+        removed,
+        removedByLeaseExpired,
+        removedAttachedUnreachable,
+        removedManagedUnreachable,
+        removedManagedByGrace,
+        removedManagedByFlag,
+        repairedManagedPid,
+      } satisfies SessionMaintenanceSummary,
+      managedSessionsToStop,
     };
   });
+  for (const session of applied.managedSessionsToStop) {
+    stopManagedSessionProcess(session);
+  }
+  return applied.summary;
 }
 
 function parseTargetPruneConfig(opts: {
@@ -290,7 +337,7 @@ function parseTargetPruneConfig(opts: {
 async function targetPruneInternal(opts: { maxAgeHours: number; maxPerSession: number }): Promise<TargetPruneReport> {
   const cutoffMs = Date.now() - opts.maxAgeHours * 60 * 60 * 1000;
 
-  return await mutateState(async (state) => {
+  return await mutateState((state) => {
     const entries = Object.entries(state.targets);
     const scanned = entries.length;
 
@@ -391,53 +438,69 @@ export async function sessionClear(opts: {
   const requestedSessionId =
     typeof opts.sessionId === "string" && opts.sessionId.trim().length > 0 ? sanitizeSessionId(opts.sessionId) : null;
   const scope: SessionClearReport["scope"] = requestedSessionId ? "session" : "all";
+  const snapshot = readState();
+  const allSnapshotSessions = Object.values(snapshot.sessions).sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+  const selectedSnapshotSessions =
+    requestedSessionId === null
+      ? allSnapshotSessions
+      : (() => {
+          const found = snapshot.sessions[requestedSessionId];
+          if (!found) {
+            throw new CliError("E_SESSION_NOT_FOUND", `Session ${requestedSessionId} not found`, {
+              hints: [
+                "Run `surfwright session list` to inspect known sessions",
+                "Use `surfwright session clear` without --session to clear all sessions",
+              ],
+              hintContext: {
+                requestedSessionId,
+                activeSessionId: snapshot.activeSessionId ?? null,
+                knownSessionCount: allSnapshotSessions.length,
+              },
+            });
+          }
+          return [found];
+        })();
 
-  return await mutateState(async (state) => {
-    const allSessions = Object.values(state.sessions).sort((a, b) => a.sessionId.localeCompare(b.sessionId));
-    const sessions =
-      requestedSessionId === null
-        ? allSessions
-        : (() => {
-            const found = state.sessions[requestedSessionId];
-            if (!found) {
-              throw new CliError("E_SESSION_NOT_FOUND", `Session ${requestedSessionId} not found`, {
-                hints: [
-                  "Run `surfwright session list` to inspect known sessions",
-                  "Use `surfwright session clear` without --session to clear all sessions",
-                ],
-                hintContext: {
-                  requestedSessionId,
-                  activeSessionId: state.activeSessionId ?? null,
-                  knownSessionCount: allSessions.length,
-                },
-              });
-            }
-            return [found];
-          })();
-    const scanned = sessions.length;
-    const clearedSessionIds = sessions.map((session) => session.sessionId);
-    const clearedSessionIdSet = new Set(clearedSessionIds);
-    let clearedManaged = 0;
-    let clearedAttached = 0;
-    let shutdownRequested = 0;
-    let shutdownSucceeded = 0;
-    let shutdownFailed = 0;
-
-    for (const session of sessions) {
-      if (session.kind === "managed") {
-        clearedManaged += 1;
-      } else {
-        clearedAttached += 1;
-      }
-      if (keepProcesses) {
-        continue;
-      }
+  let shutdownRequested = 0;
+  let shutdownSucceeded = 0;
+  let shutdownFailed = 0;
+  const preShutdownAttemptedSessionIds = new Set<string>();
+  if (!keepProcesses) {
+    for (const session of selectedSnapshotSessions) {
       shutdownRequested += 1;
+      preShutdownAttemptedSessionIds.add(session.sessionId);
       const stopped = await stopSessionProcess(session, timeoutMs);
       if (stopped) {
         shutdownSucceeded += 1;
       } else {
         shutdownFailed += 1;
+      }
+    }
+  }
+
+  const applied = await mutateState((state) => {
+    const allCurrentSessions = Object.values(state.sessions).sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+    const sessionsToClear =
+      requestedSessionId === null
+        ? allCurrentSessions
+        : (() => {
+            const found = state.sessions[requestedSessionId];
+            return found ? [found] : [];
+          })();
+    const scanned = sessionsToClear.length;
+    const clearedSessionIds = sessionsToClear.map((session) => session.sessionId);
+    const clearedSessionIdSet = new Set(clearedSessionIds);
+    let clearedManaged = 0;
+    let clearedAttached = 0;
+    const postShutdownSessions: SessionState[] = [];
+    for (const session of sessionsToClear) {
+      if (session.kind === "managed") {
+        clearedManaged += 1;
+      } else {
+        clearedAttached += 1;
+      }
+      if (!keepProcesses && !preShutdownAttemptedSessionIds.has(session.sessionId)) {
+        postShutdownSessions.push(session);
       }
     }
 
@@ -483,40 +546,66 @@ export async function sessionClear(opts: {
     if (state.activeSessionId && clearedSessionIdSet.has(state.activeSessionId)) {
       state.activeSessionId = null;
     }
-    const warnings: string[] = [];
-    if (scope === "all" && scanned >= 20) {
-      warnings.push(
-        `Cleared ${scanned} sessions in one pass; prefer --session <id> for scoped cleanup during active campaigns`,
-      );
-    }
-    if (!keepProcesses && shutdownFailed > 0) {
-      warnings.push(
-        `${shutdownFailed} session process shutdowns failed; run session prune/state reconcile to repair stale session mappings`,
-      );
-    }
 
     return {
-      ok: true,
       activeSessionId: state.activeSessionId,
-      scope,
-      requestedSessionId,
       scanned,
       cleared: scanned,
       clearedSessionIds,
       clearedManaged,
       clearedAttached,
-      keepProcesses,
-      processShutdown: {
-        requested: shutdownRequested,
-        succeeded: shutdownSucceeded,
-        failed: shutdownFailed,
-      },
       targetsRemoved,
       networkCapturesRemoved,
       networkArtifactsRemoved,
-      warnings,
+      postShutdownSessions,
     };
   });
+
+  if (!keepProcesses) {
+    for (const session of applied.postShutdownSessions) {
+      shutdownRequested += 1;
+      const stopped = await stopSessionProcess(session, timeoutMs);
+      if (stopped) {
+        shutdownSucceeded += 1;
+      } else {
+        shutdownFailed += 1;
+      }
+    }
+  }
+
+  const warnings: string[] = [];
+  if (scope === "all" && applied.scanned >= 20) {
+    warnings.push(
+      `Cleared ${applied.scanned} sessions in one pass; prefer --session <id> for scoped cleanup during active campaigns`,
+    );
+  }
+  if (!keepProcesses && shutdownFailed > 0) {
+    warnings.push(
+      `${shutdownFailed} session process shutdowns failed; run session prune/state reconcile to repair stale session mappings`,
+    );
+  }
+
+  return {
+    ok: true,
+    activeSessionId: applied.activeSessionId,
+    scope,
+    requestedSessionId,
+    scanned: applied.scanned,
+    cleared: applied.cleared,
+    clearedSessionIds: applied.clearedSessionIds,
+    clearedManaged: applied.clearedManaged,
+    clearedAttached: applied.clearedAttached,
+    keepProcesses,
+    processShutdown: {
+      requested: shutdownRequested,
+      succeeded: shutdownSucceeded,
+      failed: shutdownFailed,
+    },
+    targetsRemoved: applied.targetsRemoved,
+    networkCapturesRemoved: applied.networkCapturesRemoved,
+    networkArtifactsRemoved: applied.networkArtifactsRemoved,
+    warnings,
+  };
 }
 
 export async function targetPrune(opts: { maxAgeHours?: number; maxPerSession?: number }): Promise<TargetPruneReport> {

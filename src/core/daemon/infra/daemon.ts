@@ -1,3 +1,4 @@
+import process from "node:process";
 import { allocateFreePort } from "../../browser.js";
 import { stateRootDir } from "../../state/index.js";
 import { providers } from "../../providers/index.js";
@@ -9,6 +10,9 @@ const DAEMON_REQUEST_TIMEOUT_MS = 120000;
 const DAEMON_PING_TIMEOUT_MS = 250;
 const DAEMON_RETRY_DELAY_MS = 60;
 const MAX_FRAME_BYTES = 1024 * 1024 * 4;
+const DAEMON_START_LOCK_FILENAME = "daemon.start.lock";
+const DAEMON_START_LOCK_TIMEOUT_MS = 5000;
+const DAEMON_START_LOCK_STALE_MS = 15000;
 
 export type DaemonRunResult = {
   code: number;
@@ -64,6 +68,10 @@ type DaemonResponse =
 
 function daemonMetaPath(): string {
   return providers().path.join(stateRootDir(), "daemon.json");
+}
+
+function daemonStartLockPath(): string {
+  return providers().path.join(stateRootDir(), DAEMON_START_LOCK_FILENAME);
 }
 
 function parsePositiveInt(value: unknown): number | null {
@@ -135,6 +143,88 @@ function removeDaemonMeta(): void {
     providers().fs.unlinkSync(daemonMetaPath());
   } catch {
     // ignore missing metadata
+  }
+}
+
+function parseDaemonStartLockTimestampMs(lockPath: string): number | null {
+  try {
+    const raw = providers().fs.readFileSync(lockPath, "utf8");
+    const parsed = JSON.parse(raw) as { createdAt?: unknown } | null;
+    if (parsed && typeof parsed.createdAt === "string") {
+      const ms = Date.parse(parsed.createdAt);
+      if (Number.isFinite(ms)) {
+        return ms;
+      }
+    }
+  } catch {
+    // fall back to file stat mtime
+  }
+  try {
+    const stat = providers().fs.statSync(lockPath);
+    return Number.isFinite(stat.mtimeMs) ? stat.mtimeMs : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseDaemonStartLockOwnerPid(lockPath: string): number | null {
+  try {
+    const raw = providers().fs.readFileSync(lockPath, "utf8");
+    const parsed = JSON.parse(raw) as { pid?: unknown } | null;
+    if (!parsed) {
+      return null;
+    }
+    const pid = typeof parsed.pid === "number" ? Math.floor(parsed.pid) : Number.NaN;
+    if (!Number.isFinite(pid) || pid <= 0) {
+      return null;
+    }
+    return pid;
+  } catch {
+    return null;
+  }
+}
+
+function clearStaleDaemonStartLock(lockPath: string): boolean {
+  const ownerPid = parseDaemonStartLockOwnerPid(lockPath);
+  if (typeof ownerPid === "number" && ownerPid > 0 && isProcessAlive(ownerPid)) {
+    return false;
+  }
+  const createdMs = parseDaemonStartLockTimestampMs(lockPath);
+  if (createdMs !== null && Date.now() - createdMs < DAEMON_START_LOCK_STALE_MS) {
+    if (typeof ownerPid !== "number" || ownerPid <= 0) {
+      return false;
+    }
+  }
+  try {
+    providers().fs.unlinkSync(lockPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tryCreateDaemonStartLock(lockPath: string): boolean {
+  try {
+    providers().fs.writeFileSync(
+      lockPath,
+      `${JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() })}\n`,
+      { encoding: "utf8", flag: "wx" },
+    );
+    return true;
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    if (err.code === "EEXIST") {
+      return false;
+    }
+    return false;
+  }
+}
+
+function releaseDaemonStartLock(lockPath: string): void {
+  try {
+    providers().fs.unlinkSync(lockPath);
+  } catch {
+    // ignore missing lock
   }
 }
 
@@ -324,49 +414,74 @@ async function startDaemon(entryScriptPath: string): Promise<boolean> {
   if (existing) {
     return true;
   }
-
-  const { childProcess, crypto, env, runtime } = providers();
-  const port = await allocateFreePort();
-  const token = crypto.randomBytes(18).toString("hex");
-  const child = childProcess.spawn(
-    runtime.execPath,
-    [entryScriptPath, "__daemon-worker", "--port", String(port), "--token", token],
-    {
-      detached: true,
-      stdio: "ignore",
-      env: {
-        ...env.snapshot(),
-        SURFWRIGHT_DAEMON_CHILD: "1",
-      },
-    },
-  );
-  child.unref();
-
-  if (typeof child.pid !== "number" || child.pid <= 0) {
-    return false;
-  }
-
-  const meta: DaemonMeta = {
-    version: DAEMON_META_VERSION,
-    pid: child.pid,
-    host: DAEMON_HOST,
-    port,
-    token,
-    startedAt: new Date().toISOString(),
-  };
-  writeDaemonMeta(meta);
-
-  const ready = await waitForDaemonReady(meta, DAEMON_STARTUP_TIMEOUT_MS);
-  if (!ready) {
-    try {
-      runtime.kill(child.pid, "SIGTERM");
-    } catch {
-      // ignore
+  const { fs } = providers();
+  fs.mkdirSync(stateRootDir(), { recursive: true });
+  const startLockPath = daemonStartLockPath();
+  const startLockDeadline = Date.now() + DAEMON_START_LOCK_TIMEOUT_MS;
+  while (Date.now() < startLockDeadline) {
+    const liveMeta = readAliveDaemonMeta();
+    if (liveMeta) {
+      return true;
     }
-    removeDaemonMeta();
-    return false;
+    if (!tryCreateDaemonStartLock(startLockPath)) {
+      clearStaleDaemonStartLock(startLockPath);
+      await new Promise((resolve) => setTimeout(resolve, DAEMON_RETRY_DELAY_MS));
+      continue;
+    }
+
+    try {
+      const recheck = readAliveDaemonMeta();
+      if (recheck) {
+        return true;
+      }
+
+      const { childProcess, crypto, env, runtime } = providers();
+      const port = await allocateFreePort();
+      const token = crypto.randomBytes(18).toString("hex");
+      const child = childProcess.spawn(
+        runtime.execPath,
+        [entryScriptPath, "__daemon-worker", "--port", String(port), "--token", token],
+        {
+          detached: true,
+          stdio: "ignore",
+          env: {
+            ...env.snapshot(),
+            SURFWRIGHT_DAEMON_CHILD: "1",
+          },
+        },
+      );
+      child.unref();
+
+      if (typeof child.pid !== "number" || child.pid <= 0) {
+        return false;
+      }
+
+      const meta: DaemonMeta = {
+        version: DAEMON_META_VERSION,
+        pid: child.pid,
+        host: DAEMON_HOST,
+        port,
+        token,
+        startedAt: new Date().toISOString(),
+      };
+      writeDaemonMeta(meta);
+
+      const ready = await waitForDaemonReady(meta, DAEMON_STARTUP_TIMEOUT_MS);
+      if (!ready) {
+        try {
+          runtime.kill(child.pid, "SIGTERM");
+        } catch {
+          // ignore
+        }
+        removeDaemonMeta();
+        return false;
+      }
+      return true;
+    } finally {
+      releaseDaemonStartLock(startLockPath);
+    }
   }
-  return true;
+  return readAliveDaemonMeta() !== null;
 }
 
 export function daemonProxyEnabled(): boolean {

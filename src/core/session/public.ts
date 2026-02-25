@@ -1,7 +1,7 @@
 import {
   allocateFreePort,
-  ensureDefaultManagedSession,
   ensureSessionReachable,
+  killManagedBrowserProcessTree,
   normalizeCdpOrigin,
   redactCdpEndpointForDisplay,
   resolveCdpEndpointForAttach,
@@ -28,7 +28,7 @@ import {
   withSessionHeartbeat,
 } from "./app/hygiene.js";
 import { buildSessionReport } from "../session-report.js";
-import type { DoctorReport, OpenReport, SessionListReport, SessionReport, SessionState } from "../types.js";
+import { DEFAULT_SESSION_ID, type DoctorReport, type OpenReport, type SessionListReport, type SessionReport, type SessionState } from "../types.js";
 import { parseManagedBrowserMode } from "./app/browser-mode.js";
 import { openUrl as openUrlInternal } from "./infra/open.js";
 import { getDoctorReport as getDoctorReportInternal } from "./infra/doctor.js";
@@ -126,7 +126,7 @@ export async function sessionEnsure(opts: { timeoutMs: number; browserModeInput?
         opts.timeoutMs,
         desiredBrowserMode ? { browserMode: desiredBrowserMode } : undefined,
       );
-      return await mutateState(async (state) => {
+      return await mutateState((state) => {
         const current = state.sessions[activeId];
         if (!current) {
           throw new CliError("E_SESSION_NOT_FOUND", `Session ${activeId} not found`);
@@ -148,19 +148,75 @@ export async function sessionEnsure(opts: { timeoutMs: number; browserModeInput?
     }
   }
 
-  return await mutateState(async (state) => {
-    const ensuredDefault = await ensureDefaultManagedSession(
-      state,
+  const defaultSnapshot = readState();
+  const existingDefault = defaultSnapshot.sessions[DEFAULT_SESSION_ID];
+  if (existingDefault) {
+    if (existingDefault.kind !== "managed") {
+      throw new CliError("E_SESSION_CONFLICT", `Reserved session ${DEFAULT_SESSION_ID} is not managed`);
+    }
+    const ensuredDefault = await ensureSessionReachable(
+      existingDefault,
       opts.timeoutMs,
       desiredBrowserMode ? { browserMode: desiredBrowserMode } : undefined,
     );
-    state.activeSessionId = ensuredDefault.session.sessionId;
-    return buildSessionReport(ensuredDefault.session, {
-      active: true,
-      created: ensuredDefault.created,
-      restarted: ensuredDefault.restarted,
+    return await mutateState((state) => {
+      const current = state.sessions[DEFAULT_SESSION_ID];
+      if (!current) {
+        throw new CliError("E_SESSION_NOT_FOUND", `Session ${DEFAULT_SESSION_ID} not found`);
+      }
+      if (current.kind !== "managed") {
+        throw new CliError("E_SESSION_CONFLICT", `Reserved session ${DEFAULT_SESSION_ID} is not managed`);
+      }
+      state.sessions[DEFAULT_SESSION_ID] = ensuredDefault.session;
+      state.activeSessionId = DEFAULT_SESSION_ID;
+      return buildSessionReport(ensuredDefault.session, {
+        active: true,
+        created: false,
+        restarted: ensuredDefault.restarted,
+      });
     });
-  });
+  }
+
+  try {
+    return await sessionNew({
+      timeoutMs: opts.timeoutMs,
+      requestedSessionId: DEFAULT_SESSION_ID,
+      browserModeInput: opts.browserModeInput,
+    });
+  } catch (error) {
+    if (!(error instanceof CliError) || error.code !== "E_SESSION_EXISTS") {
+      throw error;
+    }
+    const refreshed = readState();
+    const concurrentDefault = refreshed.sessions[DEFAULT_SESSION_ID];
+    if (!concurrentDefault) {
+      throw error;
+    }
+    if (concurrentDefault.kind !== "managed") {
+      throw new CliError("E_SESSION_CONFLICT", `Reserved session ${DEFAULT_SESSION_ID} is not managed`);
+    }
+    const ensuredDefault = await ensureSessionReachable(
+      concurrentDefault,
+      opts.timeoutMs,
+      desiredBrowserMode ? { browserMode: desiredBrowserMode } : undefined,
+    );
+    return await mutateState((state) => {
+      const current = state.sessions[DEFAULT_SESSION_ID];
+      if (!current) {
+        throw new CliError("E_SESSION_NOT_FOUND", `Session ${DEFAULT_SESSION_ID} not found`);
+      }
+      if (current.kind !== "managed") {
+        throw new CliError("E_SESSION_CONFLICT", `Reserved session ${DEFAULT_SESSION_ID} is not managed`);
+      }
+      state.sessions[DEFAULT_SESSION_ID] = ensuredDefault.session;
+      state.activeSessionId = DEFAULT_SESSION_ID;
+      return buildSessionReport(ensuredDefault.session, {
+        active: true,
+        created: false,
+        restarted: ensuredDefault.restarted,
+      });
+    });
+  }
 }
 
 export async function sessionNew(opts: {
@@ -178,42 +234,50 @@ export async function sessionNew(opts: {
   if (typeof opts.leaseTtlMs === "number" && leaseTtlMs === null) {
     throw new CliError("E_QUERY_INVALID", "lease-ttl-ms must be a positive integer within supported bounds");
   }
-
-  return await mutateState(async (state) => {
-    const sessionId = opts.requestedSessionId
-      ? sanitizeSessionId(opts.requestedSessionId)
-      : allocateSessionIdForState(state, "s");
-    assertSessionDoesNotExist(state, sessionId);
-    const debugPort = await allocateFreePort();
-    const browserMode = parseManagedBrowserMode(opts.browserModeInput) ?? "headless";
-    const session = await startManagedSession(
-      {
-        sessionId,
-        debugPort,
-        userDataDir: defaultSessionUserDataDir(sessionId),
-        browserMode,
-        policy: policy ?? defaultSessionPolicyForKind("managed"),
-        createdAt: nowIso(),
-      },
-      opts.timeoutMs,
-    );
-    state.sessions[sessionId] =
-      leaseTtlMs === null
-        ? session
-        : withSessionHeartbeat(
-            {
-              ...session,
-              leaseTtlMs,
-            },
-            session.lastSeenAt,
-          );
-    state.activeSessionId = sessionId;
-    return buildSessionReport(state.sessions[sessionId], {
-      active: true,
-      created: true,
-      restarted: false,
-    });
+  const requestedSessionId = opts.requestedSessionId ? sanitizeSessionId(opts.requestedSessionId) : undefined;
+  const browserMode = parseManagedBrowserMode(opts.browserModeInput) ?? "headless";
+  const sessionId = await mutateState((state) => {
+    const resolvedSessionId = requestedSessionId ?? allocateSessionIdForState(state, "s");
+    assertSessionDoesNotExist(state, resolvedSessionId);
+    return resolvedSessionId;
   });
+  const debugPort = await allocateFreePort();
+  const started = await startManagedSession(
+    {
+      sessionId,
+      debugPort,
+      userDataDir: defaultSessionUserDataDir(sessionId),
+      browserMode,
+      policy: policy ?? defaultSessionPolicyForKind("managed"),
+      createdAt: nowIso(),
+    },
+    opts.timeoutMs,
+  );
+  const hydrated =
+    leaseTtlMs === null
+      ? started
+      : withSessionHeartbeat(
+          {
+            ...started,
+            leaseTtlMs,
+          },
+          started.lastSeenAt,
+        );
+  try {
+    return await mutateState((state) => {
+      assertSessionDoesNotExist(state, sessionId);
+      state.sessions[sessionId] = hydrated;
+      state.activeSessionId = sessionId;
+      return buildSessionReport(hydrated, {
+        active: true,
+        created: true,
+        restarted: false,
+      });
+    });
+  } catch (error) {
+    killManagedBrowserProcessTree(started.browserPid ?? null, "SIGTERM");
+    throw error;
+  }
 }
 
 export async function sessionAttach(opts: {
@@ -242,7 +306,7 @@ export async function sessionAttach(opts: {
     throw new CliError("E_QUERY_INVALID", "lease-ttl-ms must be a positive integer within supported bounds");
   }
 
-  return await mutateState(async (state) => {
+  return await mutateState((state) => {
     const sessionId = requestedSessionId ?? allocateSessionIdForState(state, "a");
     assertSessionDoesNotExist(state, sessionId);
     const attachedAt = nowIso();
@@ -284,7 +348,7 @@ export async function sessionUse(opts: { timeoutMs: number; sessionIdInput: stri
   }
   const ensured = await ensureSessionReachable(existing, opts.timeoutMs);
 
-  return await mutateState(async (state) => {
+  return await mutateState((state) => {
     const current = state.sessions[sessionId];
     if (!current) {
       throw new CliError("E_SESSION_NOT_FOUND", `Session ${sessionId} not found`);

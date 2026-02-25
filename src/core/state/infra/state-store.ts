@@ -10,7 +10,7 @@ const SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 const STATE_LOCK_FILENAME = "state.lock";
 const STATE_LOCK_RETRY_MS = 40;
 const STATE_LOCK_TIMEOUT_MS = 12000;
-const STATE_LOCK_STALE_MS = 20000;
+const STATE_LOCK_STALE_MS = 12000;
 export function stateRootDir(): string {
   const fromEnv = process.env.SURFWRIGHT_STATE_DIR;
   if (typeof fromEnv === "string" && fromEnv.trim().length > 0) {
@@ -310,12 +310,58 @@ function readLockTimestampMs(lockPath: string): number | null {
   }
 }
 
+function parseLockOwnerPid(lockPath: string): number | null {
+  try {
+    const raw = fs.readFileSync(lockPath, "utf8");
+    const parsed = JSON.parse(raw) as { pid?: unknown } | null;
+    if (!parsed) {
+      return null;
+    }
+    const pid = typeof parsed.pid === "number" ? Math.floor(parsed.pid) : Number.NaN;
+    if (!Number.isFinite(pid) || pid <= 0) {
+      return null;
+    }
+    return pid;
+  } catch {
+    return null;
+  }
+}
+
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function clearStaleLock(lockPath: string): boolean {
   const createdMs = readLockTimestampMs(lockPath);
+  const ownerPid = parseLockOwnerPid(lockPath);
+  if (typeof ownerPid === "number" && ownerPid > 0 && isPidAlive(ownerPid)) {
+    return false;
+  }
   if (createdMs === null) {
+    if (typeof ownerPid === "number" && ownerPid > 0) {
+      try {
+        fs.unlinkSync(lockPath);
+        return true;
+      } catch {
+        return false;
+      }
+    }
     return false;
   }
   if (Date.now() - createdMs < STATE_LOCK_STALE_MS) {
+    if (typeof ownerPid === "number" && ownerPid > 0) {
+      try {
+        fs.unlinkSync(lockPath);
+        return true;
+      } catch {
+        return false;
+      }
+    }
     return false;
   }
   try {
@@ -368,6 +414,7 @@ async function withStateLock<T>(fn: () => Promise<T>): Promise<T> {
   const rootDir = stateRootDir();
   fs.mkdirSync(rootDir, { recursive: true });
   const lockPath = stateLockFilePath();
+  const waitStartedMs = Date.now();
   const deadline = Date.now() + STATE_LOCK_TIMEOUT_MS;
   while (true) {
     if (tryCreateLock(lockPath)) {
@@ -379,6 +426,18 @@ async function withStateLock<T>(fn: () => Promise<T>): Promise<T> {
     }
     clearStaleLock(lockPath);
     if (Date.now() >= deadline) {
+      const ownerPid = parseLockOwnerPid(lockPath);
+      const ownerAlive = typeof ownerPid === "number" ? isPidAlive(ownerPid) : null;
+      if (ownerAlive === false) {
+        clearStaleLock(lockPath);
+        if (tryCreateLock(lockPath)) {
+          try {
+            return await fn();
+          } finally {
+            releaseLock(lockPath);
+          }
+        }
+      }
       const lockCreatedMs = readLockTimestampMs(lockPath);
       const lockAgeMs = typeof lockCreatedMs === "number" ? Math.max(0, Date.now() - lockCreatedMs) : null;
       throw new CliError("E_STATE_LOCK_TIMEOUT", "Timed out waiting for state lock", {
@@ -391,6 +450,10 @@ async function withStateLock<T>(fn: () => Promise<T>): Promise<T> {
           lockPath,
           lockAgeMs,
           timeoutMs: STATE_LOCK_TIMEOUT_MS,
+          waitMs: Math.max(0, Date.now() - waitStartedMs),
+          lockOwnerPid: ownerPid ?? null,
+          lockOwnerAlive: ownerAlive,
+          stateRoot: rootDir,
         },
       });
     }

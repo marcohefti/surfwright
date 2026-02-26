@@ -2,6 +2,7 @@ import process from "node:process";
 import { allocateFreePort } from "../../browser.js";
 import { stateRootDir } from "../../state/index.js";
 import { providers } from "../../providers/index.js";
+import { sendDaemonRequest, waitForDaemonReady } from "./daemon-transport.js";
 
 const DAEMON_META_VERSION = 1;
 const DAEMON_HOST = "127.0.0.1";
@@ -9,7 +10,6 @@ const DAEMON_STARTUP_TIMEOUT_MS = 4500;
 const DAEMON_REQUEST_TIMEOUT_MS = 120000;
 const DAEMON_PING_TIMEOUT_MS = 250;
 const DAEMON_RETRY_DELAY_MS = 60;
-const MAX_FRAME_BYTES = 1024 * 1024 * 4;
 const DAEMON_START_LOCK_FILENAME = "daemon.start.lock";
 const DAEMON_START_LOCK_TIMEOUT_MS = 5000;
 const DAEMON_START_LOCK_STALE_MS = 15000;
@@ -20,6 +20,21 @@ export type DaemonRunResult = {
   stderr: string;
 };
 
+export type DaemonClientOutcome =
+  | {
+      kind: "success";
+      result: DaemonRunResult;
+    }
+  | {
+      kind: "typed_daemon_error";
+      code: string;
+      message: string;
+    }
+  | {
+      kind: "unreachable";
+      message: string;
+    };
+
 type DaemonMeta = {
   version: number;
   pid: number;
@@ -28,43 +43,6 @@ type DaemonMeta = {
   token: string;
   startedAt: string;
 };
-
-type DaemonRequest =
-  | {
-      token: string;
-      kind: "ping";
-    }
-  | {
-      token: string;
-      kind: "shutdown";
-    }
-  | {
-      token: string;
-      kind: "run";
-      argv: string[];
-    };
-
-type DaemonResponse =
-  | {
-      ok: true;
-      kind: "pong";
-    }
-  | {
-      ok: true;
-      kind: "shutdown";
-    }
-  | {
-      ok: true;
-      kind: "run";
-      code: number;
-      stdout: string;
-      stderr: string;
-    }
-  | {
-      ok: false;
-      code: string;
-      message: string;
-    };
 
 function daemonMetaPath(): string {
   return providers().path.join(stateRootDir(), "daemon.json");
@@ -82,12 +60,25 @@ function parsePositiveInt(value: unknown): number | null {
   return parsed > 0 ? parsed : null;
 }
 
+function currentProcessUid(): number | null {
+  if (typeof process.getuid !== "function") {
+    return null;
+  }
+  try {
+    const uid = process.getuid();
+    return Number.isFinite(uid) ? uid : null;
+  } catch {
+    return null;
+  }
+}
+
 function readDaemonMeta(): DaemonMeta | null {
   try {
     const { fs, runtime } = providers();
     if (runtime.platform !== "win32") {
       const stat = fs.statSync(daemonMetaPath());
-      if ((stat.mode & 0o077) !== 0) {
+      const expectedUid = currentProcessUid();
+      if ((stat.mode & 0o077) !== 0 || (expectedUid !== null && typeof stat.uid === "number" && stat.uid !== expectedUid)) {
         removeDaemonMeta();
         return null;
       }
@@ -252,163 +243,6 @@ function readAliveDaemonMeta(): DaemonMeta | null {
   return meta;
 }
 
-function parseDaemonResponse(value: unknown): DaemonResponse | null {
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const parsed = value as Partial<DaemonResponse>;
-  if (parsed.ok === false && typeof parsed.code === "string" && typeof parsed.message === "string") {
-    return {
-      ok: false,
-      code: parsed.code,
-      message: parsed.message,
-    };
-  }
-  if (parsed.ok !== true || typeof parsed.kind !== "string") {
-    return null;
-  }
-  if (parsed.kind === "pong") {
-    return {
-      ok: true,
-      kind: "pong",
-    };
-  }
-  if (parsed.kind === "shutdown") {
-    return {
-      ok: true,
-      kind: "shutdown",
-    };
-  }
-  if (
-    parsed.kind === "run" &&
-    typeof parsed.code === "number" &&
-    Number.isFinite(parsed.code) &&
-    typeof parsed.stdout === "string" &&
-    typeof parsed.stderr === "string"
-  ) {
-    return {
-      ok: true,
-      kind: "run",
-      code: parsed.code,
-      stdout: parsed.stdout,
-      stderr: parsed.stderr,
-    };
-  }
-  return null;
-}
-
-async function sendDaemonRequest(meta: DaemonMeta, request: DaemonRequest, timeoutMs: number): Promise<DaemonResponse> {
-  return await new Promise<DaemonResponse>((resolve, reject) => {
-    const socket = providers().net.createConnection({ host: DAEMON_HOST, port: meta.port });
-    let settled = false;
-    let buffer = "";
-    let bufferBytes = 0;
-
-    const timer = setTimeout(() => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      socket.destroy();
-      reject(new Error("daemon request timed out"));
-    }, timeoutMs);
-
-    const finish = (error: Error | null, response?: DaemonResponse) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timer);
-      socket.destroy();
-      if (error) {
-        reject(error);
-        return;
-      }
-      if (!response) {
-        reject(new Error("daemon returned empty response"));
-        return;
-      }
-      resolve(response);
-    };
-
-    socket.setEncoding("utf8");
-    socket.on("error", (error) => {
-      finish(error instanceof Error ? error : new Error("daemon connection error"));
-    });
-
-    socket.on("connect", () => {
-      socket.write(`${JSON.stringify(request)}\n`);
-    });
-
-    socket.on("data", (chunk: string) => {
-      buffer += chunk;
-      bufferBytes += Buffer.byteLength(chunk, "utf8");
-      const newlineIndex = buffer.indexOf("\n");
-      if (newlineIndex === -1) {
-        if (bufferBytes > MAX_FRAME_BYTES) {
-          finish(new Error("daemon returned oversized response frame"));
-        }
-        return;
-      }
-      const rawLine = buffer.slice(0, newlineIndex).trim();
-      if (Buffer.byteLength(rawLine, "utf8") > MAX_FRAME_BYTES) {
-        finish(new Error("daemon returned oversized response frame"));
-        return;
-      }
-      if (rawLine.length === 0) {
-        finish(new Error("daemon returned blank response"));
-        return;
-      }
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(rawLine);
-      } catch {
-        finish(new Error("daemon returned invalid JSON"));
-        return;
-      }
-      const response = parseDaemonResponse(parsed);
-      if (!response) {
-        finish(new Error("daemon returned unsupported payload"));
-        return;
-      }
-      finish(null, response);
-    });
-
-    socket.on("end", () => {
-      if (!settled) {
-        finish(new Error("daemon closed connection before response"));
-      }
-    });
-  });
-}
-
-async function tryPing(meta: DaemonMeta): Promise<boolean> {
-  try {
-    const response = await sendDaemonRequest(
-      meta,
-      {
-        token: meta.token,
-        kind: "ping",
-      },
-      DAEMON_PING_TIMEOUT_MS,
-    );
-    return response.ok === true && response.kind === "pong";
-  } catch {
-    return false;
-  }
-}
-
-async function waitForDaemonReady(meta: DaemonMeta, timeoutMs: number): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (await tryPing(meta)) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, DAEMON_RETRY_DELAY_MS));
-  }
-  return false;
-}
-
 async function startDaemon(entryScriptPath: string): Promise<boolean> {
   const existing = readAliveDaemonMeta();
   if (existing) {
@@ -466,7 +300,14 @@ async function startDaemon(entryScriptPath: string): Promise<boolean> {
       };
       writeDaemonMeta(meta);
 
-      const ready = await waitForDaemonReady(meta, DAEMON_STARTUP_TIMEOUT_MS);
+      const ready = await waitForDaemonReady({
+        host: DAEMON_HOST,
+        port: meta.port,
+        token: meta.token,
+        timeoutMs: DAEMON_STARTUP_TIMEOUT_MS,
+        retryDelayMs: DAEMON_RETRY_DELAY_MS,
+        pingTimeoutMs: DAEMON_PING_TIMEOUT_MS,
+      });
       if (!ready) {
         try {
           runtime.kill(child.pid, "SIGTERM");
@@ -496,47 +337,70 @@ export function daemonProxyEnabled(): boolean {
   return false;
 }
 
-export async function runViaDaemon(argv: string[], entryScriptPath: string): Promise<DaemonRunResult | null> {
+export async function runViaDaemon(argv: string[], entryScriptPath: string): Promise<DaemonClientOutcome> {
   if (!daemonProxyEnabled()) {
-    return null;
+    return {
+      kind: "unreachable",
+      message: "daemon proxy disabled",
+    };
   }
 
   let meta = readAliveDaemonMeta();
   if (!meta) {
     const started = await startDaemon(entryScriptPath);
     if (!started) {
-      return null;
+      return {
+        kind: "unreachable",
+        message: "daemon failed to start",
+      };
     }
     meta = readAliveDaemonMeta();
     if (!meta) {
-      return null;
+      return {
+        kind: "unreachable",
+        message: "daemon metadata unavailable after start",
+      };
     }
   }
 
   try {
-    const response = await sendDaemonRequest(
-      meta,
-      {
+    const response = await sendDaemonRequest({
+      host: DAEMON_HOST,
+      port: meta.port,
+      request: {
         token: meta.token,
         kind: "run",
         argv,
       },
-      DAEMON_REQUEST_TIMEOUT_MS,
-    );
+      timeoutMs: DAEMON_REQUEST_TIMEOUT_MS,
+    });
     if (!response.ok) {
-      return null;
+      return {
+        kind: "typed_daemon_error",
+        code: response.code,
+        message: response.message,
+      };
     }
     if (response.kind !== "run") {
-      return null;
+      return {
+        kind: "unreachable",
+        message: "daemon returned non-run response kind",
+      };
     }
     return {
-      code: response.code,
-      stdout: response.stdout,
-      stderr: response.stderr,
+      kind: "success",
+      result: {
+        code: response.code,
+        stdout: response.stdout,
+        stderr: response.stderr,
+      },
     };
   } catch {
     removeDaemonMeta();
-    return null;
+    return {
+      kind: "unreachable",
+      message: "daemon request failed",
+    };
   }
 }
 
@@ -548,14 +412,15 @@ export async function stopDaemonIfRunning(): Promise<boolean> {
   }
 
   try {
-    await sendDaemonRequest(
-      meta,
-      {
+    await sendDaemonRequest({
+      host: DAEMON_HOST,
+      port: meta.port,
+      request: {
         token: meta.token,
         kind: "shutdown",
       },
-      DAEMON_PING_TIMEOUT_MS,
-    );
+      timeoutMs: DAEMON_PING_TIMEOUT_MS,
+    });
   } catch {
     // Fall back to process kill if daemon cannot be reached.
     try {

@@ -5,6 +5,11 @@ All notable changes to SurfWright are documented here.
 ## [Unreleased]
 
 ### Added
+- [daemon] Added lane-based daemon scheduler defaults with explicit backpressure contracts (`laneConcurrency=1`, `globalActiveLanes=8`, `laneQueueDepth=8`, `queueWaitMs=2000`) and typed queue failure routing (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`).
+- [daemon] Added shared runtime access + runtime pool state machine (`absent|warming|ready|degraded|draining|closed`) with contract coverage for no-double-warm, timeout recycle, repeated-timeout hard-close, and session mismatch fail-closed behavior.
+- [daemon] Added local diagnostics sink files (`diagnostics/daemon.ndjson`, `diagnostics/daemon.metrics.ndjson`) with default-off verbose gating (`SURFWRIGHT_DEBUG_LOGS=1`) and required daemon metric emission.
+- [daemon] Added metadata hardening enforcement for daemon state (`0600` permission + ownership validation on POSIX) with rejection+cleanup coverage for weak metadata.
+- [bench] Added direct CLI benchmark artifact set for daemon-on workloads `W1`, `W4`, `W6` with per-attempt elapsed/code/queue/RSS captures under `tmp/daemon-concept/artifacts/`.
 - [open] Added `open --wait-until <commit|domcontentloaded|load|networkidle>` and additive output fields `waitUntil`, `reuseMode`, `reusedTarget` for explicit navigation/readiness evidence.
 - [open] Added `open --reuse <off|url|origin|active>` for explicit tab-reuse policy.
 - [target] Added `target style` for first-class computed-style inspection without `target eval` scripting.

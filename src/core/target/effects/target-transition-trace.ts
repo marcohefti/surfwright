@@ -9,6 +9,7 @@ import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cd
 import type { BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetTransitionTraceReport } from "./types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 const DEFAULT_TRANSITION_TRACE_CAPTURE_MS = 2500;
 const MAX_TRANSITION_TRACE_CAPTURE_MS = 60_000;
@@ -93,7 +94,7 @@ export async function targetTransitionTrace(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

@@ -1,11 +1,7 @@
 import { CliError } from "./errors.js";
+import { requestContextEnvGet } from "./request-context.js";
 
 export type ReportOutputShape = "full" | "compact" | "proof";
-let runtimeOutputShapeInput: string | undefined;
-
-export function setRuntimeOutputShapeInput(input: string | undefined): void {
-  runtimeOutputShapeInput = input;
-}
 
 function parseOutputShape(input: string | undefined): ReportOutputShape {
   const value = typeof input === "string" ? input.trim().toLowerCase() : "";
@@ -230,7 +226,7 @@ export function parseFieldsCsv(input: string | undefined): string[] | null {
 }
 
 export function projectReportFields<T extends Record<string, unknown>>(report: T, fields: string[] | null): Record<string, unknown> {
-  const outputShape = parseOutputShape(runtimeOutputShapeInput);
+  const outputShape = parseOutputShape(requestContextEnvGet("SURFWRIGHT_OUTPUT_SHAPE"));
   const shaped = applyOutputShape(report, outputShape);
   if (!fields || fields.length === 0) {
     return shaped;

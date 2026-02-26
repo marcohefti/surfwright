@@ -36,6 +36,8 @@ export const errorContracts: CliErrorContract[] = [
   { code: "E_SELECTOR_INVALID", message: "Selector query is invalid", retryable: false },
   { code: "E_CDP_INVALID", message: "CDP URL is invalid", retryable: false },
   { code: "E_CDP_UNREACHABLE", message: "CDP endpoint is not reachable", retryable: true },
+  { code: "E_DAEMON_QUEUE_TIMEOUT", message: "Daemon queue wait budget expired before dispatch", retryable: true },
+  { code: "E_DAEMON_QUEUE_SATURATED", message: "Daemon lane queue depth cap reached; request rejected", retryable: true },
   { code: "E_BROWSER_NOT_FOUND", message: "No compatible Chrome/Chromium binary found", retryable: false },
   { code: "E_BROWSER_START_FAILED", message: "Chrome/Chromium process failed to start", retryable: true },
   { code: "E_BROWSER_START_TIMEOUT", message: "CDP endpoint did not become ready in time", retryable: true },

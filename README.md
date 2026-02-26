@@ -71,6 +71,16 @@ SurfWright is an agent-native browser harness:
 - a local daemon path enabled by default for fast, stateful command loops
 - using Chrome/Chromium via CDP, with Playwright as the control engine
 
+## Daemon Flags (Single Source Of Truth)
+
+| Variable | Values | Behavior |
+| --- | --- | --- |
+| `SURFWRIGHT_DAEMON` | `0` | Hard-off mode: daemon must not spawn and CLI must not proxy through daemon. |
+| `SURFWRIGHT_DAEMON` | `1` | Force daemon-enabled path (subject to documented bypass classes). |
+| `SURFWRIGHT_DAEMON` | unset | Lean v1 default: daemon-on. |
+| `SURFWRIGHT_DAEMON_IDLE_MS` | `<ms>` | Override idle shutdown timing for diagnostics/tuning. |
+| `SURFWRIGHT_DEBUG_LOGS` | `1` | Enable verbose local diagnostics logging (default is off). |
+
 ## Availability
 
 Pre-alpha. Core `session.*` and the `open -> target.*` flow are stable enough for daily agent loops. Network, plan-runner ergonomics, and experimental effects are still moving.

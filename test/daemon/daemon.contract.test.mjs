@@ -76,6 +76,33 @@ async function stopDaemonIfRunning() {
   }
 }
 
+async function sendRawDaemonLine(port, line) {
+  return await new Promise((resolve, reject) => {
+    const socket = net.createConnection({ host: "127.0.0.1", port });
+    socket.setEncoding("utf8");
+    let buffer = "";
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(new Error("timed out waiting for daemon raw response"));
+    }, 2000);
+
+    socket.on("error", reject);
+    socket.on("connect", () => {
+      socket.write(`${line}\n`);
+    });
+    socket.on("data", (chunk) => {
+      buffer += chunk;
+      const newlineIndex = buffer.indexOf("\n");
+      if (newlineIndex === -1) {
+        return;
+      }
+      clearTimeout(timer);
+      socket.end();
+      resolve(buffer.slice(0, newlineIndex));
+    });
+  });
+}
+
 process.on("exit", () => {
   const meta = readDaemonMeta();
   if (meta && typeof meta.pid === "number") {
@@ -177,6 +204,75 @@ test("daemon rejects oversized request frames without wedging", async () => {
   assert.notEqual(secondMeta, null);
   assert.equal(secondMeta.pid, meta.pid);
   assert.equal(isProcessAlive(secondMeta.pid), true);
+});
+
+test("daemon enforces one-request-per-connection", async () => {
+  await stopDaemonIfRunning();
+  const start = runCli(["contract"]);
+  assert.equal(start.status, 0);
+
+  const meta = readDaemonMeta();
+  assert.notEqual(meta, null);
+  assert.equal(typeof meta.port, "number");
+  assert.equal(typeof meta.token, "string");
+
+  const payload = [
+    JSON.stringify({ token: meta.token, kind: "ping" }),
+    JSON.stringify({ token: "bad-token", kind: "ping" }),
+  ].join("\n");
+  const line = await sendRawDaemonLine(meta.port, payload);
+  const parsed = JSON.parse(line);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.kind, "pong");
+
+  const followUp = runCli(["contract"]);
+  assert.equal(followUp.status, 0);
+});
+
+test("daemon returns typed token-invalid response for invalid token", async () => {
+  await stopDaemonIfRunning();
+  const start = runCli(["contract"]);
+  assert.equal(start.status, 0);
+
+  const meta = readDaemonMeta();
+  assert.notEqual(meta, null);
+  assert.equal(typeof meta.port, "number");
+
+  const line = await sendRawDaemonLine(meta.port, JSON.stringify({ token: "invalid-token", kind: "ping" }));
+  const parsed = JSON.parse(line);
+  assert.equal(parsed.ok, false);
+  assert.equal(parsed.code, "E_DAEMON_TOKEN_INVALID");
+});
+
+test("daemon returns E_DAEMON_REQUEST_INVALID for malformed request payload", async () => {
+  await stopDaemonIfRunning();
+  const start = runCli(["contract"]);
+  assert.equal(start.status, 0);
+
+  const meta = readDaemonMeta();
+  assert.notEqual(meta, null);
+  assert.equal(typeof meta.port, "number");
+
+  const line = await sendRawDaemonLine(meta.port, "{not-json");
+  const parsed = JSON.parse(line);
+  assert.equal(parsed.ok, false);
+  assert.equal(parsed.code, "E_DAEMON_REQUEST_INVALID");
+});
+
+test("daemon typed failures are deterministic for repeated invalid-token requests", async () => {
+  await stopDaemonIfRunning();
+  const start = runCli(["contract"]);
+  assert.equal(start.status, 0);
+
+  const meta = readDaemonMeta();
+  assert.notEqual(meta, null);
+  assert.equal(typeof meta.port, "number");
+
+  const first = JSON.parse(await sendRawDaemonLine(meta.port, JSON.stringify({ token: "bad-token", kind: "ping" })));
+  const second = JSON.parse(await sendRawDaemonLine(meta.port, JSON.stringify({ token: "bad-token", kind: "ping" })));
+
+  assert.deepEqual(Object.keys(first).sort(), ["code", "message", "ok"]);
+  assert.deepEqual(second, first);
 });
 
 test("json-mode failures do not emit stack traces by default", () => {

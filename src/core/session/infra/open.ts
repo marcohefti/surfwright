@@ -10,6 +10,7 @@ import { parseManagedBrowserMode } from "../app/browser-mode.js";
 import { buildActionProofEnvelope, evaluateActionAssertions, parseActionAssertions, toActionWaitEvidence } from "../../shared/index.js";
 import { buildRedirectEvidence, navigatePageWithEvidence, parseOpenReuseMode, parseOpenWaitUntil } from "./open-navigation.js";
 import { classifyNavigationBlockType } from "../../shared/index.js";
+import { connectSessionBrowser } from "./runtime-access.js";
 
 function canReuseActivePageForRequestedUrl(page: Page, requestedUrl: URL): boolean {
   const currentUrl = page.url().trim();
@@ -78,7 +79,7 @@ export async function openUrl(opts: {
     browserMode: desiredBrowserMode ?? undefined,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

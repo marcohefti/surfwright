@@ -5,6 +5,7 @@ import { saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import type { TargetUrlAssertReport } from "../../types.js";
 import { classifyNavigationBlockType } from "../../shared/index.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 function parseOptionalString(input: string | undefined): string | null {
   const value = typeof input === "string" ? input.trim() : "";
@@ -70,7 +71,7 @@ export async function targetUrlAssert(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

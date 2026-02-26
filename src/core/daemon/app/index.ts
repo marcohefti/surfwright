@@ -1,3 +1,3 @@
-// Policy-required layer marker.
-// Intentionally empty; migrate code into this layer as needed.
-export {};
+export { runDaemonCommandOrchestrator } from "./run-orchestrator.js";
+export type { DaemonWorkerResponse } from "./worker-request-orchestrator.js";
+export { orchestrateDaemonWorkerRequest } from "./worker-request-orchestrator.js";

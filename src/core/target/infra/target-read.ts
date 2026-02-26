@@ -9,6 +9,7 @@ import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, get
 import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { BrowserNodeLike, BrowserRuntimeLike } from "./types/browser-dom-types.js";
 import type { TargetReadReport } from "../../types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 const READ_MAX_CHUNK_SIZE = 10000;
 const READ_MAX_CHUNK_INDEX = 100000;
 const FORM_FILL_MAX_FIELDS = 80;
@@ -35,7 +36,6 @@ type TargetFormFillReport = {
     persistState: number;
   };
 };
-
 function parseChunkSize(value: number | undefined): number {
   const chunkSize = value ?? DEFAULT_TARGET_READ_CHUNK_SIZE;
   if (!Number.isFinite(chunkSize) || !Number.isInteger(chunkSize) || chunkSize <= 0 || chunkSize > READ_MAX_CHUNK_SIZE) {
@@ -62,7 +62,6 @@ function parseFormFieldValue(value: unknown): FormFieldValue {
   }
   throw new CliError("E_QUERY_INVALID", "form-fill values must be scalar or scalar arrays");
 }
-
 function parseFormJsonText(jsonText: string): Record<string, FormFieldValue> {
   if (jsonText.length > FORM_FILL_MAX_JSON_CHARS) {
     throw new CliError("E_QUERY_INVALID", `fields-json must be at most ${FORM_FILL_MAX_JSON_CHARS} characters`);
@@ -304,7 +303,7 @@ export async function targetRead(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();
@@ -432,7 +431,7 @@ export async function targetFormFill(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

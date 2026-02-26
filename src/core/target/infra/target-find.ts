@@ -7,6 +7,7 @@ import { DEFAULT_TARGET_FIND_LIMIT } from "../../types.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { BrowserNodeLike, BrowserRuntimeLike } from "./types/browser-dom-types.js";
 import type { TargetFindReport } from "../../types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 import {
   createCdpEvaluator,
   ensureValidSelectorSyntaxCdp,
@@ -165,7 +166,7 @@ export async function targetFind(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

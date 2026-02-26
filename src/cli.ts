@@ -10,22 +10,16 @@ import {
   parseDaemonWorkerArgv,
   runDaemonWorker,
   runViaDaemon,
-  type DaemonRunResult,
 } from "./core/daemon/index.js";
+import { runDaemonCommandOrchestrator } from "./core/daemon/app/index.js";
 import type { CliFailure } from "./core/types.js";
 import { parseWorkerArgv, runTargetNetworkWorker } from "./features/network/index.js";
 import { registerFeaturePlugins } from "./features/registry.js";
-import { setRuntimeOutputShapeInput } from "./core/report-fields.js";
 import { kickOpportunisticStateMaintenance, runOpportunisticStateMaintenanceWorker } from "./core/state/public.js";
 import { parseCommandPath, parseGlobalOptionValue } from "./cli/options.js";
 import { commanderExitCode, parseOutputOptsFromArgv, toCommanderFailure, type OutputOpts } from "./cli/commander-failure.js";
 import { normalizeArgv } from "./cli/argv-normalize.js";
-
-const INITIAL_AGENT_ID_ENV = typeof process.env.SURFWRIGHT_AGENT_ID === "string" ? process.env.SURFWRIGHT_AGENT_ID : null;
-const INITIAL_WORKSPACE_DIR_ENV =
-  typeof process.env.SURFWRIGHT_WORKSPACE_DIR === "string" ? process.env.SURFWRIGHT_WORKSPACE_DIR : null;
-const INITIAL_OUTPUT_SHAPE_ENV =
-  typeof process.env.SURFWRIGHT_OUTPUT_SHAPE === "string" ? process.env.SURFWRIGHT_OUTPUT_SHAPE : null;
+import { getRequestExitCode, requestContextEnvGet, setRequestExitCode, withRequestContext } from "./core/request-context.js";
 
 function resolveRepoRoot(): string {
   const __filename = fileURLToPath(import.meta.url);
@@ -72,58 +66,19 @@ function parseTimeoutMs(input: string): number {
   return value;
 }
 
-function applyAgentIdOverrideFromArgv(argv: string[]): void {
-  const parsed = parseGlobalOptionValue(argv, "--agent-id");
-  if (!parsed.found || !parsed.valid) {
-    if (INITIAL_AGENT_ID_ENV === null) {
-      delete process.env.SURFWRIGHT_AGENT_ID;
-    } else {
-      process.env.SURFWRIGHT_AGENT_ID = INITIAL_AGENT_ID_ENV;
+function resolveRequestEnvOverrides(argv: string[]): Record<string, string | undefined> {
+  const out: Record<string, string | undefined> = {};
+  const applyIfValid = (flag: string, envName: string): void => {
+    const parsed = parseGlobalOptionValue(argv, flag);
+    if (!parsed.found || !parsed.valid) {
+      return;
     }
-    return;
-  }
-  if (typeof parsed.value === "string") {
-    process.env.SURFWRIGHT_AGENT_ID = parsed.value;
-    return;
-  }
-  delete process.env.SURFWRIGHT_AGENT_ID;
-}
-
-function applyWorkspaceDirOverrideFromArgv(argv: string[]): void {
-  const parsed = parseGlobalOptionValue(argv, "--workspace");
-  if (!parsed.found || !parsed.valid) {
-    if (INITIAL_WORKSPACE_DIR_ENV === null) {
-      delete process.env.SURFWRIGHT_WORKSPACE_DIR;
-    } else {
-      process.env.SURFWRIGHT_WORKSPACE_DIR = INITIAL_WORKSPACE_DIR_ENV;
-    }
-    return;
-  }
-  if (typeof parsed.value === "string") {
-    process.env.SURFWRIGHT_WORKSPACE_DIR = parsed.value;
-    return;
-  }
-  delete process.env.SURFWRIGHT_WORKSPACE_DIR;
-}
-
-function applyOutputShapeOverrideFromArgv(argv: string[]): void {
-  const parsed = parseGlobalOptionValue(argv, "--output-shape");
-  if (!parsed.found || !parsed.valid) {
-    if (INITIAL_OUTPUT_SHAPE_ENV === null) {
-      delete process.env.SURFWRIGHT_OUTPUT_SHAPE;
-    } else {
-      process.env.SURFWRIGHT_OUTPUT_SHAPE = INITIAL_OUTPUT_SHAPE_ENV;
-    }
-    setRuntimeOutputShapeInput(process.env.SURFWRIGHT_OUTPUT_SHAPE);
-    return;
-  }
-  if (typeof parsed.value === "string") {
-    process.env.SURFWRIGHT_OUTPUT_SHAPE = parsed.value;
-    setRuntimeOutputShapeInput(process.env.SURFWRIGHT_OUTPUT_SHAPE);
-    return;
-  }
-  delete process.env.SURFWRIGHT_OUTPUT_SHAPE;
-  setRuntimeOutputShapeInput(process.env.SURFWRIGHT_OUTPUT_SHAPE);
+    out[envName] = typeof parsed.value === "string" ? parsed.value : undefined;
+  };
+  applyIfValid("--agent-id", "SURFWRIGHT_AGENT_ID");
+  applyIfValid("--workspace", "SURFWRIGHT_WORKSPACE_DIR");
+  applyIfValid("--output-shape", "SURFWRIGHT_OUTPUT_SHAPE");
+  return out;
 }
 
 function shouldBypassDaemon(argv: string[]): boolean {
@@ -172,7 +127,7 @@ function createProgram(): Command {
   }
   function handleFailure(error: unknown, opts: OutputOpts) {
     printFailure(toCliFailure(error), opts);
-    process.exitCode = 1;
+    setRequestExitCode(1);
   }
   program
     .name("surfwright")
@@ -207,81 +162,38 @@ function createProgram(): Command {
 }
 
 async function runLocalCommand(argv: string[]): Promise<number> {
-  applyAgentIdOverrideFromArgv(argv);
-  applyWorkspaceDirOverrideFromArgv(argv);
-  applyOutputShapeOverrideFromArgv(argv);
-  const [firstCommand] = parseCommandPath(argv);
-  if (firstCommand && !firstCommand.startsWith("__")) {
-    kickOpportunisticStateMaintenance(argv[1] ?? process.argv[1] ?? "");
-  }
-  const program = createProgram();
-  process.exitCode = 0;
-  try {
-    await program.parseAsync(normalizeArgv(argv));
-  } catch (error) {
-    const exitCode = commanderExitCode(error);
-    if (exitCode !== null) {
-      if (exitCode > 0) {
-        const output = parseOutputOptsFromArgv(argv);
-        const failure = toCommanderFailure(error, argv);
-        if (output.json && failure) {
-          printFailure(failure, output);
-        }
+  const envOverrides = resolveRequestEnvOverrides(argv);
+  return await withRequestContext({
+    envOverrides,
+    initialExitCode: 0,
+    run: async () => {
+      const [firstCommand] = parseCommandPath(argv);
+      if (firstCommand && !firstCommand.startsWith("__")) {
+        kickOpportunisticStateMaintenance(argv[1] ?? process.argv[1] ?? "");
       }
-      process.exitCode = exitCode;
-      return exitCode;
-    }
-    throw error;
-  }
+      const program = createProgram();
+      setRequestExitCode(0);
+      try {
+        await program.parseAsync(normalizeArgv(argv));
+      } catch (error) {
+        const exitCode = commanderExitCode(error);
+        if (exitCode !== null) {
+          if (exitCode > 0) {
+            const output = parseOutputOptsFromArgv(argv);
+            const failure = toCommanderFailure(error, argv);
+            if (output.json && failure) {
+              printFailure(failure, output);
+            }
+          }
+          setRequestExitCode(exitCode);
+          return exitCode;
+        }
+        throw error;
+      }
 
-  return process.exitCode ?? 0;
-}
-
-function captureWrite(
-  chunks: string[],
-): (chunk: Uint8Array | string, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void) => boolean {
-  return (chunk, encoding, callback) => {
-    if (typeof chunk === "string") {
-      chunks.push(chunk);
-    } else {
-      const parsedEncoding = typeof encoding === "string" ? encoding : "utf8";
-      chunks.push(Buffer.from(chunk).toString(parsedEncoding));
-    }
-
-    if (typeof encoding === "function") {
-      encoding(null);
-    }
-    if (typeof callback === "function") {
-      callback(null);
-    }
-    return true;
-  };
-}
-
-async function runLocalCommandCaptured(argv: string[]): Promise<DaemonRunResult> {
-  const stdoutChunks: string[] = [];
-  const stderrChunks: string[] = [];
-
-  const stdoutRef = process.stdout as unknown as { write: typeof process.stdout.write };
-  const stderrRef = process.stderr as unknown as { write: typeof process.stderr.write };
-
-  const originalStdoutWrite = stdoutRef.write;
-  const originalStderrWrite = stderrRef.write;
-
-  stdoutRef.write = captureWrite(stdoutChunks) as typeof process.stdout.write;
-  stderrRef.write = captureWrite(stderrChunks) as typeof process.stderr.write;
-
-  try {
-    const code = await runLocalCommand(argv);
-    return {
-      code,
-      stdout: stdoutChunks.join(""),
-      stderr: stderrChunks.join(""),
-    };
-  } finally {
-    stdoutRef.write = originalStdoutWrite;
-    stderrRef.write = originalStderrWrite;
-  }
+      return getRequestExitCode(0);
+    },
+  });
 }
 
 async function maybeRunInternalWorker(argv: string[]): Promise<number | null> {
@@ -289,11 +201,11 @@ async function maybeRunInternalWorker(argv: string[]): Promise<number | null> {
     try {
       const workerOpts = parseWorkerArgv(argv.slice(3));
       await runTargetNetworkWorker(workerOpts);
-      process.exitCode = 0;
+      setRequestExitCode(0);
     } catch {
-      process.exitCode = 1;
+      setRequestExitCode(1);
     }
-    return process.exitCode ?? 0;
+    return getRequestExitCode(0);
   }
 
   if (argv[2] === "__daemon-worker") {
@@ -304,27 +216,31 @@ async function maybeRunInternalWorker(argv: string[]): Promise<number | null> {
       await runDaemonWorker({
         port: workerOpts.port,
         token: workerOpts.token,
-        onRun: async (requestArgv) => await runLocalCommandCaptured(requestArgv),
+        onRun: async (requestArgv) =>
+          await runDaemonCommandOrchestrator({
+            argv: requestArgv,
+            runLocalCommand,
+          }),
       });
-      process.exitCode = 0;
+      setRequestExitCode(0);
     } catch {
-      process.exitCode = 1;
+      setRequestExitCode(1);
     } finally {
       if (daemonToken.length > 0) {
         cleanupOwnedDaemonMeta(daemonToken);
       }
     }
-    return process.exitCode ?? 0;
+    return getRequestExitCode(0);
   }
 
   if (argv[2] === "__maintenance-worker") {
     try {
       await runOpportunisticStateMaintenanceWorker();
-      process.exitCode = 0;
+      setRequestExitCode(0);
     } catch {
-      process.exitCode = 1;
+      setRequestExitCode(1);
     }
-    return process.exitCode ?? 0;
+    return getRequestExitCode(0);
   }
 
   return null;
@@ -332,30 +248,47 @@ async function maybeRunInternalWorker(argv: string[]): Promise<number | null> {
 
 async function main(argv: string[]): Promise<number> {
   const normalizedArgv = normalizeArgv(argv);
-  applyAgentIdOverrideFromArgv(normalizedArgv);
-  applyWorkspaceDirOverrideFromArgv(normalizedArgv);
-  applyOutputShapeOverrideFromArgv(normalizedArgv);
-
-  const workerExitCode = await maybeRunInternalWorker(normalizedArgv);
-  if (workerExitCode !== null) {
-    return workerExitCode;
-  }
-
-  if (!shouldBypassDaemon(normalizedArgv)) {
-    const proxied = await runViaDaemon(normalizedArgv, normalizedArgv[1] ?? process.argv[1]);
-    if (proxied) {
-      if (proxied.stdout.length > 0) {
-        process.stdout.write(proxied.stdout);
+  const envOverrides = resolveRequestEnvOverrides(normalizedArgv);
+  return await withRequestContext({
+    envOverrides,
+    run: async () => {
+      const workerExitCode = await maybeRunInternalWorker(normalizedArgv);
+      if (workerExitCode !== null) {
+        return workerExitCode;
       }
-      if (proxied.stderr.length > 0) {
-        process.stderr.write(proxied.stderr);
+
+      if (!shouldBypassDaemon(normalizedArgv)) {
+        const proxied = await runViaDaemon(normalizedArgv, normalizedArgv[1] ?? process.argv[1]);
+        if (proxied.kind === "success") {
+          if (proxied.result.stdout.length > 0) {
+            process.stdout.write(proxied.result.stdout);
+          }
+          if (proxied.result.stderr.length > 0) {
+            process.stderr.write(proxied.result.stderr);
+          }
+          setRequestExitCode(proxied.result.code);
+          return proxied.result.code;
+        }
+        if (proxied.kind === "typed_daemon_error") {
+          printFailure(
+            {
+              ok: false,
+              code: proxied.code,
+              message: proxied.message,
+            },
+            parseOutputOptsFromArgv(normalizedArgv),
+          );
+          setRequestExitCode(1);
+          return 1;
+        }
+        if (requestContextEnvGet("SURFWRIGHT_DEBUG_LOGS") === "1") {
+          process.stderr.write(`[daemon] local fallback due to unreachable daemon: ${proxied.message}\n`);
+        }
       }
-      process.exitCode = proxied.code;
-      return proxied.code;
+
+      return await runLocalCommand(normalizedArgv);
     }
-  }
-
-  return await runLocalCommand(normalizedArgv);
+  });
 }
 
 const exitCode = await main(process.argv);

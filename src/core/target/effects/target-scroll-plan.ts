@@ -8,6 +8,7 @@ import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import { parseScrollPlanMode, parseSettleMs, parseStepsCsv } from "./parse.js";
 import type { TargetScrollPlanReport } from "./types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 const DEFAULT_SCROLL_PLAN_SETTLE_MS = 300;
 
@@ -58,7 +59,7 @@ export async function targetScrollPlan(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

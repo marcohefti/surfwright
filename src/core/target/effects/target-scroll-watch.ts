@@ -10,6 +10,7 @@ import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser
 import { parsePropertiesCsv, parseSettleMs, parseStepsCsv } from "./parse.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetScrollWatchReport } from "./types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 const DEFAULT_SCROLL_WATCH_SETTLE_MS = 300;
 const DEFAULT_SCROLL_WATCH_PROPERTIES = ["position", "top", "transform", "opacity"];
@@ -70,7 +71,7 @@ export async function targetScrollWatch(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

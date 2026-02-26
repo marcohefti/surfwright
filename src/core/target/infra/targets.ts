@@ -5,6 +5,7 @@ import { ensureProfileManagedSession } from "../../profile/index.js";
 import { withSessionHeartbeat } from "../../session/index.js";
 import { defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId } from "../../state/index.js";
 import { allocateSessionIdForState, assertSessionDoesNotExist, mutateState, saveTargetSnapshot } from "../../state/index.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
   type ManagedBrowserMode,
@@ -372,7 +373,7 @@ export async function targetList(opts: { timeoutMs: number; sessionId?: string; 
     timeoutMs: opts.timeoutMs,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

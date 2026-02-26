@@ -8,6 +8,7 @@ import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser
 import { parsePropertiesCsv } from "./parse.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetStyleReport } from "./types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 const DEFAULT_STYLE_PROPERTIES = ["background-color", "color", "font-size", "border-radius"];
 const STYLE_CLASS_NAME_MAX_CHARS = 180;
@@ -76,7 +77,7 @@ export async function targetStyle(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

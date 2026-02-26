@@ -12,6 +12,7 @@ import { readSelectorCountAfter } from "../../click/click-proof.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
 import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 import type { BrowserRuntimeLike } from "../types/browser-dom-types.js";
+import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 
 type TargetKeypressReport = {
   ok: true;
@@ -110,7 +111,7 @@ export async function targetKeypress(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

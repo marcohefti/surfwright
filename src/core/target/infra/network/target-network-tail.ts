@@ -5,6 +5,7 @@ import { readRecentTargetAction } from "../../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { parseNetworkInput, wsFramePreview } from "./target-network-utils.js";
 import type { TargetNetworkTailReport } from "../../../types.js";
+import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 
 const TAIL_MAX_EVENTS_CAP = 20000;
 
@@ -77,7 +78,7 @@ export async function targetNetworkTail(opts: {
     sessionId: session.sessionId,
     targetId,
   });
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const startedEpochMs = Date.now();

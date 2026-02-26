@@ -9,6 +9,7 @@ import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser
 import { parseDurationMs, parseIntervalMs, parseMaxSamples, parsePropertyName } from "./parse.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetObserveReport } from "./types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 const DEFAULT_OBSERVE_INTERVAL_MS = 400;
 const DEFAULT_OBSERVE_DURATION_MS = 3000;
@@ -51,7 +52,7 @@ export async function targetObserve(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

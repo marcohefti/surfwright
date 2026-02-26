@@ -5,6 +5,7 @@ import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "
 import { createCdpEvaluator, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "./cdp/index.js";
 import type { BrowserRuntimeLike } from "./types/browser-dom-types.js";
 import type { SessionSource, TargetConsoleTailReport, TargetHealthReport, TargetHudReport } from "../../types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 type TargetConsoleGetEvent = {
   type: "console" | "page-error" | "request-failed";
@@ -110,7 +111,7 @@ export async function targetConsoleTail(opts: {
     timeoutMs: opts.timeoutMs,
     targetIdHint: targetId,
   });
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const startedEpochMs = Date.now();
@@ -294,7 +295,7 @@ export async function targetHealth(opts: {
     targetIdHint: targetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

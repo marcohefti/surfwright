@@ -8,6 +8,7 @@ import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, get
 import type { TargetWaitReport } from "../../types.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../shared/index.js";
 import type { BrowserRuntimeLike } from "./types/browser-dom-types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 function parseWaitInput(opts: {
   forText?: string;
@@ -89,7 +90,7 @@ export async function targetWait(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

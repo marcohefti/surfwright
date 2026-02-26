@@ -11,6 +11,7 @@ import { cdpQueryOp } from "../../click/cdp-query-op.js";
 import type { TargetDownloadReport } from "../../../types.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
 import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
+import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 import {
   handleMissingDownloadEvent,
   persistDownloadReport,
@@ -68,7 +69,7 @@ export async function targetDownload(opts: {
   });
   const resolvedSessionAt = Date.now();
   const frameScope = parseFrameScope(opts.frameScope);
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, { timeout: opts.timeoutMs });
+  const browser = await connectSessionBrowser(session.cdpOrigin, { timeout: opts.timeoutMs });
   const connectedAt = Date.now();
 
   try {

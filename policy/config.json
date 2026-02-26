@@ -31,6 +31,7 @@
           "src/core/target/public",
           "src/core/types",
           "src/core/update/public",
+          "src/core/request-context",
           "src/core/*/public"
         ]
       }
@@ -71,7 +72,13 @@
           "skills",
           "update"
         ],
-        "allowCrossDomainInternal": ["src/core/*/public", "src/core/*/index"]
+        "allowCrossDomainInternal": [
+          "src/core/*/public",
+          "src/core/*/index",
+          "src/core/session/infra/runtime-access",
+          "src/core/daemon/infra/diagnostics",
+          "src/core/daemon/domain/diagnostics"
+        ]
       }
     },
     {
@@ -101,12 +108,15 @@
         "allowlist": [
           "src/cli.ts",
           "src/core/daemon/infra/daemon.ts",
+          "src/core/daemon/infra/daemon-transport.ts",
           "src/core/daemon/infra/worker.ts",
           "src/core/extensions/infra/registry.ts",
           "src/core/profile/infra/profile-session.ts",
           "src/core/pipeline-support/infra/plan.ts",
+          "src/core/daemon/app/worker-request-orchestrator.ts",
           "src/core/skills/infra/manager.ts",
           "src/core/state/infra/state-store.ts",
+          "src/core/state/infra/state-lock.ts",
           "src/core/target/infra/target-eval.ts",
           "src/core/target/infra/target-read.ts",
           "src/core/target/infra/utils/target-snapshot-diff.ts",
@@ -141,6 +151,7 @@
           "src/core/network-types.ts",
           "src/core/pipeline.ts",
           "src/core/report-fields.ts",
+          "src/core/request-context.ts",
           "src/core/session-isolation.ts",
           "src/core/session-report.ts",
           "src/core/types.ts"
@@ -246,7 +257,11 @@
       "options": {
         "max": 12,
         "include": ["**/*"],
-        "exclude": []
+        "exclude": [
+          "missions/browser-control/*.md",
+          "missions/browser-control/prompts/*.md",
+          "missions/browser-control/oracles/*.json"
+        ]
       }
     },
     {

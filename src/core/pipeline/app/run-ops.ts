@@ -1,0 +1,422 @@
+import { openUrl } from "../../session/public.js";
+import {
+  targetClick,
+  targetCount,
+  targetEval,
+  targetExtract,
+  targetFill,
+  targetFind,
+  targetList,
+  targetRead,
+  targetScrollPlan,
+  targetSnapshot,
+  targetUpload,
+  targetWait,
+} from "../../target/public.js";
+import type { TargetClickReport } from "../../types.js";
+import type { PipelineOps } from "../index.js";
+
+export function buildPipelineOps(opts: { isolation?: string; browserModeInput?: string }): PipelineOps {
+  const ops: PipelineOps = {
+    open: async (input: { url: string; timeoutMs: number; sessionId?: string; reuseModeInput?: string }) =>
+      (await openUrl({
+        inputUrl: input.url,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        reuseModeInput: input.reuseModeInput,
+        isolation: opts.isolation,
+        browserModeInput: opts.browserModeInput,
+      })) as unknown as Record<string, unknown>,
+    list: async (input: { timeoutMs: number; sessionId?: string; persistState: boolean }) =>
+      (await targetList({ timeoutMs: input.timeoutMs, sessionId: input.sessionId, persistState: input.persistState })) as unknown as Record<
+        string,
+        unknown
+      >,
+    snapshot: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      selectorQuery?: string;
+      visibleOnly: boolean;
+      frameScope?: string;
+      persistState: boolean;
+    }) =>
+      (await targetSnapshot({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        selectorQuery: input.selectorQuery,
+        visibleOnly: input.visibleOnly,
+        frameScope: input.frameScope,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    find: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      textQuery?: string;
+      selectorQuery?: string;
+      containsQuery?: string;
+      visibleOnly: boolean;
+      first: boolean;
+      limit?: number;
+      persistState: boolean;
+    }) =>
+      (await targetFind({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        textQuery: input.textQuery,
+        selectorQuery: input.selectorQuery,
+        containsQuery: input.containsQuery,
+        visibleOnly: input.visibleOnly,
+        first: input.first,
+        limit: input.limit,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    count: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      textQuery?: string;
+      selectorQuery?: string;
+      containsQuery?: string;
+      visibleOnly: boolean;
+      frameScope?: string;
+      persistState: boolean;
+    }) =>
+      (await targetCount({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        textQuery: input.textQuery,
+        selectorQuery: input.selectorQuery,
+        containsQuery: input.containsQuery,
+        visibleOnly: input.visibleOnly,
+        frameScope: input.frameScope,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    scrollPlan: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      modeInput?: string;
+      stepsCsv?: string;
+      settleMs?: number;
+      countSelectorQuery?: string;
+      countContainsQuery?: string;
+      countVisibleOnly: boolean;
+      persistState: boolean;
+    }) =>
+      (await targetScrollPlan({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        modeInput: input.modeInput,
+        stepsCsv: input.stepsCsv,
+        settleMs: input.settleMs,
+        countSelectorQuery: input.countSelectorQuery,
+        countContainsQuery: input.countContainsQuery,
+        countVisibleOnly: input.countVisibleOnly,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    click: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      textQuery?: string;
+      selectorQuery?: string;
+      containsQuery?: string;
+      visibleOnly: boolean;
+      withinSelector?: string;
+      frameScope?: string;
+      index?: number;
+      waitForText?: string;
+      waitForSelector?: string;
+      waitNetworkIdle: boolean;
+      waitTimeoutMs?: number;
+      snapshot: boolean;
+      delta: boolean;
+      proof: boolean;
+      countAfter: boolean;
+      expectCountAfter?: number;
+      proofCheckState: boolean;
+      assertUrlPrefix?: string;
+      assertSelector?: string;
+      assertText?: string;
+      persistState: boolean;
+    }) =>
+      (await targetClick({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        textQuery: input.textQuery,
+        selectorQuery: input.selectorQuery,
+        containsQuery: input.containsQuery,
+        visibleOnly: input.visibleOnly,
+        withinSelector: input.withinSelector,
+        frameScope: input.frameScope,
+        index: input.index,
+        waitForText: input.waitForText,
+        waitForSelector: input.waitForSelector,
+        waitNetworkIdle: input.waitNetworkIdle,
+        waitTimeoutMs: input.waitTimeoutMs,
+        snapshot: input.snapshot,
+        delta: input.delta,
+        proof: input.proof,
+        countAfter: input.countAfter,
+        expectCountAfter: input.expectCountAfter,
+        proofCheckState: input.proofCheckState,
+        assertUrlPrefix: input.assertUrlPrefix,
+        assertSelector: input.assertSelector,
+        assertText: input.assertText,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    clickRead: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      textQuery?: string;
+      selectorQuery?: string;
+      containsQuery?: string;
+      visibleOnly: boolean;
+      frameScope?: string;
+      index?: number;
+      waitForText?: string;
+      waitForSelector?: string;
+      waitNetworkIdle: boolean;
+      waitTimeoutMs?: number;
+      readSelector?: string;
+      readVisibleOnly: boolean;
+      readFrameScope?: string;
+      chunkSize?: number;
+      chunkIndex?: number;
+      persistState: boolean;
+    }) => {
+      const clickReport = await targetClick({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        textQuery: input.textQuery,
+        selectorQuery: input.selectorQuery,
+        containsQuery: input.containsQuery,
+        visibleOnly: input.visibleOnly,
+        frameScope: input.frameScope,
+        index: input.index,
+        waitForText: input.waitForText,
+        waitForSelector: input.waitForSelector,
+        waitNetworkIdle: input.waitNetworkIdle,
+        waitTimeoutMs: input.waitTimeoutMs,
+        snapshot: false,
+        delta: false,
+        proof: false,
+        persistState: input.persistState,
+      });
+      const clickResult = clickReport as TargetClickReport;
+      const readTargetId =
+        !clickResult.handoff.sameTarget &&
+        typeof clickResult.handoff.openedTargetId === "string" &&
+        clickResult.handoff.openedTargetId.length > 0
+          ? clickResult.handoff.openedTargetId
+          : clickResult.targetId;
+      const readReport = await targetRead({
+        targetId: readTargetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: clickResult.sessionId,
+        selectorQuery: input.readSelector,
+        visibleOnly: input.readVisibleOnly,
+        frameScope: input.readFrameScope ?? input.frameScope,
+        chunkSize: input.chunkSize,
+        chunkIndex: input.chunkIndex,
+        persistState: input.persistState,
+      });
+      return {
+        ok: true,
+        sessionId: clickResult.sessionId,
+        targetId: readTargetId,
+        click: {
+          actionId: clickResult.actionId,
+          targetId: clickResult.targetId,
+          mode: clickResult.mode,
+          query: clickResult.query,
+          selector: clickResult.selector,
+          matchCount: clickResult.matchCount,
+          pickedIndex: clickResult.pickedIndex,
+          handoff: clickResult.handoff,
+        },
+        read: readReport,
+      } as Record<string, unknown>;
+    },
+    fill: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      textQuery?: string;
+      selectorQuery?: string;
+      containsQuery?: string;
+      visibleOnly: boolean;
+      frameScope?: string;
+      value: string;
+      eventsInput?: string;
+      eventModeInput?: string;
+      waitForText?: string;
+      waitForSelector?: string;
+      waitNetworkIdle: boolean;
+      waitTimeoutMs?: number;
+      proof: boolean;
+      assertUrlPrefix?: string;
+      assertSelector?: string;
+      assertText?: string;
+      persistState: boolean;
+    }) =>
+      (await targetFill({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        textQuery: input.textQuery,
+        selectorQuery: input.selectorQuery,
+        containsQuery: input.containsQuery,
+        visibleOnly: input.visibleOnly,
+        frameScope: input.frameScope,
+        value: input.value,
+        eventsInput: input.eventsInput,
+        eventModeInput: input.eventModeInput,
+        waitForText: input.waitForText,
+        waitForSelector: input.waitForSelector,
+        waitNetworkIdle: input.waitNetworkIdle,
+        waitTimeoutMs: input.waitTimeoutMs,
+        proof: input.proof,
+        assertUrlPrefix: input.assertUrlPrefix,
+        assertSelector: input.assertSelector,
+        assertText: input.assertText,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    upload: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      selectorQuery: string;
+      files: string[];
+      submitSelector?: string;
+      expectUploadedFilename?: string;
+      waitForResult: boolean;
+      resultSelector?: string;
+      resultTextContains?: string;
+      resultFilenameRegex?: string;
+      waitForText?: string;
+      waitForSelector?: string;
+      waitNetworkIdle: boolean;
+      waitTimeoutMs?: number;
+      proof: boolean;
+      assertUrlPrefix?: string;
+      assertSelector?: string;
+      assertText?: string;
+      persistState: boolean;
+    }) =>
+      (await targetUpload({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        selectorQuery: input.selectorQuery,
+        files: input.files,
+        submitSelector: input.submitSelector,
+        expectUploadedFilename: input.expectUploadedFilename,
+        waitForResult: input.waitForResult,
+        resultSelector: input.resultSelector,
+        resultTextContains: input.resultTextContains,
+        resultFilenameRegex: input.resultFilenameRegex,
+        waitForText: input.waitForText,
+        waitForSelector: input.waitForSelector,
+        waitNetworkIdle: input.waitNetworkIdle,
+        waitTimeoutMs: input.waitTimeoutMs,
+        proof: input.proof,
+        assertUrlPrefix: input.assertUrlPrefix,
+        assertSelector: input.assertSelector,
+        assertText: input.assertText,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    read: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      selectorQuery?: string;
+      visibleOnly: boolean;
+      frameScope?: string;
+      chunkSize?: number;
+      chunkIndex?: number;
+      persistState: boolean;
+    }) =>
+      (await targetRead({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        selectorQuery: input.selectorQuery,
+        visibleOnly: input.visibleOnly,
+        frameScope: input.frameScope,
+        chunkSize: input.chunkSize,
+        chunkIndex: input.chunkIndex,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    extract: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      kind?: string;
+      selectorQuery?: string;
+      visibleOnly: boolean;
+      frameScope?: string;
+      limit?: number;
+      persistState: boolean;
+    }) =>
+      (await targetExtract({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        kind: input.kind,
+        selectorQuery: input.selectorQuery,
+        visibleOnly: input.visibleOnly,
+        frameScope: input.frameScope,
+        limit: input.limit,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    eval: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      expression?: string;
+      argJson?: string;
+      captureConsole?: boolean;
+      maxConsole?: number;
+      persistState: boolean;
+    }) =>
+      (await targetEval({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        expression: input.expression,
+        argJson: input.argJson,
+        captureConsole: input.captureConsole,
+        maxConsole: input.maxConsole,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+    wait: async (input: {
+      targetId: string;
+      timeoutMs: number;
+      sessionId?: string;
+      forText?: string;
+      forSelector?: string;
+      networkIdle: boolean;
+      persistState: boolean;
+    }) =>
+      (await targetWait({
+        targetId: input.targetId,
+        timeoutMs: input.timeoutMs,
+        sessionId: input.sessionId,
+        forText: input.forText,
+        forSelector: input.forSelector,
+        networkIdle: input.networkIdle,
+        persistState: input.persistState,
+      })) as unknown as Record<string, unknown>,
+  };
+  return ops;
+}

@@ -13,6 +13,7 @@ import { waitAfterClickWithBudget } from "./click-wait.js";
 import { readSelectorCountAfter } from "./click-proof.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../shared/index.js";
 import { buildActionProofEnvelope, toActionWaitEvidence } from "../../shared/index.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 type TargetFillReport = {
   ok: true;
@@ -186,7 +187,7 @@ export async function targetFill(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

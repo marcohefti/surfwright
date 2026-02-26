@@ -14,6 +14,7 @@ import {
 } from "../cdp/index.js";
 import type { BrowserNodeLike, BrowserRuntimeLike } from "../types/browser-dom-types.js";
 import type { TargetAttrReport } from "../../../types.js";
+import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 
 const URL_ATTRIBUTE_NAMES = ["href", "src", "action", "formaction", "poster", "cite"];
 const ATTR_MAX_INDEX = 5000;
@@ -112,7 +113,7 @@ export async function targetAttr(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

@@ -4,6 +4,7 @@ import { CliError } from "../../errors.js";
 import { sanitizeSessionId } from "../../state/index.js";
 import { resolveSessionForAction } from "../infra/targets.js";
 import type { SessionCookieCopyReport } from "../../types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 function parseCookieScopeUrls(rawUrls: string[]): string[] {
   if (!Array.isArray(rawUrls) || rawUrls.length === 0) {
@@ -76,10 +77,10 @@ export async function sessionCookieCopy(opts: {
   });
   const sessionsResolvedAt = Date.now();
 
-  const sourceBrowser = await chromium.connectOverCDP(fromResolved.session.cdpOrigin, {
+  const sourceBrowser = await connectSessionBrowser(fromResolved.session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
-  const destinationBrowser = await chromium.connectOverCDP(toResolved.session.cdpOrigin, {
+  const destinationBrowser = await connectSessionBrowser(toResolved.session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

@@ -8,6 +8,7 @@ import { parseFrameScope } from "../infra/target-find.js";
 import { readPageTargetId, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import { cdpQueryOp } from "./cdp-query-op.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 type TargetSpawnReport = {
   ok: true;
@@ -66,7 +67,7 @@ export async function targetSpawn(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

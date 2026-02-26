@@ -10,6 +10,7 @@ import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser
 import { parsePropertyName, parseSettleMs, parseStepsCsv } from "./parse.js";
 import { resolveFirstMatch } from "./query-match.js";
 import type { TargetScrollSampleReport } from "./types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 const DEFAULT_SCROLL_SAMPLE_SETTLE_MS = 300;
 const DEFAULT_SCROLL_SAMPLE_PROPERTY = "transform";
@@ -48,7 +49,7 @@ export async function targetScrollSample(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

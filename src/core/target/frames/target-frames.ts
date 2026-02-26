@@ -5,6 +5,7 @@ import { saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "../infra/cdp/index.js";
 import type { TargetFramesReport } from "../../types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 const TARGET_FRAMES_LIMIT_MAX = 200;
 
@@ -33,7 +34,7 @@ export async function targetFrames(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

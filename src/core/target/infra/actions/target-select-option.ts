@@ -6,6 +6,7 @@ import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sani
 import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
 import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 import type { TargetSelectOptionReport } from "../../../types.js";
+import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 
 type ParsedSelection =
   | { selectedBy: "value"; value: string }
@@ -80,7 +81,7 @@ export async function targetSelectOption(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

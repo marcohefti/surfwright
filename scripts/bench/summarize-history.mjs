@@ -7,7 +7,6 @@ function fail(message) {
   process.stderr.write(`bench-history: ${message}\n`);
   process.exit(1);
 }
-
 function parseArgs(argv) {
   const out = {
     historyPath: "",
@@ -95,10 +94,8 @@ function parseArgs(argv) {
     }
     fail(`unknown argument: ${token}`);
   }
-
   return out;
 }
-
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
@@ -113,7 +110,6 @@ function readJsonMaybe(filePath) {
     return null;
   }
 }
-
 function readJsonl(filePath) {
   if (!fs.existsSync(filePath)) {
     return [];

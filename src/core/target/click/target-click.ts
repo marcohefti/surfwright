@@ -19,6 +19,7 @@ import { targetClickByHandle } from "./target-click-handle.js";
 import { waitAfterClickWithBudget } from "./click-wait.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../shared/index.js";
 import { buildClickProofArtifacts, buildClickReport } from "./click-report.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 export async function targetClick(opts: {
   targetId: string;
   timeoutMs: number;
@@ -102,7 +103,7 @@ export async function targetClick(opts: {
   });
   const resolvedSessionAt = Date.now();
   const frameScope = parseFrameScope(opts.frameScope);
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

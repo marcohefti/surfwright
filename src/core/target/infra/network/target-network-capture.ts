@@ -16,6 +16,7 @@ import {
 import { applyCapturedView } from "./capture/apply-captured-view.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { providers } from "../../../providers/index.js";
+import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 import type {
   TargetNetworkCaptureBeginReport,
   TargetNetworkCaptureEndReport,
@@ -56,7 +57,7 @@ async function ensureCaptureTargetExists(opts: { targetId: string; sessionId?: s
     timeoutMs: opts.timeoutMs,
     targetIdHint: sanitizeTargetId(opts.targetId),
   });
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   try {

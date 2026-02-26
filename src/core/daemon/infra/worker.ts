@@ -1,5 +1,11 @@
+import process from "node:process";
 import { stateRootDir } from "../../state/index.js";
 import { providers } from "../../providers/index.js";
+import { parseCommandPath } from "../../../cli/options.js";
+import { orchestrateDaemonWorkerRequest, type DaemonWorkerResponse } from "../app/index.js";
+import type { DaemonLaneResolution } from "../domain/index.js";
+import { DAEMON_QUEUE_WAIT_MS_DEFAULT, createDaemonLaneScheduler, resolveDaemonLaneKey } from "../domain/index.js";
+import { createLocalDaemonDiagnostics } from "./diagnostics.js";
 
 const DAEMON_META_VERSION = 1;
 const DAEMON_HOST = "127.0.0.1";
@@ -11,43 +17,6 @@ export type DaemonRunResult = {
   stdout: string;
   stderr: string;
 };
-
-type DaemonRequest =
-  | {
-      token: string;
-      kind: "ping";
-    }
-  | {
-      token: string;
-      kind: "shutdown";
-    }
-  | {
-      token: string;
-      kind: "run";
-      argv: string[];
-    };
-
-type DaemonResponse =
-  | {
-      ok: true;
-      kind: "pong";
-    }
-  | {
-      ok: true;
-      kind: "shutdown";
-    }
-  | {
-      ok: true;
-      kind: "run";
-      code: number;
-      stdout: string;
-      stderr: string;
-    }
-  | {
-      ok: false;
-      code: string;
-      message: string;
-    };
 
 type DaemonMeta = {
   version: number;
@@ -70,12 +39,25 @@ function parsePositiveInt(value: unknown): number | null {
   return parsed > 0 ? parsed : null;
 }
 
+function currentProcessUid(): number | null {
+  if (typeof process.getuid !== "function") {
+    return null;
+  }
+  try {
+    const uid = process.getuid();
+    return Number.isFinite(uid) ? uid : null;
+  } catch {
+    return null;
+  }
+}
+
 function readDaemonMeta(): DaemonMeta | null {
   try {
     const { fs, runtime } = providers();
     if (runtime.platform !== "win32") {
       const stat = fs.statSync(daemonMetaPath());
-      if ((stat.mode & 0o077) !== 0) {
+      const expectedUid = currentProcessUid();
+      if ((stat.mode & 0o077) !== 0 || (expectedUid !== null && typeof stat.uid === "number" && stat.uid !== expectedUid)) {
         removeDaemonMeta();
         return null;
       }
@@ -178,12 +160,15 @@ export function parseDaemonWorkerArgv(argv: string[]): { port: number; token: st
 export async function runDaemonWorker(opts: {
   port: number;
   token: string;
-  onRun: (argv: string[]) => Promise<DaemonRunResult>;
+  onRun: (argv: string[], lane: DaemonLaneResolution) => Promise<DaemonRunResult>;
 }): Promise<void> {
   const idleMs = daemonIdleTimeoutMs();
   const { net } = providers();
   const server = net.createServer();
-  let queue = Promise.resolve();
+  const diagnostics = createLocalDaemonDiagnostics();
+  const scheduler = createDaemonLaneScheduler<DaemonRunResult>({
+    diagnostics,
+  });
   let idleTimer: NodeJS.Timeout | null = null;
 
   const scheduleIdleShutdown = () => {
@@ -197,7 +182,7 @@ export async function runDaemonWorker(opts: {
 
   const writeResponse = (
     socket: { end: (data: string, callback?: () => void) => void },
-    response: DaemonResponse,
+    response: DaemonWorkerResponse,
     shutdownAfterWrite: boolean,
   ) => {
     socket.end(`${JSON.stringify(response)}\n`, () => {
@@ -205,6 +190,50 @@ export async function runDaemonWorker(opts: {
         server.close();
       }
     });
+  };
+
+  const metric = (metricName: string, value: number, tags?: Record<string, string>) => {
+    diagnostics.emitMetric({
+      ts: new Date().toISOString(),
+      metric: metricName,
+      value,
+      ...(tags ? { tags } : {}),
+    });
+  };
+
+  const deriveRunDiagnostics = (
+    rawLine: string,
+  ): {
+    requestId: string;
+    sessionId: string;
+    command: string;
+    queueScope: string;
+  } | null => {
+    try {
+      const parsed = JSON.parse(rawLine) as { token?: unknown; kind?: unknown; argv?: unknown };
+      if (parsed.token !== opts.token || parsed.kind !== "run" || !Array.isArray(parsed.argv)) {
+        return null;
+      }
+      if (parsed.argv.some((entry) => typeof entry !== "string")) {
+        return null;
+      }
+      const argv = parsed.argv as string[];
+      const lane = resolveDaemonLaneKey({ argv });
+      const [first, second] = parseCommandPath(argv);
+      const command =
+        typeof first === "string" && first.length > 0
+          ? [first, second].filter((token): token is string => typeof token === "string" && token.length > 0).join(".")
+          : "unknown";
+      const sessionId = lane.source === "sessionId" ? lane.laneKey.replace(/^session:/, "") : "none";
+      return {
+        requestId: providers().crypto.randomBytes(8).toString("hex"),
+        sessionId: sessionId.length > 0 ? sessionId : "none",
+        command,
+        queueScope: lane.laneKey,
+      };
+    } catch {
+      return null;
+    }
   };
 
   server.on("connection", (socket) => {
@@ -244,131 +273,58 @@ export async function runDaemonWorker(opts: {
       buffer = "";
       bufferBytes = 0;
 
-      queue = queue
-        .then(async () => {
-          let parsed: unknown;
-          try {
-            parsed = JSON.parse(rawLine);
-          } catch {
-            writeResponse(
-              socket,
-              {
-                ok: false,
-                code: "E_DAEMON_REQUEST_INVALID",
-                message: "request must be JSON",
-              },
-              false,
-            );
-            return;
+      void (async () => {
+        const startedAtMs = Date.now();
+        let queueWaitMs = 0;
+        const diag = deriveRunDiagnostics(rawLine);
+        try {
+          const orchestrated = await orchestrateDaemonWorkerRequest({
+            rawRequestLine: rawLine,
+            expectedToken: opts.token,
+            onRun: async (argv, lane) =>
+              await scheduler.enqueue({
+                laneKey: lane.laneKey,
+                execute: async () => {
+                  queueWaitMs = Math.max(0, Date.now() - startedAtMs);
+                  metric("daemon_queue_wait_ms", queueWaitMs, { scope: lane.laneKey });
+                  return await opts.onRun(argv, lane);
+                },
+              }),
+          });
+          const durationMs = Math.max(0, Date.now() - startedAtMs);
+          metric("daemon_request_duration_ms", durationMs, {
+            command: diag?.command ?? "unknown",
+          });
+          const rssMb = Number((process.memoryUsage().rss / (1024 * 1024)).toFixed(2));
+          metric("daemon_worker_rss_mb", rssMb);
+          if (diag) {
+            const errorCode = orchestrated.response.ok ? null : orchestrated.response.code;
+            const result: "success" | "typed_error" | "unreachable" | "timeout" | "cancelled" =
+              errorCode === "E_DAEMON_QUEUE_TIMEOUT"
+                ? "timeout"
+                : orchestrated.response.ok
+                  ? "success"
+                  : "typed_error";
+            const queueWaitForEvent =
+              errorCode === "E_DAEMON_QUEUE_TIMEOUT" && queueWaitMs === 0 ? DAEMON_QUEUE_WAIT_MS_DEFAULT : queueWaitMs;
+            diagnostics.emitEvent({
+              ts: new Date().toISOString(),
+              event: "daemon.request",
+              requestId: diag.requestId,
+              sessionId: diag.sessionId,
+              command: diag.command,
+              result,
+              errorCode,
+              queueScope: diag.queueScope,
+              queueWaitMs: queueWaitForEvent,
+              durationMs,
+            });
           }
-
-          if (typeof parsed !== "object" || parsed === null) {
-            writeResponse(
-              socket,
-              {
-                ok: false,
-                code: "E_DAEMON_REQUEST_INVALID",
-                message: "request payload must be object",
-              },
-              false,
-            );
-            return;
-          }
-
-          const request = parsed as Partial<DaemonRequest>;
-          if (request.token !== opts.token) {
-            writeResponse(
-              socket,
-              {
-                ok: false,
-                code: "E_DAEMON_TOKEN_INVALID",
-                message: "token mismatch",
-              },
-              false,
-            );
-            return;
-          }
-
-          if (request.kind === "ping") {
-            writeResponse(
-              socket,
-              {
-                ok: true,
-                kind: "pong",
-              },
-              false,
-            );
+          writeResponse(socket, orchestrated.response, orchestrated.shutdownAfterWrite);
+          if (orchestrated.scheduleIdleAfterWrite) {
             scheduleIdleShutdown();
-            return;
           }
-
-          if (request.kind === "shutdown") {
-            writeResponse(
-              socket,
-              {
-                ok: true,
-                kind: "shutdown",
-              },
-              true,
-            );
-            return;
-          }
-
-          if (request.kind === "run") {
-            if (!Array.isArray(request.argv) || request.argv.some((entry) => typeof entry !== "string")) {
-              writeResponse(
-                socket,
-                {
-                  ok: false,
-                  code: "E_DAEMON_REQUEST_INVALID",
-                  message: "run request requires argv string array",
-                },
-                false,
-              );
-              return;
-            }
-
-            try {
-              const result = await opts.onRun(request.argv);
-              writeResponse(
-                socket,
-                {
-                  ok: true,
-                  kind: "run",
-                  code: result.code,
-                  stdout: result.stdout,
-                  stderr: result.stderr,
-                },
-                false,
-              );
-              scheduleIdleShutdown();
-              return;
-            } catch {
-              writeResponse(
-                socket,
-                {
-                  ok: false,
-                  code: "E_DAEMON_RUN_FAILED",
-                  message: "daemon failed to execute command",
-                },
-                false,
-              );
-              scheduleIdleShutdown();
-              return;
-            }
-          }
-
-          writeResponse(
-            socket,
-            {
-              ok: false,
-              code: "E_DAEMON_REQUEST_INVALID",
-              message: "unsupported request kind",
-            },
-            false,
-          );
-        })
-        .catch(() => {
+        } catch {
           writeResponse(
             socket,
             {
@@ -378,7 +334,8 @@ export async function runDaemonWorker(opts: {
             },
             false,
           );
-        });
+        }
+      })();
     });
   });
 

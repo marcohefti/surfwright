@@ -7,6 +7,7 @@ import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "
 import { providers } from "../../providers/index.js";
 import { openCdpSession } from "./cdp/index.js";
 import { safePageTitle } from "./utils/safe-page-title.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 type ActionTimingMs = {
   total: number;
@@ -171,7 +172,7 @@ export async function targetEmulate(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, { timeout: opts.timeoutMs });
+  const browser = await connectSessionBrowser(session.cdpOrigin, { timeout: opts.timeoutMs });
   const connectedAt = Date.now();
 
   try {
@@ -275,7 +276,7 @@ export async function targetClickAt(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, { timeout: opts.timeoutMs });
+  const browser = await connectSessionBrowser(session.cdpOrigin, { timeout: opts.timeoutMs });
   const connectedAt = Date.now();
 
   try {
@@ -363,7 +364,7 @@ export async function targetScreenshot(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, { timeout: opts.timeoutMs });
+  const browser = await connectSessionBrowser(session.cdpOrigin, { timeout: opts.timeoutMs });
   const connectedAt = Date.now();
 
   try {

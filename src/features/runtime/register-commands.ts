@@ -18,6 +18,7 @@ import {
   DEFAULT_SESSION_TIMEOUT_MS,
 } from "../../core/types.js";
 import { getCliContractReport } from "../../core/cli-contract.js";
+import { setRequestExitCode } from "../../core/request-context.js";
 import { runtimeCommandMeta } from "./manifest.js";
 import { registerSkillLifecycleCommands } from "./commands/skill-lifecycle.js";
 import { registerSessionCookieCopyCommand } from "./commands/session-cookie-copy.js";
@@ -62,7 +63,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
       try {
         const report = getDoctorReport();
         printDoctorReport(report, output);
-        process.exitCode = report.ok ? 0 : 1;
+        setRequestExitCode(report.ok ? 0 : 1);
       } catch (error) {
         ctx.handleFailure(error, output);
       }
@@ -467,7 +468,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         });
         printRunSuccess(report, output);
         if (report.mode === "doctor" && report.valid !== true) {
-          process.exitCode = 1;
+          setRequestExitCode(1);
         }
       } catch (error) {
         ctx.handleFailure(error, output);

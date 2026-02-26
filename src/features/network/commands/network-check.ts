@@ -1,4 +1,5 @@
 import { targetNetworkCheck } from "../../../core/network/public.js";
+import { setRequestExitCode } from "../../../core/request-context.js";
 import { DEFAULT_TARGET_NETWORK_CAPTURE_MS, DEFAULT_TARGET_TIMEOUT_MS } from "../../../core/types.js";
 import { networkCommandMeta } from "../manifest.js";
 import type { NetworkCommandSpec } from "./types.js";
@@ -49,7 +50,7 @@ export const networkCheckCommandSpec: NetworkCommandSpec = {
             });
             ctx.printTargetSuccess(report, output);
             if (options.failOnViolation && !report.passed) {
-              process.exitCode = 1;
+              setRequestExitCode(1);
             }
           } catch (error) {
             ctx.handleFailure(error, output);

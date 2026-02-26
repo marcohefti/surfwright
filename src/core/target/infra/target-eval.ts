@@ -9,6 +9,7 @@ import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "
 import { safePageTitle } from "./utils/safe-page-title.js";
 import { parseEvalExpression } from "./utils/eval-expression.js";
 import type { TargetEvalReport } from "../../types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 type TargetCloseReport = {
   ok: true;
   sessionId: string;
@@ -161,7 +162,7 @@ export async function targetEval(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();
@@ -453,7 +454,7 @@ export async function targetClose(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

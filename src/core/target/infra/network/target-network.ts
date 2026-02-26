@@ -25,6 +25,7 @@ import type {
   TargetNetworkWebSocketReport,
 } from "../../../types.js";
 import { redactHeaders } from "../../../shared/index.js";
+import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 
 type MutableRequest = TargetNetworkRequestReport;
 type MutableWebSocket = TargetNetworkWebSocketReport;
@@ -103,7 +104,7 @@ export async function targetNetwork(opts: {
     sessionId: session.sessionId,
     targetId: requestedTargetId,
   });
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
 

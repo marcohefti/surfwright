@@ -7,6 +7,7 @@ import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../cdp/index.js";
 import type { BrowserNodeLike, BrowserRuntimeLike } from "../types/browser-dom-types.js";
 import type { TargetCountReport } from "../../../types.js";
+import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 
 export async function targetCount(opts: {
   targetId: string;
@@ -35,7 +36,7 @@ export async function targetCount(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

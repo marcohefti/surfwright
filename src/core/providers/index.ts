@@ -7,6 +7,7 @@ import net from "node:net";
 import { spawn, spawnSync } from "node:child_process";
 import zlib from "node:zlib";
 import process from "node:process";
+import { requestContextEnvGet, requestContextEnvSnapshot } from "../request-context.js";
 
 export type Providers = {
   clock: {
@@ -88,9 +89,9 @@ function defaultProviders(): Providers {
       nowIso: () => new Date().toISOString(),
     },
     env: {
-      get: (name) => (typeof process.env[name] === "string" ? process.env[name] : undefined),
+      get: (name) => requestContextEnvGet(name),
       // Return a shallow clone so callers can't mutate the live process.env object.
-      snapshot: () => ({ ...process.env }),
+      snapshot: () => requestContextEnvSnapshot(),
     },
     runtime: {
       platform: process.platform,

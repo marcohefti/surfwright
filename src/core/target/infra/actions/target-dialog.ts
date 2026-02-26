@@ -7,6 +7,7 @@ import { parseOptionalTargetQuery, resolveFirstQueryMatch } from "./target-input
 import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick } from "../../click/click-utils.js";
 import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
 import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
+import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 
 type TargetDialogReport = {
   ok: true;
@@ -104,7 +105,7 @@ export async function targetDialog(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

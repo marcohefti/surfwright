@@ -8,6 +8,7 @@ import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick, waitTimeoutE
 import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
 import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 import type { BrowserNodeLike } from "../types/browser-dom-types.js";
+import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 import {
   deriveResultSource,
   escapeRegexLiteral,
@@ -191,7 +192,7 @@ export async function targetUpload(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

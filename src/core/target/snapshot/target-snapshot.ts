@@ -9,6 +9,7 @@ import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, s
 import { extractScopedSnapshotSample } from "./snapshot-sample.js";
 import { safePageTitle } from "../infra/utils/safe-page-title.js";
 import { targetSnapshotA11y } from "./snapshot-a11y.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 type SnapshotMode = "snapshot" | "orient" | "a11y";
 type SnapshotCountScope = "full" | "bounded";
@@ -213,7 +214,7 @@ export async function targetSnapshot(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

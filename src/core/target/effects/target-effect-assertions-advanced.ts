@@ -10,6 +10,7 @@ import { parseSettleMs, parseStepsCsv } from "./parse.js";
 import { targetScrollWatch } from "./target-scroll-watch.js";
 import { targetTransitionTrace } from "./target-transition-trace.js";
 import type { TargetScrollRevealScanReport, TargetTransitionAssertReport } from "./types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 const DEFAULT_TRANSITION_ASSERT_CYCLES = 2;
 const MAX_TRANSITION_ASSERT_CYCLES = 5;
@@ -52,7 +53,7 @@ async function persistTargetAction(opts: {
     timeoutMs: opts.timeoutMs,
     targetIdHint: opts.targetId,
   });
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   try {
@@ -188,7 +189,7 @@ async function discoverRevealSelectors(opts: {
     timeoutMs: opts.timeoutMs,
     targetIdHint: requestedTargetId,
   });
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   try {

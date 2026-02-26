@@ -10,6 +10,7 @@ import { resolveFirstMatch } from "./query-match.js";
 import { targetObserve } from "./target-observe.js";
 import { targetScrollWatch } from "./target-scroll-watch.js";
 import type { TargetHoverReport, TargetMotionDetectReport, TargetStickyCheckReport } from "./types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 const DEFAULT_HOVER_PROPERTIES = ["color", "background-color", "box-shadow", "transform", "opacity"];
 const DEFAULT_HOVER_SETTLE_MS = 180;
@@ -33,7 +34,7 @@ async function persistTargetAction(opts: {
     timeoutMs: opts.timeoutMs,
     targetIdHint: opts.targetId,
   });
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   try {
@@ -83,7 +84,7 @@ export async function targetHover(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

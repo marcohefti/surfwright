@@ -10,6 +10,7 @@ import { normalizeSelectorQuery, resolveSessionForAction, resolveTargetHandle, s
 import { extractFrameItems } from "./query/target-extract-frame.js";
 import { parseJsonObjectText } from "./target-eval.js";
 import type { TargetExtractReport } from "../../types.js";
+import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 const EXTRACT_MAX_LIMIT = 100;
 const EXTRACT_SCHEMA_MAX_FIELDS = 24;
@@ -224,7 +225,7 @@ export async function targetExtract(opts: {
     targetIdHint: requestedTargetId,
   });
   const resolvedSessionAt = Date.now();
-  const browser = await chromium.connectOverCDP(session.cdpOrigin, {
+  const browser = await connectSessionBrowser(session.cdpOrigin, {
     timeout: opts.timeoutMs,
   });
   const connectedAt = Date.now();

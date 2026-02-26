@@ -121,12 +121,38 @@ test("runtime-access migration scan gate leaves direct connectOverCDP only in ab
     cwd: process.cwd(),
   });
 
-  assert.equal(result.status, 0, `Expected scan matches. stderr: ${result.stderr}`);
-  const matchedFiles = result.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => line.split(":")[0]);
+  let matchedFiles = [];
+  if (result.status === 0) {
+    matchedFiles = result.stdout
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => line.split(":")[0]);
+  } else if (result.error && result.error.code === "ENOENT") {
+    const root = path.resolve(process.cwd(), "src/core");
+    const stack = [root];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        const full = path.join(current, entry.name);
+        if (entry.isDirectory()) {
+          stack.push(full);
+          continue;
+        }
+        if (!entry.isFile() || !entry.name.endsWith(".ts")) {
+          continue;
+        }
+        const text = fs.readFileSync(full, "utf8");
+        if (!text.includes("chromium.connectOverCDP(")) {
+          continue;
+        }
+        const rel = path.relative(process.cwd(), full).split(path.sep).join("/");
+        matchedFiles.push(rel);
+      }
+    }
+  } else {
+    assert.fail(`Expected scan matches. stderr: ${result.stderr}`);
+  }
 
   assert.deepEqual(Array.from(new Set(matchedFiles)), ["src/core/session/infra/runtime-access.ts"]);
 });

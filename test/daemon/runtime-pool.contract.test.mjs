@@ -209,7 +209,14 @@ test("runtime pool fails closed on session-key authority mismatch", () => {
   const result = runNodeModule(`
     import { createSessionRuntimePool } from "./src/core/session/infra/runtime-pool.ts";
 
+    const metrics = [];
     const pool = createSessionRuntimePool({
+      diagnostics: {
+        emitEvent: () => {},
+        emitMetric: (metric) => {
+          metrics.push(metric);
+        },
+      },
       connect: async () => ({
         close: async () => {},
       }),
@@ -228,9 +235,9 @@ test("runtime pool fails closed on session-key authority mismatch", () => {
         cdpOrigin: "ws://different-origin",
         timeoutMs: 200,
       });
-      console.log(JSON.stringify({ ok: false, reason: "expected-mismatch-error" }));
+      console.log(JSON.stringify({ ok: false, reason: "expected-mismatch-error", metrics }));
     } catch (error) {
-      console.log(JSON.stringify({ ok: true, code: error?.code ?? null }));
+      console.log(JSON.stringify({ ok: true, code: error?.code ?? null, metrics }));
     }
   `);
 
@@ -238,4 +245,95 @@ test("runtime pool fails closed on session-key authority mismatch", () => {
   const payload = parseJsonLine(result.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.code, "E_RUNTIME_POOL_SESSION_MISMATCH");
+  assert.equal(payload.metrics.some((entry) => entry.metric === "daemon_session_isolation_breaks_total"), true);
+});
+
+test("runtime pool keeps warm/connect failures lane-local to the failing key", () => {
+  const result = runNodeModule(`
+    import { createSessionRuntimePool } from "./src/core/session/infra/runtime-pool.ts";
+
+    const attempts = [];
+    const pool = createSessionRuntimePool({
+      connect: async ({ cdpOrigin }) => {
+        attempts.push(cdpOrigin);
+        if (cdpOrigin === "ws://bad") {
+          throw new Error("forced warm failure");
+        }
+        return {
+          close: async () => {},
+        };
+      },
+    });
+
+    let badCode = null;
+    try {
+      await pool.acquire({
+        sessionId: "s-bad",
+        cdpOrigin: "ws://bad",
+        timeoutMs: 200,
+      });
+    } catch (error) {
+      badCode = error?.code ?? null;
+    }
+
+    const good = await pool.acquire({
+      sessionId: "s-good",
+      cdpOrigin: "ws://good",
+      timeoutMs: 200,
+    });
+    await good.release();
+
+    console.log(JSON.stringify({ badCode, attempts, snapshot: pool.snapshot() }));
+  `);
+
+  assert.equal(result.status, 0, `Expected subprocess exit 0. stderr: ${result.stderr}`);
+  const payload = parseJsonLine(result.stdout);
+  assert.equal(payload.badCode, "E_RUNTIME_POOL_WARM_FAILED");
+  assert.deepEqual(payload.attempts, ["ws://bad", "ws://good"]);
+  assert.equal(payload.snapshot.length, 1);
+  assert.equal(payload.snapshot[0].key, "session:s-good");
+});
+
+test("runtime pool drains oldest cold entries on memory pressure without touching active borrows", () => {
+  const result = runNodeModule(`
+    import { createSessionRuntimePool } from "./src/core/session/infra/runtime-pool.ts";
+
+    const closed = [];
+    let tick = 0;
+    const pool = createSessionRuntimePool({
+      now: () => {
+        tick += 1;
+        return tick;
+      },
+      connect: async ({ cdpOrigin }) => ({
+        close: async () => {
+          closed.push(cdpOrigin);
+        },
+      }),
+    });
+
+    const a = await pool.acquire({ sessionId: "s-a", cdpOrigin: "ws://a", timeoutMs: 200 });
+    await a.release();
+    const b = await pool.acquire({ sessionId: "s-b", cdpOrigin: "ws://b", timeoutMs: 200 });
+    const c = await pool.acquire({ sessionId: "s-c", cdpOrigin: "ws://c", timeoutMs: 200 });
+    await c.release();
+
+    const drained = await pool.drainColdEntriesOnMemoryPressure(3);
+    const snapshotAfterDrain = pool.snapshot();
+    await b.release();
+
+    console.log(JSON.stringify({ drained, closed, snapshotAfterDrain, finalSnapshot: pool.snapshot() }));
+  `);
+
+  assert.equal(result.status, 0, `Expected subprocess exit 0. stderr: ${result.stderr}`);
+  const payload = parseJsonLine(result.stdout);
+  assert.equal(payload.drained, 2);
+  assert.equal(payload.closed.includes("ws://a"), true);
+  assert.equal(payload.closed.includes("ws://c"), true);
+  assert.equal(payload.closed.includes("ws://b"), false);
+  assert.equal(payload.snapshotAfterDrain.length, 1);
+  assert.equal(payload.snapshotAfterDrain[0].key, "session:s-b");
+  assert.equal(payload.snapshotAfterDrain[0].borrowCount, 1);
+  assert.equal(payload.finalSnapshot.length, 1);
+  assert.equal(payload.finalSnapshot[0].key, "session:s-b");
 });

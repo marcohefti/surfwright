@@ -94,6 +94,7 @@ All notable changes to SurfWright are documented here.
 - [state] Session lifecycle maintenance (`session prune`, `session clear`) now runs external reachability/process shutdown work outside the state-file lock and commits state mutations in short lock windows.
 - [session] Managed session creation paths now reserve session handles first and perform browser startup outside state mutation locks before a short commit step.
 - [daemon] Daemon bootstrap now uses a startup singleflight lock to avoid parallel spawn/meta races when multiple commands cold-start concurrently.
+- [daemon] Validation now includes executable daemon changeset gates: contract snapshot diffs require approval-log updates, and daemon behavior edits require docs+tests in the same change set.
 - [session] `session attach --cdp` now accepts `ws://`/`wss://` endpoints and supports HTTP(S) discovery URLs with path/query (resolved to websocket endpoints for runtime attach).
 - [session] CDP attach health checks now split discovery and websocket-connect stages for clearer remote endpoint handling under variable latency.
 - [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage` to reduce startup flakes in constrained environments.

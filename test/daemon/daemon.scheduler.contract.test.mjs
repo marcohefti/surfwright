@@ -302,7 +302,18 @@ test("daemon scheduler emits queue-timeout code only on wait-budget expiry", () 
   const result = runNodeModule(`
     import { createDaemonLaneScheduler } from "./src/core/daemon/domain/lane-scheduler.ts";
 
-    const scheduler = createDaemonLaneScheduler({ globalActiveLanes: 1, laneQueueDepth: 8, queueWaitMs: 20 });
+    const metrics = [];
+    const scheduler = createDaemonLaneScheduler({
+      globalActiveLanes: 1,
+      laneQueueDepth: 8,
+      queueWaitMs: 20,
+      diagnostics: {
+        emitEvent: () => {},
+        emitMetric: (metric) => {
+          metrics.push(metric);
+        },
+      },
+    });
 
     const first = scheduler.enqueue({
       laneKey: "session:s-1",
@@ -317,9 +328,9 @@ test("daemon scheduler emits queue-timeout code only on wait-budget expiry", () 
         laneKey: "session:s-1",
         execute: async () => "second",
       });
-      console.log(JSON.stringify({ ok: false, reason: "expected-timeout" }));
+      console.log(JSON.stringify({ ok: false, reason: "expected-timeout", metrics }));
     } catch (error) {
-      console.log(JSON.stringify({ ok: true, code: error?.code ?? null }));
+      console.log(JSON.stringify({ ok: true, code: error?.code ?? null, metrics }));
     } finally {
       await first;
     }
@@ -329,13 +340,34 @@ test("daemon scheduler emits queue-timeout code only on wait-budget expiry", () 
   const payload = parseJsonLine(result.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.code, "E_DAEMON_QUEUE_TIMEOUT");
+  assert.equal(payload.metrics.some((entry) => entry.metric === "daemon_queue_depth"), true);
+  assert.equal(
+    payload.metrics.some(
+      (entry) =>
+        entry.metric === "daemon_queue_rejects_total" &&
+        entry.tags?.reason === "timeout" &&
+        entry.tags?.scope === "session:s-1",
+    ),
+    true,
+  );
 });
 
 test("daemon scheduler emits queue-saturated code only on depth-cap rejection", () => {
   const result = runNodeModule(`
     import { createDaemonLaneScheduler } from "./src/core/daemon/domain/lane-scheduler.ts";
 
-    const scheduler = createDaemonLaneScheduler({ globalActiveLanes: 1, laneQueueDepth: 1, queueWaitMs: 500 });
+    const metrics = [];
+    const scheduler = createDaemonLaneScheduler({
+      globalActiveLanes: 1,
+      laneQueueDepth: 1,
+      queueWaitMs: 500,
+      diagnostics: {
+        emitEvent: () => {},
+        emitMetric: (metric) => {
+          metrics.push(metric);
+        },
+      },
+    });
 
     const first = scheduler.enqueue({
       laneKey: "session:s-1",
@@ -355,10 +387,10 @@ test("daemon scheduler emits queue-saturated code only on depth-cap rejection", 
         laneKey: "session:s-1",
         execute: async () => "third",
       });
-      console.log(JSON.stringify({ ok: false, reason: "expected-saturation" }));
+      console.log(JSON.stringify({ ok: false, reason: "expected-saturation", metrics }));
     } catch (error) {
       await Promise.all([first, second]);
-      console.log(JSON.stringify({ ok: true, code: error?.code ?? null }));
+      console.log(JSON.stringify({ ok: true, code: error?.code ?? null, metrics }));
     }
   `);
 
@@ -366,4 +398,14 @@ test("daemon scheduler emits queue-saturated code only on depth-cap rejection", 
   const payload = parseJsonLine(result.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.code, "E_DAEMON_QUEUE_SATURATED");
+  assert.equal(payload.metrics.some((entry) => entry.metric === "daemon_queue_depth"), true);
+  assert.equal(
+    payload.metrics.some(
+      (entry) =>
+        entry.metric === "daemon_queue_rejects_total" &&
+        entry.tags?.reason === "saturated" &&
+        entry.tags?.scope === "session:s-1",
+    ),
+    true,
+  );
 });

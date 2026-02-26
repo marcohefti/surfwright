@@ -15,6 +15,18 @@ function parseJson(stdout) {
   return JSON.parse(text);
 }
 
+function readNdjson(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return [];
+  }
+  return fs
+    .readFileSync(filePath, "utf8")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line));
+}
+
 async function runCli(args, env = {}) {
   return await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ["dist/cli.js", ...args], {
@@ -203,6 +215,38 @@ test("daemon-unreachable path falls back to local CLI execution", async () => {
     const payload = parseJson(result.stdout);
     assert.equal(payload.ok, true);
     assert.equal(fs.existsSync(daemonMetaPath(stateDir)), false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test("daemon-unreachable fallback is recorded in debug diagnostics events", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-unreachable-diag-"));
+  const token = "unreachable-diag-token";
+  const eventsPath = path.join(stateDir, "diagnostics", "daemon.ndjson");
+
+  try {
+    const unusedPort = await reserveUnusedLocalPort();
+    writeDaemonMeta(stateDir, { pid: process.pid, port: unusedPort, token });
+
+    const result = await runCli(["contract"], {
+      SURFWRIGHT_STATE_DIR: stateDir,
+      SURFWRIGHT_DAEMON: "1",
+      SURFWRIGHT_DEBUG_LOGS: "1",
+    });
+
+    assert.equal(result.status, 0);
+    const payload = parseJson(result.stdout);
+    assert.equal(payload.ok, true);
+
+    const events = readNdjson(eventsPath);
+    assert.equal(events.length > 0, true);
+    const fallbackEvent = events.find((entry) => entry.event === "daemon_cli_fallback");
+    assert.notEqual(fallbackEvent, undefined);
+    assert.equal(fallbackEvent.result, "unreachable");
+    assert.equal(fallbackEvent.command, "contract");
+    assert.equal(typeof fallbackEvent.fallbackMessage, "string");
+    assert.equal(fallbackEvent.fallbackMessage.length > 0, true);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }

@@ -138,6 +138,39 @@ test("daemon default path auto-starts and reuses the same worker", () => {
   assert.equal(isProcessAlive(secondMeta.pid), true);
 });
 
+test("daemon startup cleans stale metadata and replaces it with a live worker record", async () => {
+  await stopDaemonIfRunning();
+  const stalePid = 2147483647;
+  const staleToken = "stale-token";
+  fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
+  fs.writeFileSync(
+    daemonMetaPath(),
+    `${JSON.stringify({
+      version: 1,
+      pid: stalePid,
+      host: "127.0.0.1",
+      port: 49997,
+      token: staleToken,
+      startedAt: new Date(Date.now() - 60_000).toISOString(),
+    })}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+  if (process.platform !== "win32") {
+    fs.chmodSync(daemonMetaPath(), 0o600);
+  }
+
+  const result = runCli(["contract"]);
+  assert.equal(result.status, 0);
+
+  const freshMeta = readDaemonMeta();
+  assert.notEqual(freshMeta, null);
+  assert.equal(typeof freshMeta.pid, "number");
+  assert.equal(freshMeta.pid > 0, true);
+  assert.notEqual(freshMeta.pid, stalePid);
+  assert.notEqual(freshMeta.token, staleToken);
+  assert.equal(isProcessAlive(freshMeta.pid), true);
+});
+
 test("daemon idle timeout exits worker and clears metadata", async () => {
   await stopDaemonIfRunning();
 

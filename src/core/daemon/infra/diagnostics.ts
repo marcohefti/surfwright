@@ -78,3 +78,22 @@ export function createLocalDaemonDiagnostics(): DaemonDiagnostics {
     },
   };
 }
+
+export function emitDaemonFallbackDiagnostics(input: { command: string; message: string }): void {
+  if (!debugEnabled()) {
+    return;
+  }
+  appendNdjson(eventsPath(), {
+    ts: new Date().toISOString(),
+    event: "daemon_cli_fallback",
+    requestId: "cli-fallback",
+    sessionId: safeSessionId("none"),
+    command: input.command.trim().length > 0 ? input.command : "unknown",
+    result: "unreachable",
+    errorCode: null,
+    queueScope: safeQueueScope("control"),
+    queueWaitMs: 0,
+    durationMs: 0,
+    fallbackMessage: input.message,
+  });
+}

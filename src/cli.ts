@@ -7,6 +7,7 @@ import { Command, Option } from "commander";
 import { toCliFailure } from "./core/errors.js";
 import {
   cleanupOwnedDaemonMeta,
+  emitDaemonFallbackDiagnostics,
   parseDaemonWorkerArgv,
   runDaemonWorker,
   runViaDaemon,
@@ -283,6 +284,10 @@ async function main(argv: string[]): Promise<number> {
         }
         if (requestContextEnvGet("SURFWRIGHT_DEBUG_LOGS") === "1") {
           process.stderr.write(`[daemon] local fallback due to unreachable daemon: ${proxied.message}\n`);
+          emitDaemonFallbackDiagnostics({
+            command: parseCommandPath(normalizedArgv).filter(Boolean).join(" "),
+            message: proxied.message,
+          });
         }
       }
 

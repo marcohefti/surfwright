@@ -113,11 +113,18 @@ test("streaming commands bypass daemon proxy path", async () => {
       },
       async ({ port, requests }) => {
         writeDaemonMeta(stateDir, { port, token });
-        const result = await runCli(["target", "network-tail", "DEADBEEF", "--session", "s-missing"], {
+        const networkTail = await runCli(["target", "network-tail", "DEADBEEF", "--session", "s-missing"], {
           SURFWRIGHT_STATE_DIR: stateDir,
           SURFWRIGHT_DAEMON: "1",
         });
-        assert.equal(result.status, 1);
+        assert.equal(networkTail.status, 1);
+        assert.equal(requests.length, 0);
+
+        const consoleTail = await runCli(["target", "console-tail", "DEADBEEF", "--session", "s-missing"], {
+          SURFWRIGHT_STATE_DIR: stateDir,
+          SURFWRIGHT_DAEMON: "1",
+        });
+        assert.equal(consoleTail.status, 1);
         assert.equal(requests.length, 0);
       },
     );
@@ -154,6 +161,31 @@ test("non-streaming bypass classes stay direct (skill + run --plan -)", async ()
           "{\"steps\":[{\"id\":\"open\",\"url\":\"https://example.com\"}]}",
         );
         assert.equal(planResult.status, 0);
+        assert.equal(requests.length, 0);
+      },
+    );
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test("internal __* worker paths stay direct and never proxy via daemon metadata", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-bypass-internal-"));
+  const token = "bypass-internal-token";
+  try {
+    await withStubDaemon(
+      {
+        ok: false,
+        code: "E_DAEMON_RUN_FAILED",
+        message: "daemon should never receive internal worker command",
+      },
+      async ({ port, requests }) => {
+        writeDaemonMeta(stateDir, { port, token });
+        const result = await runCli(["__maintenance-worker"], {
+          SURFWRIGHT_STATE_DIR: stateDir,
+          SURFWRIGHT_DAEMON: "1",
+        });
+        assert.equal(result.status, 0);
         assert.equal(requests.length, 0);
       },
     );

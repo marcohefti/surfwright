@@ -94,7 +94,9 @@ All notable changes to SurfWright are documented here.
 - [state] Session lifecycle maintenance (`session prune`, `session clear`) now runs external reachability/process shutdown work outside the state-file lock and commits state mutations in short lock windows.
 - [session] Managed session creation paths now reserve session handles first and perform browser startup outside state mutation locks before a short commit step.
 - [daemon] Daemon bootstrap now uses a startup singleflight lock to avoid parallel spawn/meta races when multiple commands cold-start concurrently.
+- [daemon] Daemon lane resolution now recognizes `--session-id` as a session lane key and partitions control-lane traffic by hashed `--agent-id` when provided (falls back to `control:default` when absent).
 - [daemon] Validation now includes executable daemon changeset gates: contract snapshot diffs require approval-log updates, and daemon behavior edits require docs+tests in the same change set.
+- [state] `state reconcile` now includes daemon hygiene counters (`scanned/kept/removed`, reason breakdowns, stale lock counts), and opportunistic maintenance now sweeps stale daemon metadata/start locks.
 - [session] `session attach --cdp` now accepts `ws://`/`wss://` endpoints and supports HTTP(S) discovery URLs with path/query (resolved to websocket endpoints for runtime attach).
 - [session] CDP attach health checks now split discovery and websocket-connect stages for clearer remote endpoint handling under variable latency.
 - [browser] Managed Chrome launch now applies Linux container resilience flag `--disable-dev-shm-usage` to reduce startup flakes in constrained environments.
@@ -143,6 +145,13 @@ All notable changes to SurfWright are documented here.
 - [errors] `E_SESSION_NOT_FOUND` and `E_TARGET_SESSION_UNKNOWN` now include bounded continuity hints/hintContext for faster recovery after stale session/target mappings.
 - [state] State lock stale detection now checks lock-owner PID liveness and lock timeouts now emit additive lock diagnostics (`waitMs`, `lockOwnerPid`, `lockOwnerAlive`, `stateRoot`).
 - [browser] Managed startup timeout recovery now performs bounded TERM->KILL shutdown verification before retrying, reducing leaked Chrome process/profile races.
+- [daemon] Idle shutdown now forcibly clears half-open idle sockets so daemon workers exit cleanly instead of lingering after `server.close()` with stale connections.
+- [daemon] CLI daemon proxy now retries queue-pressure typed failures (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) with a short bounded backoff before returning the typed error.
+- [daemon] CLI `--help`/`-h` invocations now bypass daemon proxying so help output remains available under daemon queue contention.
+- [daemon] `contract` commands now bypass daemon proxying to reduce control-lane contention from low-cost metadata lookups.
+- [daemon] `open <url>` lane routing now derives `origin:url:<hash>` lanes when session/profile/shared-origin hints are absent, reducing control-lane contention under parallel open flows.
+- [daemon] Daemon proxy now injects request-scoped `SURFWRIGHT_AGENT_ID` into daemon argv when `--agent-id` is omitted, preserving per-agent lane partitioning in parallel runs.
+- [daemon] Daemon-run command failures now preserve typed CLI envelopes (for example `E_QUERY_INVALID`) instead of collapsing to generic `E_DAEMON_RUN_FAILED` for validation errors.
 - [browser] Managed session startup now performs scoped profile startup-artifact cleanup before the single bounded retry after `E_BROWSER_START_TIMEOUT` (no timeout inflation).
 - [run] Fixed deterministic plan template resolution for object payloads by removing duplicate nested assignment in `resolveTemplateInValue`.
 - [state] Hardened `sessionId`/`targetId` sanitization to reject placeholder handles (`undefined`, `null`, `nan`) early.

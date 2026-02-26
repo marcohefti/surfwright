@@ -1,4 +1,5 @@
 import process from "node:process";
+import { sweepDaemonMetadata } from "../../daemon/public.js";
 import { sessionParkIdleManagedProcesses } from "./session-idle-parking.js";
 import {
   DEFAULT_DISK_PRUNE_CAPTURES_MAX_AGE_HOURS,
@@ -288,6 +289,15 @@ export async function runOpportunisticStateMaintenanceWorker(): Promise<void> {
     await sessionParkIdleManagedProcesses({
       idleTtlMs: idleProcessTtlMs(),
       sweepCap: idleProcessSweepCap(),
+    });
+  } catch {
+    // best effort; maintenance failures should not crash caller flows
+  }
+
+  try {
+    sweepDaemonMetadata({
+      includeAgentNamespaces: true,
+      maxAgentNamespaces: 64,
     });
   } catch {
     // best effort; maintenance failures should not crash caller flows

@@ -8,6 +8,7 @@ import process from "node:process";
 import test from "node:test";
 
 const DAEMON_META_VERSION = 1;
+const DAEMON_QUEUE_RETRY_MAX_ATTEMPTS = 2;
 
 function parseJson(stdout) {
   const text = stdout.trim();
@@ -153,7 +154,7 @@ test("CLI surfaces E_DAEMON_QUEUE_TIMEOUT directly from daemon typed failure", a
       },
       async ({ port, requests }) => {
         writeDaemonMeta(stateDir, { pid: process.pid, port, token });
-        const result = await runCli(["contract"], {
+        const result = await runCli(["session", "list"], {
           SURFWRIGHT_STATE_DIR: stateDir,
           SURFWRIGHT_DAEMON: "1",
         });
@@ -161,7 +162,7 @@ test("CLI surfaces E_DAEMON_QUEUE_TIMEOUT directly from daemon typed failure", a
         const payload = parseJson(result.stdout);
         assert.equal(payload.ok, false);
         assert.equal(payload.code, "E_DAEMON_QUEUE_TIMEOUT");
-        assert.equal(requests.length, 1);
+        assert.equal(requests.length, DAEMON_QUEUE_RETRY_MAX_ATTEMPTS + 1);
       },
     );
   } finally {
@@ -182,7 +183,7 @@ test("CLI surfaces E_DAEMON_QUEUE_SATURATED directly from daemon typed failure",
       },
       async ({ port, requests }) => {
         writeDaemonMeta(stateDir, { pid: process.pid, port, token });
-        const result = await runCli(["contract"], {
+        const result = await runCli(["session", "list"], {
           SURFWRIGHT_STATE_DIR: stateDir,
           SURFWRIGHT_DAEMON: "1",
         });
@@ -190,7 +191,7 @@ test("CLI surfaces E_DAEMON_QUEUE_SATURATED directly from daemon typed failure",
         const payload = parseJson(result.stdout);
         assert.equal(payload.ok, false);
         assert.equal(payload.code, "E_DAEMON_QUEUE_SATURATED");
-        assert.equal(requests.length, 1);
+        assert.equal(requests.length, DAEMON_QUEUE_RETRY_MAX_ATTEMPTS + 1);
       },
     );
   } finally {
@@ -206,7 +207,7 @@ test("daemon-unreachable path falls back to local CLI execution", async () => {
     const unusedPort = await reserveUnusedLocalPort();
     writeDaemonMeta(stateDir, { pid: process.pid, port: unusedPort, token });
 
-    const result = await runCli(["contract"], {
+    const result = await runCli(["session", "list"], {
       SURFWRIGHT_STATE_DIR: stateDir,
       SURFWRIGHT_DAEMON: "1",
     });
@@ -215,6 +216,47 @@ test("daemon-unreachable path falls back to local CLI execution", async () => {
     const payload = parseJson(result.stdout);
     assert.equal(payload.ok, true);
     assert.equal(fs.existsSync(daemonMetaPath(stateDir)), false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test("CLI retries queue overload once daemon recovers and returns success", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-queue-retry-recover-"));
+  const token = "queue-retry-recover-token";
+  let remainingQueueFailures = 1;
+
+  try {
+    await withStubDaemon(
+      () => {
+        if (remainingQueueFailures > 0) {
+          remainingQueueFailures -= 1;
+          return {
+            ok: false,
+            code: "E_DAEMON_QUEUE_TIMEOUT",
+            message: "daemon queue wait budget exceeded",
+          };
+        }
+        return {
+          ok: true,
+          kind: "run",
+          code: 0,
+          stdout: '{"ok":true}\n',
+          stderr: "",
+        };
+      },
+      async ({ port, requests }) => {
+        writeDaemonMeta(stateDir, { pid: process.pid, port, token });
+        const result = await runCli(["session", "list"], {
+          SURFWRIGHT_STATE_DIR: stateDir,
+          SURFWRIGHT_DAEMON: "1",
+        });
+        assert.equal(result.status, 0);
+        const payload = parseJson(result.stdout);
+        assert.equal(payload.ok, true);
+        assert.equal(requests.length, 2);
+      },
+    );
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }
@@ -229,7 +271,7 @@ test("daemon-unreachable fallback is recorded in debug diagnostics events", asyn
     const unusedPort = await reserveUnusedLocalPort();
     writeDaemonMeta(stateDir, { pid: process.pid, port: unusedPort, token });
 
-    const result = await runCli(["contract"], {
+    const result = await runCli(["session", "list"], {
       SURFWRIGHT_STATE_DIR: stateDir,
       SURFWRIGHT_DAEMON: "1",
       SURFWRIGHT_DEBUG_LOGS: "1",
@@ -244,9 +286,112 @@ test("daemon-unreachable fallback is recorded in debug diagnostics events", asyn
     const fallbackEvent = events.find((entry) => entry.event === "daemon_cli_fallback");
     assert.notEqual(fallbackEvent, undefined);
     assert.equal(fallbackEvent.result, "unreachable");
-    assert.equal(fallbackEvent.command, "contract");
+    assert.equal(fallbackEvent.command, "session list");
     assert.equal(typeof fallbackEvent.fallbackMessage, "string");
     assert.equal(fallbackEvent.fallbackMessage.length > 0, true);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test("contract commands bypass daemon proxy even when daemon metadata exists", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-contract-bypass-"));
+  const token = "contract-bypass-token";
+  try {
+    await withStubDaemon(
+      {
+        ok: false,
+        code: "E_DAEMON_QUEUE_TIMEOUT",
+        message: "contract should not proxy via daemon",
+      },
+      async ({ port, requests }) => {
+        writeDaemonMeta(stateDir, { pid: process.pid, port, token });
+        const result = await runCli(["contract"], {
+          SURFWRIGHT_STATE_DIR: stateDir,
+          SURFWRIGHT_DAEMON: "1",
+        });
+        assert.equal(result.status, 0);
+        const payload = parseJson(result.stdout);
+        assert.equal(payload.ok, true);
+        assert.equal(requests.length, 0);
+      },
+    );
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test("daemon injects request-scoped agent id into argv when --agent-id is absent", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-agentid-inject-"));
+  const token = "agentid-inject-token";
+  try {
+    await withStubDaemon(
+      {
+        ok: true,
+        kind: "run",
+        code: 0,
+        stdout: '{"ok":true}\n',
+        stderr: "",
+      },
+      async ({ port, requests }) => {
+        writeDaemonMeta(stateDir, { pid: process.pid, port, token });
+        const result = await runCli(["open", "https://example.com"], {
+          SURFWRIGHT_STATE_DIR: stateDir,
+          SURFWRIGHT_DAEMON: "1",
+          SURFWRIGHT_AGENT_ID: "agent.env",
+        });
+        assert.equal(result.status, 0);
+        const payload = parseJson(result.stdout);
+        assert.equal(payload.ok, true);
+        assert.equal(requests.length, 1);
+        const request = JSON.parse(requests[0]);
+        assert.equal(request.kind, "run");
+        assert.equal(Array.isArray(request.argv), true);
+        const argv = request.argv;
+        const index = argv.indexOf("--agent-id");
+        assert.notEqual(index, -1);
+        assert.equal(argv[index + 1], "agent.env");
+      },
+    );
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test("daemon keeps explicit --agent-id instead of replacing with request-scoped agent id", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-agentid-explicit-"));
+  const token = "agentid-explicit-token";
+  try {
+    await withStubDaemon(
+      {
+        ok: true,
+        kind: "run",
+        code: 0,
+        stdout: '{"ok":true}\n',
+        stderr: "",
+      },
+      async ({ port, requests }) => {
+        writeDaemonMeta(stateDir, { pid: process.pid, port, token });
+        const result = await runCli(["--agent-id", "agent.cli", "open", "https://example.com"], {
+          SURFWRIGHT_STATE_DIR: stateDir,
+          SURFWRIGHT_DAEMON: "1",
+          SURFWRIGHT_AGENT_ID: "agent.env",
+        });
+        assert.equal(result.status, 0);
+        const payload = parseJson(result.stdout);
+        assert.equal(payload.ok, true);
+        assert.equal(requests.length, 1);
+        const request = JSON.parse(requests[0]);
+        const argv = request.argv;
+        const indexes = argv
+          .map((tokenValue, index) => ({ tokenValue, index }))
+          .filter((entry) => entry.tokenValue === "--agent-id")
+          .map((entry) => entry.index);
+        assert.equal(indexes.length, 1);
+        assert.equal(argv[indexes[0] + 1], "agent.cli");
+        assert.equal(argv.includes("agent.env"), false);
+      },
+    );
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }
@@ -256,7 +401,7 @@ test("hard-off daemon mode never spawns daemon metadata", async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-hardoff-nospawn-"));
 
   try {
-    const result = await runCli(["contract"], {
+    const result = await runCli(["session", "list"], {
       SURFWRIGHT_STATE_DIR: stateDir,
       SURFWRIGHT_DAEMON: "0",
     });
@@ -282,13 +427,39 @@ test("hard-off daemon mode never proxies to existing daemon metadata", async () 
       },
       async ({ port, requests }) => {
         writeDaemonMeta(stateDir, { pid: process.pid, port, token });
-        const result = await runCli(["contract"], {
+        const result = await runCli(["session", "list"], {
           SURFWRIGHT_STATE_DIR: stateDir,
           SURFWRIGHT_DAEMON: "0",
         });
         assert.equal(result.status, 0);
         const payload = parseJson(result.stdout);
         assert.equal(payload.ok, true);
+        assert.equal(requests.length, 0);
+      },
+    );
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test("help commands bypass daemon proxy even when daemon metadata exists", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-help-bypass-"));
+  const token = "help-bypass-token";
+  try {
+    await withStubDaemon(
+      {
+        ok: false,
+        code: "E_DAEMON_QUEUE_TIMEOUT",
+        message: "help should not proxy via daemon",
+      },
+      async ({ port, requests }) => {
+        writeDaemonMeta(stateDir, { pid: process.pid, port, token });
+        const result = await runCli(["session", "list", "--help"], {
+          SURFWRIGHT_STATE_DIR: stateDir,
+          SURFWRIGHT_DAEMON: "1",
+        });
+        assert.equal(result.status, 0);
+        assert.equal(result.stdout.includes("Usage: surfwright session list"), true);
         assert.equal(requests.length, 0);
       },
     );
@@ -311,7 +482,7 @@ test("daemon client rejects oversized daemon response frames and falls back loca
       },
       async ({ port, requests }) => {
         writeDaemonMeta(stateDir, { pid: process.pid, port, token });
-        const result = await runCli(["contract"], {
+        const result = await runCli(["session", "list"], {
           SURFWRIGHT_STATE_DIR: stateDir,
           SURFWRIGHT_DAEMON: "1",
         });
@@ -338,9 +509,9 @@ test("queue errors never collapse to E_DAEMON_RUN_FAILED at CLI surface", async 
           code,
           message: `typed queue code ${code}`,
         },
-        async ({ port }) => {
+        async ({ port, requests }) => {
           writeDaemonMeta(stateDir, { pid: process.pid, port, token });
-          const result = await runCli(["contract"], {
+          const result = await runCli(["session", "list"], {
             SURFWRIGHT_STATE_DIR: stateDir,
             SURFWRIGHT_DAEMON: "1",
           });
@@ -348,6 +519,7 @@ test("queue errors never collapse to E_DAEMON_RUN_FAILED at CLI surface", async 
           const payload = parseJson(result.stdout);
           assert.equal(payload.code, code);
           assert.notEqual(payload.code, "E_DAEMON_RUN_FAILED");
+          assert.equal(requests.length, DAEMON_QUEUE_RETRY_MAX_ATTEMPTS + 1);
         },
       );
     } finally {
@@ -357,4 +529,22 @@ test("queue errors never collapse to E_DAEMON_RUN_FAILED at CLI surface", async 
 
   await runCase("E_DAEMON_QUEUE_TIMEOUT");
   await runCase("E_DAEMON_QUEUE_SATURATED");
+});
+
+test("daemon preserves typed CLI validation failures instead of E_DAEMON_RUN_FAILED", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-typed-cli-failure-"));
+  try {
+    const result = await runCli(["target", "attr", "t-1", "--selector", "input", "--nth", "0", "--name", "checked"], {
+      SURFWRIGHT_STATE_DIR: stateDir,
+      SURFWRIGHT_DAEMON: "1",
+      SURFWRIGHT_DAEMON_IDLE_MS: "300",
+    });
+    assert.equal(result.status, 1);
+    const payload = parseJson(result.stdout);
+    assert.equal(payload.ok, false);
+    assert.equal(payload.code, "E_QUERY_INVALID");
+    assert.notEqual(payload.code, "E_DAEMON_RUN_FAILED");
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
 });

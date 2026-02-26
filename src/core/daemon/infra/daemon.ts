@@ -2,6 +2,8 @@ import process from "node:process";
 import { allocateFreePort } from "../../browser.js";
 import { stateRootDir } from "../../state/index.js";
 import { providers } from "../../providers/index.js";
+import { requestContextEnvGet } from "../../request-context.js";
+import { parseGlobalOptionValue } from "../../../cli/options.js";
 import { sendDaemonRequest, waitForDaemonReady } from "./daemon-transport.js";
 
 const DAEMON_META_VERSION = 1;
@@ -10,6 +12,8 @@ const DAEMON_STARTUP_TIMEOUT_MS = 4500;
 const DAEMON_REQUEST_TIMEOUT_MS = 120000;
 const DAEMON_PING_TIMEOUT_MS = 250;
 const DAEMON_RETRY_DELAY_MS = 60;
+const DAEMON_QUEUE_RETRY_MAX_ATTEMPTS = 2;
+const DAEMON_QUEUE_RETRY_DELAY_MS = 60;
 const DAEMON_START_LOCK_FILENAME = "daemon.start.lock";
 const DAEMON_START_LOCK_TIMEOUT_MS = 5000;
 const DAEMON_START_LOCK_STALE_MS = 15000;
@@ -50,6 +54,30 @@ function daemonMetaPath(): string {
 
 function daemonStartLockPath(): string {
   return providers().path.join(stateRootDir(), DAEMON_START_LOCK_FILENAME);
+}
+
+function normalizedAgentIdFromContext(): string | null {
+  const raw = requestContextEnvGet("SURFWRIGHT_AGENT_ID");
+  if (typeof raw !== "string") {
+    return null;
+  }
+  const trimmed = raw.trim();
+  if (!/^[A-Za-z0-9._-]{1,64}$/.test(trimmed)) {
+    return null;
+  }
+  return trimmed;
+}
+
+function withRequestAgentIdArgv(argv: string[]): string[] {
+  const parsed = parseGlobalOptionValue(argv, "--agent-id");
+  if (parsed.found && parsed.valid) {
+    return argv;
+  }
+  const fromContext = normalizedAgentIdFromContext();
+  if (!fromContext) {
+    return argv;
+  }
+  return [argv[0] ?? "", argv[1] ?? "", "--agent-id", fromContext, ...argv.slice(2)];
 }
 
 function parsePositiveInt(value: unknown): number | null {
@@ -363,37 +391,52 @@ export async function runViaDaemon(argv: string[], entryScriptPath: string): Pro
     }
   }
 
+  const isQueuePressureCode = (code: string): boolean =>
+    code === "E_DAEMON_QUEUE_TIMEOUT" || code === "E_DAEMON_QUEUE_SATURATED";
+  const requestArgv = withRequestAgentIdArgv(argv);
+
   try {
-    const response = await sendDaemonRequest({
-      host: DAEMON_HOST,
-      port: meta.port,
-      request: {
-        token: meta.token,
-        kind: "run",
-        argv,
-      },
-      timeoutMs: DAEMON_REQUEST_TIMEOUT_MS,
-    });
-    if (!response.ok) {
+    for (let attempt = 0; attempt <= DAEMON_QUEUE_RETRY_MAX_ATTEMPTS; attempt += 1) {
+      const response = await sendDaemonRequest({
+        host: DAEMON_HOST,
+        port: meta.port,
+        request: {
+          token: meta.token,
+          kind: "run",
+          argv: requestArgv,
+        },
+        timeoutMs: DAEMON_REQUEST_TIMEOUT_MS,
+      });
+      if (!response.ok) {
+        const shouldRetry = isQueuePressureCode(response.code) && attempt < DAEMON_QUEUE_RETRY_MAX_ATTEMPTS;
+        if (shouldRetry) {
+          await new Promise((resolve) => setTimeout(resolve, DAEMON_QUEUE_RETRY_DELAY_MS));
+          continue;
+        }
+        return {
+          kind: "typed_daemon_error",
+          code: response.code,
+          message: response.message,
+        };
+      }
+      if (response.kind !== "run") {
+        return {
+          kind: "unreachable",
+          message: "daemon returned non-run response kind",
+        };
+      }
       return {
-        kind: "typed_daemon_error",
-        code: response.code,
-        message: response.message,
-      };
-    }
-    if (response.kind !== "run") {
-      return {
-        kind: "unreachable",
-        message: "daemon returned non-run response kind",
+        kind: "success",
+        result: {
+          code: response.code,
+          stdout: response.stdout,
+          stderr: response.stderr,
+        },
       };
     }
     return {
-      kind: "success",
-      result: {
-        code: response.code,
-        stdout: response.stdout,
-        stderr: response.stderr,
-      },
+      kind: "unreachable",
+      message: "daemon queue retry loop exhausted",
     };
   } catch {
     removeDaemonMeta();

@@ -148,6 +148,7 @@ SurfWright now performs opportunistic idle process parking on normal command ing
 - session metadata/profile state is kept so the next command can transparently restart the session
 - attached sessions are never process-killed by this path
 - stale disk artifacts are opportunistically pruned with bounded retention (runs, captures, orphan session profiles)
+- stale daemon metadata/start locks are opportunistically swept (`daemon.json`, `daemon.start.lock`) when records are dead/invalid
 
 Tuning knobs:
 

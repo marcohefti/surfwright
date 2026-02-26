@@ -139,6 +139,7 @@ SurfWright runs a bounded detached opportunistic maintenance pass on normal comm
 
 - park long-idle managed browser processes
 - prune stale disk artifacts (`runs/`, `captures/`, orphan `profiles/` dirs) with conservative caps
+- sweep stale daemon metadata/start-lock files (`daemon.json`, `daemon.start.lock`) for dead or invalid daemon records
 
 Use `state reconcile` and `state disk-prune` only when doing explicit maintainer diagnostics or housekeeping:
 

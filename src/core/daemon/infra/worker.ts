@@ -10,6 +10,7 @@ import { createLocalDaemonDiagnostics } from "./diagnostics.js";
 const DAEMON_META_VERSION = 1;
 const DAEMON_HOST = "127.0.0.1";
 const DAEMON_IDLE_TIMEOUT_MS = 15000;
+const DAEMON_FORCE_SOCKET_CLOSE_MS = 750;
 const MAX_FRAME_BYTES = 1024 * 1024 * 4;
 
 export type DaemonRunResult = {
@@ -170,24 +171,76 @@ export async function runDaemonWorker(opts: {
     diagnostics,
   });
   let idleTimer: NodeJS.Timeout | null = null;
+  let forceCloseTimer: NodeJS.Timeout | null = null;
+  let shuttingDown = false;
+  const sockets = new Map<
+    {
+      setEncoding: (encoding: BufferEncoding) => void;
+      on: (event: string, listener: (...args: unknown[]) => void) => void;
+      destroy: () => void;
+      end: (data: string, callback?: () => void) => void;
+      setTimeout: (timeout: number, callback?: () => void) => void;
+    },
+    {
+      inFlight: boolean;
+    }
+  >();
+
+  const clearForceCloseTimer = () => {
+    if (forceCloseTimer) {
+      clearTimeout(forceCloseTimer);
+      forceCloseTimer = null;
+    }
+  };
+
+  const destroyIdleSockets = () => {
+    for (const [socket, state] of sockets.entries()) {
+      if (state.inFlight) {
+        continue;
+      }
+      socket.destroy();
+    }
+  };
+
+  const beginShutdown = () => {
+    if (shuttingDown) {
+      return;
+    }
+    shuttingDown = true;
+    clearForceCloseTimer();
+    server.close();
+    destroyIdleSockets();
+    if (sockets.size > 0) {
+      forceCloseTimer = setTimeout(() => {
+        destroyIdleSockets();
+      }, DAEMON_FORCE_SOCKET_CLOSE_MS);
+    }
+  };
 
   const scheduleIdleShutdown = () => {
+    if (shuttingDown) {
+      return;
+    }
     if (idleTimer) {
       clearTimeout(idleTimer);
     }
     idleTimer = setTimeout(() => {
-      server.close();
+      beginShutdown();
     }, idleMs);
   };
 
-  const writeResponse = (
-    socket: { end: (data: string, callback?: () => void) => void },
-    response: DaemonWorkerResponse,
-    shutdownAfterWrite: boolean,
-  ) => {
-    socket.end(`${JSON.stringify(response)}\n`, () => {
-      if (shutdownAfterWrite) {
-        server.close();
+  const writeResponse = (input: {
+    socket: {
+      end: (data: string, callback?: () => void) => void;
+    };
+    response: DaemonWorkerResponse;
+    shutdownAfterWrite: boolean;
+    markIdle: () => void;
+  }) => {
+    input.socket.end(`${JSON.stringify(input.response)}\n`, () => {
+      input.markIdle();
+      if (input.shutdownAfterWrite) {
+        beginShutdown();
       }
     });
   };
@@ -237,10 +290,34 @@ export async function runDaemonWorker(opts: {
   };
 
   server.on("connection", (socket) => {
+    if (shuttingDown) {
+      socket.destroy();
+      return;
+    }
+    const state = {
+      inFlight: false,
+    };
+    sockets.set(socket, state);
     scheduleIdleShutdown();
+    socket.setTimeout(idleMs, () => {
+      if (state.inFlight) {
+        return;
+      }
+      socket.destroy();
+    });
     socket.setEncoding("utf8");
     let buffer = "";
     let bufferBytes = 0;
+
+    socket.on("close", () => {
+      sockets.delete(socket);
+      if (shuttingDown) {
+        destroyIdleSockets();
+        if (sockets.size === 0) {
+          clearForceCloseTimer();
+        }
+      }
+    });
 
     socket.on("data", (chunk: string) => {
       buffer += chunk;
@@ -258,20 +335,24 @@ export async function runDaemonWorker(opts: {
         return;
       }
       if (rawLine.length === 0) {
-        writeResponse(
+        writeResponse({
           socket,
-          {
+          response: {
             ok: false,
             code: "E_DAEMON_REQUEST_INVALID",
             message: "blank request",
           },
-          false,
-        );
+          shutdownAfterWrite: false,
+          markIdle: () => {
+            state.inFlight = false;
+          },
+        });
         return;
       }
       // Only one request per connection; ignore any extra bytes.
       buffer = "";
       bufferBytes = 0;
+      state.inFlight = true;
 
       void (async () => {
         const startedAtMs = Date.now();
@@ -320,20 +401,30 @@ export async function runDaemonWorker(opts: {
               durationMs,
             });
           }
-          writeResponse(socket, orchestrated.response, orchestrated.shutdownAfterWrite);
+          writeResponse({
+            socket,
+            response: orchestrated.response,
+            shutdownAfterWrite: orchestrated.shutdownAfterWrite,
+            markIdle: () => {
+              state.inFlight = false;
+            },
+          });
           if (orchestrated.scheduleIdleAfterWrite) {
             scheduleIdleShutdown();
           }
         } catch {
-          writeResponse(
+          writeResponse({
             socket,
-            {
+            response: {
               ok: false,
               code: "E_DAEMON_RUN_FAILED",
               message: "daemon request processing failed",
             },
-            false,
-          );
+            shutdownAfterWrite: false,
+            markIdle: () => {
+              state.inFlight = false;
+            },
+          });
         }
       })();
     });
@@ -354,6 +445,8 @@ export async function runDaemonWorker(opts: {
       if (idleTimer) {
         clearTimeout(idleTimer);
       }
+      clearForceCloseTimer();
+      destroyIdleSockets();
       resolve();
     });
     server.once("error", reject);

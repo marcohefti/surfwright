@@ -181,3 +181,33 @@ test("opportunistic maintenance prunes stale run artifacts in detached worker", 
   const removed = await waitForPathMissing(staleRun, 4000);
   assert.equal(removed, true);
 });
+
+test("opportunistic maintenance cleans stale daemon metadata in detached worker", async () => {
+  writeState(baseState());
+  fs.rmSync(path.join(TEST_STATE_DIR, "opportunistic-gc.stamp"), { force: true });
+  fs.rmSync(path.join(TEST_STATE_DIR, "opportunistic-gc.lock"), { force: true });
+  const daemonMetaPath = path.join(TEST_STATE_DIR, "daemon.json");
+  fs.writeFileSync(
+    daemonMetaPath,
+    `${JSON.stringify({
+      version: 1,
+      pid: 2147483647,
+      host: "127.0.0.1",
+      port: 49997,
+      token: "stale-token",
+      startedAt: new Date(Date.now() - 60_000).toISOString(),
+    })}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+  if (process.platform !== "win32") {
+    fs.chmodSync(daemonMetaPath, 0o600);
+  }
+
+  const result = runCli(["contract"], {
+    SURFWRIGHT_GC_DISK_PRUNE_ENABLED: "0",
+  });
+  assert.equal(result.status, 0);
+
+  const removed = await waitForPathMissing(daemonMetaPath, 4000);
+  assert.equal(removed, true);
+});

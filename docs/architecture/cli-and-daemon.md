@@ -63,6 +63,8 @@ Implemented Lean v1 boundary path:
    - If argv[2] is `__network-worker` or `__daemon-worker`, run worker mode directly and exit.
 3. Decide daemon bypass:
    - `shouldBypassDaemon(...)` returns true for:
+     - `contract` commands (cheap metadata lookups stay local; avoid daemon queue contention)
+     - `--help` / `-h` invocations (keep help deterministic even under daemon load)
      - internal commands (`__*`)
      - streaming tails: `target network-tail`, `target console-tail`
      - `run --plan -` (stdin plan; avoid buffering/forwarding complexity)
@@ -83,17 +85,21 @@ Implemented Lean v1 boundary path:
 
 | Outcome class | Fallback eligibility | CLI behavior |
 | --- | --- | --- |
-| Queue overload (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) | No | Return typed queue failure directly to stdout JSON; do not run local fallback. |
+| Queue overload (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) | No | Retry daemon request with a short bounded backoff (`2` retries), then return typed queue failure directly to stdout JSON if still overloaded. |
 | Daemon unreachable (transport/startup/connectivity failure) | Yes | Run local command path and preserve CLI contract envelope. |
 
 ## Scheduler Semantics (Lean v1 Defaults)
 
-- lane key precedence for daemon `run`: `sessionId -> cdpOrigin -> control:default`
+- lane key precedence for daemon `run`: `sessionId (--session|--session-id) -> cdpOrigin -> control`
+- `open <url>` without `--session|--profile|--isolation shared` now derives an origin lane (`origin:url:<hash>`) instead of falling back to control lane
 - per-session lane concurrency: `1` (same session stays serialized cross-process)
 - global active lane cap: `8`
 - per-lane queue depth cap: `8`
 - queue wait budget: `2000ms`
-- non-session work is routed to bounded `control:default` lane
+- non-session work is routed to bounded control lanes:
+  - `control:agent:<hash>` when `--agent-id` is present
+  - `control:default` otherwise
+- daemon client injects request-scoped `SURFWRIGHT_AGENT_ID` into proxied argv when `--agent-id` is not explicitly set, preserving per-agent control-lane partitioning under parallel runs
 - scheduler is fairness-oriented across runnable lanes; one stalled lane must not starve unrelated lanes
 - queue wait expiry maps only to `E_DAEMON_QUEUE_TIMEOUT`
 - queue depth rejection maps only to `E_DAEMON_QUEUE_SATURATED`
@@ -168,6 +174,7 @@ Implemented Lean v1 boundary path:
 
 - Daemon metadata:
   - `daemon.json` in the state root directory records `{ pid, host, port, token, startedAt }` (`src/core/daemon/infra/daemon.ts`).
+  - `state reconcile` and opportunistic maintenance sweep stale daemon metadata (`daemon.json`) and stale startup locks (`daemon.start.lock`) for dead/invalid workers.
 - Deterministic typed failures:
   - CLI converts thrown errors into typed failures via `toCliFailure(...)` and prints in a stable shape (`src/cli.ts`).
 

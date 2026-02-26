@@ -87,6 +87,12 @@ function shouldBypassDaemon(argv: string[]): boolean {
   if (!first) {
     return true;
   }
+  if (first === "contract") {
+    return true;
+  }
+  if (argv.includes("--help") || argv.includes("-h")) {
+    return true;
+  }
   if (first.startsWith("__")) {
     return true;
   }

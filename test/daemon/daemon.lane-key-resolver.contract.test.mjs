@@ -30,6 +30,20 @@ test("lane resolver: sessionId takes precedence over profile/origin fallbacks", 
   assert.equal(payload.laneKey, "session:s-main");
 });
 
+test("lane resolver: --session-id uses session lane routing", () => {
+  const result = runNodeModule(`
+    import { resolveDaemonLaneKey } from "./src/core/daemon/domain/lane-key-resolver.ts";
+    const resolved = resolveDaemonLaneKey({
+      argv: ["node", "dist/cli.js", "session", "new", "--session-id", "s-new"],
+    });
+    console.log(JSON.stringify(resolved));
+  `);
+  assert.equal(result.status, 0, `Expected subprocess exit 0. stderr: ${result.stderr}`);
+  const payload = parseJsonLine(result.stdout);
+  assert.equal(payload.source, "sessionId");
+  assert.equal(payload.laneKey, "session:s-new");
+});
+
 test("lane resolver: open/run derive origin lane from profile/shared isolation", () => {
   const result = runNodeModule(`
     import { resolveDaemonLaneKey } from "./src/core/daemon/domain/lane-key-resolver.ts";
@@ -47,6 +61,38 @@ test("lane resolver: open/run derive origin lane from profile/shared isolation",
   assert.equal(payload.openProfile.laneKey, "origin:profile:auth");
   assert.equal(payload.runShared.source, "cdpOrigin");
   assert.equal(payload.runShared.laneKey, "origin:shared");
+});
+
+test("lane resolver: open without session/profile derives url-origin lane", () => {
+  const result = runNodeModule(`
+    import { resolveDaemonLaneKey } from "./src/core/daemon/domain/lane-key-resolver.ts";
+    const resolved = resolveDaemonLaneKey({
+      argv: ["node", "dist/cli.js", "open", "https://example.com/page", "--wait-until", "load"],
+    });
+    console.log(JSON.stringify(resolved));
+  `);
+  assert.equal(result.status, 0, `Expected subprocess exit 0. stderr: ${result.stderr}`);
+  const payload = parseJsonLine(result.stdout);
+  assert.equal(payload.source, "cdpOrigin");
+  assert.equal(payload.family, "open");
+  assert.equal(typeof payload.laneKey, "string");
+  assert.equal(payload.laneKey.startsWith("origin:url:"), true);
+});
+
+test("lane resolver: open with options before url still derives url-origin lane", () => {
+  const result = runNodeModule(`
+    import { resolveDaemonLaneKey } from "./src/core/daemon/domain/lane-key-resolver.ts";
+    const resolved = resolveDaemonLaneKey({
+      argv: ["node", "dist/cli.js", "open", "--wait-until", "domcontentloaded", "https://example.com/start"],
+    });
+    console.log(JSON.stringify(resolved));
+  `);
+  assert.equal(result.status, 0, `Expected subprocess exit 0. stderr: ${result.stderr}`);
+  const payload = parseJsonLine(result.stdout);
+  assert.equal(payload.source, "cdpOrigin");
+  assert.equal(payload.family, "open");
+  assert.equal(typeof payload.laneKey, "string");
+  assert.equal(payload.laneKey.startsWith("origin:url:"), true);
 });
 
 test("lane resolver: session.attach derives hashed origin lane from --cdp", () => {
@@ -83,4 +129,20 @@ test("lane resolver: target.* and non-session commands fall back to control lane
   assert.equal(payload.targetWithoutSession.laneKey, payload.controlKey);
   assert.equal(payload.controlCommand.source, "control");
   assert.equal(payload.controlCommand.laneKey, payload.controlKey);
+});
+
+test("lane resolver: --agent-id partitions control lane without exposing raw agent id", () => {
+  const result = runNodeModule(`
+    import { resolveDaemonLaneKey } from "./src/core/daemon/domain/lane-key-resolver.ts";
+    const resolved = resolveDaemonLaneKey({
+      argv: ["node", "dist/cli.js", "contract", "--agent-id", "team.alpha"],
+    });
+    console.log(JSON.stringify(resolved));
+  `);
+  assert.equal(result.status, 0, `Expected subprocess exit 0. stderr: ${result.stderr}`);
+  const payload = parseJsonLine(result.stdout);
+  assert.equal(payload.source, "control");
+  assert.equal(typeof payload.laneKey, "string");
+  assert.equal(payload.laneKey.startsWith("control:agent:"), true);
+  assert.equal(payload.laneKey.includes("team.alpha"), false);
 });

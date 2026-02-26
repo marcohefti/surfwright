@@ -1,4 +1,5 @@
 import { CDP_HEALTHCHECK_TIMEOUT_MS } from "../../browser.js";
+import { sweepDaemonMetadata } from "../../daemon/public.js";
 import { CliError } from "../../errors.js";
 import { readState, sanitizeSessionId } from "./state-store.js";
 import { mutateState } from "../repo/mutations.js";
@@ -382,6 +383,9 @@ export async function stateReconcile(opts: {
   });
 
   const targetSummary = await targetPruneInternal(parsedPrune);
+  const daemonSummary = sweepDaemonMetadata({
+    includeAgentNamespaces: true,
+  });
 
   return {
     ok: true,
@@ -407,5 +411,6 @@ export async function stateReconcile(opts: {
       maxAgeHours: targetSummary.maxAgeHours,
       maxPerSession: targetSummary.maxPerSession,
     },
+    daemon: daemonSummary,
   };
 }

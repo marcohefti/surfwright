@@ -269,6 +269,18 @@ export type StateReconcileReport = {
     maxAgeHours: number;
     maxPerSession: number;
   };
+  daemon: {
+    scanned: number;
+    kept: number;
+    removed: number;
+    removedDeadPid: number;
+    removedInvalid: number;
+    removedPermissionMismatch: number;
+    removedOwnerMismatch: number;
+    startLocksScanned: number;
+    startLocksRemoved: number;
+    namespacesScanned: number;
+  };
 };
 export type StateDiskPruneBucketReport = {
   scanned: number;

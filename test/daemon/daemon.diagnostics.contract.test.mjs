@@ -33,7 +33,7 @@ test("daemon diagnostics verbose events are default-off", () => {
   const metricsPath = path.join(stateDir, "diagnostics", "daemon.metrics.ndjson");
 
   try {
-    const result = runCli(["contract"], {
+    const result = runCli(["session", "list"], {
       SURFWRIGHT_STATE_DIR: stateDir,
       SURFWRIGHT_DAEMON: "1",
     });
@@ -57,7 +57,7 @@ test("daemon diagnostics verbose events are emitted when debug is enabled", () =
   const eventsPath = path.join(stateDir, "diagnostics", "daemon.ndjson");
 
   try {
-    const result = runCli(["contract", "--session", "diag-session"], {
+    const result = runCli(["--session", "diag-session", "session", "list"], {
       SURFWRIGHT_STATE_DIR: stateDir,
       SURFWRIGHT_DAEMON: "1",
       SURFWRIGHT_DEBUG_LOGS: "1",
@@ -86,7 +86,7 @@ test("daemon diagnostics redact session and token material", () => {
   const rawSessionId = "session-secret-value-123";
 
   try {
-    const result = runCli(["contract", "--session", rawSessionId], {
+    const result = runCli(["--session", rawSessionId, "session", "list"], {
       SURFWRIGHT_STATE_DIR: stateDir,
       SURFWRIGHT_DAEMON: "1",
       SURFWRIGHT_DEBUG_LOGS: "1",

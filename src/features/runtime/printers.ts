@@ -171,6 +171,8 @@ export function printStateReconcileSuccess(report: StateReconcileReport, opts: R
       `activeSessionId=${report.activeSessionId ?? "none"}`,
       `sessionsRemoved=${report.sessions.removed}`,
       `targetsRemoved=${report.targets.removed}`,
+      `daemonMetaRemoved=${report.daemon.removed}`,
+      `daemonLocksRemoved=${report.daemon.startLocksRemoved}`,
     ].join(" ") + "\n",
   );
 }

@@ -58,6 +58,17 @@ async function waitForProcessExit(pid, timeoutMs) {
   return false;
 }
 
+async function waitForPathMissing(targetPath, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!fs.existsSync(targetPath)) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+  return !fs.existsSync(targetPath);
+}
+
 async function stopDaemonIfRunning() {
   const meta = readDaemonMeta();
   if (!meta || typeof meta.pid !== "number") {
@@ -120,7 +131,7 @@ process.on("exit", () => {
 });
 
 test("daemon default path auto-starts and reuses the same worker", () => {
-  const first = runCli(["contract"]);
+  const first = runCli(["session", "list"]);
   assert.equal(first.status, 0);
 
   const firstMeta = readDaemonMeta();
@@ -129,7 +140,7 @@ test("daemon default path auto-starts and reuses the same worker", () => {
   assert.equal(firstMeta.pid > 0, true);
   assert.equal(isProcessAlive(firstMeta.pid), true);
 
-  const second = runCli(["contract"]);
+  const second = runCli(["session", "list"]);
   assert.equal(second.status, 0);
 
   const secondMeta = readDaemonMeta();
@@ -159,7 +170,7 @@ test("daemon startup cleans stale metadata and replaces it with a live worker re
     fs.chmodSync(daemonMetaPath(), 0o600);
   }
 
-  const result = runCli(["contract"]);
+  const result = runCli(["session", "list"]);
   assert.equal(result.status, 0);
 
   const freshMeta = readDaemonMeta();
@@ -174,7 +185,7 @@ test("daemon startup cleans stale metadata and replaces it with a live worker re
 test("daemon idle timeout exits worker and clears metadata", async () => {
   await stopDaemonIfRunning();
 
-  const result = runCli(["contract"], {
+  const result = runCli(["session", "list"], {
     // Keep this comfortably above typical process startup jitter so the daemon
     // doesn't exit before we can read metadata under parallel test load.
     SURFWRIGHT_DAEMON_IDLE_MS: "2000",
@@ -195,10 +206,41 @@ test("daemon idle timeout exits worker and clears metadata", async () => {
   assert.equal(fs.existsSync(daemonMetaPath()), false);
 });
 
+test("daemon idle shutdown closes half-open sockets so worker exits cleanly", async () => {
+  await stopDaemonIfRunning();
+
+  const start = runCli(["session", "list"], {
+    SURFWRIGHT_DAEMON_IDLE_MS: "300",
+  });
+  assert.equal(start.status, 0);
+
+  const meta = readDaemonMeta();
+  assert.notEqual(meta, null);
+  assert.equal(typeof meta.pid, "number");
+  assert.equal(typeof meta.port, "number");
+  assert.equal(typeof meta.token, "string");
+
+  const stuckClient = net.createConnection({ host: "127.0.0.1", port: meta.port });
+  await new Promise((resolve, reject) => {
+    stuckClient.once("error", reject);
+    stuckClient.once("connect", resolve);
+  });
+  // Deliberately keep the frame incomplete so the connection stays half-open.
+  stuckClient.write(`{"token":"${meta.token}"`);
+
+  const exited = await waitForProcessExit(meta.pid, 8000);
+  assert.equal(exited, true);
+
+  stuckClient.destroy();
+
+  const removed = await waitForPathMissing(daemonMetaPath(), 2000);
+  assert.equal(removed, true);
+});
+
 test("daemon rejects oversized request frames without wedging", async () => {
   await stopDaemonIfRunning();
 
-  const first = runCli(["contract"]);
+  const first = runCli(["session", "list"]);
   assert.equal(first.status, 0);
 
   const meta = readDaemonMeta();
@@ -230,7 +272,7 @@ test("daemon rejects oversized request frames without wedging", async () => {
 
   assert.equal(isProcessAlive(meta.pid), true);
 
-  const second = runCli(["contract"]);
+  const second = runCli(["session", "list"]);
   assert.equal(second.status, 0);
 
   const secondMeta = readDaemonMeta();
@@ -241,7 +283,7 @@ test("daemon rejects oversized request frames without wedging", async () => {
 
 test("daemon enforces one-request-per-connection", async () => {
   await stopDaemonIfRunning();
-  const start = runCli(["contract"]);
+  const start = runCli(["session", "list"]);
   assert.equal(start.status, 0);
 
   const meta = readDaemonMeta();
@@ -258,13 +300,13 @@ test("daemon enforces one-request-per-connection", async () => {
   assert.equal(parsed.ok, true);
   assert.equal(parsed.kind, "pong");
 
-  const followUp = runCli(["contract"]);
+  const followUp = runCli(["session", "list"]);
   assert.equal(followUp.status, 0);
 });
 
 test("daemon returns typed token-invalid response for invalid token", async () => {
   await stopDaemonIfRunning();
-  const start = runCli(["contract"]);
+  const start = runCli(["session", "list"]);
   assert.equal(start.status, 0);
 
   const meta = readDaemonMeta();
@@ -279,7 +321,7 @@ test("daemon returns typed token-invalid response for invalid token", async () =
 
 test("daemon returns E_DAEMON_REQUEST_INVALID for malformed request payload", async () => {
   await stopDaemonIfRunning();
-  const start = runCli(["contract"]);
+  const start = runCli(["session", "list"]);
   assert.equal(start.status, 0);
 
   const meta = readDaemonMeta();
@@ -294,7 +336,7 @@ test("daemon returns E_DAEMON_REQUEST_INVALID for malformed request payload", as
 
 test("daemon typed failures are deterministic for repeated invalid-token requests", async () => {
   await stopDaemonIfRunning();
-  const start = runCli(["contract"]);
+  const start = runCli(["session", "list"]);
   assert.equal(start.status, 0);
 
   const meta = readDaemonMeta();

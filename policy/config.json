@@ -118,6 +118,8 @@
           "src/core/daemon/app/worker-request-orchestrator.ts",
           "src/core/skills/infra/manager.ts",
           "src/core/state/infra/state-store.ts",
+          "src/core/state/infra/state-legacy.ts",
+          "src/core/state/infra/state-shards.ts",
           "src/core/state/infra/state-lock.ts",
           "src/core/target/infra/target-eval.ts",
           "src/core/target/infra/target-read.ts",

@@ -99,7 +99,9 @@ All notable changes to SurfWright are documented here.
 - [session] Added opportunistic idle managed-process parking on command ingress (detached worker, bounded sweep) to prevent Chrome accumulation without introducing a persistent daemon.
 - [state] Opportunistic maintenance now also prunes stale disk artifacts (`runs`, `captures`, orphan `profiles`) with conservative retention caps; workspace profile pruning remains explicit opt-in.
 - [state] Session lifecycle maintenance (`session prune`, `session clear`) now runs external reachability/process shutdown work outside the state-file lock and commits state mutations in short lock windows.
-- [state] State writes now use compact JSON payloads and skip no-op rewrites when the serialized state is unchanged.
+- [state] Replaced monolithic `state.json` as runtime source-of-truth with canonical `state-v2/` shards (`meta`, `sessions`, `network-captures`, `network-artifacts`, and per-session target shards) so hot-path mutations only rewrite changed shards.
+- [state] Added optimistic revisioned mutation commits for `state-v2` so default mutation work runs outside the lock and lock scope is limited to short compare-and-commit windows.
+- [state] Added optional legacy snapshot mirror (`SURFWRIGHT_STATE_LEGACY_SNAPSHOT=1`) for test harness compatibility while sharded storage remains canonical.
 - [target] Target handle resolution now uses a per-browser targetId cache with closed-page eviction and scan fallback on cache miss.
 - [session] Managed session creation paths now reserve session handles first and perform browser startup outside state mutation locks before a short commit step.
 - [daemon] Daemon bootstrap now uses a startup singleflight lock to avoid parallel spawn/meta races when multiple commands cold-start concurrently.

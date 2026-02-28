@@ -113,7 +113,7 @@ test("open without session skips stale profile directory ids", () => {
   const blockedProfileId = "s-1";
   fs.mkdirSync(path.join(TEST_STATE_DIR, "profiles", blockedProfileId), { recursive: true });
   const seededState = {
-    version: 3,
+    version: 4,
     activeSessionId: null,
     nextSessionOrdinal: 1,
     nextCaptureOrdinal: 1,

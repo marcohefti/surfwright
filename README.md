@@ -275,7 +275,7 @@ surfwright target network-end <captureId> --view summary
 - Release policy: `docs/release-governance.md`
 - ZCL browser-control campaign runbook: `docs/campaigns/browser-control-zcl-native.md`
 - SurfWright scoped benchmark loop runbook: `docs/campaigns/browser-control-surfwright-loop.md`
-- Loop assets: `bench/agent-loop/config.json`, `bench/agent-loop/AGENT_LOOP.md`, `bench/agent-loop/scopes/<scopeId>/history.jsonl`, `bench/agent-loop/scopes/<scopeId>/RESULT_SHEET.md`
+- Loop assets: `bench/agent-loop/config.json`, `bench/agent-loop/AGENT_LOOP.md`, `tmp/zerocontext/bench-loop/scopes/<scopeId>/history.jsonl`, `tmp/zerocontext/bench-loop/scopes/<scopeId>/RESULT_SHEET.md`
 - Loop iteration semantics: default `optimize` (`change -> run -> evaluate`); use `--mode sample` only for explicit variance/baseline sampling.
 - Loop fan-out control: set `agentsPerMission` in `bench/agent-loop/config.json` (or override with `--agents-per-mission`) to run parallel fresh-agent attempts per mission in one run.
 - ZCL browser-control prompt/oracle assets: `missions/browser-control/prompts/` + `missions/browser-control/oracles/`

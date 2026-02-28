@@ -12,6 +12,7 @@ yarn-error.log*
 .zerocontext-lab/
 tmp/
 artifacts/
+bench/agent-loop/scopes/
 packages/*/dist/
 packages/*/*.tgz
 packages/*/README.md

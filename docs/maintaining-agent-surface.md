@@ -116,11 +116,11 @@ Versioned loop assets:
 
 - `bench/agent-loop/config.json`
 - `bench/agent-loop/AGENT_LOOP.md`
-- `bench/agent-loop/scopes/<scopeId>/history.jsonl`
-- `bench/agent-loop/scopes/<scopeId>/RESULT_SHEET.md`
 
 Non-versioned per-iteration artifacts:
 
+- `tmp/zerocontext/bench-loop/scopes/<scopeId>/history.jsonl`
+- `tmp/zerocontext/bench-loop/scopes/<scopeId>/RESULT_SHEET.md`
 - `tmp/zerocontext/bench-loop/<loopId>/<scopeId>/<iterationId>/...`
 
 ## 6) Edge-case fixture policy

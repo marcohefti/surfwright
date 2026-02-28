@@ -8,7 +8,7 @@ This is the repository-native loop for iterative SurfWright optimization.
 - Run one mission scope per campaign iteration (single mission or cluster).
 - Allow configurable parallel fan-out per mission (`agentsPerMission`) for variance/robustness sampling.
 - Apply one concrete code change between iterations.
-- Track improvement/regression in a versioned per-scope result sheet.
+- Track improvement/regression in per-scope result sheets under `tmp/`.
 
 ## Iteration Semantics (Mandatory)
 
@@ -21,7 +21,10 @@ This is the repository-native loop for iterative SurfWright optimization.
 
 - Config: `bench/agent-loop/config.json`
 - Protocol: `bench/agent-loop/AGENT_LOOP.md`
-- Scope outputs: `bench/agent-loop/scopes/<scopeId>/`
+
+## Non-Versioned Loop Outputs
+
+- Scope outputs: `tmp/zerocontext/bench-loop/scopes/<scopeId>/`
   - `history.jsonl`
   - `RESULT_SHEET.md`
   - `RESULT_SHEET.json`

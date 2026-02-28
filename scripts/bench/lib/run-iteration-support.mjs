@@ -151,9 +151,10 @@ export function buildScopeId(missionIds) {
 }
 
 export function scopePaths(repoRoot, scopeId, overrideHistoryPath = "") {
-  const scopeDir = path.resolve(repoRoot, "bench/agent-loop/scopes", scopeId);
+  const scopeDirDefault = path.resolve(repoRoot, "tmp/zerocontext/bench-loop/scopes", scopeId);
   if (overrideHistoryPath) {
     const historyPath = path.resolve(repoRoot, overrideHistoryPath);
+    const scopeDir = path.dirname(historyPath);
     return {
       scopeDir,
       historyPath,
@@ -163,11 +164,11 @@ export function scopePaths(repoRoot, scopeId, overrideHistoryPath = "") {
     };
   }
   return {
-    scopeDir,
-    historyPath: path.join(scopeDir, "history.jsonl"),
-    outMd: path.join(scopeDir, "RESULT_SHEET.md"),
-    outJson: path.join(scopeDir, "RESULT_SHEET.json"),
-    outBrief: path.join(scopeDir, "NEXT_ITERATION_TASK.md"),
+    scopeDir: scopeDirDefault,
+    historyPath: path.join(scopeDirDefault, "history.jsonl"),
+    outMd: path.join(scopeDirDefault, "RESULT_SHEET.md"),
+    outJson: path.join(scopeDirDefault, "RESULT_SHEET.json"),
+    outBrief: path.join(scopeDirDefault, "NEXT_ITERATION_TASK.md"),
   };
 }
 
@@ -335,5 +336,5 @@ export function extractChangedPath(line) {
 
 export function isLoopDataPath(filePath) {
   const normalized = String(filePath || "").replace(/\\/g, "/");
-  return normalized.startsWith("bench/agent-loop/scopes/") || normalized.startsWith("tmp/");
+  return normalized.startsWith("tmp/");
 }

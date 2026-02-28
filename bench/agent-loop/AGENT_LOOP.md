@@ -44,12 +44,12 @@ In `bench/agent-loop/config.json`:
 
 ## Scope Model
 
-Each mission scope gets its own versioned history:
+Each mission scope gets its own append-only history:
 
 - scope id = derived from mission set (or explicit `--scope-id`)
-- scope directory = `bench/agent-loop/scopes/<scopeId>/`
-- scope ledger = `bench/agent-loop/scopes/<scopeId>/history.jsonl`
-- scope result sheet = `bench/agent-loop/scopes/<scopeId>/RESULT_SHEET.md`
+- scope directory = `tmp/zerocontext/bench-loop/scopes/<scopeId>/`
+- scope ledger = `tmp/zerocontext/bench-loop/scopes/<scopeId>/history.jsonl`
+- scope result sheet = `tmp/zerocontext/bench-loop/scopes/<scopeId>/RESULT_SHEET.md`
 
 Examples:
 
@@ -135,15 +135,16 @@ git add <changed-files>
 git commit -m "feat(bench): <scope> iNNN <change-summary>"
 ```
 
-## Versioned Outputs (in repo)
+## Versioned Assets (in repo)
 
 - Loop config: `bench/agent-loop/config.json`
-- Scope ledgers/results: `bench/agent-loop/scopes/<scopeId>/...`
+- Loop protocol: `bench/agent-loop/AGENT_LOOP.md`
+
+## Non-Versioned Outputs
+
+- Scope ledgers/results: `tmp/zerocontext/bench-loop/scopes/<scopeId>/...`
+- Run artifacts: `tmp/zerocontext/bench-loop/<loopId>/<scopeId>/<iterationId>/...`
 
 History is append-only. There is no reset flag.
-
-## Non-Versioned Outputs (run artifacts)
-
-- `tmp/zerocontext/bench-loop/<loopId>/<scopeId>/<iterationId>/...`
 
 These include spec, lint/doctor/run/report logs, run-state, trace metrics, and attempt artifacts.

@@ -4,10 +4,9 @@
   "startUrl": "https://the-internet.herokuapp.com/",
   "collectFields": [
     "featureCount",
-    "firstFeature",
-    "lastFeature"
+    "firstFeature"
   ],
-  "successCheck": "featureCount >= 40 and firstFeature == \"A/B Testing\" and lastFeature == \"WYSIWYG Editor\"",
+  "successCheck": "featureCount >= 40 and firstFeature == \"A/B Testing\"",
   "rules": [
     {
       "field": "featureCount",
@@ -18,16 +17,10 @@
       "field": "firstFeature",
       "op": "eq",
       "value": "A/B Testing"
-    },
-    {
-      "field": "lastFeature",
-      "op": "eq",
-      "value": "WYSIWYG Editor"
     }
   ],
   "examplePayload": {
-    "featureCount": 44,
-    "firstFeature": "A/B Testing",
-    "lastFeature": "WYSIWYG Editor"
+    "featureCount": 45,
+    "firstFeature": "A/B Testing"
   }
 }

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "missionId": "006-new-window-spawn",
+  "startUrl": "https://the-internet.herokuapp.com/windows",
+  "collectFields": [
+    "spawnUrl",
+    "spawnTitle",
+    "pageUrl",
+    "pageTitle",
+    "pageH3"
+  ],
+  "successCheck": "spawnUrl == \"https://the-internet.herokuapp.com/windows/new\" and spawnTitle == \"New Window\" and pageUrl == \"https://the-internet.herokuapp.com/windows/new\" and pageTitle == \"New Window\" and pageH3 == \"New Window\"",
+  "rules": [
+    {
+      "field": "spawnUrl",
+      "op": "eq",
+      "value": "https://the-internet.herokuapp.com/windows/new"
+    },
+    {
+      "field": "spawnTitle",
+      "op": "eq",
+      "value": "New Window"
+    },
+    {
+      "field": "pageUrl",
+      "op": "eq",
+      "value": "https://the-internet.herokuapp.com/windows/new"
+    },
+    {
+      "field": "pageTitle",
+      "op": "eq",
+      "value": "New Window"
+    },
+    {
+      "field": "pageH3",
+      "op": "eq",
+      "value": "New Window"
+    }
+  ],
+  "examplePayload": {
+    "spawnUrl": "https://the-internet.herokuapp.com/windows/new",
+    "spawnTitle": "New Window",
+    "pageUrl": "https://the-internet.herokuapp.com/windows/new",
+    "pageTitle": "New Window",
+    "pageH3": "New Window"
+  }
+}

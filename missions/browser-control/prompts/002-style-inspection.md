@@ -1,14 +1,15 @@
-# Mission 001 - first-pass-orientation
+# Mission 002 - style-inspection
 
 Task
 - Use SurfWright to complete this browser mission.
-- Start URL: https://the-internet.herokuapp.com/
-- Goal: report first feature label and total feature count from the main content list
+- Start URL: https://example.com/
+- Goal: capture one short network sample and one short trace insight
 
 Output format
 Return exactly one JSON object with these keys:
-- featureCount
-- firstFeature
+- networkRequestCount
+- networkTopHost
+- traceInsightName
 
 Constraints
 - Use the exact key names listed above.

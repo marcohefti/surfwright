@@ -138,7 +138,7 @@ All notable changes to SurfWright are documented here.
 - [bench] Removed `bench:loop:run --reset-history`; scope ledgers are append-only by default.
 - [bench] `bench:loop:score` now supports flow-family aggregation (`--flow-prefix`) so sharded SurfWright fan-out runs are scored as one iteration, with per-attempt `flowId`/slot evidence in CSV/markdown outputs.
 - [bench] Documented branch-first loop policy: run optimize iterations on feature branches with commit-per-change traceability, and push only when explicitly requested.
-- [missions] Updated browser-control campaign selection to 16 active missions, revised `first-pass-orientation`, `style-inspection`, `checkbox-toggle`, `iframe-edit`, and `docs-commands-extract`, and archived prior mission definitions.
+- [missions] Rebased the browser-control mission pack to 10 active missions (`001`-`010`) with deterministic contracts (`first-pass-orientation`, `style-inspection`, `login-success`, `javascript-alert-dialog`, `iframe-edit`, `new-window-spawn`, `file-upload`, `dynamic-loading`, `infinite-scroll-chunks`, `download-file`) and aligned campaign/benchmark docs and configs to the new IDs.
 
 ### Fixed
 - [cli] JSON-mode Commander parse failures now remain pure typed JSON (no appended help/prose), reducing token noise and parser ambiguity for agents.

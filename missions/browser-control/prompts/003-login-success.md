@@ -1,14 +1,13 @@
-# Mission 001 - first-pass-orientation
+# Mission 003 - login-success
 
 Task
 - Use SurfWright to complete this browser mission.
-- Start URL: https://the-internet.herokuapp.com/
-- Goal: report first feature label and total feature count from the main content list
+- Start URL: https://the-internet.herokuapp.com/login
+- Goal: submit valid credentials and report secure area heading text
 
 Output format
 Return exactly one JSON object with these keys:
-- featureCount
-- firstFeature
+- secureAreaHeading
 
 Constraints
 - Use the exact key names listed above.

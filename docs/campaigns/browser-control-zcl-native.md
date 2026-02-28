@@ -5,7 +5,7 @@ This runbook defines the versioned ZCL workflow for SurfWright's browser-control
 ## Goals
 
 - Keep campaign config in version control.
-- Run the 16 active mission browser-control pack with native Codex runtime (`codex_app_server`).
+- Run the 10 active mission browser-control pack with native Codex runtime (`codex_app_server`).
 - Produce trace-backed feedback artifacts we can use to improve the SurfWright surface.
 
 ## Files
@@ -23,7 +23,7 @@ This runbook defines the versioned ZCL workflow for SurfWright's browser-control
   - `missionSource.promptSource.path`: concise agent prompt only (task + output keys).
   - `missionSource.oracleSource.path`: host-side oracle rules (not copied into prompts).
 - Finalization is `auto_from_result_json` with `resultChannel=file_json` (`mission.result.json`).
-- Mission selection is explicit by mission id to lock scope to exactly 16 active missions and avoid accidental inclusion of non-mission markdown files.
+- Mission selection is explicit by mission id to lock scope to exactly 10 active missions and avoid accidental inclusion of non-mission markdown files.
 - Campaign evaluation is `oracle` with built-in rules and normalized matching (`evaluation.oraclePolicy.mode=normalized`).
 - Runtime is native (`runner.type=codex_app_server`, `sessionIsolation=native`), with deterministic fresh session per attempt.
 - Model is pinned in campaign config (`runner.model: gpt-5.3-codex-spark`).
@@ -64,7 +64,7 @@ Canary:
 zcl campaign canary --spec "$SPEC" --out-root "$OUT_ROOT" --missions 3 --json
 ```
 
-Full run (16 missions):
+Full run (10 missions):
 
 ```bash
 zcl campaign run --spec "$SPEC" --out-root "$OUT_ROOT" --json

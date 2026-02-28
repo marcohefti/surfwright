@@ -5,30 +5,28 @@
 - mission_id: `first-pass-orientation`
 - index: `1`
 - status: `active`
-- version: `2`
+- version: `3`
 
 ## Intent
 
 - start_url: `https://the-internet.herokuapp.com/`
-- goal: `report feature-list bounds from the main content list`
+- goal: `report first feature label and total feature count from the main content list`
 
 ## Proof Contract
 
 - collect_fields:
   - `featureCount`
   - `firstFeature`
-  - `lastFeature`
 
 ## Success Check (authoritative)
 
-- `featureCount >= 40 and firstFeature == "A/B Testing" and lastFeature == "WYSIWYG Editor"`
+- `featureCount >= 40 and firstFeature == "A/B Testing"`
 
 ## Example Proof Payload
 
 ```json
 {
-  "featureCount": 44,
-  "firstFeature": "A/B Testing",
-  "lastFeature": "WYSIWYG Editor"
+  "featureCount": 45,
+  "firstFeature": "A/B Testing"
 }
 ```

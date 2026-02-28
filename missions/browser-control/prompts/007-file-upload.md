@@ -1,14 +1,13 @@
-# Mission 001 - first-pass-orientation
+# Mission 007 - file-upload
 
 Task
 - Use SurfWright to complete this browser mission.
-- Start URL: https://the-internet.herokuapp.com/
-- Goal: report first feature label and total feature count from the main content list
+- Start URL: https://the-internet.herokuapp.com/upload
+- Goal: create a local file named upload-proof.txt, upload it, and verify uploaded filename
 
 Output format
 Return exactly one JSON object with these keys:
-- featureCount
-- firstFeature
+- uploadedFile
 
 Constraints
 - Use the exact key names listed above.

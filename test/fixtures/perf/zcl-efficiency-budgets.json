@@ -18,7 +18,7 @@
       "maxExecCommandBegin": 5,
       "maxCommandOutputDeltaChars": 7000
     },
-    "002-modal-lifecycle": {
+    "002-style-inspection": {
       "maxToolCallsTotal": 170,
       "maxTotalTokens": 55000,
       "maxWallTimeMs": 35000,

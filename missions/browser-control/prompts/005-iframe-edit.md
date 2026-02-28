@@ -1,14 +1,14 @@
-# Mission 001 - first-pass-orientation
+# Mission 005 - iframe-edit
 
 Task
 - Use SurfWright to complete this browser mission.
-- Start URL: https://the-internet.herokuapp.com/
-- Goal: report first feature label and total feature count from the main content list
+- Start URL: https://the-internet.herokuapp.com/iframe
+- Goal: report frame count, set editor text to probe string, and read it back
 
 Output format
 Return exactly one JSON object with these keys:
-- featureCount
-- firstFeature
+- frameCount
+- editorText
 
 Constraints
 - Use the exact key names listed above.

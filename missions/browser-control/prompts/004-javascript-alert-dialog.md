@@ -1,14 +1,14 @@
-# Mission 001 - first-pass-orientation
+# Mission 004 - javascript-alert-dialog
 
 Task
 - Use SurfWright to complete this browser mission.
-- Start URL: https://the-internet.herokuapp.com/
-- Goal: report first feature label and total feature count from the main content list
+- Start URL: https://the-internet.herokuapp.com/javascript_alerts
+- Goal: handle JS alert and verify result text
 
 Output format
 Return exactly one JSON object with these keys:
-- featureCount
-- firstFeature
+- dialogText
+- result
 
 Constraints
 - Use the exact key names listed above.

@@ -63,13 +63,13 @@ pnpm bench:loop:run --mode sample --label baseline --hypothesis "baseline sample
 Single mission scope:
 
 ```bash
-pnpm bench:loop:run --mode sample --label baseline --mission-id 014-infinite-scroll-chunks --hypothesis "baseline sample" --change "no code change" --tags sample
+pnpm bench:loop:run --mode sample --label baseline --mission-id 009-infinite-scroll-chunks --hypothesis "baseline sample" --change "no code change" --tags sample
 ```
 
 Single mission with parallel fan-out (3 agents in one run):
 
 ```bash
-pnpm bench:loop:run --mode sample --label baseline-a3 --mission-id 014-infinite-scroll-chunks --agents-per-mission 3 --hypothesis "variance sample with parallel fan-out" --change "no code change" --tags sample
+pnpm bench:loop:run --mode sample --label baseline-a3 --mission-id 009-infinite-scroll-chunks --agents-per-mission 3 --hypothesis "variance sample with parallel fan-out" --change "no code change" --tags sample
 ```
 
 Scoring is flow-family based: `score-iteration` aggregates all `surfwright*` flow shards via `--flow-prefix surfwright`.
@@ -80,7 +80,7 @@ Cluster scope:
 pnpm bench:loop:run \
   --mode sample \
   --label baseline-5 \
-  --mission-ids 003-multimatch-disambiguation,010-new-window-spawn,013-dynamic-loading,014-infinite-scroll-chunks,016-docs-commands-extract \
+  --mission-ids 001-first-pass-orientation,002-style-inspection,006-new-window-spawn,008-dynamic-loading,010-download-file \
   --hypothesis "baseline sample" \
   --change "no code change" \
   --tags sample
@@ -92,7 +92,7 @@ Run one changed iteration:
 pnpm bench:loop:run \
   --mode optimize \
   --label exp-1 \
-  --mission-id 014-infinite-scroll-chunks \
+  --mission-id 009-infinite-scroll-chunks \
   --hypothesis "<why this should help>" \
   --change "<what changed>" \
   --tags <tag1>,<tag2>
@@ -104,7 +104,7 @@ Run explicit no-change sample:
 pnpm bench:loop:run \
   --mode sample \
   --label sample-1 \
-  --mission-id 014-infinite-scroll-chunks \
+  --mission-id 009-infinite-scroll-chunks \
   --hypothesis "variance sample" \
   --change "no code change" \
   --tags sample
@@ -113,7 +113,7 @@ pnpm bench:loop:run \
 Refresh result sheet for a scope:
 
 ```bash
-pnpm bench:loop:history --mission-id 014-infinite-scroll-chunks
+pnpm bench:loop:history --mission-id 009-infinite-scroll-chunks
 ```
 
 ## Headless Guard

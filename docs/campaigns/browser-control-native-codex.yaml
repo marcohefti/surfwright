@@ -1,11 +1,11 @@
-# SurfWright browser-control exam campaign (16 active missions) via native Codex runtime.
+# SurfWright browser-control exam campaign (10 active missions) via native Codex runtime.
 # Versioned baseline spec with split prompts/oracles for repeatable ZCL feedback campaigns.
 schemaVersion: 1
 campaignId: surfwright-browser-control-native
 outRoot: .zcl
 promptMode: exam
 
-totalMissions: 16
+totalMissions: 10
 canaryMissions: 3
 failFast: false
 
@@ -19,21 +19,15 @@ missionSource:
     mode: mission_id
     missionIds:
       - 001-first-pass-orientation
-      - 002-modal-lifecycle
-      - 003-multimatch-disambiguation
-      - 004-style-inspection
-      - 005-login-success
-      - 006-checkbox-toggle
-      - 007-dropdown-select
-      - 008-javascript-alert-dialog
-      - 009-iframe-edit
-      - 010-new-window-spawn
-      - 011-file-upload
-      - 012-dynamic-controls-enable
-      - 013-dynamic-loading
-      - 014-infinite-scroll-chunks
-      - 015-download-file
-      - 016-docs-commands-extract
+      - 002-style-inspection
+      - 003-login-success
+      - 004-javascript-alert-dialog
+      - 005-iframe-edit
+      - 006-new-window-spawn
+      - 007-file-upload
+      - 008-dynamic-loading
+      - 009-infinite-scroll-chunks
+      - 010-download-file
 
 evaluation:
   mode: oracle

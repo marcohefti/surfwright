@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "missionId": "005-iframe-edit",
+  "startUrl": "https://the-internet.herokuapp.com/iframe",
+  "collectFields": [
+    "frameCount",
+    "editorText"
+  ],
+  "successCheck": "frameCount >= 2 and editorText == \"SURFWRIGHT IFRAME PROBE\"",
+  "rules": [
+    {
+      "field": "frameCount",
+      "op": "gte",
+      "value": 2
+    },
+    {
+      "field": "editorText",
+      "op": "eq",
+      "value": "SURFWRIGHT IFRAME PROBE"
+    }
+  ],
+  "examplePayload": {
+    "frameCount": 2,
+    "editorText": "SURFWRIGHT IFRAME PROBE"
+  }
+}

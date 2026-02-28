@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "missionId": "002-style-inspection",
+  "startUrl": "https://example.com/",
+  "collectFields": [
+    "networkRequestCount",
+    "networkTopHost",
+    "traceInsightName"
+  ],
+  "successCheck": "networkRequestCount >= 1 and networkTopHost is non-empty and traceInsightName == \"top-host\"",
+  "rules": [
+    {
+      "field": "networkRequestCount",
+      "op": "gte",
+      "value": 1
+    },
+    {
+      "field": "networkTopHost",
+      "op": "non_empty"
+    },
+    {
+      "field": "traceInsightName",
+      "op": "eq",
+      "value": "top-host"
+    }
+  ],
+  "examplePayload": {
+    "networkRequestCount": 1,
+    "networkTopHost": "example.com",
+    "traceInsightName": "top-host"
+  }
+}

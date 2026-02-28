@@ -96,6 +96,7 @@ All notable changes to SurfWright are documented here.
 - [errors] Commander-originated `E_QUERY_INVALID` failures now include additive machine-fix diagnostics (`unknownFlags`, `expectedPositionals`, `validFlags`, `canonicalInvocation`) for deterministic recovery.
 - [contract] `contract --command` now accepts CLI path lookup forms (for example `target snapshot`) and tolerates extra mode/search flags while still returning `mode=command`.
 - [contract] Per-command contract output now includes additive machine-invocation fields (`argvPath`, `dotAlias`) for deterministic command execution.
+- [contract] Added `contract --commands <id1,id2,...>` for one-shot compact multi-command schema lookup, reducing repeated `contract --command` probing in agent loops.
 - [cli] Improved first-run discoverability: parse errors now show stronger suggestions/help.
 - [target] Unified post-action waits across interactive actions: `target fill|keypress|upload|drag-drop|dialog` now support `--wait-for-text|--wait-for-selector|--wait-network-idle` and `--wait-timeout-ms`.
 - [session] Reduced repeat command overhead in tight loops with short-lived CDP reachability caching during session health checks.

@@ -15,7 +15,7 @@ export function resolveContractCommandOrThrow(rawCommandLookup: string, commands
         ? `Closest command ids: ${resolved.suggestions.slice(0, 5).join(", ")}`
         : null,
       `Run \`surfwright contract --search ${lookupSeed}\` to discover command ids`,
-      "Use `surfwright contract --command <id>` with a dot id (example: target.snapshot)",
+      "Use `surfwright contract --command <id>` or `surfwright contract --commands <id1,id2>`",
     ].filter((entry): entry is string => typeof entry === "string" && entry.length > 0),
     hintContext: {
       requestedCommandId: rawCommandLookup,
@@ -30,4 +30,25 @@ export function resolveContractCommandOrThrow(rawCommandLookup: string, commands
       },
     },
   });
+}
+
+export function resolveContractCommandIdsOrThrow(rawCommandList: string, commands: CliCommandContract[]): string[] {
+  const parts = String(rawCommandList || "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  if (parts.length === 0) {
+    throw queryInvalid("commands must include at least one command id (comma-separated)");
+  }
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of parts) {
+    const commandId = resolveContractCommandOrThrow(part, commands);
+    if (seen.has(commandId)) {
+      continue;
+    }
+    seen.add(commandId);
+    out.push(commandId);
+  }
+  return out;
 }

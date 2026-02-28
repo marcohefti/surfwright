@@ -104,6 +104,7 @@ surfwright contract
 `contract` now includes additive `guidance` entries with command signatures, examples, and proof schemas for high-traffic workflows.
 Use `surfwright contract --core` for low-token bootstrap output, and `surfwright contract --search <term>` to filter commands/errors/guidance.
 Use `surfwright contract --command <id>` for compact per-command flags/positionals/examples (low-token command lookup).
+Use `surfwright contract --commands <id1,id2,...>` for one-shot compact schemas across multiple commands.
 `contract --command` also accepts CLI path form (for example `target snapshot`) and returns `command.argvPath` for machine-executable command tokens.
 `contract --search` tolerates unquoted multi-token terms (for example `surfwright contract --search target dialog`), though quoted terms remain preferred in scripts.
 

@@ -11,6 +11,7 @@ Deterministic browser control via CLI JSON outputs and explicit handles.
 
 Use contract lookup first.
 
+- Prefer `surfwright contract --commands <id1,id2,...>` for one-shot multi-command schema fetches.
 - `surfwright contract --search <term>` for focused discovery.
 - `surfwright contract --command <id>` for one command schema.
 - Use `--full` only for explicit debug/audit.

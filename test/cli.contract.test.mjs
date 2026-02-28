@@ -294,6 +294,20 @@ test("contract --command returns compact per-command schema", () => {
   assert.equal(payload.command.positionals.includes("targetId"), true);
 });
 
+test("contract --commands returns compact multi-command schemas", () => {
+  const result = runCli(["contract", "--commands", "open,target.click,target read"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "commands");
+  assert.equal(payload.commandCount, 3);
+  assert.equal(Array.isArray(payload.commands), true);
+  assert.equal(payload.commands[0]?.id, "open");
+  assert.equal(payload.commands[1]?.id, "target.click");
+  assert.equal(payload.commands[2]?.id, "target.read");
+  assert.equal(Array.isArray(payload.commands[1]?.flags), true);
+});
+
 test("contract --core --search run exposes runnable plan guidance", () => {
   const result = runCli(["contract", "--core", "--search", "run"]);
   assert.equal(result.status, 0);
@@ -337,6 +351,14 @@ test("contract --command tolerates extra mode/search flags and still resolves co
   assert.equal(payload.ok, true);
   assert.equal(payload.mode, "command");
   assert.equal(payload.command.id, "open");
+});
+
+test("contract rejects mixed --command and --commands", () => {
+  const result = runCli(["contract", "--command", "open", "--commands", "target.click"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
 });
 
 test("contract --command resolves CLI path form (space path)", () => {

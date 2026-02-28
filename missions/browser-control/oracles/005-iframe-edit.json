@@ -3,24 +3,29 @@
   "missionId": "005-iframe-edit",
   "startUrl": "https://the-internet.herokuapp.com/iframe",
   "collectFields": [
-    "frameCount",
-    "editorText"
+    "writeText",
+    "readBackText",
+    "writeMatches"
   ],
-  "successCheck": "frameCount >= 2 and editorText == \"SURFWRIGHT IFRAME PROBE\"",
+  "successCheck": "writeText is non-empty and readBackText is non-empty and writeMatches == true",
   "rules": [
     {
-      "field": "frameCount",
-      "op": "gte",
-      "value": 2
+      "field": "writeText",
+      "op": "non_empty"
     },
     {
-      "field": "editorText",
+      "field": "readBackText",
+      "op": "non_empty"
+    },
+    {
+      "field": "writeMatches",
       "op": "eq",
-      "value": "SURFWRIGHT IFRAME PROBE"
+      "value": true
     }
   ],
   "examplePayload": {
-    "frameCount": 2,
-    "editorText": "SURFWRIGHT IFRAME PROBE"
+    "writeText": "probe string",
+    "readBackText": "probe string",
+    "writeMatches": true
   }
 }

@@ -146,6 +146,8 @@ Everything is JSON-first by default.
 SurfWright now performs opportunistic idle process parking on normal command ingress (no persistent daemon required):
 
 - managed browser processes idle longer than `30m` are shut down in a detached maintenance worker
+- maintenance pressure mode (default on) automatically tightens GC interval/idle TTL and increases sweep throughput when managed-session load is high
+- no hard session cap is enforced; high-load behavior uses adaptive cleanup instead of rejecting new sessions
 - session metadata/profile state is kept so the next command can transparently restart the session
 - attached sessions are never process-killed by this path
 - stale disk artifacts are opportunistically pruned with bounded retention (runs, captures, orphan session profiles)
@@ -158,6 +160,9 @@ SURFWRIGHT_GC_ENABLED=0                  # disable opportunistic maintenance (pa
 SURFWRIGHT_GC_MIN_INTERVAL_MS=600000     # minimum trigger interval (default: 10m)
 SURFWRIGHT_IDLE_PROCESS_TTL_MS=1800000   # idle threshold (default: 30m)
 SURFWRIGHT_IDLE_PROCESS_SWEEP_CAP=6      # max managed sessions parked per run
+SURFWRIGHT_GC_PRESSURE_ENABLED=0         # disable adaptive pressure mode (default: enabled)
+SURFWRIGHT_GC_PRESSURE_MANAGED_THRESHOLD=20      # managed-session count to enter pressure mode
+SURFWRIGHT_GC_PRESSURE_HIGH_MANAGED_THRESHOLD=80 # managed-session count to enter high pressure mode
 SURFWRIGHT_GC_DISK_PRUNE_ENABLED=0       # disable opportunistic disk pruning
 SURFWRIGHT_GC_RUNS_MAX_AGE_HOURS=168     # prune ~/.surfwright/runs older than N hours
 SURFWRIGHT_GC_RUNS_MAX_TOTAL_MB=1024     # keep runs within total size budget (MB)

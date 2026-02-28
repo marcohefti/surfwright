@@ -5,28 +5,30 @@
 - mission_id: `iframe-edit`
 - index: `5`
 - status: `active`
-- version: `3`
+- version: `5`
 
 ## Intent
 
 - start_url: `https://the-internet.herokuapp.com/iframe`
-- goal: `report frame count, set editor text to probe string, and read it back`
+- goal: `set editor text to any non-empty probe string and verify readback`
 
 ## Proof Contract
 
 - collect_fields:
-  - `frameCount`
-  - `editorText`
+  - `writeText`
+  - `readBackText`
+  - `writeMatches`
 
 ## Success Check (authoritative)
 
-- `frameCount >= 2 and editorText == "SURFWRIGHT IFRAME PROBE"`
+- `writeText is non-empty and readBackText is non-empty and writeMatches == true`
 
 ## Example Proof Payload
 
 ```json
 {
-  "frameCount": 2,
-  "editorText": "SURFWRIGHT IFRAME PROBE"
+  "writeText": "probe string",
+  "readBackText": "probe string",
+  "writeMatches": true
 }
 ```

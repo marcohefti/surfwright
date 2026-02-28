@@ -100,6 +100,7 @@ All notable changes to SurfWright are documented here.
 - [target] Unified post-action waits across interactive actions: `target fill|keypress|upload|drag-drop|dialog` now support `--wait-for-text|--wait-for-selector|--wait-network-idle` and `--wait-timeout-ms`.
 - [session] Reduced repeat command overhead in tight loops with short-lived CDP reachability caching during session health checks.
 - [session] Added opportunistic idle managed-process parking on command ingress (detached worker, bounded sweep) to prevent Chrome accumulation without introducing a persistent daemon.
+- [state] Opportunistic maintenance now uses adaptive pressure mode (default on) to increase cleanup cadence/throughput under high managed-session load without enforcing hard session caps.
 - [state] Opportunistic maintenance now also prunes stale disk artifacts (`runs`, `captures`, orphan `profiles`) with conservative retention caps; workspace profile pruning remains explicit opt-in.
 - [state] Session lifecycle maintenance (`session prune`, `session clear`) now runs external reachability/process shutdown work outside the state-file lock and commits state mutations in short lock windows.
 - [state] Replaced monolithic `state.json` as runtime source-of-truth with canonical `state-v2/` shards (`meta`, `sessions`, `network-captures`, `network-artifacts`, and per-session target shards) so hot-path mutations only rewrite changed shards.
@@ -139,6 +140,7 @@ All notable changes to SurfWright are documented here.
 - [bench] `bench:loop:score` now supports flow-family aggregation (`--flow-prefix`) so sharded SurfWright fan-out runs are scored as one iteration, with per-attempt `flowId`/slot evidence in CSV/markdown outputs.
 - [bench] Documented branch-first loop policy: run optimize iterations on feature branches with commit-per-change traceability, and push only when explicitly requested.
 - [missions] Rebased the browser-control mission pack to 10 active missions (`001`-`010`) with deterministic contracts (`first-pass-orientation`, `style-inspection`, `login-success`, `javascript-alert-dialog`, `iframe-edit`, `new-window-spawn`, `file-upload`, `dynamic-loading`, `infinite-scroll-chunks`, `download-file`) and aligned campaign/benchmark docs and configs to the new IDs.
+- [missions] Updated `005-iframe-edit` and `009-infinite-scroll-chunks` to capability-first success checks (non-literal probe text roundtrip for iframe edit; load-more evidence for infinite scroll) to reduce intelligence/wording-driven false failures.
 
 ### Fixed
 - [cli] JSON-mode Commander parse failures now remain pure typed JSON (no appended help/prose), reducing token noise and parser ambiguity for agents.

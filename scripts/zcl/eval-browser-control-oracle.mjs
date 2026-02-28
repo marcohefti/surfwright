@@ -15,13 +15,17 @@ function main() {
 
     const feedbackPath = path.join(attemptDir, 'feedback.json');
     const feedback = readJson(feedbackPath);
+    const infraFailureCode = extractInfraFailureCode(feedback);
+    if (infraFailureCode) {
+      return writeVerdict(false, [infraFailureCode], `attempt failed before mission evaluation: ${infraFailureCode}`);
+    }
     const proof = extractProof(feedback);
     if (!proof || typeof proof !== 'object' || Array.isArray(proof)) {
       return writeVerdict(false, [CODE_ERROR], 'feedback result must resolve to a JSON object');
     }
 
     const oracle = readJson(oraclePath);
-    const failures = evaluateOracle(oracle, proof);
+    const failures = evaluateOracle(oracle, proof, attemptDir);
 
     if (failures.length > 0) {
       return writeVerdict(false, [CODE_FAIL], trim(failures.join('; '), 800));
@@ -32,6 +36,20 @@ function main() {
     const message = err instanceof Error ? err.message : String(err);
     return writeVerdict(false, [CODE_ERROR], trim(message, 800));
   }
+}
+
+function extractInfraFailureCode(feedback) {
+  if (!feedback || typeof feedback !== 'object') {
+    return '';
+  }
+  if (feedback.ok !== false) {
+    return '';
+  }
+  const code = feedback?.resultJson?.code;
+  if (typeof code !== 'string' || !code.trim()) {
+    return '';
+  }
+  return code.trim();
 }
 
 function requiredEnv(name) {
@@ -79,7 +97,7 @@ function extractProof(feedback) {
   }
 }
 
-function evaluateOracle(oracle, proof) {
+function evaluateOracle(oracle, proof, attemptDir) {
   const failures = [];
 
   const collectFields = Array.isArray(oracle.collectFields) ? oracle.collectFields : [];
@@ -101,6 +119,9 @@ function evaluateOracle(oracle, proof) {
       failures.push(msg);
     }
   }
+
+  const traceFailures = evaluateTraceRules(oracle, attemptDir);
+  failures.push(...traceFailures);
 
   return failures;
 }
@@ -165,6 +186,131 @@ function evaluateRule(rule, oracle, proof) {
 
     default:
       return `unsupported oracle op: ${op}`;
+  }
+}
+
+function evaluateTraceRules(oracle, attemptDir) {
+  const traceRules = Array.isArray(oracle.traceRules) ? oracle.traceRules : [];
+  if (traceRules.length === 0) {
+    return [];
+  }
+
+  const tracePath = path.join(attemptDir, 'tool.calls.jsonl');
+  if (!existsSync(tracePath)) {
+    return ['tool.calls.jsonl is required for traceRules'];
+  }
+
+  const execCommands = readExecCommands(tracePath);
+  const failures = [];
+  for (const rule of traceRules) {
+    const msg = evaluateTraceRule(rule, execCommands);
+    if (msg) {
+      failures.push(msg);
+    }
+  }
+  return failures;
+}
+
+function readExecCommands(tracePath) {
+  const raw = readFileSync(tracePath, 'utf8');
+  const out = [];
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+    let event;
+    try {
+      event = JSON.parse(trimmed);
+    } catch {
+      continue;
+    }
+    if (event?.op !== 'exec_command_begin') {
+      continue;
+    }
+    const cmd = extractCommandText(event);
+    if (cmd) {
+      out.push(cmd);
+    }
+  }
+  return out;
+}
+
+function extractCommandText(event) {
+  const command = event?.input?.payload?.msg?.command;
+  if (Array.isArray(command) && command.length > 0) {
+    const tail = command[command.length - 1];
+    if (typeof tail === 'string' && tail.trim()) {
+      return tail.trim();
+    }
+  }
+  if (typeof command === 'string' && command.trim()) {
+    return command.trim();
+  }
+
+  const fallback = event?.input?.payload?.command;
+  if (typeof fallback === 'string' && fallback.trim()) {
+    return fallback.trim();
+  }
+
+  return '';
+}
+
+function evaluateTraceRule(rule, execCommands) {
+  if (!rule || typeof rule !== 'object') {
+    return 'invalid trace rule';
+  }
+  const field = String(rule.field || '').trim();
+  const op = String(rule.op || '').trim();
+  if (field !== 'execCommand' || !op) {
+    return 'trace rule must target execCommand with an op';
+  }
+
+  switch (op) {
+    case 'count_gte': {
+      const expected = toNumberLike(rule.value);
+      if (expected == null) {
+        return 'trace rule count_gte requires numeric value';
+      }
+      if (execCommands.length < expected) {
+        return `execCommand count must be >= ${valueAsString(rule.value)} got ${execCommands.length}`;
+      }
+      return '';
+    }
+
+    case 'contains': {
+      const needle = String(rule.value || '').trim();
+      if (!needle) {
+        return 'trace rule contains requires non-empty value';
+      }
+      if (!execCommands.some((cmd) => normalizeLooseText(cmd).includes(normalizeLooseText(needle)))) {
+        return `no execCommand contains ${valueAsString(rule.value)}`;
+      }
+      return '';
+    }
+
+    case 'contains_any': {
+      if (!Array.isArray(rule.value) || rule.value.length === 0) {
+        return 'trace rule contains_any requires non-empty array';
+      }
+      const needles = rule.value
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean);
+      if (needles.length === 0) {
+        return 'trace rule contains_any requires non-empty string entries';
+      }
+      const hit = execCommands.some((cmd) => {
+        const normalized = normalizeLooseText(cmd);
+        return needles.some((needle) => normalized.includes(normalizeLooseText(needle)));
+      });
+      if (!hit) {
+        return `no execCommand matched any required patterns ${valueAsString(rule.value)}`;
+      }
+      return '';
+    }
+
+    default:
+      return `unsupported trace rule op: ${op}`;
   }
 }
 

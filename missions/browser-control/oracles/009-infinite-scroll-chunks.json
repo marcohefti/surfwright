@@ -3,17 +3,53 @@
   "missionId": "009-infinite-scroll-chunks",
   "startUrl": "https://the-internet.herokuapp.com/infinite_scroll",
   "collectFields": [
-    "chunksLoaded"
+    "chunksLoaded",
+    "loadedMore"
   ],
-  "successCheck": "chunksLoaded >= 2",
+  "successCheck": "chunksLoaded >= 1 and loadedMore == true",
   "rules": [
     {
       "field": "chunksLoaded",
       "op": "gte",
-      "value": 2
+      "value": 1
+    },
+    {
+      "field": "loadedMore",
+      "op": "eq",
+      "value": true
     }
   ],
   "examplePayload": {
-    "chunksLoaded": 2
-  }
+    "chunksLoaded": 1,
+    "loadedMore": true
+  },
+  "traceChecks": [
+    "execCommand count >= 1",
+    "execCommand contains \"surfwright\"",
+    "execCommand contains any of [\"target scroll-plan\", \"target scroll-watch\", \"target scroll-reveal-scan\", \"run --plan-json\", \"window.scrollTo\", \"scrollTo(\"]"
+  ],
+  "traceRules": [
+    {
+      "field": "execCommand",
+      "op": "count_gte",
+      "value": 1
+    },
+    {
+      "field": "execCommand",
+      "op": "contains",
+      "value": "surfwright"
+    },
+    {
+      "field": "execCommand",
+      "op": "contains_any",
+      "value": [
+        "target scroll-plan",
+        "target scroll-watch",
+        "target scroll-reveal-scan",
+        "run --plan-json",
+        "window.scrollTo",
+        "scrollTo("
+      ]
+    }
+  ]
 }

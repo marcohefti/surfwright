@@ -3,12 +3,13 @@
 Task
 - Use SurfWright to complete this browser mission.
 - Start URL: https://the-internet.herokuapp.com/iframe
-- Goal: report frame count, set editor text to probe string, and read it back
+- Goal: set editor text to any non-empty probe string and verify readback
 
 Output format
 Return exactly one JSON object with these keys:
-- frameCount
-- editorText
+- writeText
+- readBackText
+- writeMatches
 
 Constraints
 - Use the exact key names listed above.

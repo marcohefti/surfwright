@@ -138,6 +138,7 @@ For long-lived automation, use per-agent state namespaces with `SURFWRIGHT_AGENT
 SurfWright runs a bounded detached opportunistic maintenance pass on normal command ingress to:
 
 - park long-idle managed browser processes
+- adaptively increase cleanup cadence/throughput under high managed-session load (no hard session cap)
 - prune stale disk artifacts (`runs/`, `captures/`, orphan `profiles/` dirs) with conservative caps
 - sweep stale daemon metadata/start-lock files (`daemon.json`, `daemon.start.lock`) for dead or invalid daemon records
 

@@ -157,6 +157,70 @@ test("opportunistic maintenance parks idle managed browser processes without del
   }
 });
 
+test("opportunistic maintenance scales idle parking under managed-session pressure without hard limits", async () => {
+  const sleeper = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+    detached: true,
+    stdio: "ignore",
+  });
+  sleeper.unref();
+
+  const pid = sleeper.pid;
+  assert.equal(typeof pid, "number");
+  assert.equal(isProcessAlive(pid), true);
+
+  try {
+    fs.rmSync(path.join(TEST_STATE_DIR, "opportunistic-gc.stamp"), { force: true });
+    fs.rmSync(path.join(TEST_STATE_DIR, "opportunistic-gc.lock"), { force: true });
+
+    const staleSeenAt = new Date(Date.now() - 12 * 60 * 1000).toISOString();
+    const sessions = {};
+    for (let i = 1; i <= 25; i += 1) {
+      const sessionId = `m-load-${i}`;
+      sessions[sessionId] = {
+        sessionId,
+        kind: "managed",
+        policy: "persistent",
+        browserMode: "headless",
+        cdpOrigin: `http://127.0.0.1:${9000 + i}`,
+        debugPort: 9000 + i,
+        userDataDir: `/tmp/surfwright-${sessionId}`,
+        profile: null,
+        browserPid: i === 1 ? pid : null,
+        ownerId: "agent.test",
+        leaseExpiresAt: null,
+        leaseTtlMs: 3600000,
+        managedUnreachableSince: null,
+        managedUnreachableCount: 0,
+        createdAt: staleSeenAt,
+        lastSeenAt: staleSeenAt,
+      };
+    }
+
+    writeState({
+      ...baseState(),
+      activeSessionId: "m-load-1",
+      sessions,
+      targets: {},
+    });
+
+    const result = runCli(["contract"]);
+    assert.equal(result.status, 0);
+
+    const exited = await waitForProcessExit(pid, 5000);
+    assert.equal(exited, true);
+
+    const state = await waitForBrowserPidCleared("m-load-1", 3000);
+    assert.equal(state.sessions["m-load-1"].sessionId, "m-load-1");
+    assert.equal(state.sessions["m-load-1"].browserPid, null);
+    assert.equal(state.sessions["m-load-1"].kind, "managed");
+    assert.equal(Object.keys(state.sessions).length, 25);
+  } finally {
+    if (isProcessAlive(pid)) {
+      process.kill(pid, "SIGKILL");
+    }
+  }
+});
+
 test("opportunistic maintenance prunes stale run artifacts in detached worker", async () => {
   writeState(baseState());
   fs.rmSync(path.join(TEST_STATE_DIR, "opportunistic-gc.stamp"), { force: true });

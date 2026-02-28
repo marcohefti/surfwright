@@ -9,7 +9,7 @@ import {
   DEFAULT_DISK_PRUNE_RUNS_MAX_TOTAL_BYTES,
   stateDiskPrune,
 } from "./disk-prune.js";
-import { stateRootDir } from "./state-store.js";
+import { readState, stateRootDir } from "./state-store.js";
 import { providers } from "../../providers/index.js";
 
 const DEFAULT_GC_MIN_INTERVAL_MS = 10 * 60 * 1000;
@@ -28,6 +28,27 @@ const MAX_DISK_MAX_TOTAL_MB = 1024 * 1024;
 const KICK_LOCK_STALE_MS = 30 * 1000;
 const KICK_STAMP_FILE = "opportunistic-gc.stamp";
 const KICK_LOCK_FILE = "opportunistic-gc.lock";
+const DEFAULT_GC_PRESSURE_MANAGED_THRESHOLD = 20;
+const DEFAULT_GC_PRESSURE_HIGH_MANAGED_THRESHOLD = 80;
+const MIN_GC_PRESSURE_MANAGED_THRESHOLD = 1;
+const MAX_GC_PRESSURE_MANAGED_THRESHOLD = 5000;
+const MODERATE_PRESSURE_INTERVAL_DIVISOR = 5;
+const HIGH_PRESSURE_INTERVAL_DIVISOR = 20;
+const MODERATE_PRESSURE_IDLE_TTL_DIVISOR = 3;
+const HIGH_PRESSURE_IDLE_TTL_DIVISOR = 6;
+const MODERATE_PRESSURE_SWEEP_CAP_MULTIPLIER = 4;
+const HIGH_PRESSURE_SWEEP_CAP_MULTIPLIER = 12;
+
+type GcPressureLevel = "none" | "moderate" | "high";
+
+type MaintenancePressureProfile = {
+  level: GcPressureLevel;
+  managedSessions: number;
+  liveManagedProcesses: number;
+  gcMinIntervalMs: number;
+  idleTtlMs: number;
+  sweepCap: number;
+};
 
 function parseBooleanEnabled(raw: string | undefined): boolean {
   if (typeof raw !== "string") {
@@ -79,8 +100,28 @@ function parseOptionalIntWithinBounds(input: {
   return parsed;
 }
 
+function clampInt(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, Math.floor(value)));
+}
+
+function pidIsAlive(pid: number | null): boolean {
+  if (typeof pid !== "number" || !Number.isFinite(pid) || pid <= 0) {
+    return false;
+  }
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function gcEnabled(): boolean {
   return parseBooleanEnabled(providers().env.get("SURFWRIGHT_GC_ENABLED"));
+}
+
+function gcPressureEnabled(): boolean {
+  return parseBooleanEnabled(providers().env.get("SURFWRIGHT_GC_PRESSURE_ENABLED"));
 }
 
 function gcMinIntervalMs(): number {
@@ -90,6 +131,26 @@ function gcMinIntervalMs(): number {
     min: MIN_GC_MIN_INTERVAL_MS,
     max: MAX_GC_MIN_INTERVAL_MS,
   });
+}
+
+function gcPressureManagedThreshold(): number {
+  return parseIntWithinBounds({
+    raw: providers().env.get("SURFWRIGHT_GC_PRESSURE_MANAGED_THRESHOLD"),
+    fallback: DEFAULT_GC_PRESSURE_MANAGED_THRESHOLD,
+    min: MIN_GC_PRESSURE_MANAGED_THRESHOLD,
+    max: MAX_GC_PRESSURE_MANAGED_THRESHOLD,
+  });
+}
+
+function gcPressureHighManagedThreshold(managedThreshold: number): number {
+  const fallback = Math.max(managedThreshold + 1, DEFAULT_GC_PRESSURE_HIGH_MANAGED_THRESHOLD);
+  const resolved = parseIntWithinBounds({
+    raw: providers().env.get("SURFWRIGHT_GC_PRESSURE_HIGH_MANAGED_THRESHOLD"),
+    fallback,
+    min: MIN_GC_PRESSURE_MANAGED_THRESHOLD,
+    max: MAX_GC_PRESSURE_MANAGED_THRESHOLD,
+  });
+  return Math.max(resolved, managedThreshold + 1);
 }
 
 function idleProcessTtlMs(): number {
@@ -108,6 +169,79 @@ function idleProcessSweepCap(): number {
     min: MIN_IDLE_PROCESS_SWEEP_CAP,
     max: MAX_IDLE_PROCESS_SWEEP_CAP,
   });
+}
+
+function currentManagedLoad(): {
+  managedSessions: number;
+  liveManagedProcesses: number;
+} {
+  const snapshot = readState();
+  let managedSessions = 0;
+  let liveManagedProcesses = 0;
+  for (const session of Object.values(snapshot.sessions)) {
+    if (session.kind !== "managed") {
+      continue;
+    }
+    managedSessions += 1;
+    if (pidIsAlive(session.browserPid ?? null)) {
+      liveManagedProcesses += 1;
+    }
+  }
+  return {
+    managedSessions,
+    liveManagedProcesses,
+  };
+}
+
+function maintenancePressureProfile(): MaintenancePressureProfile {
+  const baseIntervalMs = gcMinIntervalMs();
+  const baseIdleTtlMs = idleProcessTtlMs();
+  const baseSweepCap = idleProcessSweepCap();
+  const load = currentManagedLoad();
+  if (!gcPressureEnabled()) {
+    return {
+      level: "none",
+      managedSessions: load.managedSessions,
+      liveManagedProcesses: load.liveManagedProcesses,
+      gcMinIntervalMs: baseIntervalMs,
+      idleTtlMs: baseIdleTtlMs,
+      sweepCap: baseSweepCap,
+    };
+  }
+
+  const managedThreshold = gcPressureManagedThreshold();
+  const highManagedThreshold = gcPressureHighManagedThreshold(managedThreshold);
+
+  let level: GcPressureLevel = "none";
+  if (load.managedSessions >= highManagedThreshold) {
+    level = "high";
+  } else if (load.managedSessions >= managedThreshold) {
+    level = "moderate";
+  }
+
+  if (level === "none") {
+    return {
+      level,
+      managedSessions: load.managedSessions,
+      liveManagedProcesses: load.liveManagedProcesses,
+      gcMinIntervalMs: baseIntervalMs,
+      idleTtlMs: baseIdleTtlMs,
+      sweepCap: baseSweepCap,
+    };
+  }
+
+  const intervalDivisor = level === "high" ? HIGH_PRESSURE_INTERVAL_DIVISOR : MODERATE_PRESSURE_INTERVAL_DIVISOR;
+  const idleTtlDivisor = level === "high" ? HIGH_PRESSURE_IDLE_TTL_DIVISOR : MODERATE_PRESSURE_IDLE_TTL_DIVISOR;
+  const sweepCapMultiplier = level === "high" ? HIGH_PRESSURE_SWEEP_CAP_MULTIPLIER : MODERATE_PRESSURE_SWEEP_CAP_MULTIPLIER;
+
+  return {
+    level,
+    managedSessions: load.managedSessions,
+    liveManagedProcesses: load.liveManagedProcesses,
+    gcMinIntervalMs: clampInt(Math.floor(baseIntervalMs / intervalDivisor), MIN_GC_MIN_INTERVAL_MS, MAX_GC_MIN_INTERVAL_MS),
+    idleTtlMs: clampInt(Math.floor(baseIdleTtlMs / idleTtlDivisor), MIN_IDLE_PROCESS_TTL_MS, MAX_IDLE_PROCESS_TTL_MS),
+    sweepCap: clampInt(baseSweepCap * sweepCapMultiplier, MIN_IDLE_PROCESS_SWEEP_CAP, MAX_IDLE_PROCESS_SWEEP_CAP),
+  };
 }
 
 function diskPruneEnabled(): boolean {
@@ -228,7 +362,8 @@ function withKickLock<T>(fn: () => T): T | null {
 }
 
 function reserveKickSlot(): boolean {
-  const intervalMs = gcMinIntervalMs();
+  const pressure = maintenancePressureProfile();
+  const intervalMs = pressure.gcMinIntervalMs;
   const { fs } = providers();
   return (
     withKickLock(() => {
@@ -285,10 +420,11 @@ export async function runOpportunisticStateMaintenanceWorker(): Promise<void> {
   if (!gcEnabled()) {
     return;
   }
+  const pressure = maintenancePressureProfile();
   try {
     await sessionParkIdleManagedProcesses({
-      idleTtlMs: idleProcessTtlMs(),
-      sweepCap: idleProcessSweepCap(),
+      idleTtlMs: pressure.idleTtlMs,
+      sweepCap: pressure.sweepCap,
     });
   } catch {
     // best effort; maintenance failures should not crash caller flows

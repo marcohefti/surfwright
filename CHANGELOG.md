@@ -74,6 +74,12 @@ All notable changes to SurfWright are documented here.
 - [cli] Added npm scripts `bench:loop:run`, `bench:loop:score`, and `bench:loop:history`.
 
 ### Changed
+- [state] State read/version failures now return typed failures and quarantine the offending `state.json` snapshot instead of silently resetting to empty state.
+- [errors] Added typed state read failure codes `E_STATE_READ_INVALID`, `E_STATE_VERSION_MISMATCH`, and `E_STATE_READ_FAILED` to the published contract error surface.
+- [daemon] CLI daemon proxy now normalizes non-contract daemon-internal typed failures to `E_INTERNAL`; queue pressure codes remain pass-through.
+- [session] `session ensure` no longer performs global prune as part of the hot path; cleanup stays in explicit maintenance flows.
+- [cli] Daemon bypass routing now derives bypassable command IDs from the command manifest set (plus explicit stdin-plan/internal/help guards) instead of pure argv-branch hardcoding.
+- [extensions] `extension.*` commands now honor global `--no-json` with deterministic human summaries.
 - [session] `session clear` now supports scoped teardown via `--session <id>`, clearing only the selected session and its related target/network metadata while preserving other sessions.
 - [cli] `session clear` now normalizes common cold-start wrapper forms: positional session scope (`session clear <id>`), boolean assignment (`--keep-processes=<bool>`), and no-op `--no-prompt`.
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
@@ -129,6 +135,9 @@ All notable changes to SurfWright are documented here.
 - [missions] Updated browser-control campaign selection to 16 active missions, revised `first-pass-orientation`, `style-inspection`, `checkbox-toggle`, `iframe-edit`, and `docs-commands-extract`, and archived legacy mission definitions.
 
 ### Fixed
+- [cli] Timeout parser validation failures now return typed `E_QUERY_INVALID` instead of collapsing to `E_INTERNAL`.
+- [tests] Browser target-effects contract tests no longer mask first-attempt failures via broad retry classes.
+- [tests] Split daemon queue routing contract assertions into focused files to stay within LOC policy and keep review scope bounded.
 - [target] Session resolution for target-driven actions now attempts active/single-session recovery when target-to-session mappings are stale, reducing `E_TARGET_SESSION_UNKNOWN`/`E_SESSION_NOT_FOUND` churn in long runs.
 - [open] `open --reuse active` now reuses the current tab only for same-origin navigations (or blank tabs), avoiding unintended cross-site tab drift.
 - [cli] Commander parse failures for `session clear` now include focused remediation hints for scoped cleanup and keep-processes boolean syntax.
@@ -168,7 +177,7 @@ All notable changes to SurfWright are documented here.
 - [target] Removed `target eval` option aliases `--js` and `--script`; use `--expr|--expression|--script-file`.
 - [target] Removed `target style` output aliases `element` and `computed`; use `inspected` and `values`.
 - [target] Removed `target spawn` output alias `childTargetId`; use canonical `targetId`.
-- [state] Removed state schema migration layer; incompatible state versions now reset to empty state.
+- [state] Removed state schema migration layer.
 - [skill] Removed `skills/surfwright/references/*`; runtime agent guidance now lives only in `skills/surfwright/SKILL.md`.
 
 ## [0.1.2] - 2026-02-17

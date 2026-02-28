@@ -1,4 +1,5 @@
 const GLOBAL_PATH_OPTIONS = ["--session", "--agent-id", "--workspace", "--output-shape"] as const;
+const COMMANDS_WITH_SUBCOMMAND = new Set(["target", "session", "state", "workspace", "extension", "network", "skill"]);
 
 export function parseOptionTokenSpan(argv: string[], index: number, optionName: string): number {
   const token = argv[index];
@@ -101,7 +102,7 @@ export function parseCommandPath(argv: string[]): string[] {
     if (out.length >= 2) {
       break;
     }
-    if (out.length === 1 && out[0] !== "target" && out[0] !== "session" && out[0] !== "state" && out[0] !== "workspace") {
+    if (out.length === 1 && !COMMANDS_WITH_SUBCOMMAND.has(out[0])) {
       break;
     }
   }

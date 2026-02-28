@@ -2,8 +2,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import process from "node:process";
 
 type OutputCapture = {
-  stdout: string[];
-  stderr: string[];
+  stdout: CapturedStream;
+  stderr: CapturedStream;
 };
 
 type RequestContext = {
@@ -11,6 +11,17 @@ type RequestContext = {
   outputCapture: OutputCapture | null;
   exitCode: number;
 };
+
+type CapturedStream = {
+  label: "stdout" | "stderr";
+  chunks: string[];
+  bytes: number;
+  droppedBytes: number;
+  truncated: boolean;
+  maxBytes: number;
+};
+
+const DEFAULT_CAPTURE_MAX_BYTES = 512 * 1024;
 
 const storage = new AsyncLocalStorage<RequestContext>();
 
@@ -21,16 +32,37 @@ const originalStderrWrite = process.stderr.write.bind(process.stderr);
 let outputInterceptorsInstalled = false;
 
 function appendCapturedChunk(
-  chunks: string[],
+  stream: CapturedStream,
   chunk: Uint8Array | string,
   encoding?: BufferEncoding | ((error?: Error | null) => void),
 ): void {
-  if (typeof chunk === "string") {
-    chunks.push(chunk);
+  const text =
+    typeof chunk === "string"
+      ? chunk
+      : Buffer.from(chunk).toString(typeof encoding === "string" ? encoding : "utf8");
+  if (text.length === 0) {
     return;
   }
-  const parsedEncoding = typeof encoding === "string" ? encoding : "utf8";
-  chunks.push(Buffer.from(chunk).toString(parsedEncoding));
+  const encoded = Buffer.from(text, "utf8");
+  const remaining = stream.maxBytes - stream.bytes;
+  if (remaining <= 0) {
+    stream.truncated = true;
+    stream.droppedBytes += encoded.byteLength;
+    return;
+  }
+  if (encoded.byteLength <= remaining) {
+    stream.chunks.push(text);
+    stream.bytes += encoded.byteLength;
+    return;
+  }
+
+  const bounded = encoded.subarray(0, remaining).toString("utf8");
+  if (bounded.length > 0) {
+    stream.chunks.push(bounded);
+  }
+  stream.bytes += remaining;
+  stream.truncated = true;
+  stream.droppedBytes += encoded.byteLength - remaining;
 }
 
 function finishCapturedWrite(
@@ -72,6 +104,47 @@ function installOutputInterceptors(): void {
   }) as typeof process.stderr.write;
 }
 
+function parseCaptureLimitBytes(input: unknown): number {
+  if (typeof input !== "number" || !Number.isFinite(input)) {
+    return DEFAULT_CAPTURE_MAX_BYTES;
+  }
+  const parsed = Math.floor(input);
+  if (parsed <= 0) {
+    return DEFAULT_CAPTURE_MAX_BYTES;
+  }
+  return parsed;
+}
+
+function createCapturedStream(label: "stdout" | "stderr", maxBytes: number): CapturedStream {
+  return {
+    label,
+    chunks: [],
+    bytes: 0,
+    droppedBytes: 0,
+    truncated: false,
+    maxBytes,
+  };
+}
+
+function createOutputCapture(maxBytes: number): OutputCapture {
+  return {
+    stdout: createCapturedStream("stdout", maxBytes),
+    stderr: createCapturedStream("stderr", maxBytes),
+  };
+}
+
+function renderCapturedStream(stream: CapturedStream): string {
+  const joined = stream.chunks.join("");
+  if (!stream.truncated) {
+    return joined;
+  }
+  const suffix = `[daemon] ${stream.label} truncated at ${stream.maxBytes} bytes (${stream.droppedBytes} bytes omitted)\n`;
+  if (joined.length === 0) {
+    return suffix;
+  }
+  return joined.endsWith("\n") ? `${joined}${suffix}` : `${joined}\n${suffix}`;
+}
+
 function mergedEnvOverrides(next: Record<string, string | undefined>): Record<string, string | undefined> {
   const parent = storage.getStore();
   if (!parent) {
@@ -97,16 +170,15 @@ export function withRequestContext<T>(opts: {
   envOverrides?: Record<string, string | undefined>;
   initialExitCode?: number;
   captureOutput?: boolean;
+  maxCapturedOutputBytes?: number;
   run: () => Promise<T>;
 }): Promise<T> {
   installOutputInterceptors();
   const parent = storage.getStore();
+  const captureLimit = parseCaptureLimitBytes(opts.maxCapturedOutputBytes);
   const outputCapture =
     opts.captureOutput === true
-      ? {
-          stdout: [],
-          stderr: [],
-        }
+      ? createOutputCapture(captureLimit)
       : parent?.outputCapture ?? null;
   const context: RequestContext = {
     envOverrides: mergedEnvOverrides(opts.envOverrides ?? {}),
@@ -119,13 +191,11 @@ export function withRequestContext<T>(opts: {
 export async function withCapturedRequestContext<T>(opts: {
   envOverrides?: Record<string, string | undefined>;
   initialExitCode?: number;
+  maxCapturedOutputBytes?: number;
   run: () => Promise<T>;
 }): Promise<{ result: T; stdout: string; stderr: string; exitCode: number }> {
   installOutputInterceptors();
-  const capture: OutputCapture = {
-    stdout: [],
-    stderr: [],
-  };
+  const capture = createOutputCapture(parseCaptureLimitBytes(opts.maxCapturedOutputBytes));
   const context: RequestContext = {
     envOverrides: mergedEnvOverrides(opts.envOverrides ?? {}),
     outputCapture: capture,
@@ -135,8 +205,8 @@ export async function withCapturedRequestContext<T>(opts: {
     const result = await opts.run();
     return {
       result,
-      stdout: capture.stdout.join(""),
-      stderr: capture.stderr.join(""),
+      stdout: renderCapturedStream(capture.stdout),
+      stderr: renderCapturedStream(capture.stderr),
       exitCode: context.exitCode,
     };
   });

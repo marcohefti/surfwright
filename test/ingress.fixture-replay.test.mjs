@@ -1,9 +1,38 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 const FIXTURE_ROOT = path.join(process.cwd(), "test", "fixtures", "ingress");
+const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-ingress-replay-"));
+const RUNTIME_REPLAY_FAILURE_CASE_IDS = new Set(["target-find-missing-query"]);
+
+process.on("exit", () => {
+  try {
+    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
+  } catch {
+    // ignore cleanup failures
+  }
+});
+
+function runCli(args) {
+  return spawnSync(process.execPath, ["dist/cli.js", ...args], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+      SURFWRIGHT_DAEMON: "0",
+    },
+  });
+}
+
+function parseJson(stdout, filePath) {
+  const text = String(stdout ?? "").trim();
+  assert.ok(text.length > 0, `${filePath}: expected JSON output`);
+  return JSON.parse(text);
+}
 
 function listFixtureFiles(rootDir) {
   const out = [];
@@ -208,6 +237,24 @@ function assertFixtureCasesPresent(fixturesByCaseId) {
   }
 }
 
+function failureFixtureToArgs(fixture, filePath) {
+  const commandId = fixture?.command?.id;
+  if (commandId === "target.find") {
+    const input = fixture.command.input ?? {};
+    const args = ["target", "find", String(input.targetId ?? "DEADBEEF")];
+    if (input.mode === "text") {
+      args.push("--text", String(input.query ?? ""));
+    } else if (input.mode === "selector") {
+      args.push("--selector", String(input.query ?? ""));
+    }
+    if (typeof input.limit === "number" && Number.isFinite(input.limit)) {
+      args.push("--limit", String(Math.max(1, Math.floor(input.limit))));
+    }
+    return args;
+  }
+  assert.fail(`${filePath}: unsupported runtime replay mapping for ${String(commandId)}`);
+}
+
 test("ingress fixture replay cases are present and valid", () => {
   assert.equal(fs.existsSync(FIXTURE_ROOT), true, "Fixture ingress root is missing");
   const files = listFixtureFiles(FIXTURE_ROOT);
@@ -260,4 +307,23 @@ test("ingress fixture replay cases are present and valid", () => {
   }
 
   assertFixtureCasesPresent(byCaseId);
+});
+
+test("ingress failure fixtures replay through CLI runtime with expected typed errors", () => {
+  const files = listFixtureFiles(FIXTURE_ROOT);
+  const replayedCaseIds = [];
+  for (const filePath of files) {
+    const fixture = readFixture(filePath);
+    if (!fixture?.expect || fixture.expect.ok !== false || !RUNTIME_REPLAY_FAILURE_CASE_IDS.has(String(fixture.caseId))) {
+      continue;
+    }
+    const args = failureFixtureToArgs(fixture, filePath);
+    const result = runCli(args);
+    const payload = parseJson(result.stdout, filePath);
+    assert.equal(result.status, 1, `${filePath}: expected CLI status 1`);
+    assert.equal(payload.ok, false, `${filePath}: expected failure payload`);
+    assert.equal(payload.code, fixture.expect.code, `${filePath}: expected code mismatch`);
+    replayedCaseIds.push(fixture.caseId);
+  }
+  assert.deepEqual(replayedCaseIds.sort(), Array.from(RUNTIME_REPLAY_FAILURE_CASE_IDS).sort());
 });

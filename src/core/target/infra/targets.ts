@@ -4,7 +4,7 @@ import { CliError } from "../../errors.js";
 import { ensureProfileManagedSession } from "../../profile/index.js";
 import { withSessionHeartbeat } from "../../session/index.js";
 import { defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId } from "../../state/index.js";
-import { allocateSessionIdForState, assertSessionDoesNotExist, mutateState, saveTargetSnapshot } from "../../state/index.js";
+import { allocateSessionIdForState, assertSessionDoesNotExist, mutateState, saveTargetSnapshots } from "../../state/index.js";
 import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
@@ -394,16 +394,17 @@ export async function targetList(opts: { timeoutMs: number; sessionId?: string; 
 
     const persistStartedAt = Date.now();
     if (opts.persistState !== false) {
-      for (const target of targets) {
-        await saveTargetSnapshot({
+      const updatedAt = nowIso();
+      await saveTargetSnapshots(
+        targets.map((target) => ({
           targetId: target.targetId,
           sessionId: session.sessionId,
           url: target.url,
           title: target.title,
           status: null,
-          updatedAt: nowIso(),
-        });
-      }
+          updatedAt,
+        })),
+      );
     }
     const persistedAt = Date.now();
 

@@ -74,7 +74,7 @@ test("contract includes state maintenance commands", () => {
   assert.equal(commandIds.has("state.disk-prune"), true);
 });
 
-test("legacy state payload is discarded before maintenance commands run", () => {
+test("legacy state payload returns typed version mismatch and quarantine metadata", () => {
   writeState({
     version: 1,
     activeSessionId: null,
@@ -84,25 +84,16 @@ test("legacy state payload is discarded before maintenance commands run", () => 
   });
 
   const result = runCli(["target", "prune"]);
-  assert.equal(result.status, 0);
+  assert.equal(result.status, 1);
 
   const payload = parseJson(result.stdout);
-  assert.equal(payload.ok, true);
-  assert.equal(payload.scanned, 0);
-  assert.equal(payload.removed, 0);
-
-  const state = readState();
-  assert.equal(state.version, 4);
-  assert.equal(state.nextSessionOrdinal, 1);
-  assert.equal(state.nextCaptureOrdinal, 1);
-  assert.equal(state.nextArtifactOrdinal, 1);
-  assert.deepEqual(state.sessions, {});
-  assert.deepEqual(state.targets, {});
-  assert.deepEqual(state.networkCaptures, {});
-  assert.deepEqual(state.networkArtifacts, {});
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_STATE_VERSION_MISMATCH");
+  assert.equal(typeof payload.hintContext?.quarantinedPath, "string");
+  assert.equal(fs.existsSync(payload.hintContext.quarantinedPath), true);
 });
 
-test("non-current state schema resets to empty current envelope", () => {
+test("non-current state schema is rejected with typed mismatch", () => {
   writeState({
     version: 2,
     activeSessionId: "s-legacy",
@@ -127,15 +118,13 @@ test("non-current state schema resets to empty current envelope", () => {
   });
 
   const result = runCli(["target", "prune"]);
-  assert.equal(result.status, 0);
+  assert.equal(result.status, 1);
 
-  const state = readState();
-  assert.equal(state.version, 4);
-  assert.equal(state.activeSessionId, null);
-  assert.deepEqual(state.sessions, {});
-  assert.deepEqual(state.targets, {});
-  assert.deepEqual(state.networkCaptures, {});
-  assert.deepEqual(state.networkArtifacts, {});
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_STATE_VERSION_MISMATCH");
+  assert.equal(typeof payload.hintContext?.quarantinedPath, "string");
+  assert.equal(fs.existsSync(payload.hintContext.quarantinedPath), true);
 });
 
 test("target prune removes orphaned, stale, and overflow metadata", () => {

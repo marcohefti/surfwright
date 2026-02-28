@@ -29,17 +29,38 @@ function listContractTests(dir) {
   return out;
 }
 
-test("contract tests must not include skip markers (split into a separate lane instead)", () => {
-  const root = path.resolve("test");
-  const files = listContractTests(root);
-  const violations = [];
+function listBrowserTests(dir) {
+  const out = [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === "dist") {
+        continue;
+      }
+      out.push(...listBrowserTests(full));
+      continue;
+    }
+    if (!entry.isFile()) {
+      continue;
+    }
+    if (!entry.name.endsWith(".browser.mjs")) {
+      continue;
+    }
+    out.push(full);
+  }
+  return out;
+}
 
-  const patterns = [
-    { id: "skip-option", re: /\{\s*skip\s*:/ },
-    { id: "test-skip", re: /\btest\.skip\b/ },
-    { id: "it-skip", re: /\bit\.skip\b/ },
-    { id: "describe-skip", re: /\bdescribe\.skip\b/ },
-  ];
+const patterns = [
+  { id: "skip-option", re: /\{\s*skip\s*:/ },
+  { id: "test-skip", re: /\btest\.skip\b/ },
+  { id: "it-skip", re: /\bit\.skip\b/ },
+  { id: "describe-skip", re: /\bdescribe\.skip\b/ },
+];
+
+function findSkipViolations(files) {
+  const violations = [];
 
   for (const file of files) {
     const rel = path.relative(process.cwd(), file).split(path.sep).join("/");
@@ -55,6 +76,13 @@ test("contract tests must not include skip markers (split into a separate lane i
       break;
     }
   }
+  return violations;
+}
+
+test("contract tests must not include skip markers (split into a separate lane instead)", () => {
+  const root = path.resolve("test");
+  const files = listContractTests(root);
+  const violations = findSkipViolations(files);
 
   assert.equal(
     violations.length,
@@ -63,3 +91,9 @@ test("contract tests must not include skip markers (split into a separate lane i
   );
 });
 
+test("browser tests must not include skip markers", () => {
+  const root = path.resolve("test", "browser");
+  const files = fs.existsSync(root) ? listBrowserTests(root) : [];
+  const violations = findSkipViolations(files);
+  assert.equal(violations.length, 0, `Found skip markers in browser tests:\n${violations.join("\n")}`);
+});

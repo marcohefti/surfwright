@@ -88,6 +88,7 @@
         "allowlist": [
           "src/cli.ts",
           "src/core/daemon/infra/daemon.ts",
+          "src/core/daemon/infra/daemon-meta.ts",
           "src/core/daemon/infra/worker.ts",
           "src/core/extensions/infra/registry.ts",
           "src/core/profile/infra/profile-session.ts",

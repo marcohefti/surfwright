@@ -28,7 +28,7 @@ function extractModuleSpecifiers(content) {
 }
 
 function isCommandModule(file) {
-  return file.includes("/commands/");
+  return file.includes("/commands/") || file.endsWith("/register-commands.ts");
 }
 
 export const rule = {
@@ -75,4 +75,3 @@ export const rule = {
     return violations;
   },
 };
-

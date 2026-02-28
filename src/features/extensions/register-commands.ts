@@ -14,7 +14,44 @@ function printExtensionSuccess(report: unknown, output: { json: boolean; pretty:
     process.stdout.write(`${JSON.stringify(report, null, spacing)}\n`);
     return;
   }
-  process.stdout.write(`${JSON.stringify(report)}\n`);
+  if (typeof report !== "object" || report === null) {
+    process.stdout.write(`${String(report)}\n`);
+    return;
+  }
+  const value = report as {
+    ok?: unknown;
+    count?: unknown;
+    reloaded?: unknown;
+    removed?: unknown;
+    missing?: unknown;
+    extension?: { id?: unknown; name?: unknown } | null;
+  };
+  if (value.ok !== true) {
+    process.stdout.write(`${JSON.stringify(report)}\n`);
+    return;
+  }
+  const tokens: string[] = ["ok"];
+  if (typeof value.count === "number" && Number.isFinite(value.count)) {
+    tokens.push(`extensions=${value.count}`);
+  }
+  if (typeof value.reloaded === "boolean") {
+    tokens.push(`reloaded=${value.reloaded ? "true" : "false"}`);
+  }
+  if (typeof value.removed === "boolean") {
+    tokens.push(`removed=${value.removed ? "true" : "false"}`);
+  }
+  if (typeof value.missing === "boolean") {
+    tokens.push(`missing=${value.missing ? "true" : "false"}`);
+  }
+  if (value.extension && typeof value.extension === "object") {
+    if (typeof value.extension.id === "string" && value.extension.id.length > 0) {
+      tokens.push(`extensionId=${value.extension.id}`);
+    }
+    if (typeof value.extension.name === "string" && value.extension.name.length > 0) {
+      tokens.push(`name=${value.extension.name}`);
+    }
+  }
+  process.stdout.write(`${tokens.join(" ")}\n`);
 }
 
 function ensureExtensionCommand(program: Command): Command {

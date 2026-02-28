@@ -10,6 +10,9 @@ export const runtimeCommandManifest: CliCommandContract[] = [
     id: "contract",
     usage: "surfwright contract [--search <term>] [--core] [--full] [--command <id>] [--no-json] [--pretty]",
     summary: "emit machine-readable CLI contract metadata (compact by default)",
+    execution: {
+      daemon: "bypass",
+    },
   },
   {
     id: "workspace.info",
@@ -126,17 +129,26 @@ export const runtimeCommandManifest: CliCommandContract[] = [
     usage:
       "surfwright skill install [--source <path>] [--dest <path>] [--lock <path>] [--no-json] [--pretty]",
     summary: "install skill atomically with contract compatibility gates",
+    execution: {
+      daemon: "bypass",
+    },
   },
   {
     id: "skill.doctor",
     usage: "surfwright skill doctor [--dest <path>] [--lock <path>] [--no-json] [--pretty]",
     summary: "report installed skill health, compatibility, and lock drift",
+    execution: {
+      daemon: "bypass",
+    },
   },
   {
     id: "skill.update",
     usage:
       "surfwright skill update [--source <path>] [--dest <path>] [--lock <path>] [--no-json] [--pretty]",
     summary: "update skill atomically with compatibility checks and rollback safety",
+    execution: {
+      daemon: "bypass",
+    },
   },
 ];
 

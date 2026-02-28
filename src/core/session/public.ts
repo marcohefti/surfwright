@@ -19,7 +19,6 @@ import {
   readState,
   sanitizeSessionId,
   sessionClear,
-  sessionPrune,
 } from "../state/index.js";
 import {
   defaultSessionPolicyForKind,
@@ -111,11 +110,6 @@ export async function openUrl(opts: {
 
 export async function sessionEnsure(opts: { timeoutMs: number; browserModeInput?: string }): Promise<SessionReport> {
   const desiredBrowserMode = parseManagedBrowserMode(opts.browserModeInput);
-  await sessionPrune({
-    timeoutMs: opts.timeoutMs,
-    dropManagedUnreachable: false,
-  });
-
   const snapshot = readState();
   if (snapshot.activeSessionId && snapshot.sessions[snapshot.activeSessionId]) {
     const activeId = snapshot.activeSessionId;

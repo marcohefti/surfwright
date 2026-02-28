@@ -1,8 +1,7 @@
-import process from "node:process";
 import { createInlineDaemonScheduler } from "../domain/index.js";
 import { withCapturedRequestContext } from "../../request-context.js";
 import { toCliFailure } from "../../errors.js";
-import { parseOutputOptsFromArgv } from "../../../cli/commander-failure.js";
+import type { CliFailure } from "../../types.js";
 
 type DaemonRunResult = {
   code: number;
@@ -11,15 +10,17 @@ type DaemonRunResult = {
 };
 
 type RunLocalCommand = (argv: string[]) => Promise<number>;
+const DAEMON_CAPTURE_MAX_BYTES = 512 * 1024;
 
 export async function runDaemonCommandOrchestrator(opts: {
   argv: string[];
   runLocalCommand: RunLocalCommand;
+  emitFailure: (failure: CliFailure) => void;
 }): Promise<DaemonRunResult> {
   const scheduler = createInlineDaemonScheduler<DaemonRunResult>();
-  const output = parseOutputOptsFromArgv(opts.argv);
   const captured = await withCapturedRequestContext({
     initialExitCode: 0,
+    maxCapturedOutputBytes: DAEMON_CAPTURE_MAX_BYTES,
     run: async () =>
       await scheduler.enqueue({
         laneKey: "daemon.worker.run",
@@ -28,12 +29,7 @@ export async function runDaemonCommandOrchestrator(opts: {
           try {
             code = await opts.runLocalCommand(opts.argv);
           } catch (error) {
-            const failure = toCliFailure(error);
-            if (output.json) {
-              process.stdout.write(`${JSON.stringify(failure, null, output.pretty ? 2 : 0)}\n`);
-            } else {
-              process.stderr.write(`error ${failure.code}: ${failure.message}\n`);
-            }
+            opts.emitFailure(toCliFailure(error));
             code = 1;
           }
           return {

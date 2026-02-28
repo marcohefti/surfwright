@@ -1,21 +1,18 @@
 import process from "node:process";
 import { stateRootDir } from "../../state/index.js";
 import { providers } from "../../providers/index.js";
+import {
+  DAEMON_META_FILENAME,
+  type DaemonMeta,
+  currentProcessUid,
+  isProcessAlive,
+  parseDaemonMeta,
+  parsePositiveInt,
+} from "./daemon-meta.js";
 
-const DAEMON_META_VERSION = 1;
-const DAEMON_META_FILENAME = "daemon.json";
 const DAEMON_START_LOCK_FILENAME = "daemon.start.lock";
 const DAEMON_START_LOCK_STALE_MS = 15000;
 const DAEMON_SWEEP_MAX_AGENT_NAMESPACES_DEFAULT = 256;
-
-type DaemonMeta = {
-  version: number;
-  pid: number;
-  host: string;
-  port: number;
-  token: string;
-  startedAt: string;
-};
 
 export type DaemonMetadataSweepReport = {
   scanned: number;
@@ -30,66 +27,6 @@ export type DaemonMetadataSweepReport = {
   namespacesScanned: number;
 };
 
-function parsePositiveInt(value: unknown): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return null;
-  }
-  const parsed = Math.floor(value);
-  return parsed > 0 ? parsed : null;
-}
-
-function currentProcessUid(): number | null {
-  if (typeof process.getuid !== "function") {
-    return null;
-  }
-  try {
-    const uid = process.getuid();
-    return Number.isFinite(uid) ? uid : null;
-  } catch {
-    return null;
-  }
-}
-
-function parseDaemonMeta(raw: string): DaemonMeta | null {
-  try {
-    const parsed = JSON.parse(raw) as Partial<DaemonMeta>;
-    if (
-      parsed.version !== DAEMON_META_VERSION ||
-      parsePositiveInt(parsed.pid) === null ||
-      typeof parsed.host !== "string" ||
-      parsed.host.length === 0 ||
-      parsePositiveInt(parsed.port) === null ||
-      typeof parsed.token !== "string" ||
-      parsed.token.length === 0 ||
-      typeof parsed.startedAt !== "string" ||
-      parsed.startedAt.length === 0
-    ) {
-      return null;
-    }
-    return {
-      version: DAEMON_META_VERSION,
-      pid: parsePositiveInt(parsed.pid) ?? 0,
-      host: parsed.host,
-      port: parsePositiveInt(parsed.port) ?? 0,
-      token: parsed.token,
-      startedAt: parsed.startedAt,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function isProcessAlive(pid: number): boolean {
-  if (pid <= 0) {
-    return false;
-  }
-  try {
-    providers().runtime.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function removeFileIfPresent(filePath: string): boolean {
   try {

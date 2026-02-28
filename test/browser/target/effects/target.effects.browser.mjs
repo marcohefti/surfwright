@@ -39,29 +39,9 @@ function requireBrowser() {
   assert.equal(hasBrowser(), true, "Browser contract tests require a local Chrome/Chromium (run `surfwright doctor`)");
 }
 
-const RETRYABLE_INFRA_CODES = new Set([
-  "E_CDP_UNREACHABLE",
-  "E_BROWSER_START_TIMEOUT",
-  "E_STATE_LOCK_TIMEOUT",
-  "E_INTERNAL",
-  "E_WAIT_TIMEOUT",
-]);
-
 function openTarget(url, { timeoutMs = 5000 } = {}) {
   const args = ["open", url, "--timeout-ms", String(timeoutMs)];
-  let result = runCli(args);
-  if (result.status !== 0) {
-    try {
-      const payload = parseJson(result.stdout);
-      if (payload?.ok === false && typeof payload.code === "string" && RETRYABLE_INFRA_CODES.has(payload.code)) {
-        // One retry for flaky infra startup races (keeps timeouts tight).
-        result = runCli(args);
-      }
-    } catch {
-      // ignore non-JSON errors; assertion below will surface stdout/stderr
-    }
-  }
-
+  const result = runCli(args);
   assert.equal(
     result.status,
     0,

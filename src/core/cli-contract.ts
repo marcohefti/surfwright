@@ -34,10 +34,7 @@ export function commandPathToId(commandPath: string[]): string | null {
   if (!Array.isArray(commandPath) || commandPath.length === 0) {
     return null;
   }
-  if (commandPath.length === 1) {
-    return commandPath[0];
-  }
-  return `${commandPath[0]}.${commandPath[1]}`;
+  return commandPath.join(".");
 }
 
 export function findCommandContractByPath(commandPath: string[]): CliCommandContract | null {
@@ -92,7 +89,7 @@ export function resolveContractCommandId(
   }
 
   // Accept dotted alias conversion when operators pass "target snapshot" style ids.
-  const dottedLookup = requestedRaw.split(" ").slice(0, 2).join(".");
+  const dottedLookup = requestedRaw.split(" ").filter((token) => token.length > 0).join(".");
   if (byId.has(dottedLookup)) {
     return { commandId: dottedLookup, suggestions: [] };
   }

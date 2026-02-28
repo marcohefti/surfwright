@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { Command, Option } from "commander";
-import { toCliFailure } from "./core/errors.js";
+import { CliError, toCliFailure } from "./core/errors.js";
 import {
   cleanupOwnedDaemonMeta,
   emitDaemonFallbackDiagnostics,
@@ -15,9 +15,10 @@ import {
 import { runDaemonCommandOrchestrator } from "./core/daemon/app/index.js";
 import type { CliFailure } from "./core/types.js";
 import { parseWorkerArgv, runTargetNetworkWorker } from "./features/network/index.js";
-import { registerFeaturePlugins } from "./features/registry.js";
+import { allCommandManifest, registerFeaturePlugins } from "./features/registry.js";
 import { kickOpportunisticStateMaintenance, runOpportunisticStateMaintenanceWorker } from "./core/state/public.js";
-import { parseCommandPath, parseGlobalOptionValue } from "./cli/options.js";
+import { parseGlobalOptionValue } from "./cli/options.js";
+import { resolveArgvCommandId, resolveArgvCommandPath } from "./cli/command-path.js";
 import { commanderExitCode, parseOutputOptsFromArgv, toCommanderFailure, type OutputOpts } from "./cli/commander-failure.js";
 import { normalizeArgv } from "./cli/argv-normalize.js";
 import { getRequestExitCode, requestContextEnvGet, setRequestExitCode, withRequestContext } from "./core/request-context.js";
@@ -58,11 +59,11 @@ function printFailure(failure: CliFailure, opts: OutputOpts) {
 function parseTimeoutMs(input: string): number {
   const raw = input.trim();
   if (!/^\d+$/.test(raw)) {
-    throw new Error("timeout-ms must be a positive integer");
+    throw new CliError("E_QUERY_INVALID", "timeout-ms must be a positive integer");
   }
   const value = Number.parseInt(raw, 10);
   if (!Number.isFinite(value) || value <= 0) {
-    throw new Error("timeout-ms must be a positive integer");
+    throw new CliError("E_QUERY_INVALID", "timeout-ms must be a positive integer");
   }
   return value;
 }
@@ -82,33 +83,36 @@ function resolveRequestEnvOverrides(argv: string[]): Record<string, string | und
   return out;
 }
 
-function shouldBypassDaemon(argv: string[]): boolean {
-  const [first, second] = parseCommandPath(argv);
-  if (!first) {
-    return true;
+function shouldBypassDaemonFromContract(commandId: string): boolean {
+  const manifest = allCommandManifest.find((entry) => entry.id === commandId);
+  if (!manifest) {
+    return false;
   }
-  if (first === "contract") {
+  return manifest.execution?.daemon === "bypass" || manifest.execution?.streaming === true;
+}
+
+const DAEMON_BYPASS_COMMAND_IDS = new Set(
+  allCommandManifest
+    .map((entry) => entry.id)
+    .filter((commandId) => shouldBypassDaemonFromContract(commandId)),
+);
+
+function shouldBypassDaemon(argv: string[]): boolean {
+  const commandId = resolveArgvCommandId(argv);
+  if (!commandId) {
     return true;
   }
   if (argv.includes("--help") || argv.includes("-h")) {
     return true;
   }
-  if (first.startsWith("__")) {
+  if (commandId.startsWith("__")) {
     return true;
   }
-  if (first === "skill") {
-    // Skill commands often take local filesystem paths; resolve relative paths from operator cwd, not daemon worker cwd.
+  if (DAEMON_BYPASS_COMMAND_IDS.has(commandId)) {
+    // Commands that rely on cwd-local IO or streaming stay direct to avoid daemon buffering/path ambiguity.
     return true;
   }
-  if (first === "target" && second === "network-tail") {
-    // Keep streaming command direct to avoid daemon buffering latency/memory.
-    return true;
-  }
-  if (first === "target" && second === "console-tail") {
-    // Keep streaming command direct to avoid daemon buffering latency/memory.
-    return true;
-  }
-  if (first === "run") {
+  if (commandId === "run") {
     for (let index = 2; index < argv.length; index += 1) {
       const token = argv[index];
       if (token === "--plan" && argv[index + 1] === "-") {
@@ -174,7 +178,7 @@ async function runLocalCommand(argv: string[]): Promise<number> {
     envOverrides,
     initialExitCode: 0,
     run: async () => {
-      const [firstCommand] = parseCommandPath(argv);
+      const [firstCommand] = resolveArgvCommandPath(argv);
       if (firstCommand && !firstCommand.startsWith("__")) {
         kickOpportunisticStateMaintenance(argv[1] ?? process.argv[1] ?? "");
       }
@@ -227,6 +231,9 @@ async function maybeRunInternalWorker(argv: string[]): Promise<number | null> {
           await runDaemonCommandOrchestrator({
             argv: requestArgv,
             runLocalCommand,
+            emitFailure: (failure) => {
+              printFailure(failure, parseOutputOptsFromArgv(requestArgv));
+            },
           }),
       });
       setRequestExitCode(0);
@@ -291,7 +298,7 @@ async function main(argv: string[]): Promise<number> {
         if (requestContextEnvGet("SURFWRIGHT_DEBUG_LOGS") === "1") {
           process.stderr.write(`[daemon] local fallback due to unreachable daemon: ${proxied.message}\n`);
           emitDaemonFallbackDiagnostics({
-            command: parseCommandPath(normalizedArgv).filter(Boolean).join(" "),
+            command: resolveArgvCommandPath(normalizedArgv).join(" "),
             message: proxied.message,
           });
         }

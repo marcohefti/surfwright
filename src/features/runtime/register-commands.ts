@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import { type Command } from "commander";
 import {
   getDoctorReport,
@@ -48,7 +47,7 @@ type RuntimeCommandContext = {
 function parseLeaseTtlMs(input: string): number {
   const value = Number.parseInt(input, 10);
   if (!Number.isFinite(value) || value <= 0) {
-    throw new Error("lease-ttl-ms must be a positive integer");
+    throw queryInvalid("lease-ttl-ms must be a positive integer");
   }
   return value;
 }
@@ -448,11 +447,9 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
       const output = ctx.globalOutputOpts();
       const globalOpts = ctx.program.opts<{ session?: string }>();
       try {
-        const stdinPlan = options.plan === "-" ? fs.readFileSync(0, "utf8") : undefined;
         const report = await runPipeline({
           planPath: options.plan,
           planJson: options.planJson,
-          stdinPlan,
           replayPath: options.replay,
           timeoutMs: options.timeoutMs,
           profile: typeof options.profile === "string" ? options.profile : undefined,

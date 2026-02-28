@@ -12,6 +12,48 @@ const STATE_LOCK_FILENAME = "state.lock";
 const STATE_LOCK_RETRY_MS = 40;
 const STATE_LOCK_TIMEOUT_MS = 12000;
 const STATE_LOCK_STALE_MS = 12000;
+function quarantineStateFile(statePath: string, raw: string): string | null {
+  const quarantinePath = path.join(path.dirname(statePath), `state.corrupt.${Date.now()}.${Math.random().toString(16).slice(2)}.json`);
+  try {
+    fs.renameSync(statePath, quarantinePath);
+    return quarantinePath;
+  } catch {
+    try {
+      fs.writeFileSync(quarantinePath, raw, { encoding: "utf8", flag: "wx", mode: 0o600 });
+      return quarantinePath;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function throwStateReadFailure(opts: {
+  code: "E_STATE_READ_INVALID" | "E_STATE_VERSION_MISMATCH";
+  message: string;
+  statePath: string;
+  raw: string;
+}): never {
+  const quarantinedPath = quarantineStateFile(opts.statePath, opts.raw);
+  throw new CliError(opts.code, opts.message, {
+    phase: "state.read",
+    recovery: {
+      strategy: "repair-state-file",
+      nextCommand: "surfwright state reconcile",
+      requiredFields: ["statePath"],
+      context: {
+        statePath: opts.statePath,
+        quarantinedPath,
+      },
+    },
+    hints: quarantinedPath
+      ? [`quarantined state snapshot: ${quarantinedPath}`]
+      : ["state snapshot could not be quarantined automatically; inspect state.json permissions"],
+    hintContext: {
+      statePath: opts.statePath,
+      quarantinedPath,
+    },
+  });
+}
 export function stateRootDir(): string {
   const fromEnv = process.env.SURFWRIGHT_STATE_DIR;
   if (typeof fromEnv === "string" && fromEnv.trim().length > 0) {
@@ -198,13 +240,33 @@ export function readState(): SurfwrightState {
 function readStateFromPath(statePath: string): SurfwrightState {
   try {
     const raw = fs.readFileSync(statePath, "utf8");
-    const parsedRaw = JSON.parse(raw);
+    let parsedRaw: unknown;
+    try {
+      parsedRaw = JSON.parse(raw);
+    } catch {
+      throwStateReadFailure({
+        code: "E_STATE_READ_INVALID",
+        message: "state file is not valid JSON",
+        statePath,
+        raw,
+      });
+    }
     if (typeof parsedRaw !== "object" || parsedRaw === null) {
-      return emptyState();
+      throwStateReadFailure({
+        code: "E_STATE_READ_INVALID",
+        message: "state file must contain a JSON object",
+        statePath,
+        raw,
+      });
     }
     const parsed = parsedRaw as Partial<SurfwrightState>;
     if (parsed.version !== STATE_VERSION) {
-      return emptyState();
+      throwStateReadFailure({
+        code: "E_STATE_VERSION_MISMATCH",
+        message: `state version mismatch: expected ${STATE_VERSION}`,
+        statePath,
+        raw,
+      });
     }
     const sessions: Record<string, SessionState> = {};
     if (typeof parsed.sessions === "object" && parsed.sessions !== null) {
@@ -267,8 +329,21 @@ function readStateFromPath(statePath: string): SurfwrightState {
       networkCaptures,
       networkArtifacts,
     };
-  } catch {
-    return emptyState();
+  } catch (error) {
+    if (error instanceof CliError) {
+      throw error;
+    }
+    const maybe = error as { code?: unknown; message?: unknown };
+    if (maybe.code === "ENOENT") {
+      return emptyState();
+    }
+    throw new CliError("E_STATE_READ_FAILED", "Unable to read state file", {
+      phase: "state.read",
+      hintContext: {
+        statePath,
+        cause: typeof maybe.message === "string" ? maybe.message : null,
+      },
+    });
   }
 }
 
@@ -390,19 +465,30 @@ export function assertSessionDoesNotExist(state: SurfwrightState, sessionId: str
   }
 }
 
+function applyTargetStateUpdate(state: SurfwrightState, target: TargetState) {
+  const existing = state.targets[target.targetId];
+  state.targets[target.targetId] = {
+    ...target,
+    lastActionId: typeof target.lastActionId === "undefined" ? (existing?.lastActionId ?? null) : target.lastActionId,
+    lastActionAt: typeof target.lastActionAt === "undefined" ? (existing?.lastActionAt ?? null) : target.lastActionAt,
+    lastActionKind: typeof target.lastActionKind === "undefined" ? (existing?.lastActionKind ?? null) : target.lastActionKind,
+  };
+  const session = state.sessions[target.sessionId];
+  if (session) {
+    state.sessions[target.sessionId] = withSessionHeartbeat(session);
+  }
+}
+
 export async function upsertTargetState(target: TargetState) {
   await updateState((state) => {
-    const existing = state.targets[target.targetId];
-    state.targets[target.targetId] = {
-      ...target,
-      lastActionId: typeof target.lastActionId === "undefined" ? (existing?.lastActionId ?? null) : target.lastActionId,
-      lastActionAt: typeof target.lastActionAt === "undefined" ? (existing?.lastActionAt ?? null) : target.lastActionAt,
-      lastActionKind:
-        typeof target.lastActionKind === "undefined" ? (existing?.lastActionKind ?? null) : target.lastActionKind,
-    };
-    const session = state.sessions[target.sessionId];
-    if (session) {
-      state.sessions[target.sessionId] = withSessionHeartbeat(session);
+    applyTargetStateUpdate(state, target);
+  });
+}
+
+export async function upsertTargetStates(targets: TargetState[]) {
+  await updateState((state) => {
+    for (const target of targets) {
+      applyTargetStateUpdate(state, target);
     }
   });
 }

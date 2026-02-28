@@ -46,6 +46,17 @@ function writeState(state) {
   fs.writeFileSync(stateFilePath(), `${JSON.stringify(state, null, 2)}\n`, "utf8");
 }
 
+function clearStateArtifacts() {
+  if (!fs.existsSync(TEST_STATE_DIR)) {
+    return;
+  }
+  for (const entry of fs.readdirSync(TEST_STATE_DIR)) {
+    if (entry === "state.json" || entry.startsWith("state.corrupt.")) {
+      fs.rmSync(path.join(TEST_STATE_DIR, entry), { force: true });
+    }
+  }
+}
+
 process.on("exit", () => {
   try {
     fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
@@ -79,6 +90,44 @@ test("session attach requires explicit valid CDP origin", () => {
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_CDP_INVALID");
+});
+
+test("timeout parsers return E_QUERY_INVALID instead of E_INTERNAL", () => {
+  const result = runCli(["session", "ensure", "--timeout-ms", "abc"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+  assert.equal(payload.message, "timeout-ms must be a positive integer");
+});
+
+test("invalid state JSON is quarantined and returns typed failure", () => {
+  clearStateArtifacts();
+  fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
+  fs.writeFileSync(stateFilePath(), "{broken-json", "utf8");
+
+  const result = runCli(["session", "list"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_STATE_READ_INVALID");
+  assert.equal(typeof payload.hintContext?.quarantinedPath, "string");
+  assert.equal(fs.existsSync(payload.hintContext.quarantinedPath), true);
+});
+
+test("state version mismatch is quarantined and returns typed failure", () => {
+  clearStateArtifacts();
+  const stale = baseState();
+  stale.version = 999;
+  writeState(stale);
+
+  const result = runCli(["session", "list"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_STATE_VERSION_MISMATCH");
+  assert.equal(typeof payload.hintContext?.quarantinedPath, "string");
+  assert.equal(fs.existsSync(payload.hintContext.quarantinedPath), true);
 });
 
 test("session attach accepts ws:// CDP endpoint format (returns typed unreachable if offline)", () => {

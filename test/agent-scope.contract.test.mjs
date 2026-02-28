@@ -196,3 +196,20 @@ test("extension lifecycle strict mode returns typed unknown-extension failure", 
   assert.equal(uninstallPayload.code, "E_QUERY_INVALID");
 });
 
+test("extension commands honor --no-json with deterministic human summaries", () => {
+  const extensionName = "SurfWright NoJson Extension";
+  const extensionDir = createExtensionFixture(TEST_STATE_DIR, extensionName);
+  const loadResult = runCli(["--no-json", "extension", "load", extensionDir], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(loadResult.status, 0);
+  assert.equal(loadResult.stdout.startsWith("ok "), true);
+  assert.equal(loadResult.stdout.trim().startsWith("{"), false);
+
+  const listResult = runCli(["--no-json", "extension", "list"], {
+    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+  });
+  assert.equal(listResult.status, 0);
+  assert.equal(listResult.stdout.startsWith("ok "), true);
+  assert.equal(listResult.stdout.trim().startsWith("{"), false);
+});

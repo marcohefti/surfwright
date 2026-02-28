@@ -216,7 +216,7 @@ export function resolvePlanSource(opts: {
   if (typeof opts.planPath === "string" && opts.planPath.length > 0) {
     const raw =
       opts.planPath === "-"
-        ? (typeof opts.stdinPlan === "string" ? opts.stdinPlan : "")
+        ? (typeof opts.stdinPlan === "string" ? opts.stdinPlan : providers().fs.readFileSync(0, "utf8"))
         : providers().fs.readFileSync(opts.planPath, "utf8");
     if (opts.planPath === "-" && raw.trim().length === 0) {
       throw new CliError("E_QUERY_INVALID", "stdin plan is empty");

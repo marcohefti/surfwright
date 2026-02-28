@@ -1,4 +1,5 @@
-import { parseCommandPath, parseGlobalOptionValue, parseOptionTokenSpan } from "../../../cli/options.js";
+import { resolveArgvCommandPath } from "../../../cli/command-path.js";
+import { parseGlobalOptionValue, parseOptionTokenSpan } from "../../../cli/options.js";
 
 export const DAEMON_CONTROL_LANE_KEY = "control:default";
 
@@ -47,7 +48,7 @@ function hashOriginToken(value: string): string {
 }
 
 function commandFamily(argv: string[]): DaemonLaneFamily {
-  const [first, second] = parseCommandPath(argv);
+  const [first, second] = resolveArgvCommandPath(argv);
   if (first === "open") {
     return "open";
   }

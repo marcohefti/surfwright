@@ -332,6 +332,10 @@ export type CliCommandContract = {
   id: string;
   usage: string;
   summary: string;
+  execution?: {
+    daemon?: "proxy" | "bypass";
+    streaming?: boolean;
+  };
 };
 export type CliErrorContract = {
   code: string;

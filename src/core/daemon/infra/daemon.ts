@@ -5,8 +5,15 @@ import { providers } from "../../providers/index.js";
 import { requestContextEnvGet } from "../../request-context.js";
 import { parseGlobalOptionValue } from "../../../cli/options.js";
 import { sendDaemonRequest, waitForDaemonReady } from "./daemon-transport.js";
+import {
+  DAEMON_META_VERSION,
+  type DaemonMeta,
+  isProcessAlive,
+  readDaemonMeta,
+  removeDaemonMeta,
+  writeDaemonMeta,
+} from "./daemon-meta.js";
 
-const DAEMON_META_VERSION = 1;
 const DAEMON_HOST = "127.0.0.1";
 const DAEMON_STARTUP_TIMEOUT_MS = 4500;
 const DAEMON_REQUEST_TIMEOUT_MS = 120000;
@@ -39,19 +46,6 @@ export type DaemonClientOutcome =
       message: string;
     };
 
-type DaemonMeta = {
-  version: number;
-  pid: number;
-  host: string;
-  port: number;
-  token: string;
-  startedAt: string;
-};
-
-function daemonMetaPath(): string {
-  return providers().path.join(stateRootDir(), "daemon.json");
-}
-
 function daemonStartLockPath(): string {
   return providers().path.join(stateRootDir(), DAEMON_START_LOCK_FILENAME);
 }
@@ -78,91 +72,6 @@ function withRequestAgentIdArgv(argv: string[]): string[] {
     return argv;
   }
   return [argv[0] ?? "", argv[1] ?? "", "--agent-id", fromContext, ...argv.slice(2)];
-}
-
-function parsePositiveInt(value: unknown): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return null;
-  }
-  const parsed = Math.floor(value);
-  return parsed > 0 ? parsed : null;
-}
-
-function currentProcessUid(): number | null {
-  if (typeof process.getuid !== "function") {
-    return null;
-  }
-  try {
-    const uid = process.getuid();
-    return Number.isFinite(uid) ? uid : null;
-  } catch {
-    return null;
-  }
-}
-
-function readDaemonMeta(): DaemonMeta | null {
-  try {
-    const { fs, runtime } = providers();
-    if (runtime.platform !== "win32") {
-      const stat = fs.statSync(daemonMetaPath());
-      const expectedUid = currentProcessUid();
-      if ((stat.mode & 0o077) !== 0 || (expectedUid !== null && typeof stat.uid === "number" && stat.uid !== expectedUid)) {
-        removeDaemonMeta();
-        return null;
-      }
-    }
-    const raw = fs.readFileSync(daemonMetaPath(), "utf8");
-    const parsed = JSON.parse(raw) as Partial<DaemonMeta>;
-    if (
-      parsed.version !== DAEMON_META_VERSION ||
-      parsePositiveInt(parsed.pid) === null ||
-      typeof parsed.host !== "string" ||
-      parsed.host.length === 0 ||
-      parsePositiveInt(parsed.port) === null ||
-      typeof parsed.token !== "string" ||
-      parsed.token.length === 0 ||
-      typeof parsed.startedAt !== "string" ||
-      parsed.startedAt.length === 0
-    ) {
-      return null;
-    }
-    return {
-      version: DAEMON_META_VERSION,
-      pid: parsePositiveInt(parsed.pid) ?? 0,
-      host: parsed.host,
-      port: parsePositiveInt(parsed.port) ?? 0,
-      token: parsed.token,
-      startedAt: parsed.startedAt,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeDaemonMeta(meta: DaemonMeta): void {
-  const { fs, runtime } = providers();
-  const root = stateRootDir();
-  fs.mkdirSync(root, { recursive: true });
-  const metaPath = daemonMetaPath();
-  fs.writeFileSync(metaPath, `${JSON.stringify(meta)}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  if (runtime.platform !== "win32") {
-    try {
-      fs.chmodSync(metaPath, 0o600);
-    } catch {
-      // best-effort: chmod may fail on some filesystems
-    }
-  }
-}
-
-function removeDaemonMeta(): void {
-  try {
-    providers().fs.unlinkSync(daemonMetaPath());
-  } catch {
-    // ignore missing metadata
-  }
 }
 
 function parseDaemonStartLockTimestampMs(lockPath: string): number | null {
@@ -244,18 +153,6 @@ function releaseDaemonStartLock(lockPath: string): void {
     providers().fs.unlinkSync(lockPath);
   } catch {
     // ignore missing lock
-  }
-}
-
-function isProcessAlive(pid: number): boolean {
-  if (pid <= 0) {
-    return false;
-  }
-  try {
-    providers().runtime.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
   }
 }
 
@@ -393,6 +290,15 @@ export async function runViaDaemon(argv: string[], entryScriptPath: string): Pro
 
   const isQueuePressureCode = (code: string): boolean =>
     code === "E_DAEMON_QUEUE_TIMEOUT" || code === "E_DAEMON_QUEUE_SATURATED";
+  const normalizeSurfaceDaemonError = (code: string, message: string): { code: string; message: string } => {
+    if (isQueuePressureCode(code)) {
+      return { code, message };
+    }
+    return {
+      code: "E_INTERNAL",
+      message: message.length > 0 ? message : "daemon request failed",
+    };
+  };
   const requestArgv = withRequestAgentIdArgv(argv);
 
   try {
@@ -413,10 +319,11 @@ export async function runViaDaemon(argv: string[], entryScriptPath: string): Pro
           await new Promise((resolve) => setTimeout(resolve, DAEMON_QUEUE_RETRY_DELAY_MS));
           continue;
         }
+        const normalized = normalizeSurfaceDaemonError(response.code, response.message);
         return {
           kind: "typed_daemon_error",
-          code: response.code,
-          message: response.message,
+          code: normalized.code,
+          message: normalized.message,
         };
       }
       if (response.kind !== "run") {

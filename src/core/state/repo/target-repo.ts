@@ -1,4 +1,4 @@
-import { readState, upsertTargetState } from "../infra/state-store.js";
+import { readState, upsertTargetState, upsertTargetStates } from "../infra/state-store.js";
 import type { TargetState } from "../../types.js";
 
 const DEFAULT_RECENT_ACTION_WINDOW_MS = 2 * 60 * 1000;
@@ -26,4 +26,11 @@ export function readRecentTargetAction(opts: {
 
 export async function saveTargetSnapshot(target: TargetState) {
   await upsertTargetState(target);
+}
+
+export async function saveTargetSnapshots(targets: TargetState[]) {
+  if (targets.length === 0) {
+    return;
+  }
+  await upsertTargetStates(targets);
 }

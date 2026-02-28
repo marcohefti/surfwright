@@ -1,13 +1,12 @@
 import process from "node:process";
-import { stateRootDir } from "../../state/index.js";
 import { providers } from "../../providers/index.js";
-import { parseCommandPath } from "../../../cli/options.js";
+import { resolveArgvCommandId } from "../../../cli/command-path.js";
 import { orchestrateDaemonWorkerRequest, type DaemonWorkerResponse } from "../app/index.js";
 import type { DaemonLaneResolution } from "../domain/index.js";
 import { DAEMON_QUEUE_WAIT_MS_DEFAULT, createDaemonLaneScheduler, resolveDaemonLaneKey } from "../domain/index.js";
+import { readDaemonMeta, removeDaemonMeta } from "./daemon-meta.js";
 import { createLocalDaemonDiagnostics } from "./diagnostics.js";
 
-const DAEMON_META_VERSION = 1;
 const DAEMON_HOST = "127.0.0.1";
 const DAEMON_IDLE_TIMEOUT_MS = 15000;
 const DAEMON_FORCE_SOCKET_CLOSE_MS = 750;
@@ -18,84 +17,6 @@ export type DaemonRunResult = {
   stdout: string;
   stderr: string;
 };
-
-type DaemonMeta = {
-  version: number;
-  pid: number;
-  host: string;
-  port: number;
-  token: string;
-  startedAt: string;
-};
-
-function daemonMetaPath(): string {
-  return providers().path.join(stateRootDir(), "daemon.json");
-}
-
-function parsePositiveInt(value: unknown): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return null;
-  }
-  const parsed = Math.floor(value);
-  return parsed > 0 ? parsed : null;
-}
-
-function currentProcessUid(): number | null {
-  if (typeof process.getuid !== "function") {
-    return null;
-  }
-  try {
-    const uid = process.getuid();
-    return Number.isFinite(uid) ? uid : null;
-  } catch {
-    return null;
-  }
-}
-
-function readDaemonMeta(): DaemonMeta | null {
-  try {
-    const { fs, runtime } = providers();
-    if (runtime.platform !== "win32") {
-      const stat = fs.statSync(daemonMetaPath());
-      const expectedUid = currentProcessUid();
-      if ((stat.mode & 0o077) !== 0 || (expectedUid !== null && typeof stat.uid === "number" && stat.uid !== expectedUid)) {
-        removeDaemonMeta();
-        return null;
-      }
-    }
-    const raw = fs.readFileSync(daemonMetaPath(), "utf8");
-    const parsed = JSON.parse(raw) as Partial<DaemonMeta>;
-    if (
-      parsed.version !== DAEMON_META_VERSION ||
-      parsePositiveInt(parsed.pid) === null ||
-      typeof parsed.host !== "string" ||
-      parsed.host.length === 0 ||
-      parsePositiveInt(parsed.port) === null ||
-      typeof parsed.token !== "string" ||
-      parsed.token.length === 0
-    ) {
-      return null;
-    }
-    return {
-      version: DAEMON_META_VERSION,
-      pid: parsePositiveInt(parsed.pid) ?? 0,
-      host: parsed.host,
-      port: parsePositiveInt(parsed.port) ?? 0,
-      token: parsed.token,
-      startedAt: typeof parsed.startedAt === "string" ? parsed.startedAt : "",
-    };
-  } catch {
-    return null;
-  }
-}
-
-function removeDaemonMeta(): void {
-  try {
-    providers().fs.unlinkSync(daemonMetaPath());
-  } catch {
-    // ignore missing metadata
-  }
-}
 
 export function daemonIdleTimeoutMs(): number {
   const raw = providers().env.get("SURFWRIGHT_DAEMON_IDLE_MS");
@@ -272,11 +193,7 @@ export async function runDaemonWorker(opts: {
       }
       const argv = parsed.argv as string[];
       const lane = resolveDaemonLaneKey({ argv });
-      const [first, second] = parseCommandPath(argv);
-      const command =
-        typeof first === "string" && first.length > 0
-          ? [first, second].filter((token): token is string => typeof token === "string" && token.length > 0).join(".")
-          : "unknown";
+      const command = resolveArgvCommandId(argv) ?? "unknown";
       const sessionId = lane.source === "sessionId" ? lane.laneKey.replace(/^session:/, "") : "none";
       return {
         requestId: providers().crypto.randomBytes(8).toString("hex"),

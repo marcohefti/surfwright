@@ -245,6 +245,10 @@ export const targetCommandManifest: CliCommandContract[] = [
     usage:
       "surfwright target console-tail <targetId> [--capture-ms <ms>] [--max-events <n>] [--levels <csv>] [--reload] [--timeout-ms <ms>] [--no-json] [--pretty] [--session <id>]",
     summary: "stream live console/pageerror/requestfailed events as NDJSON",
+    execution: {
+      daemon: "bypass",
+      streaming: true,
+    },
   },
   {
     id: "target.health",

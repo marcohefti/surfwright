@@ -1,6 +1,6 @@
 import type { CliFailure } from "../core/types.js";
 import { findCommandContractByPath, usageRequiredPositionals, usageValidFlags } from "../core/cli-contract.js";
-import { parseCommandPath } from "./options.js";
+import { resolveArgvCommandPath } from "./command-path.js";
 
 export type OutputOpts = {
   json: boolean;
@@ -77,7 +77,7 @@ function contractUnknownOptionHints(unknownOption: string | null, argv?: string[
   if (!unknownOption || !Array.isArray(argv)) {
     return [];
   }
-  const commandPath = parseCommandPath(argv);
+  const commandPath = resolveArgvCommandPath(argv);
   if (commandPath[0] !== "contract") {
     return [];
   }
@@ -139,7 +139,7 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
     expectedArgs: expectedArg,
     unknownOption,
   };
-  const parsedCommandPath = Array.isArray(argv) ? parseCommandPath(argv) : [];
+  const parsedCommandPath = Array.isArray(argv) ? resolveArgvCommandPath(argv) : [];
   const commandPath = parsedCommandPath.join(" ");
   if (commandPath.length > 0) {
     hintContext.commandPath = commandPath;

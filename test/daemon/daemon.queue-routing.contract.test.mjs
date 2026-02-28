@@ -150,7 +150,23 @@ test("CLI surfaces E_DAEMON_QUEUE_TIMEOUT directly from daemon typed failure", a
       {
         ok: false,
         code: "E_DAEMON_QUEUE_TIMEOUT",
-        message: "daemon queue wait budget exceeded",
+        message: "Daemon queue wait budget expired before dispatch",
+        retryable: true,
+        phase: "daemon_queue",
+        recovery: {
+          strategy: "retry-after-backoff",
+          nextCommand: "surfwright <same-command>",
+          requiredFields: ["queueScope", "retryAfterMs"],
+          context: {
+            queueScope: "session:s-default",
+            retryAfterMs: 60,
+          },
+        },
+        hints: ["Retry the same command after a short backoff"],
+        hintContext: {
+          queueScope: "session:s-default",
+          daemonQueueRetryAttempts: 2,
+        },
       },
       async ({ port, requests }) => {
         writeDaemonMeta(stateDir, { pid: process.pid, port, token });
@@ -162,6 +178,10 @@ test("CLI surfaces E_DAEMON_QUEUE_TIMEOUT directly from daemon typed failure", a
         const payload = parseJson(result.stdout);
         assert.equal(payload.ok, false);
         assert.equal(payload.code, "E_DAEMON_QUEUE_TIMEOUT");
+        assert.equal(payload.retryable, true);
+        assert.equal(payload.phase, "daemon_queue");
+        assert.equal(payload.recovery?.strategy, "retry-after-backoff");
+        assert.equal(payload.hintContext?.queueScope, "session:s-default");
         assert.equal(requests.length, DAEMON_QUEUE_RETRY_MAX_ATTEMPTS + 1);
       },
     );

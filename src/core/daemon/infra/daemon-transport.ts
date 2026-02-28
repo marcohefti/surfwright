@@ -37,6 +37,16 @@ type DaemonResponse =
       ok: false;
       code: string;
       message: string;
+      retryable?: boolean;
+      phase?: string;
+      recovery?: {
+        strategy: string;
+        nextCommand?: string;
+        requiredFields?: string[];
+        context?: Record<string, string | number | boolean | null>;
+      };
+      hints?: string[];
+      hintContext?: Record<string, string | number | boolean | null>;
     };
 
 type DaemonResponseFrame =
@@ -59,10 +69,44 @@ function parseDaemonResponseFrame(value: unknown): DaemonResponseFrame | null {
   }
   const parsed = value as Partial<DaemonResponseFrame>;
   if (parsed.ok === false && typeof parsed.code === "string" && typeof parsed.message === "string") {
+    const hasRecovery =
+      typeof parsed.recovery === "object" &&
+      parsed.recovery !== null &&
+      typeof (parsed.recovery as { strategy?: unknown }).strategy === "string";
     return {
       ok: false,
       code: parsed.code,
       message: parsed.message,
+      ...(typeof parsed.retryable === "boolean" ? { retryable: parsed.retryable } : {}),
+      ...(typeof parsed.phase === "string" ? { phase: parsed.phase } : {}),
+      ...(hasRecovery
+        ? {
+            recovery: {
+              strategy: String((parsed.recovery as { strategy: unknown }).strategy),
+              ...((parsed.recovery as { nextCommand?: unknown }).nextCommand &&
+              typeof (parsed.recovery as { nextCommand?: unknown }).nextCommand === "string"
+                ? { nextCommand: (parsed.recovery as { nextCommand: string }).nextCommand }
+                : {}),
+              ...((parsed.recovery as { requiredFields?: unknown }).requiredFields &&
+              Array.isArray((parsed.recovery as { requiredFields: unknown[] }).requiredFields)
+                ? {
+                    requiredFields: (parsed.recovery as { requiredFields: unknown[] }).requiredFields
+                      .filter((entry): entry is string => typeof entry === "string")
+                      .slice(0, 6),
+                  }
+                : {}),
+              ...((parsed.recovery as { context?: unknown }).context &&
+              typeof (parsed.recovery as { context: unknown }).context === "object" &&
+              (parsed.recovery as { context: unknown }).context !== null
+                ? { context: (parsed.recovery as { context: Record<string, string | number | boolean | null> }).context }
+                : {}),
+            },
+          }
+        : {}),
+      ...(Array.isArray(parsed.hints)
+        ? { hints: parsed.hints.filter((entry): entry is string => typeof entry === "string").slice(0, 3) }
+        : {}),
+      ...(parsed.hintContext && typeof parsed.hintContext === "object" ? { hintContext: parsed.hintContext } : {}),
     };
   }
   if (parsed.ok !== true || typeof parsed.kind !== "string") {

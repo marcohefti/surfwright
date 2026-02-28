@@ -4,13 +4,33 @@ export const DAEMON_GLOBAL_ACTIVE_LANES_DEFAULT = 8;
 export const DAEMON_LANE_QUEUE_DEPTH_DEFAULT = 8;
 export const DAEMON_QUEUE_WAIT_MS_DEFAULT = 2000;
 
+type DaemonQueueErrorOptions = {
+  laneKey?: string;
+  queueDepth?: number;
+  laneQueueDepth?: number;
+  queueWaitMs?: number;
+  retryAfterMs?: number;
+};
+
 export class DaemonQueueError extends Error {
   code: "E_DAEMON_QUEUE_TIMEOUT" | "E_DAEMON_QUEUE_SATURATED";
+  laneKey: string | null;
+  queueDepth: number | null;
+  laneQueueDepth: number | null;
+  queueWaitMs: number | null;
+  retryAfterMs: number | null;
+  retryable: true;
 
-  constructor(code: "E_DAEMON_QUEUE_TIMEOUT" | "E_DAEMON_QUEUE_SATURATED", message: string) {
+  constructor(code: "E_DAEMON_QUEUE_TIMEOUT" | "E_DAEMON_QUEUE_SATURATED", message: string, opts?: DaemonQueueErrorOptions) {
     super(message);
     this.code = code;
     this.name = "DaemonQueueError";
+    this.laneKey = typeof opts?.laneKey === "string" && opts.laneKey.length > 0 ? opts.laneKey : null;
+    this.queueDepth = typeof opts?.queueDepth === "number" ? opts.queueDepth : null;
+    this.laneQueueDepth = typeof opts?.laneQueueDepth === "number" ? opts.laneQueueDepth : null;
+    this.queueWaitMs = typeof opts?.queueWaitMs === "number" ? opts.queueWaitMs : null;
+    this.retryAfterMs = typeof opts?.retryAfterMs === "number" ? opts.retryAfterMs : null;
+    this.retryable = true;
   }
 }
 
@@ -161,7 +181,12 @@ export function createDaemonLaneScheduler<T>(opts?: {
           reason: "saturated",
           scope: input.laneKey,
         });
-        throw new DaemonQueueError("E_DAEMON_QUEUE_SATURATED", "daemon lane queue depth exceeded");
+        throw new DaemonQueueError("E_DAEMON_QUEUE_SATURATED", "Daemon lane queue depth cap reached; request rejected", {
+          laneKey: input.laneKey,
+          queueDepth: lane.queue.length,
+          laneQueueDepth,
+          retryAfterMs: queueWaitMs,
+        });
       }
       return await new Promise<T>((resolve, reject) => {
         const task: ScheduledTask<T> = {
@@ -183,7 +208,15 @@ export function createDaemonLaneScheduler<T>(opts?: {
               scope: input.laneKey,
             });
             compactLane(input.laneKey);
-            reject(new DaemonQueueError("E_DAEMON_QUEUE_TIMEOUT", "daemon queue wait budget exceeded"));
+            reject(
+              new DaemonQueueError("E_DAEMON_QUEUE_TIMEOUT", "Daemon queue wait budget expired before dispatch", {
+                laneKey: input.laneKey,
+                queueDepth: lane.queue.length,
+                laneQueueDepth,
+                queueWaitMs,
+                retryAfterMs: queueWaitMs,
+              }),
+            );
             schedule();
           }, queueWaitMs),
         };

@@ -40,6 +40,16 @@ export type DaemonClientOutcome =
       kind: "typed_daemon_error";
       code: string;
       message: string;
+      retryable?: boolean;
+      phase?: string;
+      recovery?: {
+        strategy: string;
+        nextCommand?: string;
+        requiredFields?: string[];
+        context?: Record<string, string | number | boolean | null>;
+      };
+      hints?: string[];
+      hintContext?: Record<string, string | number | boolean | null>;
     }
   | {
       kind: "unreachable";
@@ -290,13 +300,47 @@ export async function runViaDaemon(argv: string[], entryScriptPath: string): Pro
 
   const isQueuePressureCode = (code: string): boolean =>
     code === "E_DAEMON_QUEUE_TIMEOUT" || code === "E_DAEMON_QUEUE_SATURATED";
-  const normalizeSurfaceDaemonError = (code: string, message: string): { code: string; message: string } => {
-    if (isQueuePressureCode(code)) {
-      return { code, message };
+  const normalizeSurfaceDaemonError = (input: {
+    code: string;
+    message: string;
+    retryable?: boolean;
+    phase?: string;
+    recovery?: {
+      strategy: string;
+      nextCommand?: string;
+      requiredFields?: string[];
+      context?: Record<string, string | number | boolean | null>;
+    };
+    hints?: string[];
+    hintContext?: Record<string, string | number | boolean | null>;
+  }): {
+    code: string;
+    message: string;
+    retryable?: boolean;
+    phase?: string;
+    recovery?: {
+      strategy: string;
+      nextCommand?: string;
+      requiredFields?: string[];
+      context?: Record<string, string | number | boolean | null>;
+    };
+    hints?: string[];
+    hintContext?: Record<string, string | number | boolean | null>;
+  } => {
+    if (isQueuePressureCode(input.code)) {
+      return {
+        code: input.code,
+        message: input.message,
+        ...(typeof input.retryable === "boolean" ? { retryable: input.retryable } : {}),
+        ...(typeof input.phase === "string" && input.phase.length > 0 ? { phase: input.phase } : {}),
+        ...(input.recovery ? { recovery: input.recovery } : {}),
+        ...(Array.isArray(input.hints) ? { hints: input.hints.slice(0, 3) } : {}),
+        ...(input.hintContext && typeof input.hintContext === "object" ? { hintContext: input.hintContext } : {}),
+      };
     }
     return {
       code: "E_INTERNAL",
-      message: message.length > 0 ? message : "daemon request failed",
+      message: input.message.length > 0 ? input.message : "daemon request failed",
     };
   };
   const requestArgv = withRequestAgentIdArgv(argv);
@@ -319,11 +363,29 @@ export async function runViaDaemon(argv: string[], entryScriptPath: string): Pro
           await new Promise((resolve) => setTimeout(resolve, DAEMON_QUEUE_RETRY_DELAY_MS));
           continue;
         }
-        const normalized = normalizeSurfaceDaemonError(response.code, response.message);
+        const normalized = normalizeSurfaceDaemonError({
+          code: response.code,
+          message: response.message,
+          retryable: response.retryable,
+          phase: response.phase,
+          recovery: response.recovery,
+          hints: response.hints,
+          hintContext: response.hintContext,
+        });
+        const daemonQueueRetryAttempts = attempt;
+        const mergedHintContext = {
+          ...(normalized.hintContext ?? {}),
+          daemonQueueRetryAttempts,
+        };
         return {
           kind: "typed_daemon_error",
           code: normalized.code,
           message: normalized.message,
+          ...(typeof normalized.retryable === "boolean" ? { retryable: normalized.retryable } : {}),
+          ...(typeof normalized.phase === "string" ? { phase: normalized.phase } : {}),
+          ...(normalized.recovery ? { recovery: normalized.recovery } : {}),
+          ...(normalized.hints ? { hints: normalized.hints } : {}),
+          ...(Object.keys(mergedHintContext).length > 0 ? { hintContext: mergedHintContext } : {}),
         };
       }
       if (response.kind !== "run") {

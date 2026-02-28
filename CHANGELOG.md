@@ -74,6 +74,10 @@ All notable changes to SurfWright are documented here.
 - [cli] Added npm scripts `bench:loop:run`, `bench:loop:score`, and `bench:loop:history`.
 
 ### Changed
+- [daemon] Queue-pressure typed failures (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) now carry additive recovery fields (`retryable`, `phase`, `recovery`, `hints`, `hintContext`) through daemon transport to CLI output.
+- [daemon] Queue-pressure runtime messages now align with contract wording (`Daemon queue wait budget expired before dispatch`, `Daemon lane queue depth cap reached; request rejected`).
+- [cli] `help` now normalizes dot-path and multi-token command paths to canonical help execution (for example `help target.dialog` -> `target dialog --help`).
+- [cli] `contract --search` now tolerates unquoted multi-token terms by normalizing trailing bare tokens into one search term.
 - [state] State read/version failures now return typed failures and quarantine the offending `state.json` snapshot instead of silently resetting to empty state.
 - [errors] Added typed state read failure codes `E_STATE_READ_INVALID`, `E_STATE_VERSION_MISMATCH`, and `E_STATE_READ_FAILED` to the published contract error surface.
 - [daemon] CLI daemon proxy now normalizes non-contract daemon-internal typed failures to `E_INTERNAL`; queue pressure codes remain pass-through.
@@ -137,6 +141,7 @@ All notable changes to SurfWright are documented here.
 - [missions] Updated browser-control campaign selection to 16 active missions, revised `first-pass-orientation`, `style-inspection`, `checkbox-toggle`, `iframe-edit`, and `docs-commands-extract`, and archived prior mission definitions.
 
 ### Fixed
+- [cli] JSON-mode Commander parse failures now remain pure typed JSON (no appended help/prose), reducing token noise and parser ambiguity for agents.
 - [cli] Timeout parser validation failures now return typed `E_QUERY_INVALID` instead of collapsing to `E_INTERNAL`.
 - [tests] Browser target-effects contract tests no longer mask first-attempt failures via broad retry classes.
 - [tests] Split daemon queue routing contract assertions into focused files to stay within LOC policy and keep review scope bounded.

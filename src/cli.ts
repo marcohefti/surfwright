@@ -126,8 +126,9 @@ function shouldBypassDaemon(argv: string[]): boolean {
   return false;
 }
 
-function createProgram(): Command {
+function createProgram(outputOpts: OutputOpts): Command {
   const program = new Command();
+  const suppressCommanderErrorText = outputOpts.json;
   function globalOutputOpts(): OutputOpts {
     const globalOpts = program.opts<{ json?: boolean; pretty?: boolean }>();
     return {
@@ -161,6 +162,16 @@ function createProgram(): Command {
     .showSuggestionAfterError(true)
     .showHelpAfterError("(run the command with --help for examples)")
     .exitOverride();
+  program.configureOutput({
+    writeOut: (str) => {
+      process.stdout.write(str);
+    },
+    writeErr: (str) => {
+      if (!suppressCommanderErrorText) {
+        process.stderr.write(str);
+      }
+    },
+  });
   registerFeaturePlugins({
     program,
     parseTimeoutMs,
@@ -173,6 +184,7 @@ function createProgram(): Command {
 }
 
 async function runLocalCommand(argv: string[]): Promise<number> {
+  const outputOpts = parseOutputOptsFromArgv(argv);
   const envOverrides = resolveRequestEnvOverrides(argv);
   return await withRequestContext({
     envOverrides,
@@ -182,7 +194,7 @@ async function runLocalCommand(argv: string[]): Promise<number> {
       if (firstCommand && !firstCommand.startsWith("__")) {
         kickOpportunisticStateMaintenance(argv[1] ?? process.argv[1] ?? "");
       }
-      const program = createProgram();
+      const program = createProgram(outputOpts);
       setRequestExitCode(0);
       try {
         await program.parseAsync(normalizeArgv(argv));
@@ -289,6 +301,11 @@ async function main(argv: string[]): Promise<number> {
               ok: false,
               code: proxied.code,
               message: proxied.message,
+              ...(typeof proxied.retryable === "boolean" ? { retryable: proxied.retryable } : {}),
+              ...(typeof proxied.phase === "string" ? { phase: proxied.phase } : {}),
+              ...(proxied.recovery ? { recovery: proxied.recovery } : {}),
+              ...(Array.isArray(proxied.hints) ? { hints: proxied.hints } : {}),
+              ...(proxied.hintContext ? { hintContext: proxied.hintContext } : {}),
             },
             parseOutputOptsFromArgv(normalizedArgv),
           );

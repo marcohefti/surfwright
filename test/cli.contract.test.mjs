@@ -70,6 +70,16 @@ test("open invalid URL returns typed compact JSON failure", () => {
   assert.equal(typeof payload.message, "string");
 });
 
+test("json-mode parse failures stay pure JSON without commander help text", () => {
+  const result = runCli(["open", "https://example.com", "--no-persist"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+  assert.equal(result.stdout.includes("Usage:"), false);
+  assert.equal(result.stderr.trim(), "");
+});
+
 test("--pretty switches to multiline JSON", () => {
   const result = runCli(["--pretty", "open", "camelpay.localhost"]);
   assert.equal(result.status, 1);

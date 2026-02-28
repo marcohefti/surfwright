@@ -41,6 +41,16 @@ export type DaemonWorkerResponse =
       ok: false;
       code: string;
       message: string;
+      retryable?: boolean;
+      phase?: string;
+      recovery?: {
+        strategy: string;
+        nextCommand?: string;
+        requiredFields?: string[];
+        context?: Record<string, string | number | boolean | null>;
+      };
+      hints?: string[];
+      hintContext?: Record<string, string | number | boolean | null>;
     };
 
 export type DaemonWorkerOrchestratedResponse = {
@@ -145,11 +155,37 @@ export async function orchestrateDaemonWorkerRequest(opts: {
       };
     } catch (error) {
       if (isDaemonQueueError(error)) {
+        const queueScope = error.laneKey ?? resolveDaemonLaneKey({ argv: request.argv }).laneKey;
+        const queueWaitMs = typeof error.queueWaitMs === "number" ? error.queueWaitMs : null;
+        const retryAfterMs = typeof error.retryAfterMs === "number" ? error.retryAfterMs : null;
         return {
           response: {
             ok: false,
             code: error.code,
             message: error.message,
+            retryable: true,
+            phase: "daemon_queue",
+            recovery: {
+              strategy: "retry-after-backoff",
+              nextCommand: "surfwright <same-command>",
+              requiredFields: ["queueScope", "retryAfterMs"],
+              context: {
+                queueScope,
+                retryAfterMs,
+              },
+            },
+            hints: [
+              "Retry the same command after a short backoff",
+              "Reduce parallel commands sharing the same session/profile/agent lane",
+              "If continuity is required while diagnosing daemon load, retry with SURFWRIGHT_DAEMON=0",
+            ],
+            hintContext: {
+              queueScope,
+              queueWaitMs,
+              queueDepth: error.queueDepth ?? null,
+              laneQueueDepth: error.laneQueueDepth ?? null,
+              retryAfterMs,
+            },
           },
           shutdownAfterWrite: false,
           scheduleIdleAfterWrite: true,

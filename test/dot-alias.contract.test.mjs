@@ -59,6 +59,21 @@ test("dot-command aliases route to runtime/target commands", () => {
   assert.equal(evalPayload.code, "E_TARGET_SESSION_UNKNOWN");
 });
 
+test("help accepts dot-command path aliases and resolves canonical command help", () => {
+  const helpResult = runCli(["help", "target.dialog"]);
+  assert.equal(helpResult.status, 0);
+  assert.equal(helpResult.stdout.includes("Usage: surfwright target dialog [options] <targetId>"), true);
+});
+
+test("contract --search tolerates unquoted multi-token terms", () => {
+  const result = runCli(["contract", "--search", "target", "dialog"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.search, "target dialog");
+  assert.equal(payload.commandIds.includes("target.dialog"), true);
+});
+
 test("dot-command alias routes session.clear canonical scoped form", () => {
   const clearResult = runCli(["session.clear", "--session", "s-missing", "--keep-processes", "--timeout-ms", "200"]);
   assert.equal(clearResult.status, 1);

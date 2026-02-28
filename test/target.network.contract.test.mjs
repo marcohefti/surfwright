@@ -4,12 +4,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { readRuntimeState, writeCanonicalState } from "./core/state-storage.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-network-contract-"));
-
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
 
 function runCli(args) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
@@ -28,8 +25,7 @@ function parseJson(stdout) {
 }
 
 function writeState(state) {
-  fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
-  fs.writeFileSync(stateFilePath(), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  writeCanonicalState(TEST_STATE_DIR, state);
 }
 
 process.on("exit", () => {
@@ -86,7 +82,7 @@ test("target network-end finalizes state and returns typed failure when done sta
   assert.equal(failure.ok, false);
   assert.equal(failure.code, "E_INTERNAL");
 
-  const state = JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  const state = readRuntimeState(TEST_STATE_DIR);
   assert.equal(state.networkCaptures[captureId].status, "failed");
   assert.equal(typeof state.networkCaptures[captureId].endedAt, "string");
   assert.equal(state.networkCaptures[captureId].endedAt.length > 0, true);

@@ -59,8 +59,8 @@ test("dot-command aliases route to runtime/target commands", () => {
   assert.equal(evalPayload.code, "E_TARGET_SESSION_UNKNOWN");
 });
 
-test("dot-command alias normalizes session.clear positional scope forms", () => {
-  const clearResult = runCli(["session.clear", "s-missing", "--keep-processes=true", "--no-prompt", "--timeout-ms", "200"]);
+test("dot-command alias routes session.clear canonical scoped form", () => {
+  const clearResult = runCli(["session.clear", "--session", "s-missing", "--keep-processes", "--timeout-ms", "200"]);
   assert.equal(clearResult.status, 1);
   const clearPayload = parseJson(clearResult.stdout);
   assert.equal(clearPayload.ok, false);

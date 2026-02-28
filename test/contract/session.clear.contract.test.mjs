@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { readRuntimeState, writeCanonicalState } from "../core/state-storage.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-session-clear-"));
 
@@ -24,17 +25,12 @@ function parseJson(stdout) {
   return JSON.parse(text);
 }
 
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
-
 function writeState(state) {
-  fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
-  fs.writeFileSync(stateFilePath(), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  writeCanonicalState(TEST_STATE_DIR, state);
 }
 
 function readState() {
-  return JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  return readRuntimeState(TEST_STATE_DIR);
 }
 
 process.on("exit", () => {
@@ -286,49 +282,4 @@ test("session clear can scope cleanup to one session", () => {
   assert.deepEqual(Object.keys(finalState.targets), ["t-m"]);
   assert.deepEqual(Object.keys(finalState.networkCaptures), ["cap-m"]);
   assert.deepEqual(Object.keys(finalState.networkArtifacts), ["art-m"]);
-});
-
-test("session clear normalizes positional scope and keep-processes assignment forms", () => {
-  writeState({
-    version: 4,
-    activeSessionId: "a-main",
-    nextSessionOrdinal: 2,
-    nextCaptureOrdinal: 1,
-    nextArtifactOrdinal: 1,
-    sessions: {
-      "a-main": {
-        sessionId: "a-main",
-        kind: "attached",
-        cdpOrigin: "http://127.0.0.1:1",
-        debugPort: 9222,
-        userDataDir: null,
-        browserPid: null,
-        ownerId: "agent.test",
-        leaseExpiresAt: null,
-        leaseTtlMs: 3600000,
-        managedUnreachableSince: null,
-        managedUnreachableCount: 0,
-        createdAt: "2026-02-13T09:00:00.000Z",
-        lastSeenAt: "2026-02-13T09:00:00.000Z",
-      },
-    },
-    targets: {},
-    networkCaptures: {},
-    networkArtifacts: {},
-  });
-
-  const clearResult = runCli(["session", "clear", "a-main", "--keep-processes=false", "--no-prompt", "--timeout-ms", "200"]);
-  assert.equal(clearResult.status, 0);
-  const payload = parseJson(clearResult.stdout);
-  assert.equal(payload.ok, true);
-  assert.equal(payload.scope, "session");
-  assert.equal(payload.requestedSessionId, "a-main");
-  assert.equal(payload.keepProcesses, false);
-  assert.equal(payload.scanned, 1);
-  assert.equal(payload.cleared, 1);
-  assert.equal(payload.processShutdown.requested, 1);
-
-  const finalState = readState();
-  assert.equal(finalState.activeSessionId, null);
-  assert.deepEqual(finalState.sessions, {});
 });

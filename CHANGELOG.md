@@ -27,7 +27,7 @@ All notable changes to SurfWright are documented here.
 - [target] Added `target find` link-destination narrowing flags: `--href-host <host>` and `--href-path-prefix <prefix>` with echoed filter fields in the report.
 - [target] Added additive `target click.handoff` metadata (`sameTarget`, `openedTargetId`, `openedUrl`, `openedTitle`) for deterministic post-click target chaining.
 - [contract] Added additive `contract.guidance[]` with command signatures, runnable examples, and proof schema hints for high-traffic flows.
-- [contract] Added `contract --compact` and `contract --search <term>` for low-token contract introspection and focused lookups.
+- [contract] Added `contract --search <term>` for low-token focused contract introspection.
 - [contract] Added `contract --core` for low-token bootstrap payloads (focused command/error/guidance subset).
 - [contract] Added `contract --command <id>` for compact per-command lookup (`flags`, `positionals`, `examples`, canonical invocation) to reduce full-contract probing in agent loops.
 - [errors] Added `E_HANDLE_TYPE_MISMATCH` for explicit `sessionId`/`targetId` swap detection with typed recovery payloads.
@@ -82,7 +82,6 @@ All notable changes to SurfWright are documented here.
 - [cli] Daemon bypass routing now derives bypassable command IDs from the command manifest set (plus explicit stdin-plan/internal/help guards) instead of pure argv-branch hardcoding.
 - [extensions] `extension.*` commands now honor global `--no-json` with deterministic human summaries.
 - [session] `session clear` now supports scoped teardown via `--session <id>`, clearing only the selected session and its related target/network metadata while preserving other sessions.
-- [cli] `session clear` now normalizes common cold-start wrapper forms: positional session scope (`session clear <id>`), boolean assignment (`--keep-processes=<bool>`), and no-op `--no-prompt`.
 - [target] `target click` wait payload now includes bounded telemetry (`timeoutMs`, `elapsedMs`, `satisfied`) for post-click wait stages.
 - [target] `target eval --help` now surfaces typed alternatives (`target extract`, `target style`, `target read`) plus compact-output usage for lower-token operator loops.
 - [target] `target eval` now accepts base64 script inputs via `--expr-b64` and `--script-b64` to reduce shell-quoting overhead in agent loops.
@@ -101,7 +100,6 @@ All notable changes to SurfWright are documented here.
 - [state] Session lifecycle maintenance (`session prune`, `session clear`) now runs external reachability/process shutdown work outside the state-file lock and commits state mutations in short lock windows.
 - [state] Replaced monolithic `state.json` as runtime source-of-truth with canonical `state-v2/` shards (`meta`, `sessions`, `network-captures`, `network-artifacts`, and per-session target shards) so hot-path mutations only rewrite changed shards.
 - [state] Added optimistic revisioned mutation commits for `state-v2` so default mutation work runs outside the lock and lock scope is limited to short compare-and-commit windows.
-- [state] Added optional legacy snapshot mirror (`SURFWRIGHT_STATE_LEGACY_SNAPSHOT=1`) for test harness compatibility while sharded storage remains canonical.
 - [target] Target handle resolution now uses a per-browser targetId cache with closed-page eviction and scan fallback on cache miss.
 - [session] Managed session creation paths now reserve session handles first and perform browser startup outside state mutation locks before a short commit step.
 - [daemon] Daemon bootstrap now uses a startup singleflight lock to avoid parallel spawn/meta races when multiple commands cold-start concurrently.
@@ -124,8 +122,7 @@ All notable changes to SurfWright are documented here.
 - [target] `target extract --summary` now includes a `count` alias (same value as `totalRawCount`) for simpler success checks.
 - [target] `target extract --output-shape proof` now derives compact proof fields from extracted records without requiring `--summary`.
 - [target] `target eval --output-shape proof` now consistently projects compact `proof.resultType` and `proof.resultValue` fields.
-- [cli] JSON output remains default and now also accepts explicit `--json` as a no-op compatibility flag.
-- [cli] `target <subcommand> --target <id>` is now accepted as a compatibility alias for positional `targetId` on target subcommands.
+- [cli] JSON output remains default and still accepts explicit `--json`.
 - [zcl] Switched the versioned browser-control campaign to `promptMode=exam` with split mission sources (`promptSource` + `oracleSource`) and `evaluation.mode=oracle` via normalized built-in rules.
 - [zcl] Oracle evaluator now accepts common equivalent encodings for strict mission values (for example URL trailing slash differences, `6` vs `6px`, shell prompt prefixes, and comma-list vs array representations).
 - [skill] Reduced the SurfWright runtime skill surface to a single bootstrap file (`skills/surfwright/SKILL.md`) and moved non-runtime guidance to maintainer docs.
@@ -137,7 +134,7 @@ All notable changes to SurfWright are documented here.
 - [bench] Removed `bench:loop:run --reset-history`; scope ledgers are append-only by default.
 - [bench] `bench:loop:score` now supports flow-family aggregation (`--flow-prefix`) so sharded SurfWright fan-out runs are scored as one iteration, with per-attempt `flowId`/slot evidence in CSV/markdown outputs.
 - [bench] Documented branch-first loop policy: run optimize iterations on feature branches with commit-per-change traceability, and push only when explicitly requested.
-- [missions] Updated browser-control campaign selection to 16 active missions, revised `first-pass-orientation`, `style-inspection`, `checkbox-toggle`, `iframe-edit`, and `docs-commands-extract`, and archived legacy mission definitions.
+- [missions] Updated browser-control campaign selection to 16 active missions, revised `first-pass-orientation`, `style-inspection`, `checkbox-toggle`, `iframe-edit`, and `docs-commands-extract`, and archived prior mission definitions.
 
 ### Fixed
 - [cli] Timeout parser validation failures now return typed `E_QUERY_INVALID` instead of collapsing to `E_INTERNAL`.
@@ -172,13 +169,16 @@ All notable changes to SurfWright are documented here.
 - [target] `target download` now waits for `domcontentloaded` before click query evaluation to reduce commit-stage race misses after `open --allow-download`.
 - [bench] Prevented optimize-loop misuse by rejecting no-change optimize runs when there is no detectable change since the previous iteration (unless `--allow-no-change` is set, or `--mode sample` is used).
 
-### Deprecated
+### Transition Notes
 - None.
 
 ### Removed
 - [docs] Removed campaign planning docs under `docs/campaigns/`.
-- [target] Removed legacy download aliases `download.filename` and `download.size`; use canonical `download.fileName` and `download.bytes`.
-- [open] Removed `open --reuse-url` compatibility alias; use `open --reuse url`.
+- [target] Removed old download aliases `download.filename` and `download.size`; use canonical `download.fileName` and `download.bytes`.
+- [open] Removed `open --reuse-url`; use `open --reuse url`.
+- [cli] Removed `contract --compact`; compact remains the default `contract` output mode.
+- [cli] Removed argv compatibility rewrites for `target <subcommand> --target <id>` and wrapper `session clear` forms; canonical argv is now enforced.
+- [state] Removed `SURFWRIGHT_STATE_LEGACY_SNAPSHOT`; runtime writes canonical `state-v2` storage only.
 - [target] Removed `target eval` option aliases `--js` and `--script`; use `--expr|--expression|--script-file`.
 - [target] Removed `target style` output aliases `element` and `computed`; use `inspected` and `values`.
 - [target] Removed `target spawn` output alias `childTargetId`; use canonical `targetId`.
@@ -198,7 +198,7 @@ All notable changes to SurfWright are documented here.
 - [cli] Added global `--workspace <dir>` (and `SURFWRIGHT_WORKSPACE_DIR`) to override workspace resolution.
 - [session] Added `--browser-mode <headless|headed>` to managed session flows (`session ensure/new/fresh`, `open`, `run`) for headed/headless control (defaults unchanged).
 - [contract] Added `browserMode` reporting to `open`/`session` JSON outputs (`unknown` for attached sessions).
-- [open] Added redirect evidence fields to `open` output: `requestedUrl`, `finalUrl`, `wasRedirected`, optional `redirectChain` + `redirectChainTruncated` (keeps `url` as final for back-compat).
+- [open] Added redirect evidence fields to `open` output: `requestedUrl`, `finalUrl`, `wasRedirected`, optional `redirectChain` + `redirectChainTruncated` (keeps `url` as final).
 - [open] Added first-class download capture via `open --allow-download` (saves to an artifacts dir and reports deterministic download metadata instead of `ERR_ABORTED`).
 - [target] Added `target url-assert` for typed URL drift guards (`--host`, `--origin`, `--path-prefix`, `--url-prefix`).
 - [target] Added `target frames` for bounded frame enumeration with stable `frameId` handles.
@@ -246,7 +246,7 @@ All notable changes to SurfWright are documented here.
 - [test] Browser contract tests now run with a default per-test timeout and abort-safe temp-root cleanup to prevent leaked Chrome processes.
 - [test] Browser contract tests no longer depend on external websites (use local fixtures and local HTTP servers).
 
-### Deprecated
+### Transition Notes
 - [docs] None.
 
 ### Removed

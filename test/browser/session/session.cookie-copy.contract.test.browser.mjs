@@ -1,7 +1,5 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
 import http from "node:http";
-import path from "node:path";
 import test from "node:test";
 import { createCliRunner } from "../helpers/cli-runner.mjs";
 import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
@@ -9,10 +7,6 @@ import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 
 const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-cookie-copy-");
 const { runCliSync, runCliAsync } = createCliRunner({ stateDir: TEST_STATE_DIR });
-
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
 
 function runCli(args) {
   return runCliSync(args);

@@ -6,8 +6,8 @@ import { CliError } from "../../errors.js";
 import { currentAgentId, withSessionHeartbeat } from "../../session/index.js";
 import { STATE_VERSION, type SurfwrightState, type TargetState } from "../../types.js";
 import { withStateFileLock } from "./state-lock.js";
+import { readStateFromFilePath } from "./state-file.js";
 import { readStateFromV2Shards, readStateRevisionFromV2Shards, writeStateToV2Shards } from "./state-shards.js";
-import { readLegacyStateFromPath } from "./state-legacy.js";
 const SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 const STATE_LOCK_FILENAME = "state.lock";
 const STATE_LOCK_RETRY_MS = 40;
@@ -67,9 +67,6 @@ export function inferDebugPortFromCdpOrigin(cdpOrigin: string): number | null {
   }
 }
 export function readState(): SurfwrightState {
-  if (legacySnapshotCompatEnabled()) {
-    return readStateFromPath(stateFilePath());
-  }
   const rootDir = stateRootDir();
   const fromShards = readStateFromV2Shards(rootDir);
   if (fromShards) {
@@ -85,12 +82,11 @@ export function readState(): SurfwrightState {
     }
     return fromShards;
   }
-  const legacyStatePath = stateFilePath();
-  return readStateFromPath(legacyStatePath);
+  return readStateFromPath(stateFilePath());
 }
 
 function readStateFromPath(statePath: string): SurfwrightState {
-  return readLegacyStateFromPath({
+  return readStateFromFilePath({
     statePath,
     nowIso,
     defaultSessionUserDataDir,
@@ -107,44 +103,6 @@ function writeStateAtomic(
   const rootDir = stateRootDir();
   fs.mkdirSync(rootDir, { recursive: true });
   return writeStateToV2Shards(rootDir, state, opts);
-}
-
-function legacySnapshotCompatEnabled(): boolean {
-  const raw = process.env.SURFWRIGHT_STATE_LEGACY_SNAPSHOT;
-  if (typeof raw !== "string") {
-    return false;
-  }
-  const normalized = raw.trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "on";
-}
-
-function writeLegacyStateSnapshotCompat(state: SurfwrightState): void {
-  if (!legacySnapshotCompatEnabled()) {
-    return;
-  }
-  const rootDir = stateRootDir();
-  fs.mkdirSync(rootDir, { recursive: true });
-  const finalPath = stateFilePath();
-  const tempPath = path.join(rootDir, `state-legacy.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`);
-  const payload = `${JSON.stringify(state)}\n`;
-  try {
-    const existing = fs.readFileSync(finalPath, "utf8");
-    if (existing === payload) {
-      return;
-    }
-  } catch {
-    // no legacy snapshot yet
-  }
-  fs.writeFileSync(tempPath, payload, { encoding: "utf8", flag: "wx" });
-  try {
-    fs.renameSync(tempPath, finalPath);
-  } finally {
-    try {
-      fs.unlinkSync(tempPath);
-    } catch {
-      // rename succeeded
-    }
-  }
 }
 async function withStateLock<T>(fn: () => Promise<T>): Promise<T> {
   const rootDir = stateRootDir();
@@ -163,22 +121,6 @@ async function withStateLock<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export async function updateState<T>(mutate: (state: SurfwrightState) => Promise<T> | T): Promise<T> {
-  if (legacySnapshotCompatEnabled()) {
-    let snapshotAfterWrite: SurfwrightState | null = null;
-    let wroteState = false;
-    const result = await withStateLock(async () => {
-      const state = readState();
-      const resultInner = await mutate(state);
-      wroteState = writeStateAtomic(state);
-      snapshotAfterWrite = state;
-      return resultInner;
-    });
-    if (wroteState && snapshotAfterWrite) {
-      writeLegacyStateSnapshotCompat(snapshotAfterWrite);
-    }
-    return result;
-  }
-
   const rootDir = stateRootDir();
   for (let attempt = 0; attempt < STATE_OPTIMISTIC_RETRY_ATTEMPTS; attempt += 1) {
     const baseRevision = readStateRevisionFromV2Shards(rootDir);
@@ -206,25 +148,13 @@ export async function updateState<T>(mutate: (state: SurfwrightState) => Promise
 }
 
 export async function writeState(state: SurfwrightState) {
-  if (!legacySnapshotCompatEnabled()) {
-    const rootDir = stateRootDir();
-    let wroteState = false;
-    await withStateLock(async () => {
-      const currentRevision = readStateRevisionFromV2Shards(rootDir);
-      wroteState = writeStateAtomic(state, {
-        nextRevision: currentRevision + 1,
-      });
-    });
-    return;
-  }
-
-  let wroteState = false;
+  const rootDir = stateRootDir();
   await withStateLock(async () => {
-    wroteState = writeStateAtomic(state);
+    const currentRevision = readStateRevisionFromV2Shards(rootDir);
+    writeStateAtomic(state, {
+      nextRevision: currentRevision + 1,
+    });
   });
-  if (wroteState) {
-    writeLegacyStateSnapshotCompat(state);
-  }
 }
 
 export function sanitizeSessionId(input: string): string {

@@ -1,11 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import path from "node:path";
 import process from "node:process";
-
-function stateFilePath(stateDir) {
-  return path.join(stateDir, "state.json");
-}
+import { readRuntimeStateIfExists } from "../../core/state-storage.mjs";
 
 function pidIsAlive(pid) {
   if (typeof pid !== "number" || !Number.isFinite(pid) || pid <= 0) {
@@ -49,11 +45,10 @@ function terminatePid(pid) {
 
 export function cleanupManagedBrowsers(stateDir) {
   try {
-    const statePath = stateFilePath(stateDir);
-    if (!fs.existsSync(statePath)) {
+    const state = readRuntimeStateIfExists(stateDir);
+    if (!state) {
       return;
     }
-    const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
     const sessions = state?.sessions ?? {};
     for (const session of Object.values(sessions)) {
       if (!session || typeof session !== "object") {
@@ -71,21 +66,18 @@ export function cleanupManagedBrowsers(stateDir) {
 
 export async function cleanupStateDir(stateDir, opts = {}) {
   const timeoutMs = Math.max(250, Math.min(5000, Number(opts?.timeoutMs ?? 1500)));
-  const statePath = stateFilePath(stateDir);
   const pids = new Set();
 
   try {
-    if (fs.existsSync(statePath)) {
-      const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
-      const sessions = state?.sessions ?? {};
-      for (const session of Object.values(sessions)) {
-        if (!session || typeof session !== "object" || session.kind !== "managed") {
-          continue;
-        }
-        const pid = session.browserPid;
-        if (typeof pid === "number" && Number.isFinite(pid) && pid > 0) {
-          pids.add(pid);
-        }
+    const state = readRuntimeStateIfExists(stateDir);
+    const sessions = state?.sessions ?? {};
+    for (const session of Object.values(sessions)) {
+      if (!session || typeof session !== "object" || session.kind !== "managed") {
+        continue;
+      }
+      const pid = session.browserPid;
+      if (typeof pid === "number" && Number.isFinite(pid) && pid > 0) {
+        pids.add(pid);
       }
     }
   } catch {
@@ -130,7 +122,7 @@ export async function cleanupStateDir(stateDir, opts = {}) {
     await sleep(50);
   }
 
-  // Fallback: if state.json is missing/corrupt we may not have pids. On POSIX, pkill on the unique
+  // Fallback: if state storage is missing/corrupt we may not have pids. On POSIX, pkill on the unique
   // stateDir path is a reliable last resort to prevent leaked Chrome helpers from snowballing.
   if (process.platform !== "win32") {
     try {

@@ -172,7 +172,7 @@ function normalizeNetworkArtifact(artifactId: string, raw: unknown): SurfwrightS
   };
 }
 
-export function readLegacyStateFromPath(opts: {
+export function readStateFromFilePath(opts: {
   statePath: string;
   nowIso: () => string;
   defaultSessionUserDataDir: (sessionId: string) => string;
@@ -294,4 +294,3 @@ export function readLegacyStateFromPath(opts: {
     });
   }
 }
-

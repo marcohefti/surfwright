@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { writeCanonicalState } from "../core/state-storage.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-disk-prune-state-"));
 const TEST_WORKSPACE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-disk-prune-workspace-"));
@@ -29,10 +30,6 @@ function parseJson(stdout) {
   return JSON.parse(text);
 }
 
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
-
 function baseState() {
   return {
     version: 4,
@@ -48,8 +45,7 @@ function baseState() {
 }
 
 function writeState(state) {
-  fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
-  fs.writeFileSync(stateFilePath(), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  writeCanonicalState(TEST_STATE_DIR, state);
 }
 
 function resetTestDirs() {

@@ -2,16 +2,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { readRuntimeState, writeCanonicalState } from "../../core/state-storage.mjs";
 import { createCliRunner } from "../helpers/cli-runner.mjs";
 import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
 import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 
 const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-cli-browser-contract-");
 const { runCliSync, runCliAsync } = createCliRunner({ stateDir: TEST_STATE_DIR });
-
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
 
 function runCli(args) {
   return runCliSync(args);
@@ -46,7 +43,7 @@ test.after(async () => {
 test("open without --session creates isolated implicit session", () => {
   requireBrowser();
 
-  const existingState = JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  const existingState = readRuntimeState(TEST_STATE_DIR);
   const staleState = {
     ...existingState,
     activeSessionId: "a-stale",
@@ -70,8 +67,7 @@ test("open without --session creates isolated implicit session", () => {
       },
     },
   };
-  fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
-  fs.writeFileSync(stateFilePath(), `${JSON.stringify(staleState, null, 2)}\n`, "utf8");
+  writeCanonicalState(TEST_STATE_DIR, staleState);
 
   const dataUrl = `data:text/html,${encodeURIComponent("<title>Recovered Open</title><main>ok</main>")}`;
   const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
@@ -83,7 +79,7 @@ test("open without --session creates isolated implicit session", () => {
   assert.equal(openPayload.sessionSource, "implicit-new");
   assert.equal(openPayload.title, "Recovered Open");
 
-  const state = JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  const state = readRuntimeState(TEST_STATE_DIR);
   assert.equal(state.activeSessionId, openPayload.sessionId);
 });
 
@@ -123,7 +119,7 @@ test("open without session skips stale profile directory ids", () => {
     networkCaptures: {},
     networkArtifacts: {},
   };
-  fs.writeFileSync(stateFilePath(), `${JSON.stringify(seededState, null, 2)}\n`, "utf8");
+  writeCanonicalState(TEST_STATE_DIR, seededState);
 
   const html = `<title>Skip Stale Profile</title><main>ok</main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
@@ -309,7 +305,7 @@ test("session fresh creates ephemeral managed session", () => {
   assert.equal(freshPayload.kind, "managed");
   assert.equal(freshPayload.active, true);
 
-  const state = JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  const state = readRuntimeState(TEST_STATE_DIR);
   assert.equal(state.activeSessionId, sessionId);
   assert.equal(state.sessions?.[sessionId]?.policy, "ephemeral");
 });

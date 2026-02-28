@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { readRuntimeState, stateFilePath, writeCanonicalState } from "./core/state-storage.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-state-maint-"));
 
@@ -26,10 +27,6 @@ function parseJson(stdout) {
   return JSON.parse(text);
 }
 
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
-
 function baseState() {
   return {
     version: 4,
@@ -45,12 +42,16 @@ function baseState() {
 }
 
 function writeState(state) {
+  writeCanonicalState(TEST_STATE_DIR, state);
+}
+
+function writeSnapshotState(state) {
   fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
-  fs.writeFileSync(stateFilePath(), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  fs.writeFileSync(stateFilePath(TEST_STATE_DIR), `${JSON.stringify(state, null, 2)}\n`, "utf8");
 }
 
 function readState() {
-  return JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  return readRuntimeState(TEST_STATE_DIR);
 }
 
 
@@ -75,7 +76,7 @@ test("contract includes state maintenance commands", () => {
 });
 
 test("legacy state payload returns typed version mismatch and quarantine metadata", () => {
-  writeState({
+  writeSnapshotState({
     version: 1,
     activeSessionId: null,
     nextSessionOrdinal: 3,
@@ -94,7 +95,7 @@ test("legacy state payload returns typed version mismatch and quarantine metadat
 });
 
 test("non-current state schema is rejected with typed mismatch", () => {
-  writeState({
+  writeSnapshotState({
     version: 2,
     activeSessionId: "s-legacy",
     nextSessionOrdinal: 2,

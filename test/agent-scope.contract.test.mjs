@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { stateV2MetaPath } from "./core/state-storage.mjs";
 
 const TEST_HOME_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-agent-home-"));
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-agent-state-"));
@@ -13,6 +14,8 @@ function runCli(args, env = {}) {
     encoding: "utf8",
     env: {
       ...process.env,
+      SURFWRIGHT_DAEMON: "0",
+      SURFWRIGHT_GC_ENABLED: "0",
       ...env,
     },
   });
@@ -61,7 +64,7 @@ test("agent id scopes default state root under ~/.surfwright/agents/<agentId>", 
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);
 
-  const expectedStatePath = path.join(TEST_HOME_DIR, ".surfwright", "agents", "agent.alpha", "state.json");
+  const expectedStatePath = stateV2MetaPath(path.join(TEST_HOME_DIR, ".surfwright", "agents", "agent.alpha"));
   assert.equal(fs.existsSync(expectedStatePath), true);
 });
 
@@ -75,7 +78,7 @@ test("explicit SURFWRIGHT_STATE_DIR overrides agent-id namespacing", () => {
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);
 
-  const expectedStatePath = path.join(TEST_STATE_DIR, "state.json");
+  const expectedStatePath = stateV2MetaPath(TEST_STATE_DIR);
   assert.equal(fs.existsSync(expectedStatePath), true);
 });
 
@@ -87,7 +90,7 @@ test("--agent-id CLI option scopes state root without env wiring", () => {
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);
 
-  const expectedStatePath = path.join(TEST_HOME_DIR, ".surfwright", "agents", "agent.flag", "state.json");
+  const expectedStatePath = stateV2MetaPath(path.join(TEST_HOME_DIR, ".surfwright", "agents", "agent.flag"));
   assert.equal(fs.existsSync(expectedStatePath), true);
 });
 
@@ -100,116 +103,124 @@ test("malformed --agent-id does not override existing agent scope", () => {
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);
 
-  const expectedStatePath = path.join(TEST_HOME_DIR, ".surfwright", "agents", "agent.fallback", "state.json");
+  const expectedStatePath = stateV2MetaPath(path.join(TEST_HOME_DIR, ".surfwright", "agents", "agent.fallback"));
   assert.equal(fs.existsSync(expectedStatePath), true);
 });
 
 test("extension lifecycle commands return deterministic fallback metadata", () => {
+  const extensionStateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-agent-extension-state-"));
   const extensionName = "SurfWright Parity Minimal Extension";
-  const extensionDir = createExtensionFixture(TEST_STATE_DIR, extensionName);
+  const extensionDir = createExtensionFixture(extensionStateDir, extensionName);
+  try {
+    const loadResult = runCli(["extension", "load", extensionDir], {
+      SURFWRIGHT_STATE_DIR: extensionStateDir,
+    });
+    assert.equal(loadResult.status, 0);
+    const loadPayload = parseJson(loadResult.stdout);
+    assert.equal(loadPayload.ok, true);
+    assert.equal(loadPayload.extension.name, extensionName);
+    assert.equal(loadPayload.extension.path, extensionDir);
+    assert.equal(loadPayload.capability.headlessMode, "headless-new");
+    assert.equal(loadPayload.capability.runtimeInstallSupported, false);
+    assert.equal(loadPayload.fallback.strategy, "registry-only");
+    assert.equal(loadPayload.fallback.applied, false);
 
-  const loadResult = runCli(["extension", "load", extensionDir], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-  });
-  assert.equal(loadResult.status, 0);
-  const loadPayload = parseJson(loadResult.stdout);
-  assert.equal(loadPayload.ok, true);
-  assert.equal(loadPayload.extension.name, extensionName);
-  assert.equal(loadPayload.extension.path, extensionDir);
-  assert.equal(loadPayload.capability.headlessMode, "headless-new");
-  assert.equal(loadPayload.capability.runtimeInstallSupported, false);
-  assert.equal(loadPayload.fallback.strategy, "registry-only");
-  assert.equal(loadPayload.fallback.applied, false);
+    const listResult = runCli(["extension", "list"], {
+      SURFWRIGHT_STATE_DIR: extensionStateDir,
+    });
+    assert.equal(listResult.status, 0);
+    const listPayload = parseJson(listResult.stdout);
+    assert.equal(listPayload.ok, true);
+    assert.equal(listPayload.count >= 1, true);
+    const listed = listPayload.extensions.find((entry) => entry.name === extensionName);
+    assert.notEqual(listed, undefined);
 
-  const listResult = runCli(["extension", "list"], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-  });
-  assert.equal(listResult.status, 0);
-  const listPayload = parseJson(listResult.stdout);
-  assert.equal(listPayload.ok, true);
-  assert.equal(listPayload.count >= 1, true);
-  const listed = listPayload.extensions.find((entry) => entry.name === extensionName);
-  assert.notEqual(listed, undefined);
+    const reloadResult = runCli(["extension", "reload", extensionName], {
+      SURFWRIGHT_STATE_DIR: extensionStateDir,
+    });
+    assert.equal(reloadResult.status, 0);
+    const reloadPayload = parseJson(reloadResult.stdout);
+    assert.equal(reloadPayload.ok, true);
+    assert.equal(reloadPayload.reloaded, true);
+    assert.equal(reloadPayload.extension.name, extensionName);
+    assert.equal(reloadPayload.fallback.strategy, "registry-only");
 
-  const reloadResult = runCli(["extension", "reload", extensionName], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-  });
-  assert.equal(reloadResult.status, 0);
-  const reloadPayload = parseJson(reloadResult.stdout);
-  assert.equal(reloadPayload.ok, true);
-  assert.equal(reloadPayload.reloaded, true);
-  assert.equal(reloadPayload.extension.name, extensionName);
-  assert.equal(reloadPayload.fallback.strategy, "registry-only");
+    const uninstallResult = runCli(["extension", "uninstall", listed.id], {
+      SURFWRIGHT_STATE_DIR: extensionStateDir,
+    });
+    assert.equal(uninstallResult.status, 0);
+    const uninstallPayload = parseJson(uninstallResult.stdout);
+    assert.equal(uninstallPayload.ok, true);
+    assert.equal(uninstallPayload.removed, true);
+    assert.equal(uninstallPayload.missing, false);
+    assert.equal(uninstallPayload.extension.id, listed.id);
+    assert.equal(uninstallPayload.extension.name, extensionName);
 
-  const uninstallResult = runCli(["extension", "uninstall", listed.id], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-  });
-  assert.equal(uninstallResult.status, 0);
-  const uninstallPayload = parseJson(uninstallResult.stdout);
-  assert.equal(uninstallPayload.ok, true);
-  assert.equal(uninstallPayload.removed, true);
-  assert.equal(uninstallPayload.missing, false);
-  assert.equal(uninstallPayload.extension.id, listed.id);
-  assert.equal(uninstallPayload.extension.name, extensionName);
+    const uninstallMissingResult = runCli(["extension", "uninstall", listed.id], {
+      SURFWRIGHT_STATE_DIR: extensionStateDir,
+    });
+    assert.equal(uninstallMissingResult.status, 0);
+    const uninstallMissingPayload = parseJson(uninstallMissingResult.stdout);
+    assert.equal(uninstallMissingPayload.ok, true);
+    assert.equal(uninstallMissingPayload.removed, false);
+    assert.equal(uninstallMissingPayload.missing, true);
+    assert.equal(uninstallMissingPayload.extension, null);
 
-  const uninstallMissingResult = runCli(["extension", "uninstall", listed.id], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-  });
-  assert.equal(uninstallMissingResult.status, 0);
-  const uninstallMissingPayload = parseJson(uninstallMissingResult.stdout);
-  assert.equal(uninstallMissingPayload.ok, true);
-  assert.equal(uninstallMissingPayload.removed, false);
-  assert.equal(uninstallMissingPayload.missing, true);
-  assert.equal(uninstallMissingPayload.extension, null);
+    const reloadMissingResult = runCli(["extension", "reload", listed.id], {
+      SURFWRIGHT_STATE_DIR: extensionStateDir,
+    });
+    assert.equal(reloadMissingResult.status, 0);
+    const reloadMissingPayload = parseJson(reloadMissingResult.stdout);
+    assert.equal(reloadMissingPayload.ok, true);
+    assert.equal(reloadMissingPayload.reloaded, false);
+    assert.equal(reloadMissingPayload.missing, true);
+    assert.equal(reloadMissingPayload.extension, null);
 
-  const reloadMissingResult = runCli(["extension", "reload", listed.id], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-  });
-  assert.equal(reloadMissingResult.status, 0);
-  const reloadMissingPayload = parseJson(reloadMissingResult.stdout);
-  assert.equal(reloadMissingPayload.ok, true);
-  assert.equal(reloadMissingPayload.reloaded, false);
-  assert.equal(reloadMissingPayload.missing, true);
-  assert.equal(reloadMissingPayload.extension, null);
-
-  const listAfterResult = runCli(["extension", "list"], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
-  });
-  assert.equal(listAfterResult.status, 0);
-  const listAfterPayload = parseJson(listAfterResult.stdout);
-  assert.equal(listAfterPayload.extensions.some((entry) => entry.id === listed.id), false);
+    const listAfterResult = runCli(["extension", "list"], {
+      SURFWRIGHT_STATE_DIR: extensionStateDir,
+    });
+    assert.equal(listAfterResult.status, 0);
+    const listAfterPayload = parseJson(listAfterResult.stdout);
+    assert.equal(listAfterPayload.extensions.some((entry) => entry.id === listed.id), false);
+  } finally {
+    fs.rmSync(extensionStateDir, { recursive: true, force: true });
+  }
 });
 
 test("extension lifecycle strict mode returns typed unknown-extension failure", () => {
+  const extensionStateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-agent-extension-state-"));
   const reloadResult = runCli(["extension", "reload", "missing-extension", "--fail-if-missing"], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+    SURFWRIGHT_STATE_DIR: extensionStateDir,
   });
   assert.equal(reloadResult.status, 1);
   const reloadPayload = parseJson(reloadResult.stdout);
   assert.equal(reloadPayload.code, "E_QUERY_INVALID");
 
   const uninstallResult = runCli(["extension", "uninstall", "missing-extension", "--fail-if-missing"], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+    SURFWRIGHT_STATE_DIR: extensionStateDir,
   });
   assert.equal(uninstallResult.status, 1);
   const uninstallPayload = parseJson(uninstallResult.stdout);
   assert.equal(uninstallPayload.code, "E_QUERY_INVALID");
+  fs.rmSync(extensionStateDir, { recursive: true, force: true });
 });
 
 test("extension commands honor --no-json with deterministic human summaries", () => {
+  const extensionStateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-agent-extension-state-"));
   const extensionName = "SurfWright NoJson Extension";
-  const extensionDir = createExtensionFixture(TEST_STATE_DIR, extensionName);
+  const extensionDir = createExtensionFixture(extensionStateDir, extensionName);
   const loadResult = runCli(["--no-json", "extension", "load", extensionDir], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+    SURFWRIGHT_STATE_DIR: extensionStateDir,
   });
   assert.equal(loadResult.status, 0);
   assert.equal(loadResult.stdout.startsWith("ok "), true);
   assert.equal(loadResult.stdout.trim().startsWith("{"), false);
 
   const listResult = runCli(["--no-json", "extension", "list"], {
-    SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
+    SURFWRIGHT_STATE_DIR: extensionStateDir,
   });
   assert.equal(listResult.status, 0);
   assert.equal(listResult.stdout.startsWith("ok "), true);
   assert.equal(listResult.stdout.trim().startsWith("{"), false);
+  fs.rmSync(extensionStateDir, { recursive: true, force: true });
 });

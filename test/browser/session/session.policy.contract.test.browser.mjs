@@ -1,17 +1,12 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import test from "node:test";
+import { readRuntimeState } from "../../core/state-storage.mjs";
 import { createCliRunner } from "../helpers/cli-runner.mjs";
 import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
 import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 
 const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-session-policy-");
 const { runCliSync } = createCliRunner({ stateDir: TEST_STATE_DIR });
-
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
 
 function runCli(args) {
   return runCliSync(args);
@@ -61,7 +56,7 @@ test("session new accepts explicit policy and lease ttl", () => {
   assert.equal(createPayload.ok, true);
   assert.equal(createPayload.sessionId, sessionId);
 
-  const state = JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  const state = readRuntimeState(TEST_STATE_DIR);
   const session = state.sessions[sessionId];
   assert.equal(session.policy, "ephemeral");
   assert.equal(session.leaseTtlMs, 900000);

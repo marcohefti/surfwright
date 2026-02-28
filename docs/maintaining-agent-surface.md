@@ -88,7 +88,7 @@ Expect non-zero exit and `{"ok":false,"code":...}` payload.
 
 - If docs and code disagree, code + contract command win.
 - Fix docs/skill in the same change window; do not defer drift cleanup.
-- Do not ship deprecated compatibility aliases in output shapes/flags/commands. Remove obsolete surface area outright and update tests/docs/skill references atomically.
+- Do not ship obsolete aliases in output shapes/flags/commands. Remove obsolete surface area outright and update tests/docs/skill references atomically.
 
 ## 5b) ZCL efficiency policy
 

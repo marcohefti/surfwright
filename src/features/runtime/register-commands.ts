@@ -72,20 +72,17 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
   ctx.program
     .command("contract")
     .description(contractMeta.summary)
-    .option("--compact", "Deprecated alias for default compact output", false)
     .option("--core", "Return compact core bootstrap payload", false)
     .option("--full", "Return full contract payload (larger output)", false)
     .option("--command <id>", "Return compact schema for one command id (flags, positionals, examples)")
     .option("--search <term>", "Filter contract commands/errors/guidance by id/code/usage text")
-    .action((options: { compact?: boolean; core?: boolean; full?: boolean; command?: string; search?: string }) => {
+    .action((options: { core?: boolean; full?: boolean; command?: string; search?: string }) => {
       const output = ctx.globalOutputOpts();
       try {
         const rawCommandLookup = typeof options.command === "string" ? options.command.trim() : "";
         if (rawCommandLookup.length === 0 && Boolean(options.core) && Boolean(options.full)) {
           throw queryInvalid("contract accepts at most one mode flag: --core or --full");
         }
-        // --compact is retained as a no-op alias for back-compat; compact remains default mode.
-        void options.compact;
         const report = getCliContractReport(ctx.readPackageVersion());
         let commandId = "";
         if (rawCommandLookup.length > 0) {

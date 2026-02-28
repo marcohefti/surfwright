@@ -43,7 +43,7 @@ if (!exists(CHANGELOG_PATH)) {
   if (!unreleasedBody || unreleasedBody.length === 0) {
     failures.push(`${CHANGELOG_PATH} missing body for '## [Unreleased]'`);
   } else {
-    const requiredBuckets = ["Added", "Changed", "Fixed", "Deprecated", "Removed"];
+    const requiredBuckets = ["Added", "Changed", "Fixed", "Transition Notes", "Removed"];
     for (const bucket of requiredBuckets) {
       const heading = `### ${bucket}`;
       if (!unreleasedBody.includes(heading)) {

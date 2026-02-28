@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { clearStateStorageArtifacts, stateFilePath, writeCanonicalState } from "./core/state-storage.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-cli-contract-"));
 
@@ -23,10 +24,6 @@ function parseJson(stdout) {
   return JSON.parse(text);
 }
 
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
-
 function baseState() {
   return {
     version: 4,
@@ -42,19 +39,16 @@ function baseState() {
 }
 
 function writeState(state) {
+  writeCanonicalState(TEST_STATE_DIR, state);
+}
+
+function writeSnapshotState(state) {
   fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
-  fs.writeFileSync(stateFilePath(), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  fs.writeFileSync(stateFilePath(TEST_STATE_DIR), `${JSON.stringify(state, null, 2)}\n`, "utf8");
 }
 
 function clearStateArtifacts() {
-  if (!fs.existsSync(TEST_STATE_DIR)) {
-    return;
-  }
-  for (const entry of fs.readdirSync(TEST_STATE_DIR)) {
-    if (entry === "state.json" || entry.startsWith("state.corrupt.")) {
-      fs.rmSync(path.join(TEST_STATE_DIR, entry), { force: true });
-    }
-  }
+  clearStateStorageArtifacts(TEST_STATE_DIR);
 }
 
 process.on("exit", () => {
@@ -104,7 +98,7 @@ test("timeout parsers return E_QUERY_INVALID instead of E_INTERNAL", () => {
 test("invalid state JSON is quarantined and returns typed failure", () => {
   clearStateArtifacts();
   fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
-  fs.writeFileSync(stateFilePath(), "{broken-json", "utf8");
+  fs.writeFileSync(stateFilePath(TEST_STATE_DIR), "{broken-json", "utf8");
 
   const result = runCli(["session", "list"]);
   assert.equal(result.status, 1);
@@ -119,7 +113,7 @@ test("state version mismatch is quarantined and returns typed failure", () => {
   clearStateArtifacts();
   const stale = baseState();
   stale.version = 999;
-  writeState(stale);
+  writeSnapshotState(stale);
 
   const result = runCli(["session", "list"]);
   assert.equal(result.status, 1);
@@ -191,18 +185,9 @@ test("target eval rejects removed --js alias", () => {
   assert.equal(evalPayload.code, "E_QUERY_INVALID");
 });
 
-test("--json global option is accepted as no-op compatibility flag", () => {
-  const result = runCli(["--json", "session", "list"]);
-  assert.equal(result.status, 0);
-  const payload = parseJson(result.stdout);
-  assert.equal(payload.ok, true);
-  assert.equal(Array.isArray(payload.sessions), true);
-});
-
-test("target subcommands accept --target alias for targetId position", () => {
+test("target subcommands use canonical positional targetId", () => {
   const evalResult = runCli(["target",
     "eval",
-    "--target",
     "DEADBEEF",
     "--expression",
     "1 + 1",
@@ -261,14 +246,14 @@ test("contract unknown option includes focused alternatives for compact/search",
   assert.equal(payload.hintContext?.unknownOption, "--kind");
 });
 
-test("session clear parse failures include focused compatibility hints", () => {
-  const result = runCli(["session", "clear", "--keep-processes=maybe"]);
+test("session clear parse failures include scoped cleanup hint for extra positional input", () => {
+  const result = runCli(["session", "clear", "s-demo"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_QUERY_INVALID");
   assert.equal(Array.isArray(payload.hints), true);
-  assert.equal(payload.hints.some((hint) => hint.includes("omit the flag for false")), true);
+  assert.equal(payload.hints.some((hint) => hint.includes("--session <id>")), true);
   assert.equal(payload.hintContext?.commandPath, "session clear");
 });
 

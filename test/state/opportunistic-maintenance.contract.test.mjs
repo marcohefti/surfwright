@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawn, spawnSync } from "node:child_process";
 import test from "node:test";
+import { readRuntimeState, writeCanonicalState } from "../core/state-storage.mjs";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-opportunistic-maint-"));
 
@@ -22,10 +23,6 @@ function runCli(args, env = {}) {
   });
 }
 
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
-
 function baseState() {
   return {
     version: 4,
@@ -41,12 +38,11 @@ function baseState() {
 }
 
 function writeState(state) {
-  fs.mkdirSync(TEST_STATE_DIR, { recursive: true });
-  fs.writeFileSync(stateFilePath(), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  writeCanonicalState(TEST_STATE_DIR, state);
 }
 
 function readState() {
-  return JSON.parse(fs.readFileSync(stateFilePath(), "utf8"));
+  return readRuntimeState(TEST_STATE_DIR);
 }
 
 async function waitForBrowserPidCleared(sessionId, timeoutMs) {

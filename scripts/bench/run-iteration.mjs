@@ -35,6 +35,50 @@ import {
 
 const die = (message) => fail(message, "bench-loop");
 
+function toFiniteNumber(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return null;
+  }
+  return n;
+}
+
+function readFailureBucket(source, key) {
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return null;
+  }
+  return toFiniteNumber(source[key]);
+}
+
+function resolveReportFailureBuckets(reportJson) {
+  const sources = [
+    reportJson,
+    reportJson?.metrics,
+    reportJson?.summary,
+    reportJson?.aggregate,
+    reportJson?.failureBuckets,
+    reportJson?.campaign,
+  ];
+  for (const source of sources) {
+    const infraFailed = readFailureBucket(source, "infraFailed");
+    const oracleFailed = readFailureBucket(source, "oracleFailed");
+    const missionFailed = readFailureBucket(source, "missionFailed");
+    if (infraFailed == null && oracleFailed == null && missionFailed == null) {
+      continue;
+    }
+    return {
+      infraFailed: Math.max(0, Math.floor(infraFailed || 0)),
+      oracleFailed: Math.max(0, Math.floor(oracleFailed || 0)),
+      missionFailed: Math.max(0, Math.floor(missionFailed || 0)),
+    };
+  }
+  return {
+    infraFailed: 0,
+    oracleFailed: 0,
+    missionFailed: 0,
+  };
+}
+
 function main() {
   const args = parseRunIterationArgs(process.argv.slice(2), die);
   if (!fs.existsSync(args.configPath)) {
@@ -267,6 +311,7 @@ function main() {
     const commandJsonPath = path.join(reportDir, "trace.command-durations.json");
     const metricsFull = readJson(metricsJsonPath);
     const metricsCore = getCoreMetrics(metricsFull);
+    const reportFailureBuckets = resolveReportFailureBuckets(reportJson);
 
     const headedCalls = Number(metricsFull?.aggregate?.actionable?.headedBrowserModeCallsTotal || 0);
     if (headedCalls > 0) {
@@ -313,6 +358,7 @@ function main() {
         status: String(reportJson?.status || ""),
         gatesPassed: Number(reportJson?.gatesPassed || 0),
         gatesFailed: Number(reportJson?.gatesFailed || 0),
+        failureBuckets: reportFailureBuckets,
         flowIds,
         outRoot: path.relative(repoRoot, outRoot),
         specPath: path.relative(repoRoot, specPath),

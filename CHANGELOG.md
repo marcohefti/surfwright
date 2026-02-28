@@ -102,6 +102,7 @@ All notable changes to SurfWright are documented here.
 - [session] Added opportunistic idle managed-process parking on command ingress (detached worker, bounded sweep) to prevent Chrome accumulation without introducing a persistent daemon.
 - [state] Opportunistic maintenance now uses adaptive pressure mode (default on) to increase cleanup cadence/throughput under high managed-session load without enforcing hard session caps.
 - [state] Opportunistic maintenance now also prunes stale disk artifacts (`runs`, `captures`, orphan `profiles`) with conservative retention caps; workspace profile pruning remains explicit opt-in.
+- [bench] Iteration scoring/history now ingest ZCL failure buckets (`infraFailed`, `oracleFailed`, `missionFailed`) when available, while retaining fallback derivation for older run-state schemas.
 - [state] Session lifecycle maintenance (`session prune`, `session clear`) now runs external reachability/process shutdown work outside the state-file lock and commits state mutations in short lock windows.
 - [state] Replaced monolithic `state.json` as runtime source-of-truth with canonical `state-v2/` shards (`meta`, `sessions`, `network-captures`, `network-artifacts`, and per-session target shards) so hot-path mutations only rewrite changed shards.
 - [state] Added optimistic revisioned mutation commits for `state-v2` so default mutation work runs outside the lock and lock scope is limited to short compare-and-commit windows.

@@ -197,6 +197,8 @@ export function buildMarkdown(metrics) {
   const lines = [];
   const flowSelection = metrics.flowSelection || {};
   const flowIds = Array.isArray(flowSelection.flowIds) ? flowSelection.flowIds : [];
+  const failureBuckets = metrics?.campaign?.failureBuckets || null;
+  const flowFailureBuckets = Array.isArray(metrics?.campaign?.flowFailureBuckets) ? metrics.campaign.flowFailureBuckets : [];
   lines.push("# SurfWright Iteration Metrics");
   lines.push("");
   lines.push(`- label: \`${metrics.label || ""}\``);
@@ -204,10 +206,27 @@ export function buildMarkdown(metrics) {
   lines.push(`- runId: \`${metrics.campaign.runId}\``);
   lines.push(`- status: \`${metrics.campaign.status}\``);
   lines.push(`- missionsCompleted: \`${metrics.campaign.missionsCompleted}/${metrics.campaign.totalMissions}\``);
+  if (failureBuckets && typeof failureBuckets === "object") {
+    lines.push(
+      `- failureBuckets: \`infra=${Number(failureBuckets.infraFailed || 0)}, oracle=${Number(failureBuckets.oracleFailed || 0)}, mission=${Number(failureBuckets.missionFailed || 0)}\``,
+    );
+  }
   if (flowIds.length > 0) {
     lines.push(`- flows: \`${flowIds.join(",")}\``);
   }
   lines.push("");
+  if (flowFailureBuckets.length > 0) {
+    lines.push("## Flow Failure Buckets");
+    lines.push("");
+    lines.push("| flowId | infraFailed | oracleFailed | missionFailed | source |");
+    lines.push("|---|---:|---:|---:|---|");
+    for (const row of flowFailureBuckets) {
+      lines.push(
+        `| ${row.flowId || ""} | ${Number(row.infraFailed || 0)} | ${Number(row.oracleFailed || 0)} | ${Number(row.missionFailed || 0)} | ${row.source || ""} |`,
+      );
+    }
+    lines.push("");
+  }
   lines.push("## Aggregate");
   lines.push("");
   lines.push("| metric | value |");

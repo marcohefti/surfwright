@@ -118,6 +118,115 @@ function parseAgentSlot(flowId) {
   return slot;
 }
 
+function toFiniteNumber(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return null;
+  }
+  return n;
+}
+
+function readBucketFromNode(node, key) {
+  if (!node || typeof node !== "object" || Array.isArray(node)) {
+    return null;
+  }
+  return toFiniteNumber(node[key]);
+}
+
+function readFailureBucketsFromSources(sources) {
+  for (const source of sources) {
+    const infraFailed = readBucketFromNode(source, "infraFailed");
+    const oracleFailed = readBucketFromNode(source, "oracleFailed");
+    const missionFailed = readBucketFromNode(source, "missionFailed");
+    if (infraFailed == null && oracleFailed == null && missionFailed == null) {
+      continue;
+    }
+    return {
+      infraFailed: Math.max(0, Math.floor(infraFailed || 0)),
+      oracleFailed: Math.max(0, Math.floor(oracleFailed || 0)),
+      missionFailed: Math.max(0, Math.floor(missionFailed || 0)),
+      source: "zcl",
+    };
+  }
+  return null;
+}
+
+function inferFailureBucketsFromAttempts(attempts) {
+  let infraFailed = 0;
+  let oracleFailed = 0;
+  let missionFailed = 0;
+
+  for (const attempt of attempts) {
+    if (attempt.verifiedOk) {
+      continue;
+    }
+    const reasonCodes = new Set(Array.isArray(attempt.reasonCodes) ? attempt.reasonCodes.map(String) : []);
+    const isInfra =
+      attempt.status === "infra_failed" ||
+      [...reasonCodes].some(
+        (code) =>
+          code.startsWith("ZCL_E_RUNTIME_") ||
+          code.startsWith("ZCL_E_RUNNER_") ||
+          code === "ZCL_E_SESSION_UNREACHABLE",
+      );
+    if (isInfra) {
+      infraFailed += 1;
+      continue;
+    }
+    const isOracle = [...reasonCodes].some((code) => code.startsWith("ZCL_E_CAMPAIGN_ORACLE_EVALUATION_"));
+    if (isOracle) {
+      oracleFailed += 1;
+      continue;
+    }
+    missionFailed += 1;
+  }
+
+  return {
+    infraFailed,
+    oracleFailed,
+    missionFailed,
+    source: "derived",
+  };
+}
+
+function resolveCampaignFailureBuckets(runState, attempts) {
+  const buckets =
+    readFailureBucketsFromSources([
+      runState,
+      runState?.metrics,
+      runState?.summary,
+      runState?.aggregate,
+      runState?.failureBuckets,
+      runState?.campaign,
+    ]) ?? inferFailureBucketsFromAttempts(attempts);
+
+  return buckets;
+}
+
+function resolveFlowFailureBuckets(flowRun, attempts) {
+  const fromZcl = readFailureBucketsFromSources([
+    flowRun,
+    flowRun?.metrics,
+    flowRun?.summary,
+    flowRun?.aggregate,
+    flowRun?.failureBuckets,
+  ]);
+  if (fromZcl) {
+    return {
+      ...fromZcl,
+      flowId: String(flowRun?.flowId || ""),
+    };
+  }
+
+  const flowId = String(flowRun?.flowId || "");
+  const flowAttempts = attempts.filter((row) => row.flowId === flowId);
+  const derived = inferFailureBucketsFromAttempts(flowAttempts);
+  return {
+    ...derived,
+    flowId,
+  };
+}
+
 function selectFlowRuns(runState, args) {
   const all = Array.isArray(runState.flowRuns) ? runState.flowRuns : [];
   if (args.flowId) {
@@ -297,6 +406,9 @@ function main() {
     topReasonCodes: sortCountMap(reasonCodes),
   };
 
+  const campaignFailureBuckets = resolveCampaignFailureBuckets(runState, attempts);
+  const flowFailureBuckets = selectedFlowRuns.map((flowRun) => resolveFlowFailureBuckets(flowRun, attempts));
+
   const missions = attempts.map((row) => ({
     flowId: row.flowId,
     agentSlot: row.agentSlot,
@@ -363,6 +475,13 @@ function main() {
       missionsCompleted: Number(runState.missionsCompleted || 0),
       gatesPassed: Number((runState.missionGates || []).filter((row) => row.ok === true).length),
       gatesFailed: Number((runState.missionGates || []).filter((row) => row.ok !== true).length),
+      failureBuckets: {
+        infraFailed: campaignFailureBuckets.infraFailed,
+        oracleFailed: campaignFailureBuckets.oracleFailed,
+        missionFailed: campaignFailureBuckets.missionFailed,
+        source: campaignFailureBuckets.source,
+      },
+      flowFailureBuckets,
       outRoot: String(runState.outRoot || ""),
       specPath: String(runState.specPath || ""),
     },

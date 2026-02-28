@@ -5,7 +5,7 @@
 - mission_id: `dynamic-loading`
 - index: `8`
 - status: `active`
-- version: `2`
+- version: `3`
 
 ## Intent
 
@@ -19,7 +19,7 @@
 
 ## Success Check (authoritative)
 
-- `finishText == "Hello World!"`
+- `finishText contains "Hello World!"`
 
 ## Example Proof Payload
 

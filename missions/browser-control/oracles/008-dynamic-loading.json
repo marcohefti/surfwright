@@ -5,11 +5,11 @@
   "collectFields": [
     "finishText"
   ],
-  "successCheck": "finishText == \"Hello World!\"",
+  "successCheck": "finishText contains \"Hello World!\"",
   "rules": [
     {
       "field": "finishText",
-      "op": "eq",
+      "op": "contains",
       "value": "Hello World!"
     }
   ],

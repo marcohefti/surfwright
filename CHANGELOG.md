@@ -142,6 +142,7 @@ All notable changes to SurfWright are documented here.
 - [bench] Documented branch-first loop policy: run optimize iterations on feature branches with commit-per-change traceability, and push only when explicitly requested.
 - [missions] Rebased the browser-control mission pack to 10 active missions (`001`-`010`) with deterministic contracts (`first-pass-orientation`, `style-inspection`, `login-success`, `javascript-alert-dialog`, `iframe-edit`, `new-window-spawn`, `file-upload`, `dynamic-loading`, `infinite-scroll-chunks`, `download-file`) and aligned campaign/benchmark docs and configs to the new IDs.
 - [missions] Updated `005-iframe-edit` and `009-infinite-scroll-chunks` to capability-first success checks (non-literal probe text roundtrip for iframe edit; load-more evidence for infinite scroll) to reduce intelligence/wording-driven false failures.
+- [missions] Updated `008-dynamic-loading` to capability-first success semantics (`finishText contains "Hello World!"`) so verbose confirmation payloads that include the observed value are accepted.
 
 ### Fixed
 - [cli] JSON-mode Commander parse failures now remain pure typed JSON (no appended help/prose), reducing token noise and parser ambiguity for agents.

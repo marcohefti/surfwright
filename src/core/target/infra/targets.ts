@@ -21,6 +21,59 @@ import {
 } from "./errors/target-handle-errors.js";
 
 const TARGET_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
+const browserTargetHandleCache = new WeakMap<Browser, Map<string, Page>>();
+
+function targetHandleCacheForBrowser(browser: Browser): Map<string, Page> {
+  const existing = browserTargetHandleCache.get(browser);
+  if (existing) {
+    return existing;
+  }
+  const created = new Map<string, Page>();
+  browserTargetHandleCache.set(browser, created);
+  return created;
+}
+
+function cachedTargetHandle(
+  browser: Browser,
+  targetId: string,
+): {
+  page: Page;
+  targetId: string;
+} | null {
+  const cache = browserTargetHandleCache.get(browser);
+  if (!cache) {
+    return null;
+  }
+  const page = cache.get(targetId);
+  if (!page) {
+    return null;
+  }
+  if (page.isClosed()) {
+    cache.delete(targetId);
+    return null;
+  }
+  return {
+    page,
+    targetId,
+  };
+}
+
+function hydrateTargetHandleCache(
+  browser: Browser,
+  handles: Array<{
+    page: Page;
+    targetId: string;
+  }>,
+): void {
+  const cache = targetHandleCacheForBrowser(browser);
+  cache.clear();
+  for (const handle of handles) {
+    if (handle.page.isClosed()) {
+      continue;
+    }
+    cache.set(handle.targetId, handle.page);
+  }
+}
 
 export function sanitizeTargetId(input: string): string {
   const value = input.trim();
@@ -301,7 +354,13 @@ export async function resolveTargetHandle(
   page: Page;
   targetId: string;
 }> {
+  const cached = cachedTargetHandle(browser, targetId);
+  if (cached) {
+    return cached;
+  }
+
   const handles = await listPageTargetHandles(browser);
+  hydrateTargetHandleCache(browser, handles);
   const target = handles.find((handle) => handle.targetId === targetId);
   if (!target) {
     const snapshot = readState();
@@ -380,6 +439,7 @@ export async function targetList(opts: { timeoutMs: number; sessionId?: string; 
 
   try {
     const handles = await listPageTargetHandles(browser);
+    hydrateTargetHandleCache(browser, handles);
     const targets: TargetListReport["targets"] = [];
     for (const handle of handles) {
       targets.push({

@@ -231,7 +231,6 @@ function normalizeNetworkArtifact(artifactId: string, raw: unknown): SurfwrightS
     bytes: asPositiveInteger(value.bytes) ?? 0,
   };
 }
-
 export function readState(): SurfwrightState {
   const statePath = stateFilePath();
   return readStateFromPath(statePath);
@@ -346,13 +345,20 @@ function readStateFromPath(statePath: string): SurfwrightState {
     });
   }
 }
-
-function writeStateAtomic(state: SurfwrightState) {
+function writeStateAtomic(state: SurfwrightState): boolean {
   const rootDir = stateRootDir();
   fs.mkdirSync(rootDir, { recursive: true });
   const finalPath = stateFilePath();
   const tempPath = path.join(rootDir, `state.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`);
-  const payload = `${JSON.stringify(state, null, 2)}\n`;
+  const payload = `${JSON.stringify(state)}\n`;
+  try {
+    const existing = fs.readFileSync(finalPath, "utf8");
+    if (existing === payload) {
+      return false;
+    }
+  } catch {
+    // state file may not exist on first write.
+  }
   fs.writeFileSync(tempPath, payload, { encoding: "utf8", flag: "wx" });
   try {
     fs.renameSync(tempPath, finalPath);
@@ -363,8 +369,8 @@ function writeStateAtomic(state: SurfwrightState) {
       // If rename succeeded, temp file no longer exists.
     }
   }
+  return true;
 }
-
 async function withStateLock<T>(fn: () => Promise<T>): Promise<T> {
   const rootDir = stateRootDir();
   const lockPath = stateLockFilePath();

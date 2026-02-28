@@ -11,6 +11,7 @@ const DAEMON_HOST = "127.0.0.1";
 const DAEMON_IDLE_TIMEOUT_MS = 15000;
 const DAEMON_FORCE_SOCKET_CLOSE_MS = 750;
 const MAX_FRAME_BYTES = 1024 * 1024 * 4;
+const DAEMON_RUN_CHUNK_BYTES = 64 * 1024;
 
 export type DaemonRunResult = {
   code: number;
@@ -166,6 +167,79 @@ export async function runDaemonWorker(opts: {
     });
   };
 
+  const chunkUtf8Text = (value: string, chunkBytes: number): string[] => {
+    if (value.length === 0) {
+      return [];
+    }
+    const encoded = Buffer.from(value, "utf8");
+    const out: string[] = [];
+    let offset = 0;
+    while (offset < encoded.length) {
+      let end = Math.min(offset + chunkBytes, encoded.length);
+      while (end > offset && end < encoded.length && (encoded[end] & 0b1100_0000) === 0b1000_0000) {
+        end -= 1;
+      }
+      if (end <= offset) {
+        end = Math.min(offset + chunkBytes, encoded.length);
+      }
+      out.push(encoded.subarray(offset, end).toString("utf8"));
+      offset = end;
+    }
+    return out;
+  };
+
+  const daemonRunFrames = (response: Extract<DaemonWorkerResponse, { ok: true; kind: "run" }>): string => {
+    const lines: string[] = [];
+    for (const chunk of chunkUtf8Text(response.stdout, DAEMON_RUN_CHUNK_BYTES)) {
+      lines.push(
+        `${JSON.stringify({
+          ok: true,
+          kind: "run_chunk",
+          stream: "stdout",
+          data: chunk,
+        })}\n`,
+      );
+    }
+    for (const chunk of chunkUtf8Text(response.stderr, DAEMON_RUN_CHUNK_BYTES)) {
+      lines.push(
+        `${JSON.stringify({
+          ok: true,
+          kind: "run_chunk",
+          stream: "stderr",
+          data: chunk,
+        })}\n`,
+      );
+    }
+    lines.push(
+      `${JSON.stringify({
+        ok: true,
+        kind: "run_end",
+        code: response.code,
+      })}\n`,
+    );
+    return lines.join("");
+  };
+
+  const writeResponseFrames = (input: {
+    socket: {
+      end: (data: string, callback?: () => void) => void;
+    };
+    response: DaemonWorkerResponse;
+    shutdownAfterWrite: boolean;
+    markIdle: () => void;
+  }) => {
+    if (input.response.ok && input.response.kind === "run") {
+      input.socket.end(daemonRunFrames(input.response), () => {
+        input.markIdle();
+        if (input.shutdownAfterWrite) {
+          beginShutdown();
+        }
+      });
+      return;
+    }
+    writeResponse(input);
+  };
+
   const metric = (metricName: string, value: number, tags?: Record<string, string>) => {
     diagnostics.emitMetric({
       ts: new Date().toISOString(),
@@ -252,7 +326,7 @@ export async function runDaemonWorker(opts: {
         return;
       }
       if (rawLine.length === 0) {
-        writeResponse({
+        writeResponseFrames({
           socket,
           response: {
             ok: false,
@@ -318,7 +392,7 @@ export async function runDaemonWorker(opts: {
               durationMs,
             });
           }
-          writeResponse({
+          writeResponseFrames({
             socket,
             response: orchestrated.response,
             shutdownAfterWrite: orchestrated.shutdownAfterWrite,
@@ -330,7 +404,7 @@ export async function runDaemonWorker(opts: {
             scheduleIdleShutdown();
           }
         } catch {
-          writeResponse({
+          writeResponseFrames({
             socket,
             response: {
               ok: false,

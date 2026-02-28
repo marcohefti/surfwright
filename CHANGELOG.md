@@ -77,6 +77,7 @@ All notable changes to SurfWright are documented here.
 - [state] State read/version failures now return typed failures and quarantine the offending `state.json` snapshot instead of silently resetting to empty state.
 - [errors] Added typed state read failure codes `E_STATE_READ_INVALID`, `E_STATE_VERSION_MISMATCH`, and `E_STATE_READ_FAILED` to the published contract error surface.
 - [daemon] CLI daemon proxy now normalizes non-contract daemon-internal typed failures to `E_INTERNAL`; queue pressure codes remain pass-through.
+- [daemon] Daemon run transport now supports chunked response frames (`run_chunk`/`run_end`) with deterministic client-side reassembly for large outputs.
 - [session] `session ensure` no longer performs global prune as part of the hot path; cleanup stays in explicit maintenance flows.
 - [cli] Daemon bypass routing now derives bypassable command IDs from the command manifest set (plus explicit stdin-plan/internal/help guards) instead of pure argv-branch hardcoding.
 - [extensions] `extension.*` commands now honor global `--no-json` with deterministic human summaries.
@@ -98,6 +99,8 @@ All notable changes to SurfWright are documented here.
 - [session] Added opportunistic idle managed-process parking on command ingress (detached worker, bounded sweep) to prevent Chrome accumulation without introducing a persistent daemon.
 - [state] Opportunistic maintenance now also prunes stale disk artifacts (`runs`, `captures`, orphan `profiles`) with conservative retention caps; workspace profile pruning remains explicit opt-in.
 - [state] Session lifecycle maintenance (`session prune`, `session clear`) now runs external reachability/process shutdown work outside the state-file lock and commits state mutations in short lock windows.
+- [state] State writes now use compact JSON payloads and skip no-op rewrites when the serialized state is unchanged.
+- [target] Target handle resolution now uses a per-browser targetId cache with closed-page eviction and scan fallback on cache miss.
 - [session] Managed session creation paths now reserve session handles first and perform browser startup outside state mutation locks before a short commit step.
 - [daemon] Daemon bootstrap now uses a startup singleflight lock to avoid parallel spawn/meta races when multiple commands cold-start concurrently.
 - [daemon] Daemon lane resolution now recognizes `--session-id` as a session lane key and partitions control-lane traffic by hashed `--agent-id` when provided (falls back to `control:default` when absent).

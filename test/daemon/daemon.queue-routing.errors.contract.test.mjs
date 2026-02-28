@@ -89,6 +89,10 @@ async function withStubDaemon(response, run) {
       const line = buffer.slice(0, newlineIndex).trim();
       requests.push(line);
       const payload = typeof response === "function" ? response() : response;
+      if (Array.isArray(payload)) {
+        socket.end(payload.map((entry) => `${JSON.stringify(entry)}\n`).join(""));
+        return;
+      }
       socket.end(`${JSON.stringify(payload)}\n`);
     });
   });
@@ -112,6 +116,54 @@ async function withStubDaemon(response, run) {
     });
   }
 }
+
+test("daemon client reassembles chunked run frames into stdout/stderr", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-chunked-response-"));
+  const token = "chunked-response-token";
+  try {
+    await withStubDaemon(
+      [
+        {
+          ok: true,
+          kind: "run_chunk",
+          stream: "stdout",
+          data: '{"ok":true,"sessions":',
+        },
+        {
+          ok: true,
+          kind: "run_chunk",
+          stream: "stdout",
+          data: "[]}\n",
+        },
+        {
+          ok: true,
+          kind: "run_chunk",
+          stream: "stderr",
+          data: "",
+        },
+        {
+          ok: true,
+          kind: "run_end",
+          code: 0,
+        },
+      ],
+      async ({ port, requests }) => {
+        writeDaemonMeta(stateDir, { pid: process.pid, port, token });
+        const result = await runCli(["session", "list"], {
+          SURFWRIGHT_STATE_DIR: stateDir,
+          SURFWRIGHT_DAEMON: "1",
+        });
+        assert.equal(result.status, 0);
+        const payload = parseJson(result.stdout);
+        assert.equal(payload.ok, true);
+        assert.equal(Array.isArray(payload.sessions), true);
+        assert.equal(requests.length, 1);
+      },
+    );
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
 
 test("daemon client rejects oversized daemon response frames and falls back locally", async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-oversized-response-"));

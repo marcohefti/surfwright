@@ -39,11 +39,25 @@ type DaemonResponse =
       message: string;
     };
 
-function parseDaemonResponse(value: unknown): DaemonResponse | null {
+type DaemonResponseFrame =
+  | DaemonResponse
+  | {
+      ok: true;
+      kind: "run_chunk";
+      stream: "stdout" | "stderr";
+      data: string;
+    }
+  | {
+      ok: true;
+      kind: "run_end";
+      code: number;
+    };
+
+function parseDaemonResponseFrame(value: unknown): DaemonResponseFrame | null {
   if (typeof value !== "object" || value === null) {
     return null;
   }
-  const parsed = value as Partial<DaemonResponse>;
+  const parsed = value as Partial<DaemonResponseFrame>;
   if (parsed.ok === false && typeof parsed.code === "string" && typeof parsed.message === "string") {
     return {
       ok: false,
@@ -64,6 +78,21 @@ function parseDaemonResponse(value: unknown): DaemonResponse | null {
     return {
       ok: true,
       kind: "shutdown",
+    };
+  }
+  if (parsed.kind === "run_chunk" && (parsed.stream === "stdout" || parsed.stream === "stderr") && typeof parsed.data === "string") {
+    return {
+      ok: true,
+      kind: "run_chunk",
+      stream: parsed.stream,
+      data: parsed.data,
+    };
+  }
+  if (parsed.kind === "run_end" && typeof parsed.code === "number" && Number.isFinite(parsed.code)) {
+    return {
+      ok: true,
+      kind: "run_end",
+      code: parsed.code,
     };
   }
   if (
@@ -94,7 +123,10 @@ export async function sendDaemonRequest(opts: {
     const socket = providers().net.createConnection({ host: opts.host, port: opts.port });
     let settled = false;
     let buffer = "";
-    let bufferBytes = 0;
+    const runChunks: { stdout: string[]; stderr: string[] } = {
+      stdout: [],
+      stderr: [],
+    };
 
     const timer = setTimeout(() => {
       if (settled) {
@@ -134,36 +166,59 @@ export async function sendDaemonRequest(opts: {
 
     socket.on("data", (chunk: string) => {
       buffer += chunk;
-      bufferBytes += Buffer.byteLength(chunk, "utf8");
-      const newlineIndex = buffer.indexOf("\n");
-      if (newlineIndex === -1) {
-        if (bufferBytes > MAX_FRAME_BYTES) {
-          finish(new Error("daemon returned oversized response frame"));
+      while (true) {
+        const newlineIndex = buffer.indexOf("\n");
+        if (newlineIndex === -1) {
+          break;
         }
-        return;
+        const rawLine = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+        if (Buffer.byteLength(rawLine, "utf8") > MAX_FRAME_BYTES) {
+          finish(new Error("daemon returned oversized response frame"));
+          return;
+        }
+        if (rawLine.length === 0) {
+          finish(new Error("daemon returned blank response"));
+          return;
+        }
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(rawLine);
+        } catch {
+          finish(new Error("daemon returned invalid JSON"));
+          return;
+        }
+        const frame = parseDaemonResponseFrame(parsed);
+        if (!frame) {
+          finish(new Error("daemon returned unsupported payload"));
+          return;
+        }
+        if (frame.ok === false || frame.kind === "pong" || frame.kind === "shutdown") {
+          finish(null, frame);
+          return;
+        }
+        if (frame.kind === "run") {
+          finish(null, frame);
+          return;
+        }
+        if (frame.kind === "run_chunk") {
+          runChunks[frame.stream].push(frame.data);
+          continue;
+        }
+        if (frame.kind === "run_end") {
+          finish(null, {
+            ok: true,
+            kind: "run",
+            code: frame.code,
+            stdout: runChunks.stdout.join(""),
+            stderr: runChunks.stderr.join(""),
+          });
+          return;
+        }
       }
-      const rawLine = buffer.slice(0, newlineIndex).trim();
-      if (Buffer.byteLength(rawLine, "utf8") > MAX_FRAME_BYTES) {
+      if (Buffer.byteLength(buffer, "utf8") > MAX_FRAME_BYTES) {
         finish(new Error("daemon returned oversized response frame"));
-        return;
       }
-      if (rawLine.length === 0) {
-        finish(new Error("daemon returned blank response"));
-        return;
-      }
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(rawLine);
-      } catch {
-        finish(new Error("daemon returned invalid JSON"));
-        return;
-      }
-      const response = parseDaemonResponse(parsed);
-      if (!response) {
-        finish(new Error("daemon returned unsupported payload"));
-        return;
-      }
-      finish(null, response);
     });
 
     socket.on("end", () => {

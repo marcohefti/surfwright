@@ -24,8 +24,9 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
 ## Agent Discovery Policy
 
 - Agent discovery is contract-first:
-  - `surfwright contract` returns compact ids for low-token bootstrap.
-  - `surfwright contract --command <id>` and `--commands <id1,id2>` are the only detailed lookup paths.
+  - `surfwright contract` returns a minimal bootstrap envelope for low-token loops.
+  - `surfwright contract --full` returns full command/error id catalogs.
+  - `surfwright contract --command <id>` and `--commands <id1,id2>` are the detailed lookup paths.
 - `--help` is intentionally disabled; runtime agents must use contract lookup only.
 - Contract responses must stay compact enough for repeated agent loops.
 
@@ -44,7 +45,7 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
     - `getCliContractReport(version)`: the payload behind `surfwright contract`
 - Snapshot gate (CI / validation):
   - `scripts/checks/contract-snapshot.mjs`
-    - executes `dist/cli.js contract` (explicit, though JSON is the default)
+    - executes `dist/cli.js contract --full` (explicit, though JSON is the default)
     - normalizes/sorts and compares against `test/fixtures/contract/contract.snapshot.json`
 - Contract truth tests:
   - `test/commands.contract.test.mjs` (fixtures for expected ids and usage fragments)
@@ -60,7 +61,8 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
    - `src/features/registry.ts` flattens all manifests into `allCommandManifest`.
    - `src/core/cli-contract.ts` builds the contract report and fingerprint using `allCommandManifest`.
 3. Emit contract:
-   - `surfwright contract` returns the report from `getCliContractReport(...)`.
+   - `surfwright contract` returns a compact bootstrap from `getCliContractReport(...)`.
+   - `surfwright contract --full` returns the full machine catalog.
 4. Enforce in CI:
    - `pnpm -s build` produces `dist/cli.js`.
    - `pnpm -s contract:snapshot:check` runs `scripts/checks/contract-snapshot.mjs --check`.
@@ -81,7 +83,7 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
 - Contract output includes:
   - `contractSchemaVersion`
   - `contractFingerprint`
-  - `commands[]` and `errors[]`
+  - `commands[]` and `errors[]` (via `surfwright contract --full`)
 - Snapshot check produces a short diff summary (counts) and a single remediation command (`scripts/checks/contract-snapshot.mjs`).
 
 ## Testing Expectations

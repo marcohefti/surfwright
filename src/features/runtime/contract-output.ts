@@ -17,15 +17,52 @@ function withCommandSurfaceFields(report: CliContractReport): CliContractReport 
 }
 
 function compactContractReport(report: CliContractReport): Record<string, unknown> {
+  const coreCommandIds = [
+    "contract",
+    "session.new",
+    "session.ensure",
+    "open",
+    "target.snapshot",
+    "target.find",
+    "target.click",
+    "target.fill",
+    "target.read",
+    "target.wait",
+    "target.eval",
+    "run",
+  ].filter((id) => report.commands.some((entry) => entry.id === id));
   return {
     ok: true,
     name: report.name,
     version: report.version,
     contractSchemaVersion: report.contractSchemaVersion,
     contractFingerprint: report.contractFingerprint,
+    mode: "compact",
+    commandCount: report.commands.length,
+    errorCount: report.errors.length,
+    typedFailures: true,
+    lookup: {
+      full: "surfwright contract --full",
+      command: "surfwright contract --command <id>",
+      commands: "surfwright contract --commands <id1,id2,...>",
+    },
+    coreCommandIds,
+  };
+}
+
+function fullContractReport(report: CliContractReport): Record<string, unknown> {
+  return {
+    ok: true,
+    name: report.name,
+    version: report.version,
+    contractSchemaVersion: report.contractSchemaVersion,
+    contractFingerprint: report.contractFingerprint,
+    mode: "full",
     commandCount: report.commands.length,
     errorCount: report.errors.length,
     guarantees: report.guarantees,
+    commands: report.commands,
+    errors: report.errors,
     commandIds: report.commands.map((entry) => entry.id),
     errorCodes: report.errors.map((entry) => entry.code),
   };
@@ -33,7 +70,7 @@ function compactContractReport(report: CliContractReport): Record<string, unknow
 
 export function buildContractOutput(opts: {
   report: CliContractReport;
-  mode?: "compact" | "command" | "commands";
+  mode?: "compact" | "full" | "command" | "commands";
   commandId?: string;
   commandIds?: string[];
 }): CliContractReport | Record<string, unknown> {
@@ -85,6 +122,9 @@ export function buildContractOutput(opts: {
       commandCount: commands.length,
       commands,
     };
+  }
+  if (opts.mode === "full") {
+    return fullContractReport(surfaced);
   }
   return compactContractReport(surfaced);
 }

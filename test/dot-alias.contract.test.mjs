@@ -128,11 +128,12 @@ test("json shape lint for pure commands (keys only)", () => {
     "version",
     "contractSchemaVersion",
     "contractFingerprint",
+    "mode",
     "commandCount",
     "errorCount",
-    "guarantees",
-    "commandIds",
-    "errorCodes",
+    "typedFailures",
+    "lookup",
+    "coreCommandIds",
   ]);
 
   const doctorResult = runCli(["doctor"]);
@@ -159,7 +160,7 @@ test("json shape lint for pure commands (keys only)", () => {
 });
 
 test("handle-based state lint from contract usage strings", () => {
-  const contract = parseJson(runCli(["contract"]).stdout);
+  const contract = parseJson(runCli(["contract", "--full"]).stdout);
 
   const mustHaveTargetIdAndSession = [
     "target.snapshot",
@@ -173,7 +174,7 @@ test("handle-based state lint from contract usage strings", () => {
   ];
 
   for (const id of mustHaveTargetIdAndSession) {
-    assert.equal(contract.commandIds.includes(id), true, `missing command id in compact contract: ${id}`);
+    assert.equal(contract.commandIds.includes(id), true, `missing command id in full contract: ${id}`);
     const lookup = parseJson(runCli(["contract", "--command", id]).stdout);
     const cmd = lookup.command;
     assert.equal(typeof cmd.usage, "string");

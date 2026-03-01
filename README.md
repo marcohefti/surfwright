@@ -101,8 +101,8 @@ Optional: if you run the CLI manually, check the runtime contract:
 surfwright contract
 ```
 
-`contract` now includes additive `guidance` entries with command signatures, examples, and proof schemas for high-traffic workflows.
-Use `surfwright contract` for low-token bootstrap output.
+Use `surfwright contract` for low-token bootstrap output (no full id catalogs).
+Use `surfwright contract --full` when you need full `commandIds`/`errorCodes` catalogs.
 Use `surfwright contract --command <id>` for compact per-command flags/positionals/examples (low-token command lookup).
 Use `surfwright contract --commands <id1,id2,...>` for one-shot compact schemas across multiple commands.
 `contract --command` also accepts CLI path form (for example `target snapshot`) and returns `command.argvPath` for machine-executable command tokens.

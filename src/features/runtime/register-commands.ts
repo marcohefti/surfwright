@@ -72,15 +72,20 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
   ctx.program
     .command("contract")
     .description(contractMeta.summary)
+    .option("--full", "Return full command/error id catalogs (higher token cost)", false)
     .option("--command <id>", "Return compact schema for one command id (flags, positionals, examples)")
     .option("--commands <csv>", "Return compact schemas for multiple command ids (comma-separated)")
-    .action((options: { command?: string; commands?: string }) => {
+    .action((options: { full?: boolean; command?: string; commands?: string }) => {
       const output = ctx.globalOutputOpts();
       try {
         const rawCommandLookup = typeof options.command === "string" ? options.command.trim() : "";
         const rawCommandsLookup = typeof options.commands === "string" ? options.commands.trim() : "";
+        const full = Boolean(options.full);
         if (rawCommandLookup.length > 0 && rawCommandsLookup.length > 0) {
-          throw queryInvalid("contract accepts either --command or --commands, not both");
+          throw queryInvalid("contract accepts either --full, --command, or --commands");
+        }
+        if (full && (rawCommandLookup.length > 0 || rawCommandsLookup.length > 0)) {
+          throw queryInvalid("contract accepts either --full, --command, or --commands");
         }
         const report = getCliContractReport(ctx.readPackageVersion());
         let commandId = "";
@@ -91,7 +96,7 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         if (rawCommandsLookup.length > 0) {
           commandIds = resolveContractCommandIdsOrThrow(rawCommandsLookup, report.commands);
         }
-        const mode = commandId.length > 0 ? "command" : commandIds.length > 0 ? "commands" : "compact";
+        const mode = commandId.length > 0 ? "command" : commandIds.length > 0 ? "commands" : full ? "full" : "compact";
         const outReport = buildContractOutput({
           report,
           mode,

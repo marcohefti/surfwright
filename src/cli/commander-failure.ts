@@ -87,6 +87,7 @@ function contractUnknownOptionHints(unknownOption: string | null, argv?: string[
   return [
     "Use --command <id> for one compact command schema (flags/positionals/examples).",
     "Use --commands <id1,id2> for one-shot multi-command schemas.",
+    "Use --full for full commandIds/errorCodes catalogs.",
   ];
 }
 

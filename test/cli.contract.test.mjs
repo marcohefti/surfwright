@@ -249,6 +249,7 @@ test("contract unknown option includes focused alternatives for compact command 
   assert.equal(payload.diagnostics?.unknownFlags?.includes("--kind"), true);
   assert.equal(Array.isArray(payload.diagnostics?.validFlags), true);
   assert.equal(payload.diagnostics?.validFlags?.includes("--command"), true);
+  assert.equal(payload.diagnostics?.validFlags?.includes("--full"), true);
   assert.equal(typeof payload.diagnostics?.canonicalInvocation, "string");
   assert.equal(payload.diagnostics?.canonicalInvocation?.includes("surfwright contract"), true);
   assert.equal(payload.hintContext?.commandPath, "contract");
@@ -271,7 +272,24 @@ test("contract default returns compact bootstrap payload", () => {
   assert.equal(result.status, 0);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);
-  assert.equal(payload.mode, undefined);
+  assert.equal(payload.mode, "compact");
+  assert.equal(payload.typedFailures, true);
+  assert.equal(typeof payload.lookup?.full, "string");
+  assert.equal(typeof payload.lookup?.command, "string");
+  assert.equal(typeof payload.lookup?.commands, "string");
+  assert.equal(Array.isArray(payload.coreCommandIds), true);
+  assert.equal(payload.coreCommandIds.includes("open"), true);
+  assert.equal(payload.coreCommandIds.includes("target.click"), true);
+  assert.equal(payload.commandIds, undefined);
+  assert.equal(payload.errorCodes, undefined);
+});
+
+test("contract --full returns full command/error catalogs", () => {
+  const result = runCli(["contract", "--full"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "full");
   assert.equal(Array.isArray(payload.commandIds), true);
   assert.equal(Array.isArray(payload.errorCodes), true);
   assert.equal(payload.commandIds.includes("target.click"), true);
@@ -329,6 +347,14 @@ test("contract rejects removed discovery flags", () => {
 
 test("contract rejects mixed --command and --commands", () => {
   const result = runCli(["contract", "--command", "open", "--commands", "target.click"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+});
+
+test("contract rejects mixed --full and lookup flags", () => {
+  const result = runCli(["contract", "--full", "--command", "open"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);

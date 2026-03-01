@@ -326,7 +326,7 @@ test("contract commands bypass daemon proxy even when daemon metadata exists", a
       },
       async ({ port, requests }) => {
         writeDaemonMeta(stateDir, { pid: process.pid, port, token });
-        const result = await runCli(["contract"], {
+        const result = await runCli(["contract", "--full"], {
           SURFWRIGHT_STATE_DIR: stateDir,
           SURFWRIGHT_DAEMON: "1",
         });
@@ -474,7 +474,7 @@ test("contract command bypasses daemon proxy even when daemon metadata exists", 
       },
       async ({ port, requests }) => {
         writeDaemonMeta(stateDir, { pid: process.pid, port, token });
-        const result = await runCli(["contract"], {
+        const result = await runCli(["contract", "--full"], {
           SURFWRIGHT_STATE_DIR: stateDir,
           SURFWRIGHT_DAEMON: "1",
         });

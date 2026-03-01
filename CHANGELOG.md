@@ -75,7 +75,8 @@ All notable changes to SurfWright are documented here.
 
 ### Changed
 - [cli] Disabled built-in Commander help surfaces (`--help`, `-h`, and `help` command); command discovery is now contract-only.
-- [contract] Tightened `contract` surface to compact default + explicit `--command`/`--commands` lookups; removed broad `--core`/`--full`/`--search` modes from runtime CLI.
+- [contract] Tightened `contract` surface to compact default + explicit `--command`/`--commands` lookups; removed broad `--core`/`--search` modes from runtime CLI.
+- [contract] `contract` default now returns a minimal bootstrap envelope; full command/error catalogs moved behind explicit `contract --full`.
 - [contract] `contract --command/--commands` now resolves common legacy camelCase command IDs (`openSession`, `targetFill`, `targetWaitFor`, `targetRead`, `closeSession`) to canonical SurfWright IDs.
 - [cli] Agent no-arg probe invocations for high-traffic commands (`open`, `target.find`, `target.click`, `target.spawn`, `target.fill`, `target.eval`, `target.read`, `target.wait`) now auto-route to `contract --command <id>` instead of returning typed parse failures.
 - [skill] SurfWright runtime skill guidance now enforces action-first behavior (no env/help probing, contract lookup only after command-id misses) to reduce discovery overhead in agent loops.
@@ -189,7 +190,7 @@ All notable changes to SurfWright are documented here.
 
 ### Removed
 - [cli] Removed user-facing help path (`--help`, `-h`, `help`) from runtime command surface.
-- [contract] Removed `contract --core`, `contract --full`, and `contract --search` runtime options.
+- [contract] Removed `contract --core` and `contract --search` runtime options.
 - [docs] Removed campaign planning docs under `docs/campaigns/`.
 - [target] Removed old download aliases `download.filename` and `download.size`; use canonical `download.fileName` and `download.bytes`.
 - [open] Removed `open --reuse-url`; use `open --reuse url`.

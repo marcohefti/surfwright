@@ -34,7 +34,7 @@ function extractErrorContractCodes(sourceText) {
 test("contract errors match src/core/contracts/error-contracts.ts codes", () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-error-contracts-"));
   try {
-    const contractResult = runCli(["contract"], { SURFWRIGHT_STATE_DIR: stateDir });
+    const contractResult = runCli(["contract", "--full"], { SURFWRIGHT_STATE_DIR: stateDir });
     assert.equal(contractResult.status, 0);
     const contract = parseJson(contractResult.stdout);
     const contractCodes = new Set((contract?.errorCodes ?? []).filter((c) => typeof c === "string"));

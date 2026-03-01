@@ -106,6 +106,8 @@ Use `surfwright contract` for low-token bootstrap output.
 Use `surfwright contract --command <id>` for compact per-command flags/positionals/examples (low-token command lookup).
 Use `surfwright contract --commands <id1,id2,...>` for one-shot compact schemas across multiple commands.
 `contract --command` also accepts CLI path form (for example `target snapshot`) and returns `command.argvPath` for machine-executable command tokens.
+`contract --command/--commands` also resolves common legacy aliases (for example `openSession`, `targetFill`, `targetWaitFor`) to canonical IDs.
+Agent no-arg probe calls like `surfwright open` or `surfwright target.click` auto-route to `contract --command <id>` instead of failing, reducing discovery thrash.
 
 Set global output shaping when you want smaller payloads without changing command behavior:
 

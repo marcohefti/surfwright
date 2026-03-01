@@ -103,6 +103,22 @@ test("dot-command alias supports network subcommands", () => {
   assert.equal(Array.isArray(extensionPayload.extensions), true);
 });
 
+test("agent no-arg probes redirect to contract command lookup", () => {
+  const openResult = runCli(["open"]);
+  assert.equal(openResult.status, 0);
+  const openPayload = parseJson(openResult.stdout);
+  assert.equal(openPayload.ok, true);
+  assert.equal(openPayload.mode, "command");
+  assert.equal(openPayload.command.id, "open");
+
+  const clickResult = runCli(["target.click"]);
+  assert.equal(clickResult.status, 0);
+  const clickPayload = parseJson(clickResult.stdout);
+  assert.equal(clickPayload.ok, true);
+  assert.equal(clickPayload.mode, "command");
+  assert.equal(clickPayload.command.id, "target.click");
+});
+
 test("json shape lint for pure commands (keys only)", () => {
   const contractResult = runCli(["contract"]);
   assert.equal(contractResult.status, 0);

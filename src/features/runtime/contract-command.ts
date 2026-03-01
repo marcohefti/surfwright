@@ -9,25 +9,28 @@ export function resolveContractCommandOrThrow(rawCommandLookup: string, commands
   }
 
   const lookupSeed = rawCommandLookup.split(/[.\s]/g).filter((token) => token.length > 0)[0] ?? rawCommandLookup;
+  const topSuggestion = resolved.suggestions[0] ?? null;
+  const nextCommand = topSuggestion
+    ? `surfwright contract --command ${topSuggestion}`
+    : "surfwright contract";
   throw queryInvalid(`unknown command id: ${rawCommandLookup}`, {
     hints: [
-      resolved.suggestions.length > 0
-        ? `Closest command ids: ${resolved.suggestions.slice(0, 5).join(", ")}`
-        : null,
-      "Run `surfwright contract` to list all command ids",
+      topSuggestion ? `Did you mean: ${topSuggestion}` : null,
       "Use `surfwright contract --command <id>` or `surfwright contract --commands <id1,id2>`",
     ].filter((entry): entry is string => typeof entry === "string" && entry.length > 0),
     hintContext: {
       requestedCommandId: rawCommandLookup,
       suggestionCount: resolved.suggestions.length,
+      didYouMean: topSuggestion,
     },
     recovery: {
       strategy: "discover-command-id",
-      nextCommand: "surfwright contract",
+      nextCommand,
       requiredFields: ["commandIds"],
       context: {
         requestedCommandId: rawCommandLookup,
         lookupSeed,
+        didYouMean: topSuggestion,
       },
     },
   });

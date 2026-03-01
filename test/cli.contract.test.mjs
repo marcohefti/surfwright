@@ -244,7 +244,6 @@ test("contract unknown option includes focused alternatives for compact command 
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_QUERY_INVALID");
   assert.equal(Array.isArray(payload.hints), true);
-  assert.equal(payload.hints.some((hint) => hint.includes("surfwright contract")), true);
   assert.equal(payload.hints.some((hint) => hint.includes("--command <id>")), true);
   assert.equal(Array.isArray(payload.diagnostics?.unknownFlags), true);
   assert.equal(payload.diagnostics?.unknownFlags?.includes("--kind"), true);
@@ -307,6 +306,19 @@ test("contract --commands returns compact multi-command schemas", () => {
   assert.equal(Array.isArray(payload.commands[1]?.flags), true);
 });
 
+test("contract --commands accepts legacy camelCase command ids", () => {
+  const result = runCli(["contract", "--commands", "openSession,targetFill,targetWaitFor,targetRead,closeSession"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "commands");
+  assert.equal(payload.commandCount, 5);
+  assert.deepEqual(
+    payload.commands.map((entry) => entry.id),
+    ["session.new", "target.fill", "target.wait", "target.read", "session.clear"],
+  );
+});
+
 test("contract rejects removed discovery flags", () => {
   const result = runCli(["contract", "--search", "open"]);
   assert.equal(result.status, 1);
@@ -342,9 +354,10 @@ test("contract --command unknown id returns recovery suggestions", () => {
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_QUERY_INVALID");
   assert.equal(Array.isArray(payload.hints), true);
-  assert.equal(payload.hints.some((hint) => hint.includes("Closest command ids:")), true);
+  assert.equal(payload.hints.some((hint) => hint.includes("Did you mean:")), true);
   assert.equal(payload.recovery?.strategy, "discover-command-id");
-  assert.equal(payload.recovery?.nextCommand, "surfwright contract");
+  assert.equal(typeof payload.recovery?.nextCommand, "string");
+  assert.equal(payload.recovery?.nextCommand.startsWith("surfwright contract"), true);
 });
 
 test("target commands detect swapped handle types with typed recovery", () => {

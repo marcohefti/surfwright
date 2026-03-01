@@ -85,7 +85,6 @@ function contractUnknownOptionHints(unknownOption: string | null, argv?: string[
     return [];
   }
   return [
-    "Use `surfwright contract` to list command ids.",
     "Use --command <id> for one compact command schema (flags/positionals/examples).",
     "Use --commands <id1,id2> for one-shot multi-command schemas.",
   ];
@@ -148,8 +147,10 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
   };
   const parsedCommandPath = Array.isArray(argv) ? resolveArgvCommandPath(argv) : [];
   const commandPath = parsedCommandPath.join(" ");
+  const canonicalCommandId = parsedCommandPath.join(".");
   if (commandPath.length > 0) {
     hintContext.commandPath = commandPath;
+    hintContext.canonicalCommandId = canonicalCommandId;
   }
   let example: string | null = null;
   if (didYouMean) {

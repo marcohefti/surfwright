@@ -9,19 +9,19 @@ Deterministic browser control via CLI JSON outputs and explicit handles.
 
 ## Discovery
 
-Use contract lookup first.
-
-- Prefer `surfwright contract --commands <id1,id2,...>` for one-shot multi-command schema fetches.
-- `surfwright contract --command <id>` for one command schema.
+- Do not probe with `which`, help flags, or repeated skill file reads.
+- Use direct commands first.
+- Use `surfwright contract --commands <id1,id2,...>` only when a command is unknown.
+- Use `surfwright contract --command <id>` for one command schema.
 
 ## Runtime Rules
 
 - Keep default JSON output; do not parse prose.
-- Use `surfwright contract --command <id>` to confirm the required JSON schema before parsing.
+- Confirm required JSON schema with `surfwright contract --command <id>` only after a command-id miss.
 - Start headless by default unless explicitly instructed otherwise.
 - Treat non-zero exits as typed failures and branch on `code` (`retryable` when present).
 - Use one unique `--agent-id` per task.
-- Treat daemon queue overload codes (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) as explicit backpressure signals (do not assume local fallback).
+- Treat daemon queue overload codes (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) as backpressure signals.
 - Treat daemon transport unreachability as fallback-eligible; if continuity is required during daemon diagnostics, use `SURFWRIGHT_DAEMON=0` as hard-off.
 - Help output is intentionally disabled; use `contract` lookup only.
 - For non-trivial plans, prefer `run --plan <file>` (or `--plan -`) over inline `--plan-json`.

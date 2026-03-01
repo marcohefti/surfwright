@@ -30,6 +30,27 @@ function normalizeLookupToken(input: string): string {
   return input.trim().replace(/\s+/g, " ");
 }
 
+function normalizeLegacyAliasLookup(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[\s._-]+/g, "");
+}
+
+const LEGACY_COMMAND_ID_ALIASES = new Map<string, string>([
+  ["sessioncreate", "session.new"],
+  ["opensession", "session.new"],
+  ["closesession", "session.clear"],
+  ["navigatetarget", "open"],
+  ["targetfill", "target.fill"],
+  ["targeteval", "target.eval"],
+  ["targetwaitfor", "target.wait"],
+  ["targetread", "target.read"],
+  ["targettext", "target.read"],
+  ["targetclickread", "target.click-read"],
+  ["targetclickat", "target.click-at"],
+]);
+
 export function commandPathToId(commandPath: string[]): string | null {
   if (!Array.isArray(commandPath) || commandPath.length === 0) {
     return null;
@@ -80,6 +101,11 @@ export function resolveContractCommandId(
   const byId = new Map(commands.map((entry) => [entry.id, entry]));
   if (byId.has(requestedRaw)) {
     return { commandId: requestedRaw, suggestions: [] };
+  }
+
+  const legacyAliasId = LEGACY_COMMAND_ID_ALIASES.get(normalizeLegacyAliasLookup(requestedRaw));
+  if (legacyAliasId && byId.has(legacyAliasId)) {
+    return { commandId: legacyAliasId, suggestions: [] };
   }
 
   const byUsagePath = new Map(commands.map((entry) => [commandUsagePathString(entry), entry.id]));

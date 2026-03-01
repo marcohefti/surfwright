@@ -76,6 +76,9 @@ All notable changes to SurfWright are documented here.
 ### Changed
 - [cli] Disabled built-in Commander help surfaces (`--help`, `-h`, and `help` command); command discovery is now contract-only.
 - [contract] Tightened `contract` surface to compact default + explicit `--command`/`--commands` lookups; removed broad `--core`/`--full`/`--search` modes from runtime CLI.
+- [contract] `contract --command/--commands` now resolves common legacy camelCase command IDs (`openSession`, `targetFill`, `targetWaitFor`, `targetRead`, `closeSession`) to canonical SurfWright IDs.
+- [cli] Agent no-arg probe invocations for high-traffic commands (`open`, `target.find`, `target.click`, `target.spawn`, `target.fill`, `target.eval`, `target.read`, `target.wait`) now auto-route to `contract --command <id>` instead of returning typed parse failures.
+- [skill] SurfWright runtime skill guidance now enforces action-first behavior (no env/help probing, contract lookup only after command-id misses) to reduce discovery overhead in agent loops.
 - [daemon] Queue-pressure typed failures (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) now carry additive recovery fields (`retryable`, `phase`, `recovery`, `hints`, `hintContext`) through daemon transport to CLI output.
 - [daemon] Queue-pressure runtime messages now align with contract wording (`Daemon queue wait budget expired before dispatch`, `Daemon lane queue depth cap reached; request rejected`).
 - [cli] `help` now normalizes dot-path and multi-token command paths to canonical help execution (for example `help target.dialog` -> `target dialog --help`).

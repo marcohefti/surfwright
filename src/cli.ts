@@ -102,9 +102,6 @@ function shouldBypassDaemon(argv: string[]): boolean {
   if (!commandId) {
     return true;
   }
-  if (argv.includes("--help") || argv.includes("-h")) {
-    return true;
-  }
   if (commandId.startsWith("__")) {
     return true;
   }
@@ -159,8 +156,10 @@ function createProgram(outputOpts: OutputOpts): Command {
     .addOption(
       new Option("--output-shape <shape>", "Output shape preset: full|compact|proof").choices(["full", "compact", "proof"]),
     )
+    .helpOption(false)
+    .helpCommand(false)
     .showSuggestionAfterError(true)
-    .showHelpAfterError("(run the command with --help for examples)")
+    .showHelpAfterError(false)
     .exitOverride();
   program.configureOutput({
     writeOut: (str) => {

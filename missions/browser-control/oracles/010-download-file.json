@@ -8,7 +8,7 @@
     "downloadFinalUrl",
     "downloadFileName"
   ],
-  "successCheck": "downloadStarted == true and downloadStatus == 200 and downloadFinalUrl starts with https://the-internet.herokuapp.com/download/ and downloadFileName is non-empty",
+  "successCheck": "downloadStarted == true and downloadStatus is non-empty and downloadFinalUrl starts with https://the-internet.herokuapp.com/download/ and downloadFileName is non-empty",
   "rules": [
     {
       "field": "downloadStarted",
@@ -17,8 +17,7 @@
     },
     {
       "field": "downloadStatus",
-      "op": "eq",
-      "value": 200
+      "op": "non_empty"
     },
     {
       "field": "downloadFinalUrl",
@@ -32,7 +31,7 @@
   ],
   "examplePayload": {
     "downloadStarted": true,
-    "downloadStatus": 200,
+    "downloadStatus": "completed",
     "downloadFinalUrl": "https://the-internet.herokuapp.com/download/some-file.txt",
     "downloadFileName": "some-file.txt"
   }

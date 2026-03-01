@@ -11,6 +11,7 @@ yarn-error.log*
 .zcl/
 .zerocontext-lab/
 tmp/
+local-zcl/
 artifacts/
 bench/agent-loop/scopes/
 packages/*/dist/

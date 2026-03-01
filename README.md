@@ -102,11 +102,10 @@ surfwright contract
 ```
 
 `contract` now includes additive `guidance` entries with command signatures, examples, and proof schemas for high-traffic workflows.
-Use `surfwright contract --core` for low-token bootstrap output, and `surfwright contract --search <term>` to filter commands/errors/guidance.
+Use `surfwright contract` for low-token bootstrap output.
 Use `surfwright contract --command <id>` for compact per-command flags/positionals/examples (low-token command lookup).
 Use `surfwright contract --commands <id1,id2,...>` for one-shot compact schemas across multiple commands.
 `contract --command` also accepts CLI path form (for example `target snapshot`) and returns `command.argvPath` for machine-executable command tokens.
-`contract --search` tolerates unquoted multi-token terms (for example `surfwright contract --search target dialog`), though quoted terms remain preferred in scripts.
 
 Set global output shaping when you want smaller payloads without changing command behavior:
 
@@ -246,7 +245,7 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 `run` upload steps now honor `submitSelector`, `expectUploadedFilename`, and result-verification fields (`waitForResult`, `resultSelector`, `resultTextContains`, `resultFilenameRegex`) for deterministic attach+submit+verify flows.
 JSON output is default; use `--no-json` for human summaries and `--pretty` for multiline JSON.
 In JSON mode, parse failures emit only typed JSON failures (no appended Commander help text), so output remains machine-safe.
-`surfwright help target.dialog` is normalized to canonical command help (`surfwright target dialog --help`).
+`--help` output is intentionally disabled; rely on `surfwright contract` lookup for command discovery.
 Typed failures now include additive `recovery` metadata when deterministic next-step routing is available (for example command lookup, required positionals, and handle-type mismatch recovery).
 Handle misuse is now explicit: `E_HANDLE_TYPE_MISMATCH` is returned when `sessionId` and `targetId` are swapped.
 Prefer `target extract`, `target style`, `target attr`, and `target read` before `target eval`; when you need eval, `--expr-b64`/`--script-b64` avoid shell escaping overhead and `--output-shape compact` keeps payloads lean.

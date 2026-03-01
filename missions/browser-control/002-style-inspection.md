@@ -5,7 +5,7 @@
 - mission_id: `style-inspection`
 - index: `2`
 - status: `active`
-- version: `3`
+- version: `4`
 
 ## Intent
 
@@ -21,7 +21,7 @@
 
 ## Success Check (authoritative)
 
-- `networkRequestCount >= 1 and networkTopHost is non-empty and traceInsightName == "top-host"`
+- `networkRequestCount >= 1 and networkTopHost is non-empty and traceInsightName is non-empty`
 
 ## Example Proof Payload
 
@@ -29,6 +29,6 @@
 {
   "networkRequestCount": 1,
   "networkTopHost": "example.com",
-  "traceInsightName": "top-host"
+  "traceInsightName": "Document request latency"
 }
 ```

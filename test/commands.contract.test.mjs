@@ -37,28 +37,31 @@ process.on("exit", () => {
 });
 
 test("contract command matches fixture-backed command surface", () => {
-  const result = runCli(["contract", "--full"]);
+  const result = runCli(["contract"]);
   assert.equal(result.status, 0);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.name, "surfwright");
   assert.equal(typeof payload.version, "string");
-  assert.equal(Array.isArray(payload.commands), true);
-  assert.equal(Array.isArray(payload.errors), true);
+  assert.equal(Array.isArray(payload.commandIds), true);
+  assert.equal(Array.isArray(payload.errorCodes), true);
 
   const expectedCore = loadFixture("test/fixtures/contract/commands.core.json");
   const expectedNetwork = loadFixture("test/fixtures/contract/commands.network.json");
   const expectedExperimental = loadFixture("test/fixtures/contract/commands.experimental.json");
   const expectedErrors = loadFixture("test/fixtures/contract/errors.json");
-  const commandById = new Map(payload.commands.map((entry) => [entry.id, entry]));
-
   for (const entry of [...expectedCore, ...expectedNetwork, ...expectedExperimental]) {
-    const actual = commandById.get(entry.id);
-    assert.notEqual(actual, undefined, `missing command ${entry.id}`);
-    assert.equal(actual.usage.includes(entry.usageMustContain), true, `usage mismatch for ${entry.id}`);
+    assert.equal(payload.commandIds.includes(entry.id), true, `missing command id ${entry.id}`);
+    const commandResult = runCli(["contract", "--command", entry.id]);
+    assert.equal(commandResult.status, 0, `contract lookup failed for ${entry.id}`);
+    const commandPayload = parseJson(commandResult.stdout);
+    assert.equal(commandPayload.ok, true);
+    assert.equal(commandPayload.mode, "command");
+    assert.equal(commandPayload.command.id, entry.id);
+    assert.equal(commandPayload.command.usage.includes(entry.usageMustContain), true, `usage mismatch for ${entry.id}`);
   }
 
-  const seenErrors = new Set(payload.errors.map((entry) => entry.code));
+  const seenErrors = new Set(payload.errorCodes);
   for (const code of expectedErrors) {
     assert.equal(seenErrors.has(code), true, `missing error code ${code}`);
   }

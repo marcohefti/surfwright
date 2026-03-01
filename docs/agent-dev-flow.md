@@ -26,7 +26,7 @@ For feature work, refactors, and optimizations, default to an evidence-first loo
 4. If behavior is involved, inspect current runtime contract:
 
 ```bash
-surfwright contract --search <term>
+surfwright contract
 ```
 
 ## Change Classification
@@ -95,7 +95,7 @@ If fewer than two are true, prefer documentation over new script surface.
 ### Agent-guidance and efficiency change
 
 1. Keep `skills/surfwright/SKILL.md` concise and protocol-only.
-2. Ensure SKILL instructions remain contract-first (`contract --search`) and avoid broad `--help` discovery.
+2. Ensure SKILL instructions remain contract-first (`contract --command|--commands`) and avoid broad discovery loops.
 3. Validate guidance shape with `pnpm skill:validate`.
 4. For ZCL browser-control runs, enforce attempt budgets with:
 

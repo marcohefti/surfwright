@@ -72,21 +72,15 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
   ctx.program
     .command("contract")
     .description(contractMeta.summary)
-    .option("--core", "Return compact core bootstrap payload", false)
-    .option("--full", "Return full contract payload (larger output)", false)
     .option("--command <id>", "Return compact schema for one command id (flags, positionals, examples)")
     .option("--commands <csv>", "Return compact schemas for multiple command ids (comma-separated)")
-    .option("--search <term>", "Filter contract commands/errors/guidance by id/code/usage text")
-    .action((options: { core?: boolean; full?: boolean; command?: string; commands?: string; search?: string }) => {
+    .action((options: { command?: string; commands?: string }) => {
       const output = ctx.globalOutputOpts();
       try {
         const rawCommandLookup = typeof options.command === "string" ? options.command.trim() : "";
         const rawCommandsLookup = typeof options.commands === "string" ? options.commands.trim() : "";
         if (rawCommandLookup.length > 0 && rawCommandsLookup.length > 0) {
           throw queryInvalid("contract accepts either --command or --commands, not both");
-        }
-        if (rawCommandLookup.length === 0 && rawCommandsLookup.length === 0 && Boolean(options.core) && Boolean(options.full)) {
-          throw queryInvalid("contract accepts at most one mode flag: --core or --full");
         }
         const report = getCliContractReport(ctx.readPackageVersion());
         let commandId = "";
@@ -97,12 +91,10 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         if (rawCommandsLookup.length > 0) {
           commandIds = resolveContractCommandIdsOrThrow(rawCommandsLookup, report.commands);
         }
-        const mode =
-          commandId.length > 0 ? "command" : commandIds.length > 0 ? "commands" : options.full ? "full" : options.core ? "core" : "compact";
+        const mode = commandId.length > 0 ? "command" : commandIds.length > 0 ? "commands" : "compact";
         const outReport = buildContractOutput({
           report,
           mode,
-          search: options.search,
           commandId,
           commandIds,
         });

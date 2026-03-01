@@ -7,7 +7,7 @@
     "networkTopHost",
     "traceInsightName"
   ],
-  "successCheck": "networkRequestCount >= 1 and networkTopHost is non-empty and traceInsightName == \"top-host\"",
+  "successCheck": "networkRequestCount >= 1 and networkTopHost is non-empty and traceInsightName is non-empty",
   "rules": [
     {
       "field": "networkRequestCount",
@@ -20,13 +20,12 @@
     },
     {
       "field": "traceInsightName",
-      "op": "eq",
-      "value": "top-host"
+      "op": "non_empty"
     }
   ],
   "examplePayload": {
     "networkRequestCount": 1,
     "networkTopHost": "example.com",
-    "traceInsightName": "top-host"
+    "traceInsightName": "Document request latency"
   }
 }

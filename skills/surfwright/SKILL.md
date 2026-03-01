@@ -12,9 +12,7 @@ Deterministic browser control via CLI JSON outputs and explicit handles.
 Use contract lookup first.
 
 - Prefer `surfwright contract --commands <id1,id2,...>` for one-shot multi-command schema fetches.
-- `surfwright contract --search <term>` for focused discovery.
 - `surfwright contract --command <id>` for one command schema.
-- Use `--full` only for explicit debug/audit.
 
 ## Runtime Rules
 
@@ -25,7 +23,7 @@ Use contract lookup first.
 - Use one unique `--agent-id` per task.
 - Treat daemon queue overload codes (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) as explicit backpressure signals (do not assume local fallback).
 - Treat daemon transport unreachability as fallback-eligible; if continuity is required during daemon diagnostics, use `SURFWRIGHT_DAEMON=0` as hard-off.
-- Prefer contract-first discovery over broad help probing.
+- Help output is intentionally disabled; use `contract` lookup only.
 - For non-trivial plans, prefer `run --plan <file>` (or `--plan -`) over inline `--plan-json`.
 - For complex JavaScript, prefer `target eval --script-file` / `--script-b64` over long quoted inline expressions.
 - Prefer typed primitives over eval:

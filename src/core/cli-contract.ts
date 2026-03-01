@@ -178,13 +178,11 @@ export function buildCommandSignature(opts: {
 const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
   {
     id: "contract",
-    signature: "contract(compact|core|full|command|commands, search?) -> { command ids, error codes, guidance }",
+    signature: "contract(compact|command|commands) -> { command ids, error codes }",
     examples: [
-      "surfwright contract --core",
+      "surfwright contract",
       "surfwright contract --command target.download",
       "surfwright contract --commands open,target.click,target.read",
-      "surfwright contract --core --search extract",
-      "surfwright contract --full --search target.attr",
     ],
     proofSchema: null,
   },

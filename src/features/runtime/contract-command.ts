@@ -14,7 +14,7 @@ export function resolveContractCommandOrThrow(rawCommandLookup: string, commands
       resolved.suggestions.length > 0
         ? `Closest command ids: ${resolved.suggestions.slice(0, 5).join(", ")}`
         : null,
-      `Run \`surfwright contract --search ${lookupSeed}\` to discover command ids`,
+      "Run `surfwright contract` to list all command ids",
       "Use `surfwright contract --command <id>` or `surfwright contract --commands <id1,id2>`",
     ].filter((entry): entry is string => typeof entry === "string" && entry.length > 0),
     hintContext: {
@@ -23,10 +23,11 @@ export function resolveContractCommandOrThrow(rawCommandLookup: string, commands
     },
     recovery: {
       strategy: "discover-command-id",
-      nextCommand: `surfwright contract --search ${lookupSeed}`,
+      nextCommand: "surfwright contract",
       requiredFields: ["commandIds"],
       context: {
         requestedCommandId: rawCommandLookup,
+        lookupSeed,
       },
     },
   });

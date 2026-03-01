@@ -462,24 +462,26 @@ test("hard-off daemon mode never proxies to existing daemon metadata", async () 
   }
 });
 
-test("help commands bypass daemon proxy even when daemon metadata exists", async () => {
-  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-help-bypass-"));
-  const token = "help-bypass-token";
+test("contract command bypasses daemon proxy even when daemon metadata exists", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-contract-bypass-"));
+  const token = "contract-bypass-token";
   try {
     await withStubDaemon(
       {
         ok: false,
         code: "E_DAEMON_QUEUE_TIMEOUT",
-        message: "help should not proxy via daemon",
+        message: "contract should not proxy via daemon",
       },
       async ({ port, requests }) => {
         writeDaemonMeta(stateDir, { pid: process.pid, port, token });
-        const result = await runCli(["session", "list", "--help"], {
+        const result = await runCli(["contract"], {
           SURFWRIGHT_STATE_DIR: stateDir,
           SURFWRIGHT_DAEMON: "1",
         });
         assert.equal(result.status, 0);
-        assert.equal(result.stdout.includes("Usage: surfwright session list"), true);
+        const payload = parseJson(result.stdout);
+        assert.equal(payload.ok, true);
+        assert.equal(Array.isArray(payload.commandIds), true);
         assert.equal(requests.length, 0);
       },
     );

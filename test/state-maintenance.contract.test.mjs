@@ -64,10 +64,10 @@ process.on("exit", () => {
 });
 
 test("contract includes state maintenance commands", () => {
-  const result = runCli(["contract", "--full"]);
+  const result = runCli(["contract"]);
   assert.equal(result.status, 0);
   const payload = parseJson(result.stdout);
-  const commandIds = new Set(payload.commands.map((entry) => entry.id));
+  const commandIds = new Set(payload.commandIds);
   assert.equal(commandIds.has("session.clear"), true);
   assert.equal(commandIds.has("session.prune"), true);
   assert.equal(commandIds.has("target.prune"), true);

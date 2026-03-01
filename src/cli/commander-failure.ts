@@ -85,11 +85,18 @@ function contractUnknownOptionHints(unknownOption: string | null, argv?: string[
     return [];
   }
   return [
-    "Use --search <term> to filter command/error/guidance entries.",
+    "Use `surfwright contract` to list command ids.",
     "Use --command <id> for one compact command schema (flags/positionals/examples).",
-    "contract output is compact by default; add --full only when needed.",
-    "Example: surfwright contract --search upload",
+    "Use --commands <id1,id2> for one-shot multi-command schemas.",
   ];
+}
+
+function resolveContractLookupCommand(commandPath: string[]): string {
+  if (!Array.isArray(commandPath) || commandPath.length === 0) {
+    return "surfwright contract";
+  }
+  const lookup = commandPath.join(".");
+  return `surfwright contract --command ${lookup}`;
 }
 
 function sessionClearFailureHints(input: {
@@ -148,9 +155,9 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
   if (didYouMean) {
     example = `Try: surfwright ${didYouMean}`;
   } else if (missingArgMatch?.[1]) {
-    example = "Run with --help to see required arguments";
+    example = "Use the canonical invocation in diagnostics.canonicalInvocation";
   } else if (tooManyArgsMatch) {
-    example = "Run with --help to see expected positional arguments";
+    example = "Use the canonical invocation in diagnostics.canonicalInvocation";
   }
   const hints = [
     didYouMean ? `Did you mean ${didYouMean}?` : null,
@@ -161,7 +168,6 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
       tooManyArgs: Boolean(tooManyArgsMatch),
     }),
     ...contractUnknownOptionHints(unknownOption, argv),
-    "Run the command with --help for usage examples",
   ].filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
   const diagnostics = commanderDiagnostics({
     commandPath: parsedCommandPath,
@@ -184,7 +190,7 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
     if (unknownOption) {
       return {
         strategy: "retry-with-valid-flags",
-        nextCommand: "surfwright <command> --help",
+        nextCommand: resolveContractLookupCommand(parsedCommandPath),
         requiredFields: ["validFlags"],
         context: {
           unknownOption,
@@ -195,7 +201,7 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
     if (expectedArg) {
       return {
         strategy: "retry-with-required-positionals",
-        nextCommand: "surfwright <command> --help",
+        nextCommand: resolveContractLookupCommand(parsedCommandPath),
         requiredFields: ["expectedPositionals"],
         context: {
           commandPath: commandPath.length > 0 ? commandPath : null,

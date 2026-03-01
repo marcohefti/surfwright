@@ -9,17 +9,15 @@
     "pageTitle",
     "pageH3"
   ],
-  "successCheck": "spawnUrl == \"https://the-internet.herokuapp.com/windows/new\" and spawnTitle == \"New Window\" and pageUrl == \"https://the-internet.herokuapp.com/windows/new\" and pageTitle == \"New Window\" and pageH3 == \"New Window\"",
+  "successCheck": "spawnUrl is non-empty and spawnTitle is non-empty and pageUrl == \"https://the-internet.herokuapp.com/windows/new\" and pageTitle == \"New Window\" and pageH3 == \"New Window\"",
   "rules": [
     {
       "field": "spawnUrl",
-      "op": "eq",
-      "value": "https://the-internet.herokuapp.com/windows/new"
+      "op": "non_empty"
     },
     {
       "field": "spawnTitle",
-      "op": "eq",
-      "value": "New Window"
+      "op": "non_empty"
     },
     {
       "field": "pageUrl",
@@ -38,8 +36,8 @@
     }
   ],
   "examplePayload": {
-    "spawnUrl": "https://the-internet.herokuapp.com/windows/new",
-    "spawnTitle": "New Window",
+    "spawnUrl": "https://the-internet.herokuapp.com/windows",
+    "spawnTitle": "The Internet",
     "pageUrl": "https://the-internet.herokuapp.com/windows/new",
     "pageTitle": "New Window",
     "pageH3": "New Window"

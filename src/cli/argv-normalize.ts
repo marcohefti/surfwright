@@ -65,104 +65,10 @@ function rewriteDotCommandAlias(argv: string[]): string[] {
   return out;
 }
 
-function rewriteHelpCommandAlias(argv: string[]): string[] {
-  const out = [...argv];
-  const commandIndex = firstCommandIndex(out);
-  if (commandIndex < 0 || out[commandIndex] !== "help") {
-    return out;
-  }
-
-  const pathStart = commandIndex + 1;
-  if (pathStart >= out.length || out[pathStart].startsWith("-")) {
-    return out;
-  }
-
-  let pathEnd = pathStart;
-  while (pathEnd < out.length) {
-    const token = out[pathEnd];
-    if (token === "--" || token.startsWith("-")) {
-      break;
-    }
-    pathEnd += 1;
-  }
-  if (pathEnd <= pathStart) {
-    return out;
-  }
-
-  const rawPath = out.slice(pathStart, pathEnd);
-  const resolvedPath =
-    rawPath.length === 1 && DOT_COMMAND_ALIAS_MAP.has(rawPath[0]) ? DOT_COMMAND_ALIAS_MAP.get(rawPath[0]) ?? rawPath : rawPath;
-  out.splice(commandIndex, 1 + rawPath.length, ...resolvedPath, "--help");
-  return out;
-}
-
-function rewriteContractSearchArgv(argv: string[]): string[] {
-  const out = [...argv];
-  const commandIndex = firstCommandIndex(out);
-  if (commandIndex < 0 || out[commandIndex] !== "contract") {
-    return out;
-  }
-
-  for (let index = commandIndex + 1; index < out.length; index += 1) {
-    const token = out[index];
-    if (token === "--") {
-      break;
-    }
-    if (token !== "--search") {
-      if (token.startsWith("--search=")) {
-        const seed = token.slice("--search=".length);
-        if (seed.length === 0) {
-          continue;
-        }
-        let end = index + 1;
-        while (end < out.length) {
-          const next = out[end];
-          if (next === "--" || next.startsWith("-")) {
-            break;
-          }
-          end += 1;
-        }
-        if (end <= index + 1) {
-          continue;
-        }
-        const merged = [seed, ...out.slice(index + 1, end)].join(" ");
-        out.splice(index, end - index, `--search=${merged}`);
-      }
-      continue;
-    }
-    const searchValueIndex = index + 1;
-    if (searchValueIndex >= out.length) {
-      return out;
-    }
-    const searchValue = out[searchValueIndex];
-    if (searchValue === "--" || searchValue.startsWith("-")) {
-      return out;
-    }
-    let end = searchValueIndex + 1;
-    while (end < out.length) {
-      const next = out[end];
-      if (next === "--" || next.startsWith("-")) {
-        break;
-      }
-      end += 1;
-    }
-    if (end <= searchValueIndex + 1) {
-      return out;
-    }
-    const merged = [searchValue, ...out.slice(searchValueIndex + 1, end)].join(" ");
-    out.splice(searchValueIndex, end - searchValueIndex, merged);
-    return out;
-  }
-
-  return out;
-}
-
 export function normalizeArgv(argv: string[]): string[] {
   const out = [...argv];
   if (out[2] === "--") {
     out.splice(2, 1);
   }
-  const withDotAliases = rewriteDotCommandAlias(out);
-  const withHelpAliases = rewriteHelpCommandAlias(withDotAliases);
-  return rewriteContractSearchArgv(withHelpAliases);
+  return rewriteDotCommandAlias(out);
 }

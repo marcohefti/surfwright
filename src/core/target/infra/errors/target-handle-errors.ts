@@ -25,7 +25,7 @@ export function buildHandleTypeMismatchError(input: {
         ? `Use --session ${input.correctedSessionId ?? "<sessionId>"} and reacquire targetId via \`target list\``
         : `Use targetId ${input.correctedTargetId ?? "<targetId>"} for target commands`,
       "sessionId and targetId are different handle types and are not interchangeable",
-      "Use `surfwright contract --core --search target` to confirm command signatures",
+      "Use `surfwright contract --commands target.list,target.snapshot` to confirm command signatures",
     ],
     hintContext: {
       expectedType: input.expectedType,

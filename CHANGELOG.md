@@ -74,6 +74,8 @@ All notable changes to SurfWright are documented here.
 - [cli] Added npm scripts `bench:loop:run`, `bench:loop:score`, and `bench:loop:history`.
 
 ### Changed
+- [cli] Disabled built-in Commander help surfaces (`--help`, `-h`, and `help` command); command discovery is now contract-only.
+- [contract] Tightened `contract` surface to compact default + explicit `--command`/`--commands` lookups; removed broad `--core`/`--full`/`--search` modes from runtime CLI.
 - [daemon] Queue-pressure typed failures (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) now carry additive recovery fields (`retryable`, `phase`, `recovery`, `hints`, `hintContext`) through daemon transport to CLI output.
 - [daemon] Queue-pressure runtime messages now align with contract wording (`Daemon queue wait budget expired before dispatch`, `Daemon lane queue depth cap reached; request rejected`).
 - [cli] `help` now normalizes dot-path and multi-token command paths to canonical help execution (for example `help target.dialog` -> `target dialog --help`).
@@ -183,6 +185,8 @@ All notable changes to SurfWright are documented here.
 - None.
 
 ### Removed
+- [cli] Removed user-facing help path (`--help`, `-h`, `help`) from runtime command surface.
+- [contract] Removed `contract --core`, `contract --full`, and `contract --search` runtime options.
 - [docs] Removed campaign planning docs under `docs/campaigns/`.
 - [target] Removed old download aliases `download.filename` and `download.size`; use canonical `download.fileName` and `download.bytes`.
 - [open] Removed `open --reuse-url`; use `open --reuse url`.

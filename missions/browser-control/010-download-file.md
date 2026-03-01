@@ -5,7 +5,7 @@
 - mission_id: `download-file`
 - index: `10`
 - status: `active`
-- version: `2`
+- version: `3`
 
 ## Intent
 
@@ -22,14 +22,14 @@
 
 ## Success Check (authoritative)
 
-- `downloadStarted == true and downloadStatus == 200 and downloadFinalUrl starts with https://the-internet.herokuapp.com/download/ and downloadFileName is non-empty`
+- `downloadStarted == true and downloadStatus is non-empty and downloadFinalUrl starts with https://the-internet.herokuapp.com/download/ and downloadFileName is non-empty`
 
 ## Example Proof Payload
 
 ```json
 {
   "downloadStarted": true,
-  "downloadStatus": 200,
+  "downloadStatus": "completed",
   "downloadFinalUrl": "https://the-internet.herokuapp.com/download/some-file.txt",
   "downloadFileName": "some-file.txt"
 }

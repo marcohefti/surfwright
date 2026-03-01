@@ -24,10 +24,10 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
 ## Agent Discovery Policy
 
 - Agent discovery is contract-first:
-  - `surfwright contract --search <term>` is the default lookup path.
-  - `surfwright contract --full --search <term>` is debug/audit mode only.
-- `--help` remains human-facing and is intentionally non-authoritative for runtime agents.
-- Contract search responses must stay compact enough for repeated agent loops.
+  - `surfwright contract` returns compact ids for low-token bootstrap.
+  - `surfwright contract --command <id>` and `--commands <id1,id2>` are the only detailed lookup paths.
+- `--help` is intentionally disabled; runtime agents must use contract lookup only.
+- Contract responses must stay compact enough for repeated agent loops.
 
 ## Where the Logic Lives
 

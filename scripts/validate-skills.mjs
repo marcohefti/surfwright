@@ -18,7 +18,7 @@ const surfwrightSkillPolicy = {
   maxBytes: 1800,
   maxLines: 45,
   requiredSnippets: [
-    "surfwright contract --search",
+    "surfwright contract --commands",
     "surfwright contract --command",
     "typed failures",
     "required JSON schema",

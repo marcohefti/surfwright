@@ -237,19 +237,19 @@ test("target find validates href-path-prefix before session resolution", () => {
   assert.equal(findPayload.message, "href-path-prefix must start with '/'");
 });
 
-test("contract unknown option includes focused alternatives for compact/search", () => {
+test("contract unknown option includes focused alternatives for compact command lookup", () => {
   const result = runCli(["contract", "--kind", "json"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_QUERY_INVALID");
   assert.equal(Array.isArray(payload.hints), true);
-  assert.equal(payload.hints.some((hint) => hint.includes("Use --search <term>")), true);
-  assert.equal(payload.hints.some((hint) => hint.includes("add --full")), true);
+  assert.equal(payload.hints.some((hint) => hint.includes("surfwright contract")), true);
+  assert.equal(payload.hints.some((hint) => hint.includes("--command <id>")), true);
   assert.equal(Array.isArray(payload.diagnostics?.unknownFlags), true);
   assert.equal(payload.diagnostics?.unknownFlags?.includes("--kind"), true);
   assert.equal(Array.isArray(payload.diagnostics?.validFlags), true);
-  assert.equal(payload.diagnostics?.validFlags?.includes("--search"), true);
+  assert.equal(payload.diagnostics?.validFlags?.includes("--command"), true);
   assert.equal(typeof payload.diagnostics?.canonicalInvocation, "string");
   assert.equal(payload.diagnostics?.canonicalInvocation?.includes("surfwright contract"), true);
   assert.equal(payload.hintContext?.commandPath, "contract");
@@ -267,17 +267,16 @@ test("session clear parse failures include scoped cleanup hint for extra positio
   assert.equal(payload.hintContext?.commandPath, "session clear");
 });
 
-test("contract --core returns focused bootstrap payload", () => {
-  const result = runCli(["contract", "--core"]);
+test("contract default returns compact bootstrap payload", () => {
+  const result = runCli(["contract"]);
   assert.equal(result.status, 0);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, true);
-  assert.equal(payload.mode, "core");
-  assert.equal(Array.isArray(payload.commands), true);
-  assert.equal(Array.isArray(payload.errors), true);
-  assert.equal(Array.isArray(payload.guidance), true);
-  assert.equal(payload.commands.some((entry) => entry.id === "target.click"), true);
-  assert.equal(payload.commands.some((entry) => entry.id === "target.count"), true);
+  assert.equal(payload.mode, undefined);
+  assert.equal(Array.isArray(payload.commandIds), true);
+  assert.equal(Array.isArray(payload.errorCodes), true);
+  assert.equal(payload.commandIds.includes("target.click"), true);
+  assert.equal(payload.commandIds.includes("target.count"), true);
 });
 
 test("contract --command returns compact per-command schema", () => {
@@ -308,49 +307,12 @@ test("contract --commands returns compact multi-command schemas", () => {
   assert.equal(Array.isArray(payload.commands[1]?.flags), true);
 });
 
-test("contract --core --search run exposes runnable plan guidance", () => {
-  const result = runCli(["contract", "--core", "--search", "run"]);
-  assert.equal(result.status, 0);
-  const payload = parseJson(result.stdout);
-  assert.equal(payload.ok, true);
-  assert.equal(payload.commands.some((entry) => entry.id === "run"), true);
-  const runGuidance = payload.guidance.find((entry) => entry.id === "run");
-  assert.notEqual(runGuidance, undefined);
-  assert.equal(Array.isArray(runGuidance.examples), true);
-  assert.equal(runGuidance.examples.some((entry) => entry.includes("Supported step ids:")), true);
-  assert.equal(runGuidance.examples.some((entry) => entry.includes("repeat-until")), true);
-  assert.equal(runGuidance.examples.some((entry) => entry.includes("\"result\"")), true);
-  assert.equal(runGuidance.examples.some((entry) => entry.includes("untilDeltaGte")), true);
-  assert.equal(runGuidance.examples.some((entry) => entry.includes("\"require\"")), true);
-});
-
-test("contract --core --search attr exposes target.attr guidance", () => {
-  const result = runCli(["contract", "--core", "--search", "attr"]);
-  assert.equal(result.status, 0);
-  const payload = parseJson(result.stdout);
-  assert.equal(payload.ok, true);
-  assert.equal(payload.commands.some((entry) => entry.id === "target.attr"), true);
-  const guidance = payload.guidance.find((entry) => entry.id === "target.attr");
-  assert.notEqual(guidance, undefined);
-  assert.equal(Array.isArray(guidance.examples), true);
-  assert.equal(guidance.examples.some((entry) => entry.includes("--name src")), true);
-});
-
-test("contract rejects incompatible mode flags", () => {
-  const result = runCli(["contract", "--core", "--full"]);
+test("contract rejects removed discovery flags", () => {
+  const result = runCli(["contract", "--search", "open"]);
   assert.equal(result.status, 1);
   const payload = parseJson(result.stdout);
   assert.equal(payload.ok, false);
   assert.equal(payload.code, "E_QUERY_INVALID");
-});
-
-test("contract --command tolerates extra mode/search flags and still resolves command payload", () => {
-  const result = runCli(["contract", "--command", "open", "--search", "open", "--core"]);
-  assert.equal(result.status, 0);
-  const payload = parseJson(result.stdout);
-  assert.equal(payload.ok, true);
-  assert.equal(payload.mode, "command");
-  assert.equal(payload.command.id, "open");
 });
 
 test("contract rejects mixed --command and --commands", () => {
@@ -382,7 +344,7 @@ test("contract --command unknown id returns recovery suggestions", () => {
   assert.equal(Array.isArray(payload.hints), true);
   assert.equal(payload.hints.some((hint) => hint.includes("Closest command ids:")), true);
   assert.equal(payload.recovery?.strategy, "discover-command-id");
-  assert.equal(typeof payload.recovery?.nextCommand, "string");
+  assert.equal(payload.recovery?.nextCommand, "surfwright contract");
 });
 
 test("target commands detect swapped handle types with typed recovery", () => {

@@ -30,7 +30,7 @@ Notes:
 - Browser-dependent contract tests live under `test/browser/` and are not part of `pnpm test`. Run `pnpm test:browser` locally when changing browser-executing commands.
 - For a fast operator-surface sanity pass across core browser commands, run `pnpm smoke` (deterministic `data:` pages + minimal network probes).
 - If `surfwright contract` changes intentionally, update the snapshot with `pnpm contract:snapshot:update` (this also auto-syncs skill `requires.contractFingerprint` in `skills/surfwright/skill.json` and `skills/surfwright.lock.json`).
-- `pnpm skill:validate` enforces a concise SurfWright SKILL protocol (contract-first lookup, no broad `--help` discovery drift).
+- `pnpm skill:validate` enforces a concise SurfWright SKILL protocol (contract-first lookup with compact `contract`/`contract --command*` usage).
 
 ## 3) Install/update local skill
 

@@ -64,7 +64,6 @@ Implemented Lean v1 boundary path:
 3. Decide daemon bypass:
    - `shouldBypassDaemon(...)` returns true for:
      - `contract` commands (cheap metadata lookups stay local; avoid daemon queue contention)
-     - `--help` / `-h` invocations (keep help deterministic even under daemon load)
      - internal commands (`__*`)
      - streaming tails: `target network-tail`, `target console-tail`
      - `run --plan -` (stdin plan; avoid buffering/forwarding complexity)

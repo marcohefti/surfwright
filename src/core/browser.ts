@@ -38,7 +38,7 @@ const CDP_STARTUP_POLL_MS = 125;
 const CDP_STARTUP_RETRY_BACKOFF_MS = 250;
 const MANAGED_STARTUP_TERMINATE_GRACE_MS = 500;
 const MANAGED_STARTUP_KILL_WAIT_MS = 250;
-const EXTENSION_RUNTIME_OBSERVED_WAIT_MS = 1500;
+const EXTENSION_RUNTIME_OBSERVED_WAIT_MS = 5000;
 const EXTENSION_RUNTIME_OBSERVED_POLL_MS = 50;
 
 export function managedStartupWaitPlan(timeoutMs: number): {
@@ -289,31 +289,38 @@ function normalizeFsPathForMatch(input: string): string {
 
 function readRuntimeInstalledExtensionsByPath(userDataDir: string): Map<string, string> {
   const map = new Map<string, string>();
-  const prefsPath = path.join(userDataDir, "Default", "Preferences");
-  if (!fs.existsSync(prefsPath)) {
-    return map;
-  }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(prefsPath, "utf8")) as {
-      extensions?: {
-        settings?: Record<string, { path?: string }>;
+  const prefsCandidates = [
+    path.join(userDataDir, "Default", "Secure Preferences"),
+    path.join(userDataDir, "Default", "Preferences"),
+    path.join(userDataDir, "Secure Preferences"),
+    path.join(userDataDir, "Preferences"),
+  ];
+  for (const prefsPath of prefsCandidates) {
+    if (!fs.existsSync(prefsPath)) {
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(fs.readFileSync(prefsPath, "utf8")) as {
+        extensions?: {
+          settings?: Record<string, { path?: string }>;
+        };
       };
-    };
-    const settings = parsed?.extensions?.settings;
-    if (!settings || typeof settings !== "object") {
-      return map;
-    }
-    for (const [runtimeId, raw] of Object.entries(settings)) {
-      if (!raw || typeof raw !== "object") {
+      const settings = parsed?.extensions?.settings;
+      if (!settings || typeof settings !== "object") {
         continue;
       }
-      if (typeof raw.path !== "string" || raw.path.length === 0) {
-        continue;
+      for (const [runtimeId, raw] of Object.entries(settings)) {
+        if (!raw || typeof raw !== "object") {
+          continue;
+        }
+        if (typeof raw.path !== "string" || raw.path.length === 0) {
+          continue;
+        }
+        map.set(normalizeFsPathForMatch(raw.path), runtimeId);
       }
-      map.set(normalizeFsPathForMatch(raw.path), runtimeId);
+    } catch {
+      continue;
     }
-  } catch {
-    return map;
   }
   return map;
 }

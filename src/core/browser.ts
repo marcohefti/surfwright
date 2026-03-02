@@ -382,6 +382,7 @@ function extensionIdFromUrl(rawUrl: string): string | null {
 async function inspectExtensionRuntimeTargets(cdpOrigin: string, timeoutMs: number): Promise<{
   cdpRuntimeIds: string[];
   cdpTargetUrls: string[];
+  cdpTargets: Array<{ runtimeId: string; url: string; path: string }>;
 }> {
   const controller = new AbortController();
   const deadlineMs = Math.max(200, Math.min(timeoutMs, EXTENSION_RUNTIME_CDP_PROBE_TIMEOUT_MS));
@@ -391,14 +392,15 @@ async function inspectExtensionRuntimeTargets(cdpOrigin: string, timeoutMs: numb
       signal: controller.signal,
     });
     if (!response.ok) {
-      return { cdpRuntimeIds: [], cdpTargetUrls: [] };
+      return { cdpRuntimeIds: [], cdpTargetUrls: [], cdpTargets: [] };
     }
     const payload = (await response.json()) as Array<{ url?: unknown }>;
     if (!Array.isArray(payload)) {
-      return { cdpRuntimeIds: [], cdpTargetUrls: [] };
+      return { cdpRuntimeIds: [], cdpTargetUrls: [], cdpTargets: [] };
     }
     const cdpTargetUrls: string[] = [];
     const runtimeIds = new Set<string>();
+    const cdpTargets = new Map<string, { runtimeId: string; url: string; path: string }>();
     for (const entry of payload) {
       if (!entry || typeof entry !== "object" || typeof entry.url !== "string") {
         continue;
@@ -408,18 +410,126 @@ async function inspectExtensionRuntimeTargets(cdpOrigin: string, timeoutMs: numb
       if (!id) {
         continue;
       }
+      let pathName = "/";
+      try {
+        const parsed = new URL(normalizedUrl);
+        const rawPath = parsed.pathname.trim();
+        if (rawPath.length > 0) {
+          pathName = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+        }
+      } catch {
+        pathName = "/";
+      }
       cdpTargetUrls.push(normalizedUrl);
       runtimeIds.add(id);
+      cdpTargets.set(`${id} ${normalizedUrl}`, {
+        runtimeId: id,
+        url: normalizedUrl,
+        path: pathName,
+      });
     }
     return {
       cdpRuntimeIds: Array.from(runtimeIds).sort(),
       cdpTargetUrls: Array.from(new Set(cdpTargetUrls)).sort(),
+      cdpTargets: Array.from(cdpTargets.values()),
     };
   } catch {
-    return { cdpRuntimeIds: [], cdpTargetUrls: [] };
+    return { cdpRuntimeIds: [], cdpTargetUrls: [], cdpTargets: [] };
   } finally {
     clearTimeout(timer);
   }
+}
+
+function normalizeManifestRuntimePath(input: string): string {
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    return "/";
+  }
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+function readExtensionRuntimePathHints(extensionPath: string): Set<string> {
+  const hints = new Set<string>();
+  const manifestPath = path.join(extensionPath, "manifest.json");
+  try {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as {
+      background?: {
+        service_worker?: unknown;
+        page?: unknown;
+        scripts?: unknown;
+      };
+    };
+    const background = manifest?.background;
+    if (!background || typeof background !== "object") {
+      return hints;
+    }
+    if (typeof background.service_worker === "string") {
+      hints.add(normalizeManifestRuntimePath(background.service_worker));
+    }
+    if (typeof background.page === "string") {
+      hints.add(normalizeManifestRuntimePath(background.page));
+    }
+    if (Array.isArray(background.scripts)) {
+      for (const candidate of background.scripts) {
+        if (typeof candidate === "string") {
+          hints.add(normalizeManifestRuntimePath(candidate));
+        }
+      }
+    }
+  } catch {
+    return hints;
+  }
+  return hints;
+}
+
+function resolveProjectedExtensionsFromCdpTargets(opts: {
+  projected: Array<{ id: string; path: string }>;
+  cdpTargets: Array<{ runtimeId: string; path: string }>;
+}): Map<string, string> {
+  const cdpPathsByRuntime = new Map<string, Set<string>>();
+  for (const target of opts.cdpTargets) {
+    const existing = cdpPathsByRuntime.get(target.runtimeId);
+    if (existing) {
+      existing.add(target.path);
+      continue;
+    }
+    cdpPathsByRuntime.set(target.runtimeId, new Set([target.path]));
+  }
+
+  const extensionCandidates = new Map<string, string[]>();
+  for (const extension of opts.projected) {
+    const hints = readExtensionRuntimePathHints(extension.path);
+    if (hints.size === 0) {
+      continue;
+    }
+    const candidateRuntimeIds: string[] = [];
+    for (const [runtimeId, paths] of cdpPathsByRuntime) {
+      for (const hint of hints) {
+        if (paths.has(hint)) {
+          candidateRuntimeIds.push(runtimeId);
+          break;
+        }
+      }
+    }
+    if (candidateRuntimeIds.length > 0) {
+      extensionCandidates.set(extension.id, Array.from(new Set(candidateRuntimeIds)).sort());
+    }
+  }
+
+  const resolved = new Map<string, string>();
+  for (const [extensionId, runtimeIds] of extensionCandidates) {
+    if (runtimeIds.length !== 1) {
+      continue;
+    }
+    const runtimeId = runtimeIds[0]!;
+    const matchingExtensions = Array.from(extensionCandidates.entries())
+      .filter((entry) => entry[1].includes(runtimeId))
+      .map((entry) => entry[0]);
+    if (matchingExtensions.length === 1) {
+      resolved.set(extensionId, runtimeId);
+    }
+  }
+  return resolved;
 }
 
 async function resolveRuntimeAppliedExtensions(opts: {
@@ -435,6 +545,7 @@ async function resolveRuntimeAppliedExtensions(opts: {
     preferenceRuntimeIds: string[];
     cdpRuntimeIds: string[];
     cdpTargetUrls: string[];
+    cdpMatchedExtensionIds: string[];
     observedWaitMs: number;
     cdpProbeUsed: boolean;
     verificationMode: ExtensionRuntimeVerificationMode;
@@ -443,16 +554,17 @@ async function resolveRuntimeAppliedExtensions(opts: {
   if (opts.projected.length === 0) {
     return {
       appliedExtensions: [],
-      diagnostics: {
-        checkedPreferencePaths: [],
-        readablePreferencePaths: [],
-        preferenceRuntimeIds: [],
-        cdpRuntimeIds: [],
-        cdpTargetUrls: [],
-        observedWaitMs: 0,
-        cdpProbeUsed: false,
-        verificationMode: resolveExtensionRuntimeVerificationMode(),
-      },
+        diagnostics: {
+          checkedPreferencePaths: [],
+          readablePreferencePaths: [],
+          preferenceRuntimeIds: [],
+          cdpRuntimeIds: [],
+          cdpTargetUrls: [],
+          cdpMatchedExtensionIds: [],
+          observedWaitMs: 0,
+          cdpProbeUsed: false,
+          verificationMode: resolveExtensionRuntimeVerificationMode(),
+        },
     };
   }
   const verificationMode = resolveExtensionRuntimeVerificationMode();
@@ -490,6 +602,7 @@ async function resolveRuntimeAppliedExtensions(opts: {
           preferenceRuntimeIds,
           cdpRuntimeIds: [],
           cdpTargetUrls: [],
+          cdpMatchedExtensionIds: [],
           observedWaitMs,
           cdpProbeUsed: false,
           verificationMode,
@@ -499,37 +612,28 @@ async function resolveRuntimeAppliedExtensions(opts: {
     await new Promise((resolve) => setTimeout(resolve, EXTENSION_RUNTIME_OBSERVED_POLL_MS));
   }
   const cdpObservation = await inspectExtensionRuntimeTargets(opts.cdpOrigin, opts.timeoutMs);
-  if (cdpObservation.cdpRuntimeIds.length > 0) {
-    const unresolved = applied
-      .map((entry, index) => ({ entry, index }))
-      .filter((item) => item.entry.state !== "runtime-installed");
-    const cdpIds = cdpObservation.cdpRuntimeIds;
-    if (opts.projected.length === 1 && unresolved.length === 1) {
-      const runtimeId = cdpIds[0] ?? null;
-      if (runtimeId) {
-        applied = applied.map((entry, index) =>
-          index !== unresolved[0].index
-            ? entry
-            : {
-                ...entry,
-                state: "runtime-installed",
-                runtimeId,
-              },
-        );
+  const unresolvedProjected = applied
+    .filter((entry) => entry.state !== "runtime-installed")
+    .map((entry) => ({ id: entry.id, path: entry.path }));
+  const cdpResolved = resolveProjectedExtensionsFromCdpTargets({
+    projected: unresolvedProjected,
+    cdpTargets: cdpObservation.cdpTargets,
+  });
+  if (cdpResolved.size > 0) {
+    applied = applied.map((entry) => {
+      if (entry.state === "runtime-installed") {
+        return entry;
       }
-    } else if (unresolved.length === opts.projected.length && cdpIds.length >= unresolved.length) {
-      applied = applied.map((entry, index) => {
-        const unresolvedIndex = unresolved.findIndex((candidate) => candidate.index === index);
-        if (unresolvedIndex === -1) {
-          return entry;
-        }
-        return {
-          ...entry,
-          state: "runtime-installed",
-          runtimeId: cdpIds[unresolvedIndex] ?? null,
-        };
-      });
-    }
+      const runtimeId = cdpResolved.get(entry.id);
+      if (!runtimeId) {
+        return entry;
+      }
+      return {
+        ...entry,
+        state: "runtime-installed",
+        runtimeId,
+      };
+    });
   }
   return {
     appliedExtensions: applied,
@@ -539,6 +643,7 @@ async function resolveRuntimeAppliedExtensions(opts: {
       preferenceRuntimeIds,
       cdpRuntimeIds: cdpObservation.cdpRuntimeIds,
       cdpTargetUrls: cdpObservation.cdpTargetUrls,
+      cdpMatchedExtensionIds: Array.from(cdpResolved.keys()).sort(),
       observedWaitMs,
       cdpProbeUsed: true,
       verificationMode,
@@ -657,6 +762,7 @@ export async function startManagedSession(
           preferenceRuntimeIds: resolvedExtensions.diagnostics.preferenceRuntimeIds,
           cdpRuntimeIds: resolvedExtensions.diagnostics.cdpRuntimeIds,
           cdpTargetUrls: resolvedExtensions.diagnostics.cdpTargetUrls,
+          cdpMatchedExtensionIds: resolvedExtensions.diagnostics.cdpMatchedExtensionIds,
           cdpProbeUsed: resolvedExtensions.diagnostics.cdpProbeUsed,
           observedWaitMs: resolvedExtensions.diagnostics.observedWaitMs,
         },

@@ -97,10 +97,10 @@ test("dot-command alias supports network subcommands", () => {
   assert.equal(tracePayload.code, "E_QUERY_INVALID");
 
   const extensionList = runCli(["extension.list"]);
-  assert.equal(extensionList.status, 0);
+  assert.equal(extensionList.status, 1);
   const extensionPayload = parseJson(extensionList.stdout);
-  assert.equal(extensionPayload.ok, true);
-  assert.equal(Array.isArray(extensionPayload.extensions), true);
+  assert.equal(extensionPayload.ok, false);
+  assert.equal(extensionPayload.code, "E_WORKSPACE_NOT_FOUND");
 });
 
 test("agent no-arg probes redirect to contract command lookup", () => {

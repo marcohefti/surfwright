@@ -216,7 +216,7 @@ const commandGuidance: NonNullable<CliContractReport["guidance"]> = [
   },
   {
     id: "open",
-    signature: "open(url) -> { sessionId, targetId, finalUrl, title, blockType }",
+    signature: "open(url) -> { sessionId, targetId, finalUrl, title, blockType, extensionSetFingerprint, appliedExtensions[] }",
     examples: ["surfwright open https://example.com --reuse active --wait-until domcontentloaded"],
     proofSchema: {
       version: 1,

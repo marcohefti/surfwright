@@ -21,6 +21,7 @@ Deterministic browser control with JSON-first outputs and explicit handles.
 - Keep default JSON output; do not parse prose.
 - Confirm required JSON schema via `surfwright contract --command <id>` only after a command-id miss.
 - Start headless unless explicitly instructed otherwise.
+- For workspace extension workflows, verify `open`/`session` payload `appliedExtensions[*].state == runtime-installed` before proceeding.
 - Treat non-zero exits as typed failures and branch on `code` (`retryable` when present).
 - Use one unique `--agent-id` per task.
 - Treat daemon queue overload codes (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) as backpressure.

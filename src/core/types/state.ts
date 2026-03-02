@@ -1,6 +1,18 @@
 import type { TargetNetworkCaptureStatus } from "../network-types.js";
 import type { BrowserMode, SessionKind, SessionPolicy } from "../types.js";
 
+export type SessionAppliedExtensionState = {
+  id: string;
+  name: string;
+  version: string;
+  path: string;
+  manifestVersion: number | null;
+  enabled: boolean;
+  buildFingerprint: string;
+  state: "runtime-installed" | "registry-only";
+  runtimeId: string | null;
+};
+
 export type SessionState = {
   sessionId: string;
   kind: SessionKind;
@@ -16,6 +28,8 @@ export type SessionState = {
   leaseTtlMs: number | null;
   managedUnreachableSince: string | null;
   managedUnreachableCount: number;
+  extensionSetFingerprint: string | null;
+  appliedExtensions: SessionAppliedExtensionState[];
   createdAt: string;
   lastSeenAt: string;
 };

@@ -24,6 +24,7 @@ function printExtensionSuccess(report: unknown, output: { json: boolean; pretty:
     reloaded?: unknown;
     removed?: unknown;
     missing?: unknown;
+    requiresSessionRestart?: unknown;
     extension?: { id?: unknown; name?: unknown } | null;
   };
   if (value.ok !== true) {
@@ -43,6 +44,9 @@ function printExtensionSuccess(report: unknown, output: { json: boolean; pretty:
   if (typeof value.missing === "boolean") {
     tokens.push(`missing=${value.missing ? "true" : "false"}`);
   }
+  if (typeof value.requiresSessionRestart === "boolean") {
+    tokens.push(`requiresSessionRestart=${value.requiresSessionRestart ? "true" : "false"}`);
+  }
   if (value.extension && typeof value.extension === "object") {
     if (typeof value.extension.id === "string" && value.extension.id.length > 0) {
       tokens.push(`extensionId=${value.extension.id}`);
@@ -59,7 +63,7 @@ function ensureExtensionCommand(program: Command): Command {
   if (existing) {
     return existing;
   }
-  return program.command("extension").description("Extension lifecycle controls with typed capability metadata");
+  return program.command("extension").description("Extension registry and deterministic managed-launch controls");
 }
 
 export function registerExtensionCommands(opts: RegisterExtensionCommandsOptions) {

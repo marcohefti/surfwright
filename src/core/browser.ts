@@ -30,6 +30,7 @@ import {
   type SessionState,
   type SurfwrightState,
 } from "./types.js";
+import { resolveManagedExtensionProjection } from "./extensions/index.js";
 
 const CDP_STARTUP_INITIAL_WAIT_MS = 6000;
 const CDP_STARTUP_MAX_WAIT_MS = 30000;
@@ -37,6 +38,8 @@ const CDP_STARTUP_POLL_MS = 125;
 const CDP_STARTUP_RETRY_BACKOFF_MS = 250;
 const MANAGED_STARTUP_TERMINATE_GRACE_MS = 500;
 const MANAGED_STARTUP_KILL_WAIT_MS = 250;
+const EXTENSION_RUNTIME_OBSERVED_WAIT_MS = 1500;
+const EXTENSION_RUNTIME_OBSERVED_POLL_MS = 50;
 
 export function managedStartupWaitPlan(timeoutMs: number): {
   firstAttemptStartupWaitMs: number;
@@ -136,6 +139,7 @@ export function buildManagedBrowserArgs(opts: {
   debugPort: number;
   userDataDir: string;
   browserMode: ManagedBrowserMode;
+  extensionPaths?: string[];
   platform?: NodeJS.Platform;
   noSandbox?: boolean;
 }): string[] {
@@ -148,6 +152,14 @@ export function buildManagedBrowserArgs(opts: {
     "--no-first-run",
     "--no-default-browser-check",
   ];
+  const extensionPaths = Array.isArray(opts.extensionPaths)
+    ? opts.extensionPaths.filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+    : [];
+  if (extensionPaths.length > 0) {
+    const csv = extensionPaths.join(",");
+    args.push(`--disable-extensions-except=${csv}`);
+    args.push(`--load-extension=${csv}`);
+  }
   if (platform === "linux") {
     args.push("--disable-dev-shm-usage");
     if (noSandbox) {
@@ -163,11 +175,13 @@ function launchDetachedBrowser(opts: {
   debugPort: number;
   userDataDir: string;
   browserMode: ManagedBrowserMode;
+  extensionPaths?: string[];
 }): number | null {
   const args = buildManagedBrowserArgs({
     debugPort: opts.debugPort,
     userDataDir: opts.userDataDir,
     browserMode: opts.browserMode,
+    extensionPaths: opts.extensionPaths,
   });
 
   try {
@@ -265,6 +279,79 @@ function cleanupManagedStartupArtifacts(userDataDir: string): void {
   }
 }
 
+function normalizeFsPathForMatch(input: string): string {
+  const normalized = path.resolve(input);
+  if (process.platform === "win32") {
+    return normalized.toLowerCase();
+  }
+  return normalized;
+}
+
+function readRuntimeInstalledExtensionsByPath(userDataDir: string): Map<string, string> {
+  const map = new Map<string, string>();
+  const prefsPath = path.join(userDataDir, "Default", "Preferences");
+  if (!fs.existsSync(prefsPath)) {
+    return map;
+  }
+  try {
+    const parsed = JSON.parse(fs.readFileSync(prefsPath, "utf8")) as {
+      extensions?: {
+        settings?: Record<string, { path?: string }>;
+      };
+    };
+    const settings = parsed?.extensions?.settings;
+    if (!settings || typeof settings !== "object") {
+      return map;
+    }
+    for (const [runtimeId, raw] of Object.entries(settings)) {
+      if (!raw || typeof raw !== "object") {
+        continue;
+      }
+      if (typeof raw.path !== "string" || raw.path.length === 0) {
+        continue;
+      }
+      map.set(normalizeFsPathForMatch(raw.path), runtimeId);
+    }
+  } catch {
+    return map;
+  }
+  return map;
+}
+
+async function resolveRuntimeAppliedExtensions(opts: {
+  userDataDir: string;
+  projected: ReturnType<typeof resolveManagedExtensionProjection>["extensions"];
+  timeoutMs: number;
+}): Promise<SessionState["appliedExtensions"]> {
+  if (opts.projected.length === 0) {
+    return [];
+  }
+  const deadline = Date.now() + Math.max(200, Math.min(EXTENSION_RUNTIME_OBSERVED_WAIT_MS, opts.timeoutMs));
+  let applied: SessionState["appliedExtensions"] = [];
+  while (Date.now() <= deadline) {
+    const installedByPath = readRuntimeInstalledExtensionsByPath(opts.userDataDir);
+    applied = opts.projected.map((entry) => {
+      const runtimeId = installedByPath.get(normalizeFsPathForMatch(entry.path)) ?? null;
+      return {
+        id: entry.id,
+        name: entry.name,
+        version: entry.version,
+        path: entry.path,
+        manifestVersion: entry.manifestVersion,
+        enabled: entry.enabled,
+        buildFingerprint: entry.buildFingerprint,
+        state: runtimeId ? "runtime-installed" : "registry-only",
+        runtimeId,
+      };
+    });
+    if (applied.every((entry) => entry.state === "runtime-installed")) {
+      return applied;
+    }
+    await new Promise((resolve) => setTimeout(resolve, EXTENSION_RUNTIME_OBSERVED_POLL_MS));
+  }
+  return applied;
+}
+
 export async function startManagedSession(
   opts: {
     sessionId: string;
@@ -281,6 +368,7 @@ export async function startManagedSession(
   if (!executablePath) {
     throw new CliError("E_BROWSER_NOT_FOUND", "No compatible Chrome/Chromium binary found; run doctor for candidates");
   }
+  const extensionProjection = resolveManagedExtensionProjection();
 
   fs.mkdirSync(opts.userDataDir, { recursive: true });
   const startupPlan = managedStartupWaitPlan(timeoutMs);
@@ -295,6 +383,7 @@ export async function startManagedSession(
       debugPort,
       userDataDir: opts.userDataDir,
       browserMode,
+      extensionPaths: extensionProjection.loadPaths,
     });
     if (browserPid === null) {
       throw new CliError("E_BROWSER_START_FAILED", "Failed to spawn Chrome/Chromium process", {
@@ -343,29 +432,55 @@ export async function startManagedSession(
     await new Promise((resolve) => setTimeout(resolve, startupPlan.retryBackoffMs));
     started = await attemptStart(await allocateFreePort(), startupPlan.retryAttemptStartupWaitMs, 2);
   }
-
-  const createdAt = opts.createdAt ?? nowIso();
-  return withSessionHeartbeat(
-    {
-      sessionId: opts.sessionId,
-      kind: "managed",
-      policy: normalizeSessionPolicy(opts.policy) ?? defaultSessionPolicyForKind("managed"),
-      browserMode,
-      cdpOrigin: started.cdpOrigin,
-      debugPort: started.debugPort,
+  try {
+    const appliedExtensions = await resolveRuntimeAppliedExtensions({
       userDataDir: opts.userDataDir,
-      profile: typeof opts.profile === "string" && opts.profile.trim().length > 0 ? opts.profile.trim() : null,
-      browserPid: started.browserPid,
-      ownerId: currentAgentId(),
-      leaseExpiresAt: null,
-      leaseTtlMs: null,
-      managedUnreachableSince: null,
-      managedUnreachableCount: 0,
+      projected: extensionProjection.extensions,
+      timeoutMs,
+    });
+    const notInstalled = appliedExtensions.filter((entry) => entry.state !== "runtime-installed");
+    if (notInstalled.length > 0) {
+      throw new CliError("E_EXTENSION_RUNTIME_NOT_LOADED", "Configured extension set was not mounted in runtime", {
+        hints: [
+          "Confirm each extension path still exists and contains manifest.json plus built assets.",
+          "Run `surfwright extension reload <extensionRef>` after rebuilding unpacked extension assets.",
+          "Re-run `surfwright open <url> --profile <name>` to force deterministic profile restart.",
+        ],
+        hintContext: {
+          missingExtensionIds: notInstalled.map((entry) => entry.id).join(","),
+          missingExtensionNames: notInstalled.map((entry) => entry.name).join(","),
+          userDataDir: opts.userDataDir,
+        },
+      });
+    }
+    const createdAt = opts.createdAt ?? nowIso();
+    return withSessionHeartbeat(
+      {
+        sessionId: opts.sessionId,
+        kind: "managed",
+        policy: normalizeSessionPolicy(opts.policy) ?? defaultSessionPolicyForKind("managed"),
+        browserMode,
+        cdpOrigin: started.cdpOrigin,
+        debugPort: started.debugPort,
+        userDataDir: opts.userDataDir,
+        profile: typeof opts.profile === "string" && opts.profile.trim().length > 0 ? opts.profile.trim() : null,
+        browserPid: started.browserPid,
+        ownerId: currentAgentId(),
+        leaseExpiresAt: null,
+        leaseTtlMs: null,
+        managedUnreachableSince: null,
+        managedUnreachableCount: 0,
+        extensionSetFingerprint: extensionProjection.extensionSetFingerprint,
+        appliedExtensions,
+        createdAt,
+        lastSeenAt: createdAt,
+      },
       createdAt,
-      lastSeenAt: createdAt,
-    },
-    createdAt,
-  );
+    );
+  } catch (error) {
+    await terminateBrowserProcessStrict(started.browserPid, MANAGED_STARTUP_TERMINATE_GRACE_MS);
+    throw error;
+  }
 }
 
 export async function ensureSessionReachable(
@@ -379,7 +494,10 @@ export async function ensureSessionReachable(
   restarted: boolean;
 }> {
   const desiredMode = opts?.browserMode;
-  if (session.kind === "managed" && desiredMode && session.browserMode !== desiredMode) {
+  const desiredExtensionSetFingerprint = session.kind === "managed" ? resolveManagedExtensionProjection().extensionSetFingerprint : null;
+  const extensionDrifted =
+    session.kind === "managed" && (session.extensionSetFingerprint ?? null) !== (desiredExtensionSetFingerprint ?? null);
+  if (session.kind === "managed" && ((desiredMode && session.browserMode !== desiredMode) || extensionDrifted)) {
     await terminateBrowserProcessStrict(session.browserPid, MANAGED_STARTUP_TERMINATE_GRACE_MS);
     const debugPort = session.debugPort ?? (await allocateFreePort());
     const userDataDir = session.userDataDir ?? defaultSessionUserDataDir(session.sessionId);

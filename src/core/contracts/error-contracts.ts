@@ -10,6 +10,10 @@ export const errorContracts: CliErrorContract[] = [
     retryable: false,
   },
   { code: "E_PROFILE_LOCKED", message: "profile is currently in use by another process", retryable: true },
+  { code: "E_EXTENSION_PATH_INVALID", message: "Extension path is invalid", retryable: false },
+  { code: "E_EXTENSION_MANIFEST_INVALID", message: "Extension manifest is invalid", retryable: false },
+  { code: "E_EXTENSION_ASSET_MISSING", message: "Registered extension assets are missing", retryable: false },
+  { code: "E_EXTENSION_RUNTIME_NOT_LOADED", message: "Configured extension set was not mounted in runtime", retryable: true },
   {
     code: "E_SESSION_ID_INVALID",
     message: "sessionId may only contain letters, numbers, dot, underscore, and dash",

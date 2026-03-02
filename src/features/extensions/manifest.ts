@@ -4,22 +4,22 @@ export const extensionCommandManifest: CliCommandContract[] = [
   {
     id: "extension.load",
     usage: "surfwright extension load <path> [--no-json] [--pretty] [--session <id>]",
-    summary: "register unpacked extension metadata with typed headless capability/fallback info",
+    summary: "register unpacked extension build for deterministic managed session mounting",
   },
   {
     id: "extension.list",
     usage: "surfwright extension list [--no-json] [--pretty]",
-    summary: "list registered extension metadata",
+    summary: "list registered extensions with build and set fingerprints",
   },
   {
     id: "extension.reload",
     usage: "surfwright extension reload <extensionRef> [--fail-if-missing] [--no-json] [--pretty] [--session <id>]",
-    summary: "mark a registered extension as reloaded and enabled (idempotent when missing)",
+    summary: "refresh extension build fingerprint and mark it enabled (idempotent when missing)",
   },
   {
     id: "extension.uninstall",
     usage: "surfwright extension uninstall <extensionRef> [--fail-if-missing] [--no-json] [--pretty] [--session <id>]",
-    summary: "remove a registered extension entry (idempotent when missing)",
+    summary: "remove a registered extension from the managed launch set",
   },
 ];
 

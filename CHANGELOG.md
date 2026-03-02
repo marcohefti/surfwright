@@ -5,6 +5,9 @@ All notable changes to SurfWright are documented here.
 ## [Unreleased]
 
 ### Added
+- [extensions] Added deterministic managed-launch extension coupling from workspace registry (`extension load|reload` + managed launch flags) with runtime-verified `appliedExtensions[]` and session/open `extensionSetFingerprint` evidence.
+- [extensions] Added extension drift restart semantics for managed sessions: extension set fingerprint changes now force deterministic managed restart on next ensure/open.
+- [errors] Added typed extension lifecycle/runtime failures: `E_EXTENSION_PATH_INVALID`, `E_EXTENSION_MANIFEST_INVALID`, `E_EXTENSION_ASSET_MISSING`, and `E_EXTENSION_RUNTIME_NOT_LOADED`.
 - [daemon] Added lane-based daemon scheduler defaults with explicit backpressure contracts (`laneConcurrency=1`, `globalActiveLanes=8`, `laneQueueDepth=8`, `queueWaitMs=2000`) and typed queue failure routing (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`).
 - [daemon] Added shared runtime access + runtime pool state machine (`absent|warming|ready|degraded|draining|closed`) with contract coverage for no-double-warm, timeout recycle, repeated-timeout hard-close, and session mismatch fail-closed behavior.
 - [daemon] Added local diagnostics sink files (`diagnostics/daemon.ndjson`, `diagnostics/daemon.metrics.ndjson`) with default-off verbose gating (`SURFWRIGHT_DEBUG_LOGS=1`) and required daemon metric emission.
@@ -75,6 +78,7 @@ All notable changes to SurfWright are documented here.
 - [cli] Added npm scripts `bench:loop:run`, `bench:loop:score`, and `bench:loop:history`.
 
 ### Changed
+- [extensions] `extension.*` commands are now workspace-scoped and represent managed launch source-of-truth (no registry-only capability/fallback mode).
 - [cli] Disabled built-in Commander help surfaces (`--help`, `-h`, and `help` command); command discovery is now contract-only.
 - [contract] Tightened `contract` surface to compact default + explicit `--command`/`--commands` lookups; removed broad `--core`/`--search` modes from runtime CLI.
 - [contract] `contract` default now returns a minimal bootstrap envelope; full command/error catalogs moved behind explicit `contract --full`.

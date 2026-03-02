@@ -75,6 +75,18 @@ export type SessionPolicy = "ephemeral" | "persistent";
 export type SessionSource = "explicit" | "target-inferred" | "implicit-new";
 export type BrowserMode = "headless" | "headed" | "unknown";
 export type ManagedBrowserMode = Exclude<BrowserMode, "unknown">;
+export type AppliedExtensionState = "runtime-installed" | "registry-only";
+export type AppliedExtensionReport = {
+  id: string;
+  name: string;
+  version: string;
+  path: string;
+  manifestVersion: number | null;
+  enabled: boolean;
+  buildFingerprint: string;
+  state: AppliedExtensionState;
+  runtimeId: string | null;
+};
 
 export type WorkspaceInfoReport = {
   ok: true;
@@ -138,6 +150,8 @@ export type OpenReport = {
   sessionSource: SessionSource;
   browserMode: BrowserMode;
   profile: string | null;
+  extensionSetFingerprint: string | null;
+  appliedExtensions: AppliedExtensionReport[];
   targetId: string;
   actionId: string;
   requestedUrl: string;
@@ -164,6 +178,8 @@ export type SessionReport = {
   cdpOrigin: string;
   browserMode: BrowserMode;
   profile: string | null;
+  extensionSetFingerprint: string | null;
+  appliedExtensions: AppliedExtensionReport[];
   active: boolean;
   created: boolean;
   restarted: boolean;
@@ -177,6 +193,8 @@ export type SessionListReport = {
     cdpOrigin: string;
     browserMode: BrowserMode;
     profile: string | null;
+    extensionSetFingerprint: string | null;
+    appliedExtensions: AppliedExtensionReport[];
     lastSeenAt: string;
   }>;
 };

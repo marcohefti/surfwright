@@ -15,6 +15,8 @@ export function buildSessionReport(
     cdpOrigin: session.cdpOrigin,
     browserMode: session.browserMode,
     profile: session.profile ?? null,
+    extensionSetFingerprint: session.extensionSetFingerprint ?? null,
+    appliedExtensions: session.appliedExtensions,
     active: meta.active,
     created: meta.created,
     restarted: meta.restarted,

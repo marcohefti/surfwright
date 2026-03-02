@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { allocateFreePort, isCdpEndpointReachable, killManagedBrowserProcessTree, startManagedSession } from "../../browser.js";
+import { resolveManagedExtensionProjection } from "../../extensions/index.js";
 import { CliError } from "../../errors.js";
 import { nowIso, readState } from "../../state/index.js";
 import type { ManagedBrowserMode, SessionState } from "../../types.js";
@@ -9,7 +10,7 @@ import { currentAgentId, withSessionHeartbeat } from "../../session/index.js";
 import { requireWorkspaceDir, workspaceProfilesDir, workspaceProfileSessionsDir } from "../../workspace/index.js";
 
 const PROFILE_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
-const PROFILE_SESSION_META_VERSION = 1;
+const PROFILE_SESSION_META_VERSION = 2;
 
 const PROFILE_LOCK_RETRY_MS = 40;
 const PROFILE_LOCK_TIMEOUT_MS = 2500;
@@ -25,6 +26,8 @@ type ProfileSessionMeta = {
   browserMode: "headless" | "headed";
   startedAt: string;
   ownerId: string | null;
+  extensionSetFingerprint: string | null;
+  appliedExtensions: SessionState["appliedExtensions"];
 };
 
 function profileSessionId(profile: string): string {
@@ -79,6 +82,50 @@ function readMeta(workspaceDir: string, profile: string): ProfileSessionMeta | n
     ) {
       return null;
     }
+    const rawAppliedExtensions = Array.isArray(parsed.appliedExtensions) ? parsed.appliedExtensions : [];
+    const appliedExtensions: SessionState["appliedExtensions"] = rawAppliedExtensions
+      .filter((entry) => typeof entry === "object" && entry !== null)
+      .map((entry) => {
+        const value = entry as {
+          id?: unknown;
+          name?: unknown;
+          version?: unknown;
+          path?: unknown;
+          manifestVersion?: unknown;
+          enabled?: unknown;
+          buildFingerprint?: unknown;
+          state?: unknown;
+          runtimeId?: unknown;
+        };
+        if (
+          typeof value.id !== "string" ||
+          value.id.length === 0 ||
+          typeof value.name !== "string" ||
+          value.name.length === 0 ||
+          typeof value.version !== "string" ||
+          value.version.length === 0 ||
+          typeof value.path !== "string" ||
+          value.path.length === 0 ||
+          typeof value.enabled !== "boolean" ||
+          typeof value.buildFingerprint !== "string" ||
+          value.buildFingerprint.length === 0
+        ) {
+          return null;
+        }
+        return {
+          id: value.id,
+          name: value.name,
+          version: value.version,
+          path: value.path,
+          manifestVersion:
+            typeof value.manifestVersion === "number" && Number.isFinite(value.manifestVersion) ? value.manifestVersion : null,
+          enabled: value.enabled,
+          buildFingerprint: value.buildFingerprint,
+          state: value.state === "runtime-installed" ? "runtime-installed" : "registry-only",
+          runtimeId: typeof value.runtimeId === "string" && value.runtimeId.length > 0 ? value.runtimeId : null,
+        };
+      })
+      .filter((entry): entry is SessionState["appliedExtensions"][number] => entry !== null);
     return {
       version: PROFILE_SESSION_META_VERSION,
       profile,
@@ -89,6 +136,11 @@ function readMeta(workspaceDir: string, profile: string): ProfileSessionMeta | n
       browserMode: parsed.browserMode,
       startedAt: parsed.startedAt,
       ownerId: typeof parsed.ownerId === "string" && parsed.ownerId.length > 0 ? parsed.ownerId : null,
+      extensionSetFingerprint:
+        typeof parsed.extensionSetFingerprint === "string" && parsed.extensionSetFingerprint.length > 0
+          ? parsed.extensionSetFingerprint
+          : null,
+      appliedExtensions,
     };
   } catch {
     return null;
@@ -186,12 +238,17 @@ export async function ensureProfileManagedSession(opts: {
   fs.mkdirSync(workspaceProfileSessionsDir(workspaceDir), { recursive: true });
   const sessionId = profileSessionId(profile);
   const desiredMode: ManagedBrowserMode = opts.browserMode ?? "headless";
+  const desiredExtensions = resolveManagedExtensionProjection();
+  const desiredExtensionSetFingerprint = desiredExtensions.extensionSetFingerprint;
 
   await acquireLockOrThrow(workspaceDir, profile, opts.timeoutMs);
   try {
     const existing = readMeta(workspaceDir, profile);
     if (existing && isProcessAlive(existing.browserPid) && (await isCdpEndpointReachable(existing.cdpOrigin, opts.timeoutMs))) {
-      if (existing.browserMode !== desiredMode) {
+      if (
+        existing.browserMode !== desiredMode ||
+        (existing.extensionSetFingerprint ?? null) !== (desiredExtensionSetFingerprint ?? null)
+      ) {
         killManagedBrowserProcessTree(existing.browserPid, "SIGTERM");
         removeMeta(workspaceDir, profile);
       } else {
@@ -210,6 +267,8 @@ export async function ensureProfileManagedSession(opts: {
           leaseTtlMs: null,
           managedUnreachableSince: null,
           managedUnreachableCount: 0,
+          extensionSetFingerprint: existing.extensionSetFingerprint ?? null,
+          appliedExtensions: existing.appliedExtensions,
           createdAt: existing.startedAt,
           lastSeenAt: nowIso(),
         };
@@ -246,6 +305,8 @@ export async function ensureProfileManagedSession(opts: {
       browserMode: created.browserMode === "headed" ? "headed" : "headless",
       startedAt: created.createdAt,
       ownerId: currentAgentId(),
+      extensionSetFingerprint: created.extensionSetFingerprint ?? null,
+      appliedExtensions: created.appliedExtensions,
     });
     return { session: created, created: true, restarted: false };
   } finally {

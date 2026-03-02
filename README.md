@@ -137,6 +137,7 @@ surfwright skill install
 
 - `workspace.*`: project-local browser profiles and profile locks.
 - `session.*`: create/reuse/attach/clear browser sessions.
+- `extension.*`: register/reload/uninstall unpacked extension builds for managed launch coupling.
 - `open`: open a URL and get a `targetId` + `sessionId`.
 - `target.*`: inspect/read/click/eval/network against one explicit target.
 - `run`: execute a JSON plan and optionally record/replay it.
@@ -226,6 +227,8 @@ surfwright target download <targetId> --text "Export CSV" --fallback-to-fetch --
 `target find` match rows include `text`, `visible`, `selectorHint`, `href`, and `tag`.
 `target attr` reads one matched element attribute by deterministic index (`--index|--nth`) and resolves URL-like attributes (`href|src|action|...`) to absolute URLs.
 `open --ensure-session <off|if-missing|fresh>` can bootstrap/fork managed sessions for `open` without a separate `session` command (`--profile` cannot be combined).
+`open` and `session.*` managed reports include additive extension-runtime evidence: `extensionSetFingerprint` plus `appliedExtensions[]` (`state=runtime-installed|registry-only`).
+Managed session reachability checks restart deterministically when configured extension set fingerprint drifts (for example after `extension reload` or rebuilt unpacked assets).
 `target snapshot --mode orient` now includes additive counters (`headingsCount`, `buttonsCount`, `linksCount`, `navCount`) and optional count controls (`--count-scope <full|bounded>`, `--count-filter headings,buttons,links,nav`).
 `target click --proof` now includes additive `proof.countAfter` for selector-mode clicks (when post-action counting is available).
 `target click --count-after` adds additive top-level `countAfter` without enabling full proof payloads; pair with `--expect-count-after <n>` for typed post-click assertions.
@@ -260,6 +263,18 @@ surfwright workspace init
 surfwright open https://github.com/login --profile auth --browser-mode headed
 surfwright open https://github.com --profile auth
 ```
+
+Use deterministic unpacked extension coupling with workspace profiles:
+
+```bash
+surfwright workspace init
+surfwright extension load ./dist/my-unpacked-extension
+surfwright open https://example.com --profile auth
+surfwright extension reload my-unpacked-extension
+surfwright open https://example.com --profile auth
+```
+
+`extension load|reload` updates the managed launch set. The next managed ensure/open applies the latest extension build automatically; if the fingerprint changed, SurfWright restarts the managed profile session and reports the applied runtime set in `appliedExtensions`.
 
 Attach to remote CDP endpoints (HTTP(S) discovery URL or direct WS endpoint):
 

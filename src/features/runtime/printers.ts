@@ -111,6 +111,11 @@ export function printOpenSuccess(report: Record<string, unknown>, opts: RuntimeO
   const url = typeof report.url === "string" ? report.url : "unknown";
   const browserMode = typeof report.browserMode === "string" ? report.browserMode : null;
   const profile = typeof report.profile === "string" ? report.profile : null;
+  const extensionSetFingerprint = typeof report.extensionSetFingerprint === "string" ? report.extensionSetFingerprint : null;
+  const appliedExtensions =
+    Array.isArray(report.appliedExtensions) && Number.isFinite(report.appliedExtensions.length)
+      ? report.appliedExtensions.length
+      : null;
   process.stdout.write(
     [
       "ok",
@@ -121,6 +126,8 @@ export function printOpenSuccess(report: Record<string, unknown>, opts: RuntimeO
       `url=${url}`,
       ...(browserMode ? [`browserMode=${browserMode}`] : []),
       ...(profile ? [`profile=${profile}`] : []),
+      ...(extensionSetFingerprint ? [`extensionSetFingerprint=${extensionSetFingerprint}`] : []),
+      ...(typeof appliedExtensions === "number" ? [`appliedExtensions=${appliedExtensions}`] : []),
     ].join(" ") + "\n",
   );
 }
@@ -153,6 +160,8 @@ export function printSessionSuccess(report: SessionReport | SessionListReport | 
       `kind=${report.kind}`,
       `browserMode=${report.browserMode}`,
       ...(report.profile ? [`profile=${report.profile}`] : []),
+      ...(report.extensionSetFingerprint ? [`extensionSetFingerprint=${report.extensionSetFingerprint}`] : []),
+      `appliedExtensions=${report.appliedExtensions.length}`,
       `active=${report.active ? "true" : "false"}`,
       `created=${report.created ? "true" : "false"}`,
       `restarted=${report.restarted ? "true" : "false"}`,

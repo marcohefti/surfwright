@@ -319,6 +319,8 @@ export async function sessionAttach(opts: {
       leaseTtlMs,
       managedUnreachableSince: null,
       managedUnreachableCount: 0,
+      extensionSetFingerprint: null,
+      appliedExtensions: [],
       createdAt: attachedAt,
       lastSeenAt: attachedAt,
     };
@@ -365,6 +367,8 @@ export function sessionList(): SessionListReport {
     cdpOrigin: session.cdpOrigin,
     browserMode: session.browserMode,
     profile: session.profile ?? null,
+    extensionSetFingerprint: session.extensionSetFingerprint ?? null,
+    appliedExtensions: session.appliedExtensions,
     lastSeenAt: session.lastSeenAt,
   }));
   return {

@@ -25,7 +25,7 @@ import { registerSessionClearCommand } from "./commands/session-clear.js";
 import { registerStateMaintenanceCommands } from "./commands/state-maintenance.js";
 import { registerUpdateLifecycleCommands } from "./commands/update-lifecycle.js";
 import { buildContractOutput } from "./contract-output.js";
-import { resolveContractCommandIdsOrThrow, resolveContractCommandOrThrow } from "./contract-command.js";
+import { resolveContractCommandIdsOrThrow, resolveContractCommandOrThrow, resolveContractProfileOrThrow } from "./contract-command.js";
 import {
   printContractReport,
   printDoctorReport,
@@ -73,33 +73,43 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
     .command("contract")
     .description(contractMeta.summary)
     .option("--full", "Return full command/error id catalogs (higher token cost)", false)
+    .option("--profile <id>", "Return compact schema bundle for profile id (browser-core)")
     .option("--command <id>", "Return compact schema for one command id (flags, positionals, examples)")
     .option("--commands <csv>", "Return compact schemas for multiple command ids (comma-separated)")
-    .action((options: { full?: boolean; command?: string; commands?: string }) => {
+    .action((options: { full?: boolean; profile?: string; command?: string; commands?: string }) => {
       const output = ctx.globalOutputOpts();
       try {
         const rawCommandLookup = typeof options.command === "string" ? options.command.trim() : "";
         const rawCommandsLookup = typeof options.commands === "string" ? options.commands.trim() : "";
+        const rawProfileLookup = typeof options.profile === "string" ? options.profile.trim() : "";
         const full = Boolean(options.full);
-        if (rawCommandLookup.length > 0 && rawCommandsLookup.length > 0) {
-          throw queryInvalid("contract accepts either --full, --command, or --commands");
-        }
-        if (full && (rawCommandLookup.length > 0 || rawCommandsLookup.length > 0)) {
-          throw queryInvalid("contract accepts either --full, --command, or --commands");
+        const modeSelections = [
+          full,
+          rawProfileLookup.length > 0,
+          rawCommandLookup.length > 0,
+          rawCommandsLookup.length > 0,
+        ].filter(Boolean).length;
+        if (modeSelections > 1) {
+          throw queryInvalid("contract accepts one mode: --full | --profile | --command | --commands");
         }
         const report = getCliContractReport(ctx.readPackageVersion());
+        let profileId = "";
         let commandId = "";
         let commandIds: string[] = [];
+        if (rawProfileLookup.length > 0) {
+          profileId = resolveContractProfileOrThrow(rawProfileLookup);
+        }
         if (rawCommandLookup.length > 0) {
           commandId = resolveContractCommandOrThrow(rawCommandLookup, report.commands);
         }
         if (rawCommandsLookup.length > 0) {
           commandIds = resolveContractCommandIdsOrThrow(rawCommandsLookup, report.commands);
         }
-        const mode = commandId.length > 0 ? "command" : commandIds.length > 0 ? "commands" : full ? "full" : "compact";
+        const mode = profileId.length > 0 ? "profile" : commandId.length > 0 ? "command" : commandIds.length > 0 ? "commands" : full ? "full" : "compact";
         const outReport = buildContractOutput({
           report,
           mode,
+          profileId,
           commandId,
           commandIds,
         });

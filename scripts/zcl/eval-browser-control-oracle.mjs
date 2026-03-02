@@ -5,6 +5,7 @@ import path from 'node:path';
 
 const CODE_FAIL = 'ZCL_E_CAMPAIGN_ORACLE_EVALUATION_FAILED';
 const CODE_ERROR = 'ZCL_E_CAMPAIGN_ORACLE_EVALUATION_ERROR';
+const LOCAL_DISCOVERY_GUARD_ENV = 'ZCL_GUARD_LOCAL_DISCOVERY';
 
 main();
 
@@ -122,6 +123,8 @@ function evaluateOracle(oracle, proof, attemptDir) {
 
   const traceFailures = evaluateTraceRules(oracle, attemptDir);
   failures.push(...traceFailures);
+  const localDiscoveryFailures = evaluateLocalDiscoveryGuard(attemptDir);
+  failures.push(...localDiscoveryFailures);
 
   return failures;
 }
@@ -209,6 +212,143 @@ function evaluateTraceRules(oracle, attemptDir) {
     }
   }
   return failures;
+}
+
+function evaluateLocalDiscoveryGuard(attemptDir) {
+  const guard = resolveLocalDiscoveryGuard(attemptDir);
+  if (guard.mode === 'off') {
+    return [];
+  }
+  if (guard.mode === 'invalid') {
+    return [`invalid ${LOCAL_DISCOVERY_GUARD_ENV} value: ${guard.raw}`];
+  }
+
+  const tracePath = path.join(attemptDir, 'tool.calls.jsonl');
+  if (!existsSync(tracePath)) {
+    return guard.mode === 'fail' ? ['tool.calls.jsonl is required for local discovery guard'] : [];
+  }
+
+  const startCwd = guard.startCwd;
+  if (typeof startCwd !== 'string' || startCwd.trim().length === 0) {
+    return guard.mode === 'fail' ? ['attempt.runtime.env.json runtime.startCwd is required for local discovery guard'] : [];
+  }
+
+  const violations = readLocalDiscoveryViolations({
+    tracePath,
+    startCwd: startCwd.trim(),
+  });
+  if (violations.length === 0 || guard.mode === 'warn') {
+    return [];
+  }
+  return [trim(`local discovery guard violated: ${violations.slice(0, 4).join(' | ')}`, 800)];
+}
+
+function resolveLocalDiscoveryGuard(attemptDir) {
+  const runtimeEnvPath = path.join(attemptDir, 'attempt.runtime.env.json');
+  let runtimeEnv = null;
+  if (existsSync(runtimeEnvPath)) {
+    runtimeEnv = readJson(runtimeEnvPath);
+  }
+  const explicitMode = runtimeEnv?.env?.explicit?.[LOCAL_DISCOVERY_GUARD_ENV];
+  const rawValue = typeof explicitMode === 'string' ? explicitMode : process.env[LOCAL_DISCOVERY_GUARD_ENV];
+  const normalized = String(rawValue || '').trim().toLowerCase();
+  if (!normalized || normalized === 'off' || normalized === '0' || normalized === 'false' || normalized === 'no') {
+    return { mode: 'off', raw: normalized, startCwd: runtimeEnv?.runtime?.startCwd ?? '' };
+  }
+  if (normalized === 'warn' || normalized === 'warning') {
+    return { mode: 'warn', raw: normalized, startCwd: runtimeEnv?.runtime?.startCwd ?? '' };
+  }
+  if (
+    normalized === 'fail' ||
+    normalized === 'strict' ||
+    normalized === '1' ||
+    normalized === 'true' ||
+    normalized === 'yes' ||
+    normalized === 'on'
+  ) {
+    return { mode: 'fail', raw: normalized, startCwd: runtimeEnv?.runtime?.startCwd ?? '' };
+  }
+  return { mode: 'invalid', raw: normalized, startCwd: runtimeEnv?.runtime?.startCwd ?? '' };
+}
+
+function readLocalDiscoveryViolations({ tracePath, startCwd }) {
+  const raw = readFileSync(tracePath, 'utf8');
+  const violations = [];
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+    let event;
+    try {
+      event = JSON.parse(trimmed);
+    } catch {
+      continue;
+    }
+    if (event?.op !== 'exec_command_begin') {
+      continue;
+    }
+    const msg = event?.input?.payload?.msg ?? {};
+    const cwd = typeof msg.cwd === 'string' ? msg.cwd : '';
+    const command = extractCommandText(event);
+    const parsed = Array.isArray(msg.parsed_cmd) ? msg.parsed_cmd : [];
+    for (const entry of parsed) {
+      const type = typeof entry?.type === 'string' ? entry.type : '';
+      if (type !== 'read' && type !== 'search' && type !== 'list_files') {
+        continue;
+      }
+      const pathHint = typeof entry?.path === 'string' ? entry.path.trim() : '';
+      const commandHint = typeof entry?.cmd === 'string' ? entry.cmd.trim() : command;
+      const resolvedPath = resolveDiscoveryPath(pathHint, cwd);
+      if (isAllowedDiscoveryPath(resolvedPath, startCwd, commandHint)) {
+        continue;
+      }
+      const location = resolvedPath || pathHint || cwd || '<unknown>';
+      violations.push(`${type}:${location}:${trim(commandHint, 140)}`);
+    }
+  }
+  return violations;
+}
+
+function resolveDiscoveryPath(pathHint, cwd) {
+  const value = String(pathHint || '').trim();
+  if (!value) {
+    return '';
+  }
+  const expanded = value.startsWith('~/') ? path.join(process.env.HOME || '', value.slice(2)) : value;
+  if (path.isAbsolute(expanded)) {
+    return path.resolve(expanded);
+  }
+  const cwdValue = String(cwd || '').trim();
+  if (!cwdValue) {
+    return '';
+  }
+  return path.resolve(cwdValue, expanded);
+}
+
+function isAllowedDiscoveryPath(resolvedPath, startCwd, commandHint) {
+  const normalizedStart = path.resolve(startCwd);
+  if (resolvedPath && isSkillPath(resolvedPath)) {
+    return true;
+  }
+  if (resolvedPath && isPathInside(resolvedPath, normalizedStart)) {
+    return true;
+  }
+  if (!resolvedPath) {
+    return !/\/Users\/|\/Sites\/|\/\.git\b/i.test(String(commandHint || ''));
+  }
+  return false;
+}
+
+function isSkillPath(candidatePath) {
+  const normalized = String(candidatePath || '');
+  return /\/\.codex\/skills\//.test(normalized) || /\/\.agents\/skills\//.test(normalized);
+}
+
+function isPathInside(candidatePath, basePath) {
+  const candidate = path.resolve(candidatePath);
+  const base = path.resolve(basePath);
+  return candidate === base || candidate.startsWith(`${base}${path.sep}`);
 }
 
 function readExecCommands(tracePath) {

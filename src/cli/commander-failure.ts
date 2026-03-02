@@ -85,6 +85,7 @@ function contractUnknownOptionHints(unknownOption: string | null, argv?: string[
     return [];
   }
   return [
+    "Use --profile browser-core for one compact browser-control schema bundle.",
     "Use --command <id> for one compact command schema (flags/positionals/examples).",
     "Use --commands <id1,id2> for one-shot multi-command schemas.",
     "Use --full for full commandIds/errorCodes catalogs.",

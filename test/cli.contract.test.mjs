@@ -275,9 +275,12 @@ test("contract default returns compact bootstrap payload", () => {
   assert.equal(payload.mode, "compact");
   assert.equal(payload.typedFailures, true);
   assert.equal(typeof payload.lookup?.full, "string");
+  assert.equal(typeof payload.lookup?.profile, "string");
   assert.equal(typeof payload.lookup?.command, "string");
   assert.equal(typeof payload.lookup?.commands, "string");
   assert.equal(Array.isArray(payload.coreCommandIds), true);
+  assert.equal(Array.isArray(payload.profileIds), true);
+  assert.equal(payload.profileIds.includes("browser-core"), true);
   assert.equal(payload.coreCommandIds.includes("open"), true);
   assert.equal(payload.coreCommandIds.includes("target.click"), true);
   assert.equal(payload.commandIds, undefined);
@@ -292,8 +295,23 @@ test("contract --full returns full command/error catalogs", () => {
   assert.equal(payload.mode, "full");
   assert.equal(Array.isArray(payload.commandIds), true);
   assert.equal(Array.isArray(payload.errorCodes), true);
+  assert.equal(Array.isArray(payload.profileIds), true);
+  assert.equal(payload.profileIds.includes("browser-core"), true);
   assert.equal(payload.commandIds.includes("target.click"), true);
   assert.equal(payload.commandIds.includes("target.count"), true);
+});
+
+test("contract --profile browser-core returns compact mission-first schema bundle", () => {
+  const result = runCli(["contract", "--profile", "browser-core"]);
+  assert.equal(result.status, 0);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.mode, "profile");
+  assert.equal(payload.profileId, "browser-core");
+  assert.equal(Array.isArray(payload.commands), true);
+  assert.equal(payload.commandCount > 0, true);
+  assert.equal(payload.commands.some((entry) => entry.id === "open"), true);
+  assert.equal(payload.commands.some((entry) => entry.id === "target.click"), true);
 });
 
 test("contract --command returns compact per-command schema", () => {
@@ -353,6 +371,14 @@ test("contract rejects mixed --command and --commands", () => {
   assert.equal(payload.code, "E_QUERY_INVALID");
 });
 
+test("contract rejects mixed --profile and --command", () => {
+  const result = runCli(["contract", "--profile", "browser-core", "--command", "open"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+});
+
 test("contract rejects mixed --full and lookup flags", () => {
   const result = runCli(["contract", "--full", "--command", "open"]);
   assert.equal(result.status, 1);
@@ -384,6 +410,16 @@ test("contract --command unknown id returns recovery suggestions", () => {
   assert.equal(payload.recovery?.strategy, "discover-command-id");
   assert.equal(typeof payload.recovery?.nextCommand, "string");
   assert.equal(payload.recovery?.nextCommand.startsWith("surfwright contract"), true);
+});
+
+test("contract --profile unknown id returns recovery suggestions", () => {
+  const result = runCli(["contract", "--profile", "unknown"]);
+  assert.equal(result.status, 1);
+  const payload = parseJson(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, "E_QUERY_INVALID");
+  assert.equal(payload.recovery?.strategy, "discover-contract-profile");
+  assert.equal(payload.recovery?.nextCommand, "surfwright contract --profile browser-core");
 });
 
 test("target commands detect swapped handle types with typed recovery", () => {

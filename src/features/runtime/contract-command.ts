@@ -2,6 +2,15 @@ import { resolveContractCommandId } from "../../core/cli-contract.js";
 import { queryInvalid } from "../../core/target/public.js";
 import type { CliCommandContract } from "../../core/types.js";
 
+const CONTRACT_PROFILE_ALIASES = new Map<string, string>([
+  ["browser-core", "browser-core"],
+  ["browsercore", "browser-core"],
+  ["browser", "browser-core"],
+  ["core", "browser-core"],
+]);
+
+export const CONTRACT_PROFILE_IDS = ["browser-core"] as const;
+
 export function resolveContractCommandOrThrow(rawCommandLookup: string, commands: CliCommandContract[]): string {
   const resolved = resolveContractCommandId(rawCommandLookup, commands);
   if (resolved.commandId) {
@@ -32,6 +41,36 @@ export function resolveContractCommandOrThrow(rawCommandLookup: string, commands
         requestedCommandId: rawCommandLookup,
         lookupSeed,
         didYouMean: topSuggestion,
+      },
+    },
+  });
+}
+
+export function resolveContractProfileOrThrow(rawProfileLookup: string): string {
+  const requested = String(rawProfileLookup || "").trim();
+  if (requested.length === 0) {
+    throw queryInvalid("profile id is required");
+  }
+  const normalized = requested.toLowerCase();
+  const profileId = CONTRACT_PROFILE_ALIASES.get(normalized) ?? null;
+  if (profileId) {
+    return profileId;
+  }
+  throw queryInvalid(`unknown contract profile: ${rawProfileLookup}`, {
+    hints: [
+      "Use `surfwright contract --profile browser-core` for mission-first browser primitives.",
+      "Use `surfwright contract --command <id>` or `surfwright contract --commands <id1,id2>` for targeted schemas.",
+    ],
+    hintContext: {
+      requestedProfileId: rawProfileLookup,
+      availableProfiles: [...CONTRACT_PROFILE_IDS],
+    },
+    recovery: {
+      strategy: "discover-contract-profile",
+      nextCommand: "surfwright contract --profile browser-core",
+      requiredFields: ["profileIds"],
+      context: {
+        requestedProfileId: rawProfileLookup,
       },
     },
   });

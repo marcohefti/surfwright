@@ -63,6 +63,10 @@ flows:
       feedbackPolicy: strict
       mode: discovery
       freshAgentPerAttempt: true
+      cwd:
+        mode: temp_empty_per_attempt
+        basePath: /tmp/zcl
+        retain: on_failure
       toolDriver:
         kind: mcp_proxy
       finalization:
@@ -76,5 +80,6 @@ flows:
         idleTimeoutMs: 45000
         shutdownOnComplete: true
       env:
+        ZCL_GUARD_LOCAL_DISCOVERY: "fail"
         ZCL_NATIVE_MAX_INFLIGHT_PER_STRATEGY: "6"
         ZCL_NATIVE_MIN_START_INTERVAL_MS: "150"

@@ -15,3 +15,4 @@ Return exactly one JSON object with these keys:
 Constraints
 - Use the exact key names listed above.
 - Return JSON only (no markdown fences, no prose).
+- Do not inspect local files or repo paths; complete the mission via browser actions only.

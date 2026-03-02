@@ -1,6 +1,23 @@
 import type { CliContractReport } from "../../core/types.js";
 import { buildCommandSignature, usageCommandPath } from "../../core/cli-contract.js";
 
+const BROWSER_CORE_PROFILE_COMMAND_IDS = [
+  "open",
+  "target.snapshot",
+  "target.find",
+  "target.count",
+  "target.click",
+  "target.fill",
+  "target.read",
+  "target.wait",
+  "target.eval",
+  "target.attr",
+  "target.download",
+  "run",
+];
+
+const CONTRACT_PROFILE_IDS = ["browser-core"];
+
 function withCommandSurfaceFields(report: CliContractReport): CliContractReport {
   return {
     ...report,
@@ -14,6 +31,22 @@ function withCommandSurfaceFields(report: CliContractReport): CliContractReport 
       };
     }),
   };
+}
+
+function commandSignaturesForIds(report: CliContractReport, commandIds: string[]): ReturnType<typeof buildCommandSignature>[] {
+  return commandIds
+    .map((commandId) => {
+      const command = report.commands.find((entry) => entry.id === commandId);
+      if (!command) {
+        return null;
+      }
+      const examples = Array.isArray(report.guidance) ? report.guidance.find((entry) => entry.id === commandId)?.examples ?? [] : [];
+      return buildCommandSignature({
+        command,
+        examples,
+      });
+    })
+    .filter((entry): entry is ReturnType<typeof buildCommandSignature> => entry !== null);
 }
 
 function compactContractReport(report: CliContractReport): Record<string, unknown> {
@@ -43,10 +76,12 @@ function compactContractReport(report: CliContractReport): Record<string, unknow
     typedFailures: true,
     lookup: {
       full: "surfwright contract --full",
+      profile: "surfwright contract --profile browser-core",
       command: "surfwright contract --command <id>",
       commands: "surfwright contract --commands <id1,id2,...>",
     },
     coreCommandIds,
+    profileIds: CONTRACT_PROFILE_IDS,
   };
 }
 
@@ -65,16 +100,37 @@ function fullContractReport(report: CliContractReport): Record<string, unknown> 
     errors: report.errors,
     commandIds: report.commands.map((entry) => entry.id),
     errorCodes: report.errors.map((entry) => entry.code),
+    profileIds: CONTRACT_PROFILE_IDS,
   };
 }
 
 export function buildContractOutput(opts: {
   report: CliContractReport;
-  mode?: "compact" | "full" | "command" | "commands";
+  mode?: "compact" | "full" | "profile" | "command" | "commands";
+  profileId?: string;
   commandId?: string;
   commandIds?: string[];
 }): CliContractReport | Record<string, unknown> {
   const surfaced = withCommandSurfaceFields(opts.report);
+  if (opts.mode === "profile") {
+    const profileId = typeof opts.profileId === "string" ? opts.profileId.trim() : "";
+    const profileCommandIds = profileId === "browser-core" ? BROWSER_CORE_PROFILE_COMMAND_IDS : [];
+    const commands = commandSignaturesForIds(surfaced, profileCommandIds);
+    if (commands.length === 0) {
+      return compactContractReport(surfaced);
+    }
+    return {
+      ok: true,
+      name: surfaced.name,
+      version: surfaced.version,
+      contractSchemaVersion: surfaced.contractSchemaVersion,
+      contractFingerprint: surfaced.contractFingerprint,
+      mode: "profile",
+      profileId,
+      commandCount: commands.length,
+      commands,
+    };
+  }
   if (opts.mode === "command") {
     const commandId = typeof opts.commandId === "string" ? opts.commandId.trim() : "";
     const command = surfaced.commands.find((entry) => entry.id === commandId) ?? null;
@@ -97,21 +153,7 @@ export function buildContractOutput(opts: {
   }
   if (opts.mode === "commands") {
     const commandIds = Array.isArray(opts.commandIds) ? opts.commandIds : [];
-    const commands = commandIds
-      .map((commandId) => {
-        const command = surfaced.commands.find((entry) => entry.id === commandId);
-        if (!command) {
-          return null;
-        }
-        const examples = Array.isArray(surfaced.guidance)
-          ? surfaced.guidance.find((entry) => entry.id === commandId)?.examples ?? []
-          : [];
-        return buildCommandSignature({
-          command,
-          examples,
-        });
-      })
-      .filter((entry): entry is ReturnType<typeof buildCommandSignature> => entry !== null);
+    const commands = commandSignaturesForIds(surfaced, commandIds);
     return {
       ok: true,
       name: surfaced.name,

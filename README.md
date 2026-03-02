@@ -102,6 +102,7 @@ surfwright contract
 ```
 
 Use `surfwright contract` for low-token bootstrap output (no full id catalogs).
+Use `surfwright contract --profile browser-core` for a compact mission-first browser-control schema bundle.
 Use `surfwright contract --full` when you need full `commandIds`/`errorCodes` catalogs.
 Use `surfwright contract --command <id>` for compact per-command flags/positionals/examples (low-token command lookup).
 Use `surfwright contract --commands <id1,id2,...>` for one-shot compact schemas across multiple commands.

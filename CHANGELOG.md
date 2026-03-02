@@ -30,6 +30,7 @@ All notable changes to SurfWright are documented here.
 - [contract] Added `contract --search <term>` for low-token focused contract introspection.
 - [contract] Added `contract --core` for low-token bootstrap payloads (focused command/error/guidance subset).
 - [contract] Added `contract --command <id>` for compact per-command lookup (`flags`, `positionals`, `examples`, canonical invocation) to reduce full-contract probing in agent loops.
+- [contract] Added `contract --profile browser-core` for compact mission-first schema lookup across high-traffic browser primitives.
 - [errors] Added `E_HANDLE_TYPE_MISMATCH` for explicit `sessionId`/`targetId` swap detection with typed recovery payloads.
 - [errors] Added additive `recovery` metadata on typed failures when deterministic next-command routing is available.
 - [cli] Added global `--output-shape <full|compact|proof>` (and `SURFWRIGHT_OUTPUT_SHAPE`) to project JSON outputs without changing command semantics.
@@ -80,6 +81,9 @@ All notable changes to SurfWright are documented here.
 - [contract] `contract --command/--commands` now resolves common legacy camelCase command IDs (`openSession`, `targetFill`, `targetWaitFor`, `targetRead`, `closeSession`) to canonical SurfWright IDs.
 - [cli] Agent no-arg probe invocations for high-traffic commands (`open`, `target.find`, `target.click`, `target.spawn`, `target.fill`, `target.eval`, `target.read`, `target.wait`) now auto-route to `contract --command <id>` instead of returning typed parse failures.
 - [skill] SurfWright runtime skill guidance now enforces action-first behavior (no env/help probing, contract lookup only after command-id misses) to reduce discovery overhead in agent loops.
+- [skill] SurfWright runtime skill guidance now routes bootstrap discovery through `contract --profile browser-core` before command-id lookups.
+- [zcl] Browser-control oracle evaluator now supports local-discovery guard enforcement via `ZCL_GUARD_LOCAL_DISCOVERY=fail|warn|off` with trace-backed checks against non-skill local file/repo discovery.
+- [zcl] Versioned browser-control campaign defaults now set `runner.cwd.mode=temp_empty_per_attempt` and `ZCL_GUARD_LOCAL_DISCOVERY=fail` for stricter zero-context attempt isolation.
 - [daemon] Queue-pressure typed failures (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`) now carry additive recovery fields (`retryable`, `phase`, `recovery`, `hints`, `hintContext`) through daemon transport to CLI output.
 - [daemon] Queue-pressure runtime messages now align with contract wording (`Daemon queue wait budget expired before dispatch`, `Daemon lane queue depth cap reached; request rejected`).
 - [cli] `help` now normalizes dot-path and multi-token command paths to canonical help execution (for example `help target.dialog` -> `target dialog --help`).

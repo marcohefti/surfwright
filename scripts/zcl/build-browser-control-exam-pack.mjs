@@ -255,7 +255,11 @@ function buildPrompt({ missionId, startUrl, goal, collectFields, traceChecks }) 
   const traceConstraint = Array.isArray(traceChecks) && traceChecks.length > 0
     ? '- Evaluation also checks command trace usage for this mission.'
     : '';
-  const constraints = ['- Use the exact key names listed above.', '- Return JSON only (no markdown fences, no prose).'];
+  const constraints = [
+    '- Use the exact key names listed above.',
+    '- Return JSON only (no markdown fences, no prose).',
+    '- Do not inspect local files or repo paths; complete the mission via browser actions only.',
+  ];
   if (traceConstraint) {
     constraints.push(traceConstraint);
   }

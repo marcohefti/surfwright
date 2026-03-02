@@ -25,6 +25,7 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
 
 - Agent discovery is contract-first:
   - `surfwright contract` returns a minimal bootstrap envelope for low-token loops.
+  - `surfwright contract --profile browser-core` returns a compact mission-first browser primitive bundle.
   - `surfwright contract --full` returns full command/error id catalogs.
   - `surfwright contract --command <id>` and `--commands <id1,id2>` are the detailed lookup paths.
 - `--help` is intentionally disabled; runtime agents must use contract lookup only.
@@ -62,6 +63,7 @@ Agents and automation depend on a stable command surface. If CLI help, registrat
    - `src/core/cli-contract.ts` builds the contract report and fingerprint using `allCommandManifest`.
 3. Emit contract:
    - `surfwright contract` returns a compact bootstrap from `getCliContractReport(...)`.
+   - `surfwright contract --profile browser-core` returns the curated browser-core schema bundle.
    - `surfwright contract --full` returns the full machine catalog.
 4. Enforce in CI:
    - `pnpm -s build` produces `dist/cli.js`.

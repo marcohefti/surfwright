@@ -26,6 +26,8 @@ This runbook defines the versioned ZCL workflow for SurfWright's browser-control
 - Mission selection is explicit by mission id to lock scope to exactly 10 active missions and avoid accidental inclusion of non-mission markdown files.
 - Campaign evaluation is `oracle` with built-in rules and normalized matching (`evaluation.oraclePolicy.mode=normalized`).
 - Runtime is native (`runner.type=codex_app_server`, `sessionIsolation=native`), with deterministic fresh session per attempt.
+- Runner start cwd is isolated per attempt (`runner.cwd.mode=temp_empty_per_attempt`) under `/tmp/zcl` with `retain=on_failure` to avoid workspace/repo contamination while preserving failure-debug dirs.
+- Local-discovery guard is enabled by default (`ZCL_GUARD_LOCAL_DISCOVERY=fail`) so trace-backed evaluation can reject non-skill local file/repo discovery.
 - Model is pinned in campaign config (`runner.model: gpt-5.3-codex-spark`).
 - Reasoning effort hint is pinned to `low` with `runner.modelReasoningPolicy: best_effort` (fallback to runtime default if unsupported).
 - Inflight native session cap is set to `6` (`ZCL_NATIVE_MAX_INFLIGHT_PER_STRATEGY`) to align with repo ZeroContext concurrency guardrail.

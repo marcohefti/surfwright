@@ -38,8 +38,12 @@ const CDP_STARTUP_POLL_MS = 125;
 const CDP_STARTUP_RETRY_BACKOFF_MS = 250;
 const MANAGED_STARTUP_TERMINATE_GRACE_MS = 500;
 const MANAGED_STARTUP_KILL_WAIT_MS = 250;
-const EXTENSION_RUNTIME_OBSERVED_WAIT_MS = 5000;
+const EXTENSION_RUNTIME_OBSERVED_WAIT_MS_DEFAULT = 5000;
+const EXTENSION_RUNTIME_OBSERVED_WAIT_MS_MAX = 30000;
 const EXTENSION_RUNTIME_OBSERVED_POLL_MS = 50;
+const EXTENSION_RUNTIME_CDP_PROBE_TIMEOUT_MS = 1500;
+
+type ExtensionRuntimeVerificationMode = "strict" | "warn";
 
 export function managedStartupWaitPlan(timeoutMs: number): {
   firstAttemptStartupWaitMs: number;
@@ -176,7 +180,7 @@ function launchDetachedBrowser(opts: {
   userDataDir: string;
   browserMode: ManagedBrowserMode;
   extensionPaths?: string[];
-}): number | null {
+}): { browserPid: number | null; launchArgs: string[] } {
   const args = buildManagedBrowserArgs({
     debugPort: opts.debugPort,
     userDataDir: opts.userDataDir,
@@ -190,9 +194,9 @@ function launchDetachedBrowser(opts: {
       stdio: "ignore",
     });
     child.unref();
-    return child.pid ?? null;
+    return { browserPid: child.pid ?? null, launchArgs: args };
   } catch {
-    return null;
+    return { browserPid: null, launchArgs: args };
   }
 }
 
@@ -287,8 +291,16 @@ function normalizeFsPathForMatch(input: string): string {
   return normalized;
 }
 
-function readRuntimeInstalledExtensionsByPath(userDataDir: string): Map<string, string> {
+function readRuntimeInstalledExtensionsByPath(userDataDir: string): {
+  installedByPath: Map<string, string>;
+  checkedPreferencePaths: string[];
+  readablePreferencePaths: string[];
+  preferenceRuntimeIds: string[];
+} {
   const map = new Map<string, string>();
+  const checkedPreferencePaths: string[] = [];
+  const readablePreferencePaths: string[] = [];
+  const runtimeIds = new Set<string>();
   const prefsCandidates = [
     path.join(userDataDir, "Default", "Secure Preferences"),
     path.join(userDataDir, "Default", "Preferences"),
@@ -296,6 +308,7 @@ function readRuntimeInstalledExtensionsByPath(userDataDir: string): Map<string, 
     path.join(userDataDir, "Preferences"),
   ];
   for (const prefsPath of prefsCandidates) {
+    checkedPreferencePaths.push(prefsPath);
     if (!fs.existsSync(prefsPath)) {
       continue;
     }
@@ -309,6 +322,7 @@ function readRuntimeInstalledExtensionsByPath(userDataDir: string): Map<string, 
       if (!settings || typeof settings !== "object") {
         continue;
       }
+      readablePreferencePaths.push(prefsPath);
       for (const [runtimeId, raw] of Object.entries(settings)) {
         if (!raw || typeof raw !== "object") {
           continue;
@@ -316,29 +330,145 @@ function readRuntimeInstalledExtensionsByPath(userDataDir: string): Map<string, 
         if (typeof raw.path !== "string" || raw.path.length === 0) {
           continue;
         }
+        runtimeIds.add(runtimeId);
         map.set(normalizeFsPathForMatch(raw.path), runtimeId);
       }
     } catch {
       continue;
     }
   }
-  return map;
+  return {
+    installedByPath: map,
+    checkedPreferencePaths,
+    readablePreferencePaths,
+    preferenceRuntimeIds: Array.from(runtimeIds).sort(),
+  };
+}
+
+function parsePositiveInt(raw: string | undefined): number | null {
+  if (typeof raw !== "string" || raw.trim().length === 0) {
+    return null;
+  }
+  const value = Number.parseInt(raw.trim(), 10);
+  if (!Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return Math.floor(value);
+}
+
+function resolveExtensionRuntimeVerificationMode(): ExtensionRuntimeVerificationMode {
+  const raw = process.env.SURFWRIGHT_EXTENSION_RUNTIME_MODE;
+  if (typeof raw === "string" && raw.trim().toLowerCase() === "warn") {
+    return "warn";
+  }
+  return "strict";
+}
+
+function resolveExtensionRuntimeObservedWaitMs(timeoutMs: number): number {
+  const timeoutCap = Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.floor(timeoutMs) : EXTENSION_RUNTIME_OBSERVED_WAIT_MS_DEFAULT;
+  const envOverride = parsePositiveInt(process.env.SURFWRIGHT_EXTENSION_RUNTIME_OBSERVED_WAIT_MS);
+  const configured = envOverride ?? EXTENSION_RUNTIME_OBSERVED_WAIT_MS_DEFAULT;
+  return Math.max(200, Math.min(configured, timeoutCap, EXTENSION_RUNTIME_OBSERVED_WAIT_MS_MAX));
+}
+
+function extensionIdFromUrl(rawUrl: string): string | null {
+  const match = /^chrome-extension:\/\/([a-p]{32})(?:\/|$)/i.exec(rawUrl.trim());
+  if (!match || typeof match[1] !== "string") {
+    return null;
+  }
+  return match[1].toLowerCase();
+}
+
+async function inspectExtensionRuntimeTargets(cdpOrigin: string, timeoutMs: number): Promise<{
+  cdpRuntimeIds: string[];
+  cdpTargetUrls: string[];
+}> {
+  const controller = new AbortController();
+  const deadlineMs = Math.max(200, Math.min(timeoutMs, EXTENSION_RUNTIME_CDP_PROBE_TIMEOUT_MS));
+  const timer = setTimeout(() => controller.abort(), deadlineMs);
+  try {
+    const response = await fetch(`${cdpOrigin.replace(/\/+$/, "")}/json/list`, {
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return { cdpRuntimeIds: [], cdpTargetUrls: [] };
+    }
+    const payload = (await response.json()) as Array<{ url?: unknown }>;
+    if (!Array.isArray(payload)) {
+      return { cdpRuntimeIds: [], cdpTargetUrls: [] };
+    }
+    const cdpTargetUrls: string[] = [];
+    const runtimeIds = new Set<string>();
+    for (const entry of payload) {
+      if (!entry || typeof entry !== "object" || typeof entry.url !== "string") {
+        continue;
+      }
+      const normalizedUrl = entry.url.trim();
+      const id = extensionIdFromUrl(normalizedUrl);
+      if (!id) {
+        continue;
+      }
+      cdpTargetUrls.push(normalizedUrl);
+      runtimeIds.add(id);
+    }
+    return {
+      cdpRuntimeIds: Array.from(runtimeIds).sort(),
+      cdpTargetUrls: Array.from(new Set(cdpTargetUrls)).sort(),
+    };
+  } catch {
+    return { cdpRuntimeIds: [], cdpTargetUrls: [] };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function resolveRuntimeAppliedExtensions(opts: {
   userDataDir: string;
+  cdpOrigin: string;
   projected: ReturnType<typeof resolveManagedExtensionProjection>["extensions"];
   timeoutMs: number;
-}): Promise<SessionState["appliedExtensions"]> {
+}): Promise<{
+  appliedExtensions: SessionState["appliedExtensions"];
+  diagnostics: {
+    checkedPreferencePaths: string[];
+    readablePreferencePaths: string[];
+    preferenceRuntimeIds: string[];
+    cdpRuntimeIds: string[];
+    cdpTargetUrls: string[];
+    observedWaitMs: number;
+    cdpProbeUsed: boolean;
+    verificationMode: ExtensionRuntimeVerificationMode;
+  };
+}> {
   if (opts.projected.length === 0) {
-    return [];
+    return {
+      appliedExtensions: [],
+      diagnostics: {
+        checkedPreferencePaths: [],
+        readablePreferencePaths: [],
+        preferenceRuntimeIds: [],
+        cdpRuntimeIds: [],
+        cdpTargetUrls: [],
+        observedWaitMs: 0,
+        cdpProbeUsed: false,
+        verificationMode: resolveExtensionRuntimeVerificationMode(),
+      },
+    };
   }
-  const deadline = Date.now() + Math.max(200, Math.min(EXTENSION_RUNTIME_OBSERVED_WAIT_MS, opts.timeoutMs));
+  const verificationMode = resolveExtensionRuntimeVerificationMode();
+  const observedWaitMs = resolveExtensionRuntimeObservedWaitMs(opts.timeoutMs);
+  const deadline = Date.now() + observedWaitMs;
   let applied: SessionState["appliedExtensions"] = [];
+  let checkedPreferencePaths: string[] = [];
+  let readablePreferencePaths: string[] = [];
+  let preferenceRuntimeIds: string[] = [];
   while (Date.now() <= deadline) {
-    const installedByPath = readRuntimeInstalledExtensionsByPath(opts.userDataDir);
+    const preferenceObservation = readRuntimeInstalledExtensionsByPath(opts.userDataDir);
+    checkedPreferencePaths = preferenceObservation.checkedPreferencePaths;
+    readablePreferencePaths = preferenceObservation.readablePreferencePaths;
+    preferenceRuntimeIds = preferenceObservation.preferenceRuntimeIds;
     applied = opts.projected.map((entry) => {
-      const runtimeId = installedByPath.get(normalizeFsPathForMatch(entry.path)) ?? null;
+      const runtimeId = preferenceObservation.installedByPath.get(normalizeFsPathForMatch(entry.path)) ?? null;
       return {
         id: entry.id,
         name: entry.name,
@@ -352,11 +482,68 @@ async function resolveRuntimeAppliedExtensions(opts: {
       };
     });
     if (applied.every((entry) => entry.state === "runtime-installed")) {
-      return applied;
+      return {
+        appliedExtensions: applied,
+        diagnostics: {
+          checkedPreferencePaths,
+          readablePreferencePaths,
+          preferenceRuntimeIds,
+          cdpRuntimeIds: [],
+          cdpTargetUrls: [],
+          observedWaitMs,
+          cdpProbeUsed: false,
+          verificationMode,
+        },
+      };
     }
     await new Promise((resolve) => setTimeout(resolve, EXTENSION_RUNTIME_OBSERVED_POLL_MS));
   }
-  return applied;
+  const cdpObservation = await inspectExtensionRuntimeTargets(opts.cdpOrigin, opts.timeoutMs);
+  if (cdpObservation.cdpRuntimeIds.length > 0) {
+    const unresolved = applied
+      .map((entry, index) => ({ entry, index }))
+      .filter((item) => item.entry.state !== "runtime-installed");
+    const cdpIds = cdpObservation.cdpRuntimeIds;
+    if (opts.projected.length === 1 && unresolved.length === 1) {
+      const runtimeId = cdpIds[0] ?? null;
+      if (runtimeId) {
+        applied = applied.map((entry, index) =>
+          index !== unresolved[0].index
+            ? entry
+            : {
+                ...entry,
+                state: "runtime-installed",
+                runtimeId,
+              },
+        );
+      }
+    } else if (unresolved.length === opts.projected.length && cdpIds.length >= unresolved.length) {
+      applied = applied.map((entry, index) => {
+        const unresolvedIndex = unresolved.findIndex((candidate) => candidate.index === index);
+        if (unresolvedIndex === -1) {
+          return entry;
+        }
+        return {
+          ...entry,
+          state: "runtime-installed",
+          runtimeId: cdpIds[unresolvedIndex] ?? null,
+        };
+      });
+    }
+  }
+  return {
+    appliedExtensions: applied,
+    diagnostics: {
+      checkedPreferencePaths,
+      readablePreferencePaths,
+      preferenceRuntimeIds,
+      cdpRuntimeIds: cdpObservation.cdpRuntimeIds,
+      cdpTargetUrls: cdpObservation.cdpTargetUrls,
+      observedWaitMs,
+      cdpProbeUsed: true,
+      verificationMode,
+    },
+  };
 }
 
 export async function startManagedSession(
@@ -376,6 +563,7 @@ export async function startManagedSession(
     throw new CliError("E_BROWSER_NOT_FOUND", "No compatible Chrome/Chromium binary found; run doctor for candidates");
   }
   const extensionProjection = resolveManagedExtensionProjection();
+  const verificationMode = resolveExtensionRuntimeVerificationMode();
 
   fs.mkdirSync(opts.userDataDir, { recursive: true });
   const startupPlan = managedStartupWaitPlan(timeoutMs);
@@ -384,14 +572,15 @@ export async function startManagedSession(
     debugPort: number,
     startupWaitMs: number,
     startupAttempt: 1 | 2,
-  ): Promise<{ browserPid: number; debugPort: number; cdpOrigin: string }> => {
-    const browserPid = launchDetachedBrowser({
+  ): Promise<{ browserPid: number; debugPort: number; cdpOrigin: string; launchArgs: string[] }> => {
+    const launched = launchDetachedBrowser({
       executablePath,
       debugPort,
       userDataDir: opts.userDataDir,
       browserMode,
       extensionPaths: extensionProjection.loadPaths,
     });
+    const browserPid = launched.browserPid;
     if (browserPid === null) {
       throw new CliError("E_BROWSER_START_FAILED", "Failed to spawn Chrome/Chromium process", {
         hints: browserStartHints(opts.userDataDir),
@@ -400,6 +589,7 @@ export async function startManagedSession(
           browserMode,
           debugPort,
           userDataDir: opts.userDataDir,
+          launchArgs: launched.launchArgs,
         },
       });
     }
@@ -421,10 +611,11 @@ export async function startManagedSession(
           browserMode,
           userDataDir: opts.userDataDir,
           shutdownSucceeded,
+          launchArgs: launched.launchArgs,
         },
       });
     }
-    return { browserPid, debugPort, cdpOrigin };
+    return { browserPid, debugPort, cdpOrigin, launchArgs: launched.launchArgs };
   };
 
   let started = await attemptStart(opts.debugPort, startupPlan.firstAttemptStartupWaitMs, 1).catch((error: unknown) => {
@@ -440,13 +631,15 @@ export async function startManagedSession(
     started = await attemptStart(await allocateFreePort(), startupPlan.retryAttemptStartupWaitMs, 2);
   }
   try {
-    const appliedExtensions = await resolveRuntimeAppliedExtensions({
+    const resolvedExtensions = await resolveRuntimeAppliedExtensions({
       userDataDir: opts.userDataDir,
+      cdpOrigin: started.cdpOrigin,
       projected: extensionProjection.extensions,
       timeoutMs,
     });
+    const appliedExtensions = resolvedExtensions.appliedExtensions;
     const notInstalled = appliedExtensions.filter((entry) => entry.state !== "runtime-installed");
-    if (notInstalled.length > 0) {
+    if (notInstalled.length > 0 && verificationMode === "strict") {
       throw new CliError("E_EXTENSION_RUNTIME_NOT_LOADED", "Configured extension set was not mounted in runtime", {
         hints: [
           "Confirm each extension path still exists and contains manifest.json plus built assets.",
@@ -457,6 +650,15 @@ export async function startManagedSession(
           missingExtensionIds: notInstalled.map((entry) => entry.id).join(","),
           missingExtensionNames: notInstalled.map((entry) => entry.name).join(","),
           userDataDir: opts.userDataDir,
+          verificationMode,
+          launchArgs: started.launchArgs,
+          checkedPreferencePaths: resolvedExtensions.diagnostics.checkedPreferencePaths,
+          readablePreferencePaths: resolvedExtensions.diagnostics.readablePreferencePaths,
+          preferenceRuntimeIds: resolvedExtensions.diagnostics.preferenceRuntimeIds,
+          cdpRuntimeIds: resolvedExtensions.diagnostics.cdpRuntimeIds,
+          cdpTargetUrls: resolvedExtensions.diagnostics.cdpTargetUrls,
+          cdpProbeUsed: resolvedExtensions.diagnostics.cdpProbeUsed,
+          observedWaitMs: resolvedExtensions.diagnostics.observedWaitMs,
         },
       });
     }

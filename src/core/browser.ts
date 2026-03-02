@@ -4,6 +4,7 @@ import net, { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { CliError } from "./errors.js";
+import { requestContextEnvGet } from "./request-context.js";
 import {
   CDP_HEALTHCHECK_TIMEOUT_MS,
   isCdpEndpointAlive,
@@ -106,7 +107,7 @@ function firstChromeExecutablePath(): string | null {
 }
 
 function resolveBrowserExecutableOverridePath(): string | null {
-  const raw = process.env.SURFWRIGHT_BROWSER_EXECUTABLE;
+  const raw = requestContextEnvGet("SURFWRIGHT_BROWSER_EXECUTABLE");
   if (typeof raw !== "string") {
     return null;
   }

@@ -85,6 +85,7 @@ All notable changes to SurfWright are documented here.
 - [extensions] Runtime extension verification now supports `SURFWRIGHT_EXTENSION_RUNTIME_MODE=strict|warn` and `SURFWRIGHT_EXTENSION_RUNTIME_OBSERVED_WAIT_MS`; strict-mode failures now include richer `E_EXTENSION_RUNTIME_NOT_LOADED` diagnostics (`launchArgs`, checked preference paths, observed runtime IDs, and CDP extension targets).
 - [extensions] Tightened CDP fallback runtime mapping: configured extensions are promoted to `runtime-installed` only on one-to-one manifest-runtime-path matches, eliminating permissive index-based assignment across unrelated extension IDs.
 - [extensions] Strict runtime-not-loaded failures now include additive browser capability diagnostics and explicit Chromium/CfT override guidance when side-load support probe fails.
+- [browser] Fixed `--browser-executable <path>` global override wiring so request-scoped CLI flag overrides are honored consistently (before/after command path), matching `SURFWRIGHT_BROWSER_EXECUTABLE` behavior.
 - [cli] Disabled built-in Commander help surfaces (`--help`, `-h`, and `help` command); command discovery is now contract-only.
 - [contract] Tightened `contract` surface to compact default + explicit `--command`/`--commands` lookups; removed broad `--core`/`--search` modes from runtime CLI.
 - [contract] `contract` default now returns a minimal bootstrap envelope; full command/error catalogs moved behind explicit `contract --full`.

@@ -164,6 +164,25 @@ test("browser-mode rejects invalid values (typed)", () => {
   assert.equal(openPayload.message, "browser-mode must be one of: headless, headed");
 });
 
+test("doctor applies --browser-executable override from global flag position", () => {
+  const fakeBrowserPath = path.join(TEST_STATE_DIR, "fake-browser-binary");
+  fs.writeFileSync(fakeBrowserPath, "not executable\n", "utf8");
+
+  const beforeResult = runCli(["--browser-executable", fakeBrowserPath, "doctor"]);
+  assert.equal(beforeResult.status, 0);
+  const beforePayload = parseJson(beforeResult.stdout);
+  assert.equal(beforePayload.chrome?.executableSource, "override");
+  assert.equal(beforePayload.chrome?.overridePath, fakeBrowserPath);
+  assert.equal(beforePayload.chrome?.executablePath, fakeBrowserPath);
+
+  const afterResult = runCli(["doctor", "--browser-executable", fakeBrowserPath]);
+  assert.equal(afterResult.status, 0);
+  const afterPayload = parseJson(afterResult.stdout);
+  assert.equal(afterPayload.chrome?.executableSource, "override");
+  assert.equal(afterPayload.chrome?.overridePath, fakeBrowserPath);
+  assert.equal(afterPayload.chrome?.executablePath, fakeBrowserPath);
+});
+
 test("target eval validates script size before session resolution", () => {
   const oversizedExpression = "x".repeat(5000);
   const evalResult = runCli(["target",

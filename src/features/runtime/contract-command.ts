@@ -63,12 +63,12 @@ export function resolveContractProfileOrThrow(rawProfileLookup: string): string 
     ],
     hintContext: {
       requestedProfileId: rawProfileLookup,
-      availableProfiles: [...CONTRACT_PROFILE_IDS],
+      availableProfiles: CONTRACT_PROFILE_IDS.join(","),
     },
     recovery: {
       strategy: "discover-contract-profile",
       nextCommand: "surfwright contract --profile browser-core",
-      requiredFields: ["profileIds"],
+      requiredFields: [],
       context: {
         requestedProfileId: rawProfileLookup,
       },

@@ -279,8 +279,6 @@ test("contract default returns compact bootstrap payload", () => {
   assert.equal(typeof payload.lookup?.command, "string");
   assert.equal(typeof payload.lookup?.commands, "string");
   assert.equal(Array.isArray(payload.coreCommandIds), true);
-  assert.equal(Array.isArray(payload.profileIds), true);
-  assert.equal(payload.profileIds.includes("browser-core"), true);
   assert.equal(payload.coreCommandIds.includes("open"), true);
   assert.equal(payload.coreCommandIds.includes("target.click"), true);
   assert.equal(payload.commandIds, undefined);
@@ -295,8 +293,6 @@ test("contract --full returns full command/error catalogs", () => {
   assert.equal(payload.mode, "full");
   assert.equal(Array.isArray(payload.commandIds), true);
   assert.equal(Array.isArray(payload.errorCodes), true);
-  assert.equal(Array.isArray(payload.profileIds), true);
-  assert.equal(payload.profileIds.includes("browser-core"), true);
   assert.equal(payload.commandIds.includes("target.click"), true);
   assert.equal(payload.commandIds.includes("target.count"), true);
 });

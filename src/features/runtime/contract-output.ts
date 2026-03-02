@@ -16,8 +16,6 @@ const BROWSER_CORE_PROFILE_COMMAND_IDS = [
   "run",
 ];
 
-const CONTRACT_PROFILE_IDS = ["browser-core"];
-
 function withCommandSurfaceFields(report: CliContractReport): CliContractReport {
   return {
     ...report,
@@ -81,7 +79,6 @@ function compactContractReport(report: CliContractReport): Record<string, unknow
       commands: "surfwright contract --commands <id1,id2,...>",
     },
     coreCommandIds,
-    profileIds: CONTRACT_PROFILE_IDS,
   };
 }
 
@@ -100,7 +97,6 @@ function fullContractReport(report: CliContractReport): Record<string, unknown> 
     errors: report.errors,
     commandIds: report.commands.map((entry) => entry.id),
     errorCodes: report.errors.map((entry) => entry.code),
-    profileIds: CONTRACT_PROFILE_IDS,
   };
 }
 

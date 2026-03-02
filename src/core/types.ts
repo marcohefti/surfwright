@@ -68,6 +68,22 @@ export type DoctorReport = {
   chrome: {
     found: boolean;
     candidates: string[];
+    executablePath: string | null;
+    executableSource: "override" | "candidate" | null;
+    overridePath: string | null;
+    unpackedExtensionSideload: {
+      checked: boolean;
+      supported: boolean | null;
+      reason:
+        | "ok"
+        | "browser_not_found"
+        | "spawn_failed"
+        | "cdp_not_ready"
+        | "probe_failed"
+        | "not_checked";
+      launchArgs: string[];
+      cdpMatchedExtensionIds: string[];
+    };
   };
 };
 export type SessionKind = "managed" | "attached";

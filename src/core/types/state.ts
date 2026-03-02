@@ -22,6 +22,7 @@ export type SessionState = {
   debugPort: number | null;
   userDataDir: string | null;
   profile: string | null;
+  browserExecutablePath: string | null;
   browserPid: number | null;
   ownerId: string | null;
   leaseExpiresAt: string | null;

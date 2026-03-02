@@ -57,10 +57,10 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
   ctx.program
     .command("doctor")
     .description(doctorMeta.summary)
-    .action(() => {
+    .action(async () => {
       const output = ctx.globalOutputOpts();
       try {
-        const report = getDoctorReport();
+        const report = await getDoctorReport();
         printDoctorReport(report, output);
         setRequestExitCode(report.ok ? 0 : 1);
       } catch (error) {

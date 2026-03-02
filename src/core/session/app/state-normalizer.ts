@@ -79,6 +79,7 @@ export function normalizeSessionState(opts: {
     debugPort?: unknown;
     userDataDir?: unknown;
     profile?: unknown;
+    browserExecutablePath?: unknown;
     browserPid?: unknown;
     ownerId?: unknown;
     leaseExpiresAt?: unknown;
@@ -107,6 +108,10 @@ export function normalizeSessionState(opts: {
       : null;
   const profile =
     kind === "managed" && typeof value.profile === "string" && value.profile.trim().length > 0 ? value.profile.trim() : null;
+  const browserExecutablePath =
+    kind === "managed" && typeof value.browserExecutablePath === "string" && value.browserExecutablePath.trim().length > 0
+      ? value.browserExecutablePath.trim()
+      : null;
   const browserPid = asPositiveInteger(value.browserPid);
   const createdAt = typeof value.createdAt === "string" && value.createdAt.length > 0 ? value.createdAt : opts.nowIso();
   const lastSeenAt = typeof value.lastSeenAt === "string" && value.lastSeenAt.length > 0 ? value.lastSeenAt : opts.nowIso();
@@ -127,6 +132,7 @@ export function normalizeSessionState(opts: {
     debugPort,
     userDataDir,
     profile,
+    browserExecutablePath,
     browserPid,
     ownerId,
     leaseTtlMs,

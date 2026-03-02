@@ -4,7 +4,7 @@ export const runtimeCommandManifest: CliCommandContract[] = [
   {
     id: "doctor",
     usage: "surfwright doctor [--no-json] [--pretty]",
-    summary: "check node/chrome prerequisites without side effects",
+    summary: "check node/chrome prerequisites plus unpacked extension side-load capability",
   },
   {
     id: "contract",

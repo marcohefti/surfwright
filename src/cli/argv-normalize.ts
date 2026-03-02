@@ -62,6 +62,11 @@ function firstCommandIndex(argv: string[]): number {
       commandIndex += outputShapeSpan;
       continue;
     }
+    const browserExecutableSpan = parseOptionTokenSpan(argv, commandIndex, "--browser-executable");
+    if (browserExecutableSpan > 0) {
+      commandIndex += browserExecutableSpan;
+      continue;
+    }
     if (token === "--json" || token === "--no-json" || token === "--pretty") {
       commandIndex += 1;
       continue;

@@ -8,6 +8,8 @@ All notable changes to SurfWright are documented here.
 - [extensions] Added deterministic managed-launch extension coupling from workspace registry (`extension load|reload` + managed launch flags) with runtime-verified `appliedExtensions[]` and session/open `extensionSetFingerprint` evidence.
 - [extensions] Added extension drift restart semantics for managed sessions: extension set fingerprint changes now force deterministic managed restart on next ensure/open.
 - [extensions] Added fallback runtime extension verification via CDP target discovery (`/json/list`) when preference-backed runtime mapping is incomplete.
+- [browser] Added managed browser executable override via global `--browser-executable <path>` and `SURFWRIGHT_BROWSER_EXECUTABLE`.
+- [doctor] Added bounded runtime probe for unpacked extension side-load capability (`chrome.unpackedExtensionSideload.*`) with selected executable metadata.
 - [errors] Added typed extension lifecycle/runtime failures: `E_EXTENSION_PATH_INVALID`, `E_EXTENSION_MANIFEST_INVALID`, `E_EXTENSION_ASSET_MISSING`, and `E_EXTENSION_RUNTIME_NOT_LOADED`.
 - [daemon] Added lane-based daemon scheduler defaults with explicit backpressure contracts (`laneConcurrency=1`, `globalActiveLanes=8`, `laneQueueDepth=8`, `queueWaitMs=2000`) and typed queue failure routing (`E_DAEMON_QUEUE_TIMEOUT`, `E_DAEMON_QUEUE_SATURATED`).
 - [daemon] Added shared runtime access + runtime pool state machine (`absent|warming|ready|degraded|draining|closed`) with contract coverage for no-double-warm, timeout recycle, repeated-timeout hard-close, and session mismatch fail-closed behavior.
@@ -82,6 +84,7 @@ All notable changes to SurfWright are documented here.
 - [extensions] `extension.*` commands are now workspace-scoped and represent managed launch source-of-truth (no registry-only capability/fallback mode).
 - [extensions] Runtime extension verification now supports `SURFWRIGHT_EXTENSION_RUNTIME_MODE=strict|warn` and `SURFWRIGHT_EXTENSION_RUNTIME_OBSERVED_WAIT_MS`; strict-mode failures now include richer `E_EXTENSION_RUNTIME_NOT_LOADED` diagnostics (`launchArgs`, checked preference paths, observed runtime IDs, and CDP extension targets).
 - [extensions] Tightened CDP fallback runtime mapping: configured extensions are promoted to `runtime-installed` only on one-to-one manifest-runtime-path matches, eliminating permissive index-based assignment across unrelated extension IDs.
+- [extensions] Strict runtime-not-loaded failures now include additive browser capability diagnostics and explicit Chromium/CfT override guidance when side-load support probe fails.
 - [cli] Disabled built-in Commander help surfaces (`--help`, `-h`, and `help` command); command discovery is now contract-only.
 - [contract] Tightened `contract` surface to compact default + explicit `--command`/`--commands` lookups; removed broad `--core`/`--search` modes from runtime CLI.
 - [contract] `contract` default now returns a minimal bootstrap envelope; full command/error catalogs moved behind explicit `contract --full`.

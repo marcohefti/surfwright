@@ -41,6 +41,18 @@ export function printDoctorReport(report: DoctorReport, opts: RuntimeOutputOpts)
     "",
     `node: ${report.node.version} (${report.node.platform}/${report.node.arch})`,
     `chrome: ${report.chrome.found ? "found" : "missing"}`,
+    ...(report.chrome.executablePath ? [`chrome.executable: ${report.chrome.executablePath}`] : []),
+    ...(report.chrome.executableSource ? [`chrome.source: ${report.chrome.executableSource}`] : []),
+    ...(report.chrome.overridePath ? [`chrome.override: ${report.chrome.overridePath}`] : []),
+    `chrome.unpackedSideload.checked: ${report.chrome.unpackedExtensionSideload.checked ? "true" : "false"}`,
+    `chrome.unpackedSideload.supported: ${
+      typeof report.chrome.unpackedExtensionSideload.supported === "boolean"
+        ? report.chrome.unpackedExtensionSideload.supported
+          ? "true"
+          : "false"
+        : "unknown"
+    }`,
+    `chrome.unpackedSideload.reason: ${report.chrome.unpackedExtensionSideload.reason}`,
     ...(report.chrome.found
       ? []
       : [

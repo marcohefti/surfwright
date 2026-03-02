@@ -80,6 +80,7 @@ function resolveRequestEnvOverrides(argv: string[]): Record<string, string | und
   applyIfValid("--agent-id", "SURFWRIGHT_AGENT_ID");
   applyIfValid("--workspace", "SURFWRIGHT_WORKSPACE_DIR");
   applyIfValid("--output-shape", "SURFWRIGHT_OUTPUT_SHAPE");
+  applyIfValid("--browser-executable", "SURFWRIGHT_BROWSER_EXECUTABLE");
   return out;
 }
 
@@ -153,6 +154,7 @@ function createProgram(outputOpts: OutputOpts): Command {
     .option("--agent-id <agentId>", "Agent scope id for isolated state/daemon namespace")
     .option("--workspace <dir>", "Workspace directory override for reusable profiles (default: auto-discover ./.surfwright)")
     .option("--session <sessionId>", "Use a specific session for this command")
+    .option("--browser-executable <path>", "Managed browser executable override (fallback: SURFWRIGHT_BROWSER_EXECUTABLE)")
     .addOption(
       new Option("--output-shape <shape>", "Output shape preset: full|compact|proof").choices(["full", "compact", "proof"]),
     )

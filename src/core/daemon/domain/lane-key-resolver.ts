@@ -12,7 +12,7 @@ export type DaemonLaneResolution = {
   family: DaemonLaneFamily;
 };
 
-const PATH_GLOBAL_OPTIONS = ["--session", "--agent-id", "--workspace", "--output-shape"] as const;
+const PATH_GLOBAL_OPTIONS = ["--session", "--agent-id", "--workspace", "--output-shape", "--browser-executable"] as const;
 const OPEN_OPTIONS_WITH_VALUES = [
   "--profile",
   "--reuse",

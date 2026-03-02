@@ -2,7 +2,7 @@ import { usageCommandPath } from "../core/cli-contract.js";
 import { allCommandManifest } from "../features/registry.js";
 import { parseOptionTokenSpan } from "./options.js";
 
-const GLOBAL_PATH_OPTIONS = ["--session", "--agent-id", "--workspace", "--output-shape"] as const;
+const GLOBAL_PATH_OPTIONS = ["--session", "--agent-id", "--workspace", "--output-shape", "--browser-executable"] as const;
 const OUTPUT_FLAGS = new Set(["--json", "--no-json", "--pretty"]);
 
 const manifestPaths = allCommandManifest

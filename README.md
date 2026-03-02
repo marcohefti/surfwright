@@ -276,6 +276,8 @@ surfwright open https://example.com --profile auth
 
 `extension load|reload` updates the managed launch set. The next managed ensure/open applies the latest extension build automatically; if the fingerprint changed, SurfWright restarts the managed profile session and reports the applied runtime set in `appliedExtensions`.
 Extension runtime verification defaults to strict mode (`SURFWRIGHT_EXTENSION_RUNTIME_MODE=strict`): when runtime installation is not observed, SurfWright returns typed `E_EXTENSION_RUNTIME_NOT_LOADED` and includes launch/runtime diagnostics (`launchArgs`, preference files checked, CDP extension targets observed). For non-blocking dev flows, set `SURFWRIGHT_EXTENSION_RUNTIME_MODE=warn` to continue with `appliedExtensions[*].state` evidence while still exposing runtime drift. You can tune the observation budget with `SURFWRIGHT_EXTENSION_RUNTIME_OBSERVED_WAIT_MS`.
+Managed launches support browser executable override via global `--browser-executable <path>` or `SURFWRIGHT_BROWSER_EXECUTABLE=<path>`. This is the recommended path for unpacked-extension automation on Chromium/CfT builds when stock Chrome blocks side-load flags.
+`surfwright doctor` now performs a bounded unpacked side-load runtime probe and reports `chrome.unpackedExtensionSideload.{checked,supported,reason}` plus selected executable metadata so operators can preflight capability before running strict extension workflows.
 
 Attach to remote CDP endpoints (HTTP(S) discovery URL or direct WS endpoint):
 

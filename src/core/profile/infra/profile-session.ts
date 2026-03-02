@@ -1,7 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { allocateFreePort, isCdpEndpointReachable, killManagedBrowserProcessTree, startManagedSession } from "../../browser.js";
+import {
+  allocateFreePort,
+  isCdpEndpointReachable,
+  killManagedBrowserProcessTree,
+  resolveManagedBrowserExecutablePath,
+  startManagedSession,
+} from "../../browser.js";
 import { resolveManagedExtensionProjection } from "../../extensions/index.js";
 import { CliError } from "../../errors.js";
 import { nowIso, readState } from "../../state/index.js";
@@ -24,6 +30,7 @@ type ProfileSessionMeta = {
   debugPort: number;
   browserPid: number;
   browserMode: "headless" | "headed";
+  browserExecutablePath: string | null;
   startedAt: string;
   ownerId: string | null;
   extensionSetFingerprint: string | null;
@@ -134,6 +141,10 @@ function readMeta(workspaceDir: string, profile: string): ProfileSessionMeta | n
       debugPort: parsed.debugPort,
       browserPid: parsed.browserPid,
       browserMode: parsed.browserMode,
+      browserExecutablePath:
+        typeof parsed.browserExecutablePath === "string" && parsed.browserExecutablePath.length > 0
+          ? parsed.browserExecutablePath
+          : null,
       startedAt: parsed.startedAt,
       ownerId: typeof parsed.ownerId === "string" && parsed.ownerId.length > 0 ? parsed.ownerId : null,
       extensionSetFingerprint:
@@ -247,6 +258,7 @@ export async function ensureProfileManagedSession(opts: {
     if (existing && isProcessAlive(existing.browserPid) && (await isCdpEndpointReachable(existing.cdpOrigin, opts.timeoutMs))) {
       if (
         existing.browserMode !== desiredMode ||
+        (existing.browserExecutablePath ?? null) !== (resolveManagedBrowserExecutablePath().executablePath ?? null) ||
         (existing.extensionSetFingerprint ?? null) !== (desiredExtensionSetFingerprint ?? null)
       ) {
         killManagedBrowserProcessTree(existing.browserPid, "SIGTERM");
@@ -261,6 +273,7 @@ export async function ensureProfileManagedSession(opts: {
           debugPort: existing.debugPort,
           userDataDir: path.join(workspaceProfilesDir(workspaceDir), profile),
           profile,
+          browserExecutablePath: existing.browserExecutablePath ?? null,
           browserPid: existing.browserPid,
           ownerId: existing.ownerId,
           leaseExpiresAt: null,
@@ -303,6 +316,7 @@ export async function ensureProfileManagedSession(opts: {
       debugPort: created.debugPort ?? debugPort,
       browserPid: created.browserPid ?? 0,
       browserMode: created.browserMode === "headed" ? "headed" : "headless",
+      browserExecutablePath: created.browserExecutablePath ?? null,
       startedAt: created.createdAt,
       ownerId: currentAgentId(),
       extensionSetFingerprint: created.extensionSetFingerprint ?? null,

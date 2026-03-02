@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import net, { AddressInfo } from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { CliError } from "./errors.js";
 import {
@@ -44,6 +45,7 @@ const EXTENSION_RUNTIME_OBSERVED_POLL_MS = 50;
 const EXTENSION_RUNTIME_CDP_PROBE_TIMEOUT_MS = 1500;
 
 type ExtensionRuntimeVerificationMode = "strict" | "warn";
+type BrowserExecutableSource = "override" | "candidate";
 
 export function managedStartupWaitPlan(timeoutMs: number): {
   firstAttemptStartupWaitMs: number;
@@ -101,6 +103,46 @@ function firstChromeExecutablePath(): string | null {
     }
   }
   return null;
+}
+
+function resolveBrowserExecutableOverridePath(): string | null {
+  const raw = process.env.SURFWRIGHT_BROWSER_EXECUTABLE;
+  if (typeof raw !== "string") {
+    return null;
+  }
+  const value = raw.trim();
+  return value.length > 0 ? value : null;
+}
+
+export function resolveManagedBrowserExecutablePath(): {
+  executablePath: string | null;
+  source: BrowserExecutableSource | null;
+  candidates: string[];
+  overridePath: string | null;
+} {
+  const candidates = chromeCandidatesForPlatform();
+  const overridePath = resolveBrowserExecutableOverridePath();
+  if (overridePath) {
+    try {
+      if (fs.existsSync(overridePath)) {
+        return {
+          executablePath: overridePath,
+          source: "override",
+          candidates,
+          overridePath,
+        };
+      }
+    } catch {
+      // fall back to candidate discovery
+    }
+  }
+  const candidatePath = firstChromeExecutablePath();
+  return {
+    executablePath: candidatePath,
+    source: candidatePath ? "candidate" : null,
+    candidates,
+    overridePath,
+  };
 }
 
 async function waitForCdpEndpoint(cdpOrigin: string, timeoutMs: number): Promise<boolean> {
@@ -203,6 +245,7 @@ function launchDetachedBrowser(opts: {
 function browserStartHints(userDataDir: string): string[] {
   return [
     "Run `surfwright doctor` to verify browser availability and candidates.",
+    "Use --browser-executable <path> (or SURFWRIGHT_BROWSER_EXECUTABLE) to force Chromium/CfT when required.",
     `Check write access for profile directory: ${userDataDir}`,
     "If parallel runs share state, isolate with SURFWRIGHT_STATE_DIR to avoid contention.",
   ];
@@ -651,6 +694,159 @@ async function resolveRuntimeAppliedExtensions(opts: {
   };
 }
 
+export async function probeUnpackedExtensionSideloadSupport(opts?: {
+  executablePath?: string | null;
+  timeoutMs?: number;
+  browserMode?: ManagedBrowserMode;
+}): Promise<{
+  checked: boolean;
+  supported: boolean;
+  executablePath: string | null;
+  launchArgs: string[];
+  checkedPreferencePaths: string[];
+  readablePreferencePaths: string[];
+  preferenceRuntimeIds: string[];
+  cdpRuntimeIds: string[];
+  cdpTargetUrls: string[];
+  cdpMatchedExtensionIds: string[];
+  observedWaitMs: number;
+  reason: "ok" | "browser_not_found" | "spawn_failed" | "cdp_not_ready";
+}> {
+  const resolvedExecutable = resolveManagedBrowserExecutablePath();
+  const executablePath =
+    typeof opts?.executablePath === "string" && opts.executablePath.trim().length > 0
+      ? opts.executablePath.trim()
+      : resolvedExecutable.executablePath;
+  if (!executablePath) {
+    return {
+      checked: false,
+      supported: false,
+      executablePath: null,
+      launchArgs: [],
+      checkedPreferencePaths: [],
+      readablePreferencePaths: [],
+      preferenceRuntimeIds: [],
+      cdpRuntimeIds: [],
+      cdpTargetUrls: [],
+      cdpMatchedExtensionIds: [],
+      observedWaitMs: 0,
+      reason: "browser_not_found",
+    };
+  }
+
+  const probeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-sideload-probe-"));
+  const probeExtensionDir = path.join(probeRoot, "probe-extension");
+  const probeProfileDir = path.join(probeRoot, "probe-profile");
+  fs.mkdirSync(probeExtensionDir, { recursive: true });
+  fs.mkdirSync(probeProfileDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(probeExtensionDir, "manifest.json"),
+    `${JSON.stringify(
+      {
+        manifest_version: 3,
+        name: "surfwright-sideload-probe",
+        version: "0.0.0",
+        background: {
+          service_worker: "probe-worker.js",
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  fs.writeFileSync(path.join(probeExtensionDir, "probe-worker.js"), "self.__surfwrightProbe = true;\n", "utf8");
+
+  let browserPid: number | null = null;
+  try {
+    const debugPort = await allocateFreePort();
+    const launch = launchDetachedBrowser({
+      executablePath,
+      debugPort,
+      userDataDir: probeProfileDir,
+      browserMode: opts?.browserMode ?? "headless",
+      extensionPaths: [probeExtensionDir],
+    });
+    browserPid = launch.browserPid;
+    if (browserPid === null) {
+      return {
+        checked: false,
+        supported: false,
+        executablePath,
+        launchArgs: launch.launchArgs,
+        checkedPreferencePaths: [],
+        readablePreferencePaths: [],
+        preferenceRuntimeIds: [],
+        cdpRuntimeIds: [],
+        cdpTargetUrls: [],
+        cdpMatchedExtensionIds: [],
+        observedWaitMs: 0,
+        reason: "spawn_failed",
+      };
+    }
+    const cdpOrigin = `http://127.0.0.1:${debugPort}`;
+    const requestedProbeTimeoutMs = typeof opts?.timeoutMs === "number" ? opts.timeoutMs : NaN;
+    const probeTimeoutMs =
+      Number.isFinite(requestedProbeTimeoutMs) && requestedProbeTimeoutMs > 0 ? Math.floor(requestedProbeTimeoutMs) : 8000;
+    const isReady = await waitForCdpEndpoint(cdpOrigin, probeTimeoutMs);
+    if (!isReady) {
+      return {
+        checked: true,
+        supported: false,
+        executablePath,
+        launchArgs: launch.launchArgs,
+        checkedPreferencePaths: [],
+        readablePreferencePaths: [],
+        preferenceRuntimeIds: [],
+        cdpRuntimeIds: [],
+        cdpTargetUrls: [],
+        cdpMatchedExtensionIds: [],
+        observedWaitMs: 0,
+        reason: "cdp_not_ready",
+      };
+    }
+
+    const resolved = await resolveRuntimeAppliedExtensions({
+      userDataDir: probeProfileDir,
+      cdpOrigin,
+      projected: [
+        {
+          id: "ext-sideload-probe",
+          name: "surfwright-sideload-probe",
+          version: "0.0.0",
+          path: probeExtensionDir,
+          manifestVersion: 3,
+          enabled: true,
+          buildFingerprint: "probe",
+        },
+      ],
+      timeoutMs: probeTimeoutMs,
+    });
+    const applied = resolved.appliedExtensions[0];
+    return {
+      checked: true,
+      supported: Boolean(applied && applied.state === "runtime-installed"),
+      executablePath,
+      launchArgs: launch.launchArgs,
+      checkedPreferencePaths: resolved.diagnostics.checkedPreferencePaths,
+      readablePreferencePaths: resolved.diagnostics.readablePreferencePaths,
+      preferenceRuntimeIds: resolved.diagnostics.preferenceRuntimeIds,
+      cdpRuntimeIds: resolved.diagnostics.cdpRuntimeIds,
+      cdpTargetUrls: resolved.diagnostics.cdpTargetUrls,
+      cdpMatchedExtensionIds: resolved.diagnostics.cdpMatchedExtensionIds,
+      observedWaitMs: resolved.diagnostics.observedWaitMs,
+      reason: "ok",
+    };
+  } finally {
+    await terminateBrowserProcessStrict(browserPid, MANAGED_STARTUP_TERMINATE_GRACE_MS);
+    try {
+      fs.rmSync(probeRoot, { recursive: true, force: true });
+    } catch {
+      // best effort probe cleanup
+    }
+  }
+}
+
 export async function startManagedSession(
   opts: {
     sessionId: string;
@@ -663,9 +859,15 @@ export async function startManagedSession(
   },
   timeoutMs: number,
 ): Promise<SessionState> {
-  const executablePath = firstChromeExecutablePath();
+  const executable = resolveManagedBrowserExecutablePath();
+  const executablePath = executable.executablePath;
   if (!executablePath) {
-    throw new CliError("E_BROWSER_NOT_FOUND", "No compatible Chrome/Chromium binary found; run doctor for candidates");
+    throw new CliError("E_BROWSER_NOT_FOUND", "No compatible Chrome/Chromium binary found; run doctor for candidates", {
+      hintContext: {
+        overridePath: executable.overridePath,
+        candidates: executable.candidates,
+      },
+    });
   }
   const extensionProjection = resolveManagedExtensionProjection();
   const verificationMode = resolveExtensionRuntimeVerificationMode();
@@ -691,6 +893,7 @@ export async function startManagedSession(
         hints: browserStartHints(opts.userDataDir),
         hintContext: {
           executablePath,
+          executableSource: executable.source,
           browserMode,
           debugPort,
           userDataDir: opts.userDataDir,
@@ -713,6 +916,8 @@ export async function startManagedSession(
           debugPort,
           startupWaitMs,
           startupAttempt,
+          executablePath,
+          executableSource: executable.source,
           browserMode,
           userDataDir: opts.userDataDir,
           shutdownSucceeded,
@@ -745,16 +950,28 @@ export async function startManagedSession(
     const appliedExtensions = resolvedExtensions.appliedExtensions;
     const notInstalled = appliedExtensions.filter((entry) => entry.state !== "runtime-installed");
     if (notInstalled.length > 0 && verificationMode === "strict") {
+      const sideloadProbe = await probeUnpackedExtensionSideloadSupport({
+        executablePath,
+        timeoutMs: Math.min(timeoutMs, 10000),
+        browserMode,
+      });
       throw new CliError("E_EXTENSION_RUNTIME_NOT_LOADED", "Configured extension set was not mounted in runtime", {
         hints: [
           "Confirm each extension path still exists and contains manifest.json plus built assets.",
           "Run `surfwright extension reload <extensionRef>` after rebuilding unpacked extension assets.",
           "Re-run `surfwright open <url> --profile <name>` to force deterministic profile restart.",
+          ...(sideloadProbe.checked && sideloadProbe.supported === false
+            ? [
+                "Selected browser may block unpacked extension side-load flags; retry with --browser-executable <path> (or SURFWRIGHT_BROWSER_EXECUTABLE) using Chromium/CfT.",
+              ]
+            : []),
         ],
         hintContext: {
           missingExtensionIds: notInstalled.map((entry) => entry.id).join(","),
           missingExtensionNames: notInstalled.map((entry) => entry.name).join(","),
           userDataDir: opts.userDataDir,
+          executablePath,
+          executableSource: executable.source,
           verificationMode,
           launchArgs: started.launchArgs,
           checkedPreferencePaths: resolvedExtensions.diagnostics.checkedPreferencePaths,
@@ -765,6 +982,7 @@ export async function startManagedSession(
           cdpMatchedExtensionIds: resolvedExtensions.diagnostics.cdpMatchedExtensionIds,
           cdpProbeUsed: resolvedExtensions.diagnostics.cdpProbeUsed,
           observedWaitMs: resolvedExtensions.diagnostics.observedWaitMs,
+          sideloadProbe,
         },
       });
     }
@@ -779,6 +997,7 @@ export async function startManagedSession(
         debugPort: started.debugPort,
         userDataDir: opts.userDataDir,
         profile: typeof opts.profile === "string" && opts.profile.trim().length > 0 ? opts.profile.trim() : null,
+        browserExecutablePath: executablePath,
         browserPid: started.browserPid,
         ownerId: currentAgentId(),
         leaseExpiresAt: null,
@@ -809,10 +1028,13 @@ export async function ensureSessionReachable(
   restarted: boolean;
 }> {
   const desiredMode = opts?.browserMode;
+  const desiredBrowserExecutablePath = session.kind === "managed" ? resolveManagedBrowserExecutablePath().executablePath : null;
   const desiredExtensionSetFingerprint = session.kind === "managed" ? resolveManagedExtensionProjection().extensionSetFingerprint : null;
   const extensionDrifted =
     session.kind === "managed" && (session.extensionSetFingerprint ?? null) !== (desiredExtensionSetFingerprint ?? null);
-  if (session.kind === "managed" && ((desiredMode && session.browserMode !== desiredMode) || extensionDrifted)) {
+  const executableDrifted =
+    session.kind === "managed" && (session.browserExecutablePath ?? null) !== (desiredBrowserExecutablePath ?? null);
+  if (session.kind === "managed" && ((desiredMode && session.browserMode !== desiredMode) || extensionDrifted || executableDrifted)) {
     await terminateBrowserProcessStrict(session.browserPid, MANAGED_STARTUP_TERMINATE_GRACE_MS);
     const debugPort = session.debugPort ?? (await allocateFreePort());
     const userDataDir = session.userDataDir ?? defaultSessionUserDataDir(session.sessionId);

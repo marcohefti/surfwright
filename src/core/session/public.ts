@@ -32,8 +32,8 @@ import { parseManagedBrowserMode } from "./app/browser-mode.js";
 import { openUrl as openUrlInternal } from "./infra/open.js";
 import { getDoctorReport as getDoctorReportInternal } from "./infra/doctor.js";
 
-export function getDoctorReport(): DoctorReport {
-  return getDoctorReportInternal();
+export async function getDoctorReport(): Promise<DoctorReport> {
+  return await getDoctorReportInternal();
 }
 
 type OpenEnsureSessionMode = "off" | "if-missing" | "fresh";
@@ -313,6 +313,7 @@ export async function sessionAttach(opts: {
       debugPort: inferDebugPortFromCdpOrigin(cdpOrigin),
       userDataDir: null,
       profile: null,
+      browserExecutablePath: null,
       browserPid: null,
       ownerId: null,
       leaseExpiresAt: null,

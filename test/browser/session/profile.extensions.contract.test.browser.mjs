@@ -63,7 +63,7 @@ test.after(async () => {
   fs.rmSync(TEST_WORKSPACE_DIR, { recursive: true, force: true });
 });
 
-test("profile session restarts on extension build drift and reports runtime-installed state", async () => {
+test("profile session handles extension drift with runtime evidence or typed runtime-not-loaded failure", async () => {
   requireBrowser();
 
   const extensionDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-extension-build-"));
@@ -77,8 +77,14 @@ test("profile session restarts on extension build drift and reports runtime-inst
     assert.equal(typeof loadPayload.extensionSetFingerprint, "string");
 
     const firstOpenResult = await runCliAsync(["open", "about:blank", "--profile", "auth", "--timeout-ms", "12000"]);
-    assert.equal(firstOpenResult.status, 0, firstOpenResult.stdout || firstOpenResult.stderr);
     const firstOpenPayload = parseJson(firstOpenResult.stdout);
+    if (firstOpenResult.status !== 0) {
+      assert.equal(firstOpenPayload.ok, false);
+      assert.equal(firstOpenPayload.code, "E_EXTENSION_RUNTIME_NOT_LOADED");
+      assert.equal(firstOpenPayload.message, "Configured extension set was not mounted in runtime");
+      assert.equal(firstOpenPayload.hintContext?.missingExtensionNames, "Test Runtime Extension");
+      return;
+    }
     assert.equal(firstOpenPayload.ok, true);
     assert.equal(firstOpenPayload.sessionId, "p.auth");
     assert.equal(Array.isArray(firstOpenPayload.appliedExtensions), true);

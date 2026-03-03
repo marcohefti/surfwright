@@ -1,6 +1,6 @@
 {
   "name": "@marcohefti/surfwright",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": false,
   "description": "Agent-first browser control surface (CLI + daemon) for Chrome/Chromium",
   "license": "MIT",

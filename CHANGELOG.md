@@ -4,6 +4,8 @@ All notable changes to SurfWright are documented here.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-03-03
+
 ### Added
 - [extensions] Added deterministic managed-launch extension coupling from workspace registry (`extension load|reload` + managed launch flags) with runtime-verified `appliedExtensions[]` and session/open `extensionSetFingerprint` evidence.
 - [extensions] Added extension drift restart semantics for managed sessions: extension set fingerprint changes now force deterministic managed restart on next ensure/open.

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "surfwright",
+  "skillVersion": "0.1.2",
+  "channel": "stable",
+  "requires": {
+    "surfwrightVersion": ">=0.1.0 <0.2.0",
+    "contractSchemaVersion": "^1",
+    "contractFingerprint": "sha256:6a6e68982761526f96b5d373cdae6669b649171a0612743fa761b5a97ca83c8e"
+  },
+  "artifacts": {
+    "entry": "SKILL.md",
+    "agentConfig": "agents/openai.yaml"
+  }
+}

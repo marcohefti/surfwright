@@ -181,10 +181,6 @@ jobs:
             command: pnpm -s test:release-scripts
             timeoutMinutes: 15
             installChrome: false
-          - lane: browser
-            command: pnpm -s test:browser
-            timeoutMinutes: 40
-            installChrome: true
     permissions:
       contents: read
     steps:
@@ -224,16 +220,100 @@ jobs:
           name: ci-test-${{ matrix.lane }}-artifacts
           path: artifacts/test-lanes/${{ matrix.lane }}.log
 
+  test-browser-smoke:
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@c785b87e244131f27c9f19c1a33e2ead956ab7ce
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run browser smoke lane
+        run: |
+          mkdir -p artifacts/test-lanes
+          set -o pipefail
+          node scripts/ci/run-with-heartbeat.mjs \
+            --label "test:browser-smoke" \
+            --interval-ms 30000 \
+            -- bash -lc "pnpm -s test:browser:smoke" \
+            | tee "artifacts/test-lanes/browser-smoke.log"
+
+      - name: Upload browser smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ci-test-browser-smoke-artifacts
+          path: artifacts/test-lanes/browser-smoke.log
+
+  test-browser:
+    runs-on: ubuntu-latest
+    needs: test-browser-smoke
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@c785b87e244131f27c9f19c1a33e2ead956ab7ce
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run browser full lane
+        run: |
+          mkdir -p artifacts/test-lanes
+          set -o pipefail
+          node scripts/ci/run-with-heartbeat.mjs \
+            --label "test:browser" \
+            --interval-ms 30000 \
+            -- bash -lc "pnpm -s test:browser" \
+            | tee "artifacts/test-lanes/browser.log"
+
+      - name: Upload browser artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ci-test-browser-artifacts
+          path: artifacts/test-lanes/browser.log
+
   test:
     runs-on: ubuntu-latest
-    needs: test-lane
+    needs: [test-lane, test-browser-smoke, test-browser]
     timeout-minutes: 5
     permissions:
       contents: read
     steps:
       - name: Aggregate test lanes
         run: |
-          if [ "${{ needs.test-lane.result }}" = "success" ]; then
+          if [ "${{ needs.test-lane.result }}" = "success" ] && [ "${{ needs.test-browser-smoke.result }}" = "success" ] && [ "${{ needs.test-browser.result }}" = "success" ]; then
             echo "all test lanes passed"
             exit 0
           fi

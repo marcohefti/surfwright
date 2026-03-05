@@ -14,7 +14,8 @@ All notable changes to SurfWright are documented here.
 - [lint] Resolved strict oxlint migration fallout across `src/`, `scripts/`, and `test/` with maintainable refactors (no rule downgrades or lint bypasses), restoring `pnpm lint` to zero errors.
 - [devx] Added `pnpm lint:fix:safe` (safe autofix pipeline: `oxlint --fix` + bounded codemods + mandatory `lint`/`typecheck` verification).
 - [quality] Added `pnpm max-lines:near-cap:check` and wired it into `validate` / `validate:strict` to report files nearing the max-lines cap before hard failures.
-- [ci] Split CI test execution into explicit lanes (`contract`, `fixtures`, `browser`, `release-scripts`) with per-lane timeout budgets and heartbeat logs for long-running jobs.
+- [ci] Split CI test execution into explicit lanes (`contract`, `fixtures`, `release-scripts`, `browser-smoke`, `browser`) with per-lane timeout budgets and heartbeat logs, and gated the full browser lane behind smoke.
+- [refactor] Split near-cap target modules by extracting form-fill infra helpers (`target-form-fill`) and partitioning target report typings into focused files.
 
 ### Fixed
 - [errors] Expanded `CliError` hint context typing to accept JSON values so extension runtime diagnostics compile cleanly.

@@ -158,7 +158,7 @@ pnpm validate
 pnpm contract:snapshot:check
 ```
 
-CI note: `.github/workflows/ci.yml` runs test lanes separately (`test:contract`, `test:fixtures`, `test:browser`, `test:release-scripts`) with per-lane timeout budgets and heartbeat output via `scripts/ci/run-with-heartbeat.mjs`.
+CI note: `.github/workflows/ci.yml` runs test lanes separately (`test:contract`, `test:fixtures`, `test:release-scripts`, `test:browser:smoke`, `test:browser`) with per-lane timeout budgets and heartbeat output via `scripts/ci/run-with-heartbeat.mjs`, and gates `test:browser` behind the smoke lane.
 
 For release confidence, also run:
 

@@ -34,7 +34,7 @@ Notes:
 - For a fast operator-surface sanity pass across core browser commands, run `pnpm smoke` (deterministic `data:` pages + minimal network probes).
 - If `surfwright contract` changes intentionally, update the snapshot with `pnpm contract:snapshot:update` (this also auto-syncs skill `requires.contractFingerprint` in `skills/surfwright/skill.json` and `skills/surfwright.lock.json`).
 - `pnpm skill:validate` enforces a concise SurfWright SKILL protocol (contract-first lookup with compact `contract`/`contract --command*` usage).
-- CI test coverage runs as explicit lanes (contract, fixtures, browser, release-scripts) with per-lane timeouts and heartbeat logs.
+- CI test coverage runs as explicit lanes (`contract`, `fixtures`, `release-scripts`, `browser-smoke`, `browser`) with per-lane timeouts and heartbeat logs; `browser` runs only after `browser-smoke` passes.
 
 ## 3) Install/update local skill
 

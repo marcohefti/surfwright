@@ -20,6 +20,7 @@ Run:
 ```bash
 pnpm validate
 pnpm test
+pnpm lint:fix:safe
 pnpm skill:validate
 pnpm contract:snapshot:check
 ```
@@ -27,10 +28,13 @@ pnpm contract:snapshot:check
 Notes:
 
 - `pnpm validate` is the main gate. It runs typecheck, `oxlint`, policy, docs, perf budgets, contract snapshot checks, and knowledge-store drift checks.
+- `pnpm validate` also runs a non-blocking near-cap file-size report (`pnpm max-lines:near-cap:check`) to surface files approaching the `max-lines` guardrail before they breach.
+- Use `pnpm lint:fix:safe` for migration cleanup loops: it runs `oxlint --fix`, applies bounded safe codemods, then enforces `lint + typecheck` before returning.
 - Browser-dependent contract tests live under `test/browser/` and are not part of `pnpm test`. Run `pnpm test:browser` locally when changing browser-executing commands.
 - For a fast operator-surface sanity pass across core browser commands, run `pnpm smoke` (deterministic `data:` pages + minimal network probes).
 - If `surfwright contract` changes intentionally, update the snapshot with `pnpm contract:snapshot:update` (this also auto-syncs skill `requires.contractFingerprint` in `skills/surfwright/skill.json` and `skills/surfwright.lock.json`).
 - `pnpm skill:validate` enforces a concise SurfWright SKILL protocol (contract-first lookup with compact `contract`/`contract --command*` usage).
+- CI test coverage runs as explicit lanes (contract, fixtures, browser, release-scripts) with per-lane timeouts and heartbeat logs.
 
 ## 3) Install/update local skill
 

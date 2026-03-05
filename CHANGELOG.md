@@ -12,6 +12,9 @@ All notable changes to SurfWright are documented here.
 - [lint] Moved `LOC001`, `ARC005`, `ARC008`, `ARC010`, `BUDG002`, and `BUDG003` enforcement from custom policy scripts to `.oxlintrc.json` (`max-lines`, `no-restricted-imports`, `node/no-process-env`).
 - [policy] Removed superseded custom lint-oriented policy rules so `policy-check` stays focused on architecture topology and structural invariants.
 - [lint] Resolved strict oxlint migration fallout across `src/`, `scripts/`, and `test/` with maintainable refactors (no rule downgrades or lint bypasses), restoring `pnpm lint` to zero errors.
+- [devx] Added `pnpm lint:fix:safe` (safe autofix pipeline: `oxlint --fix` + bounded codemods + mandatory `lint`/`typecheck` verification).
+- [quality] Added `pnpm max-lines:near-cap:check` and wired it into `validate` / `validate:strict` to report files nearing the max-lines cap before hard failures.
+- [ci] Split CI test execution into explicit lanes (`contract`, `fixtures`, `browser`, `release-scripts`) with per-lane timeout budgets and heartbeat logs for long-running jobs.
 
 ### Fixed
 - [errors] Expanded `CliError` hint context typing to accept JSON values so extension runtime diagnostics compile cleanly.

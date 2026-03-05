@@ -49,10 +49,10 @@ test("request-context isolation: output-shape stays request-local under parallel
 
     const [compact, proof] = await Promise.all([runCompact, runProof]);
     console.log(JSON.stringify({
-      compactHasProof: Object.prototype.hasOwnProperty.call(compact, "proof"),
-      proofHasProof: Object.prototype.hasOwnProperty.call(proof, "proof"),
-      compactHasSummary: Object.prototype.hasOwnProperty.call(compact, "summary"),
-      proofHasSummary: Object.prototype.hasOwnProperty.call(proof, "summary"),
+      compactHasProof: Object.hasOwn(compact, "proof"),
+      proofHasProof: Object.hasOwn(proof, "proof"),
+      compactHasSummary: Object.hasOwn(compact, "summary"),
+      proofHasSummary: Object.hasOwn(proof, "summary"),
       compactKeys: Object.keys(compact),
       proofKeys: Object.keys(proof),
     }));

@@ -152,10 +152,13 @@ pnpm verify
 Equivalent explicit sequence:
 
 ```bash
+pnpm lint:fix:safe
 pnpm test
 pnpm validate
 pnpm contract:snapshot:check
 ```
+
+CI note: `.github/workflows/ci.yml` runs test lanes separately (`test:contract`, `test:fixtures`, `test:browser`, `test:release-scripts`) with per-lane timeout budgets and heartbeat output via `scripts/ci/run-with-heartbeat.mjs`.
 
 For release confidence, also run:
 

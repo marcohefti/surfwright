@@ -161,10 +161,30 @@ jobs:
           name: ci-changelog-check-artifacts
           path: artifacts/changelog/changelog-check.log
 
-  test:
+  test-lane:
     runs-on: ubuntu-latest
     needs: validate
-    timeout-minutes: 30
+    timeout-minutes: ${{ matrix.timeoutMinutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: contract
+            command: pnpm -s test:contract
+            timeoutMinutes: 20
+            installChrome: false
+          - lane: fixtures
+            command: pnpm -s test:fixtures
+            timeoutMinutes: 15
+            installChrome: false
+          - lane: release-scripts
+            command: pnpm -s test:release-scripts
+            timeoutMinutes: 15
+            installChrome: false
+          - lane: browser
+            command: pnpm -s test:browser
+            timeoutMinutes: 40
+            installChrome: true
     permissions:
       contents: read
     steps:
@@ -181,26 +201,44 @@ jobs:
           cache: pnpm
 
       - name: Install Chrome
+        if: matrix.installChrome == true
         uses: browser-actions/setup-chrome@c785b87e244131f27c9f19c1a33e2ead956ab7ce
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Test
+      - name: Run test lane
         run: |
-          mkdir -p artifacts/test
+          mkdir -p artifacts/test-lanes
           set -o pipefail
-          pnpm -s test:contract
-          pnpm -s test:fixtures
-          pnpm -s test:browser
-          echo "contract+fixture lanes passed" | tee artifacts/test/test.log
+          node scripts/ci/run-with-heartbeat.mjs \
+            --label "test:${{ matrix.lane }}" \
+            --interval-ms 30000 \
+            -- bash -lc "${{ matrix.command }}" \
+            | tee "artifacts/test-lanes/${{ matrix.lane }}.log"
 
-      - name: Upload test artifacts
+      - name: Upload test-lane artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: ci-test-artifacts
-          path: artifacts/test/test.log
+          name: ci-test-${{ matrix.lane }}-artifacts
+          path: artifacts/test-lanes/${{ matrix.lane }}.log
+
+  test:
+    runs-on: ubuntu-latest
+    needs: test-lane
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Aggregate test lanes
+        run: |
+          if [ "${{ needs.test-lane.result }}" = "success" ]; then
+            echo "all test lanes passed"
+            exit 0
+          fi
+          echo "one or more test lanes failed"
+          exit 1
 
   skill-lifecycle:
     runs-on: ubuntu-latest

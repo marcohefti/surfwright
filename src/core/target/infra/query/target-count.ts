@@ -1,5 +1,3 @@
-import { chromium } from "playwright-core";
-import { CliError } from "../../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import { parseTargetQueryInput } from "../target-query.js";
 import { parseFrameScope } from "../target-find.js";
@@ -76,7 +74,7 @@ export async function targetCount(opts: {
         }) => {
           const runtime = globalThis as unknown as BrowserRuntimeLike;
           const doc = runtime.document;
-          const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+          const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
           const normLower = (value: string): string => normalize(value).toLowerCase();
           const isVisible = (node: BrowserNodeLike | null): boolean => {
             if (!node) return false;

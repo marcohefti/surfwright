@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["node"],
+  "plugins": ["node", "unicorn", "typescript", "import"],
   "categories": {
     "correctness": "off",
     "suspicious": "off",
@@ -10,7 +10,24 @@
     "style": "off"
   },
   "rules": {
-    "no-explicit-any": "error"
+    "typescript/no-explicit-any": "error",
+    "no-unused-vars": "error",
+    "unicorn/no-typeof-undefined": "error",
+    "import/no-duplicates": "error",
+    "no-nested-ternary": "error",
+    "unicorn/prefer-string-replace-all": "error",
+    "prefer-object-has-own": "error",
+    "no-extra-boolean-cast": "error",
+    "unicorn/no-useless-fallback-in-spread": "error",
+    "unicorn/require-module-specifiers": "error",
+    "no-negated-condition": "error",
+    "typescript/prefer-optional-chain": "error",
+    "typescript/require-array-sort-compare": "error",
+    "no-useless-escape": "error",
+    "unicorn/prefer-string-raw": "error",
+    "unicorn/prefer-at": "error",
+    "typescript/no-redundant-type-constituents": "error",
+    "typescript/no-unnecessary-type-assertion": "error"
   },
   "overrides": [
     {

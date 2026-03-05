@@ -20,7 +20,7 @@ async function sleep(ms) {
 }
 
 function escapeRegexLiteral(input) {
-  return String(input).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return String(input).replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 function terminatePid(pid) {

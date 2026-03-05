@@ -20,7 +20,7 @@ export function parseOptionalTrimmedString(input: string | undefined): string | 
 }
 
 export function escapeRegexLiteral(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 export function parseOptionalRegex(input: string | undefined, optionName: string): RegExp | null {

@@ -44,7 +44,7 @@ export const targetUploadCommandSpec: TargetCommandSpec = {
           "  surfwright target upload <targetId> --selector 'input[type=file]' --file ./avatar.png --proof",
           "  surfwright target upload <targetId> --selector '#file' --file ./report.csv --submit-selector 'button[type=submit]' --wait-for-text 'uploaded'",
           "  surfwright target upload <targetId> --selector '#file' --file ./report.csv --submit-selector 'button[type=submit]' --expect-uploaded-filename report.csv",
-          "  surfwright target upload <targetId> --selector '#file' --file ./report.csv --submit-selector '#submit' --wait-for-result --result-selector '#uploaded-files' --result-filename-regex 'report\\\\.csv'",
+          String.raw`  surfwright target upload <targetId> --selector '#file' --file ./report.csv --submit-selector '#submit' --wait-for-result --result-selector '#uploaded-files' --result-filename-regex 'report\\.csv'`,
         ].join("\n"),
       )
       .action(

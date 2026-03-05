@@ -74,7 +74,7 @@ function runCliJson(opts, args, envExtra) {
   let payload;
   try {
     payload = JSON.parse(stdout);
-  } catch (error) {
+  } catch {
     fail("cli stdout was not valid JSON", { args, status: result.status, stderr: result.stderr, stdout });
   }
 
@@ -384,7 +384,7 @@ try {
     ["--session", sessionId, "target", "network-tail", exampleTargetId, "--profile", "perf", "--capture-ms", "1200", "--max-events", "80", "--reload", "--timeout-ms", String(opts.timeoutMs)],
     envBase,
   );
-  const lastNet = netTail.events[netTail.events.length - 1] ?? null;
+  const lastNet = netTail.events.at(-1) ?? null;
   expect(lastNet && lastNet.type === "capture" && lastNet.phase === "end", "network-tail did not end with capture end", { lastNet });
 
   const consoleHtml = `<!doctype html><title>Console</title><script>console.log('hello'); console.warn('warn'); console.error('err');</script>`;
@@ -396,7 +396,7 @@ try {
     ["--session", sessionId, "target", "console-tail", consoleTargetId, "--capture-ms", "800", "--max-events", "30", "--levels", "error,warn,log", "--reload", "--timeout-ms", String(opts.timeoutMs)],
     envBase,
   );
-  const lastConsole = consoleTail.events[consoleTail.events.length - 1] ?? null;
+  const lastConsole = consoleTail.events.at(-1) ?? null;
   expect(lastConsole && lastConsole.type === "capture" && lastConsole.phase === "end", "console-tail did not end with capture end", { lastConsole });
 
   // Optional live probe (networked UX sanity).

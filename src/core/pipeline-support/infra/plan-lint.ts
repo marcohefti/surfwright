@@ -9,7 +9,7 @@ function lintAssertionSpec(opts: {
   isTemplateString: (value: unknown) => boolean;
 }): void {
   const { input, path, issues, isTemplateString } = opts;
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return;
   }
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
@@ -24,19 +24,19 @@ function lintAssertionSpec(opts: {
     gte?: unknown;
   };
   if (
-    typeof assertion.equals !== "undefined" &&
+    assertion.equals !== undefined &&
     (typeof assertion.equals !== "object" || assertion.equals === null || Array.isArray(assertion.equals))
   ) {
     issues.push({ level: "error", path: `${path}.equals`, message: `${path}.equals must be an object map` });
   }
   if (
-    typeof assertion.contains !== "undefined" &&
+    assertion.contains !== undefined &&
     (typeof assertion.contains !== "object" || assertion.contains === null || Array.isArray(assertion.contains))
   ) {
     issues.push({ level: "error", path: `${path}.contains`, message: `${path}.contains must be an object map` });
   }
   if (
-    typeof assertion.gte !== "undefined" &&
+    assertion.gte !== undefined &&
     (typeof assertion.gte !== "object" || assertion.gte === null || Array.isArray(assertion.gte))
   ) {
     issues.push({ level: "error", path: `${path}.gte`, message: `${path}.gte must be an object map` });
@@ -58,10 +58,8 @@ function lintAssertionSpec(opts: {
       }
     }
   }
-  if (typeof assertion.truthy !== "undefined") {
-    if (!Array.isArray(assertion.truthy)) {
-      issues.push({ level: "error", path: `${path}.truthy`, message: `${path}.truthy must be a string[]` });
-    } else {
+  if (assertion.truthy !== undefined) {
+    if (Array.isArray(assertion.truthy)) {
       for (let idx = 0; idx < assertion.truthy.length; idx += 1) {
         const item = assertion.truthy[idx];
         if (typeof item !== "string" || item.trim().length === 0) {
@@ -72,12 +70,12 @@ function lintAssertionSpec(opts: {
           });
         }
       }
+    } else {
+      issues.push({ level: "error", path: `${path}.truthy`, message: `${path}.truthy must be a string[]` });
     }
   }
-  if (typeof assertion.exists !== "undefined") {
-    if (!Array.isArray(assertion.exists)) {
-      issues.push({ level: "error", path: `${path}.exists`, message: `${path}.exists must be a string[]` });
-    } else {
+  if (assertion.exists !== undefined) {
+    if (Array.isArray(assertion.exists)) {
       for (let idx = 0; idx < assertion.exists.length; idx += 1) {
         const item = assertion.exists[idx];
         if (typeof item !== "string" || item.trim().length === 0) {
@@ -88,6 +86,8 @@ function lintAssertionSpec(opts: {
           });
         }
       }
+    } else {
+      issues.push({ level: "error", path: `${path}.exists`, message: `${path}.exists must be a string[]` });
     }
   }
 }
@@ -116,7 +116,7 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
       issues.push({ level: "error", path: `steps[${index}].id`, message: `unsupported step id: ${step.id}` });
       continue;
     }
-    if (typeof step.targetId !== "undefined" && typeof step.targetId !== "string" && !isTemplateString(step.targetId)) {
+    if (step.targetId !== undefined && typeof step.targetId !== "string" && !isTemplateString(step.targetId)) {
       issues.push({ level: "error", path: `steps[${index}].targetId`, message: "targetId must be a string" });
     }
     if (step.id === "open" && (typeof step.url !== "string" || step.url.trim().length === 0)) {
@@ -133,7 +133,7 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
       issues.push({ level: "error", path: `steps[${index}].value`, message: "value is required for fill" });
     }
     if (step.id === "scroll-plan" || step.id === "scrollPlan") {
-      if (typeof step.scrollMode !== "undefined" && typeof step.scrollMode !== "string" && !isTemplateString(step.scrollMode)) {
+      if (step.scrollMode !== undefined && typeof step.scrollMode !== "string" && !isTemplateString(step.scrollMode)) {
         issues.push({ level: "error", path: `steps[${index}].scrollMode`, message: "scrollMode must be a string" });
       }
       if (
@@ -148,39 +148,39 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
           message: "scrollMode must be one of: absolute, relative",
         });
       }
-      if (typeof step.steps !== "undefined" && typeof step.steps !== "string" && !isTemplateString(step.steps)) {
+      if (step.steps !== undefined && typeof step.steps !== "string" && !isTemplateString(step.steps)) {
         issues.push({ level: "error", path: `steps[${index}].steps`, message: "steps must be a csv string" });
       }
-      if (typeof step.settleMs !== "undefined" && typeof step.settleMs !== "number" && !isTemplateString(step.settleMs)) {
+      if (step.settleMs !== undefined && typeof step.settleMs !== "number" && !isTemplateString(step.settleMs)) {
         issues.push({ level: "error", path: `steps[${index}].settleMs`, message: "settleMs must be an integer" });
       }
       if (
-        typeof step.countSelector !== "undefined" &&
+        step.countSelector !== undefined &&
         typeof step.countSelector !== "string" &&
         !isTemplateString(step.countSelector)
       ) {
         issues.push({ level: "error", path: `steps[${index}].countSelector`, message: "countSelector must be a string" });
       }
       if (
-        typeof step.countContains !== "undefined" &&
+        step.countContains !== undefined &&
         typeof step.countContains !== "string" &&
         !isTemplateString(step.countContains)
       ) {
         issues.push({ level: "error", path: `steps[${index}].countContains`, message: "countContains must be a string" });
       }
       if (
-        typeof step.countContains !== "undefined" &&
-        typeof step.countSelector === "undefined" &&
+        step.countContains !== undefined &&
+        step.countSelector === undefined &&
         !isTemplateString(step.countContains)
       ) {
         issues.push({ level: "error", path: `steps[${index}].countContains`, message: "countContains requires countSelector" });
       }
-      if (typeof step.countVisibleOnly !== "undefined" && typeof step.countVisibleOnly !== "boolean" && !isTemplateString(step.countVisibleOnly)) {
+      if (step.countVisibleOnly !== undefined && typeof step.countVisibleOnly !== "boolean" && !isTemplateString(step.countVisibleOnly)) {
         issues.push({ level: "error", path: `steps[${index}].countVisibleOnly`, message: "countVisibleOnly must be a boolean" });
       }
       if (
         step.countVisibleOnly === true &&
-        typeof step.countSelector === "undefined" &&
+        step.countSelector === undefined &&
         !isTemplateString(step.countVisibleOnly)
       ) {
         issues.push({
@@ -210,7 +210,7 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
             message: "nested repeat-until is not supported",
           });
         }
-        if (typeof nested.as !== "undefined") {
+        if (nested.as !== undefined) {
           issues.push({
             level: "error",
             path: `steps[${index}].step.as`,
@@ -219,7 +219,7 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
         }
       }
       if (
-        typeof step.maxAttempts !== "undefined" &&
+        step.maxAttempts !== undefined &&
         typeof step.maxAttempts !== "number" &&
         !isTemplateString(step.maxAttempts)
       ) {
@@ -235,7 +235,7 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
           message: "maxAttempts must be an integer between 1 and 25",
         });
       }
-      const untilPathProvided = typeof step.untilPath !== "undefined";
+      const untilPathProvided = step.untilPath !== undefined;
       if (
         !untilPathProvided ||
         (typeof step.untilPath !== "string" && !isTemplateString(step.untilPath)) ||
@@ -247,10 +247,10 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
           message: "untilPath is required and must be a non-empty string",
         });
       }
-      const hasUntilEquals = Object.prototype.hasOwnProperty.call(step, "untilEquals");
-      const hasUntilGte = Object.prototype.hasOwnProperty.call(step, "untilGte");
-      const hasUntilDeltaGte = Object.prototype.hasOwnProperty.call(step, "untilDeltaGte");
-      const hasUntilChanged = Object.prototype.hasOwnProperty.call(step, "untilChanged");
+      const hasUntilEquals = Object.hasOwn(step, "untilEquals");
+      const hasUntilGte = Object.hasOwn(step, "untilGte");
+      const hasUntilDeltaGte = Object.hasOwn(step, "untilDeltaGte");
+      const hasUntilChanged = Object.hasOwn(step, "untilChanged");
       const enabledUntilChanged = step.untilChanged === true || isTemplateString(step.untilChanged);
       if (hasUntilGte && typeof step.untilGte !== "number" && !isTemplateString(step.untilGte)) {
         issues.push({ level: "error", path: `steps[${index}].untilGte`, message: "untilGte must be an integer" });
@@ -300,8 +300,8 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
       if (!selectorValid) {
         issues.push({ level: "error", path: `steps[${index}].selector`, message: "selector is required for upload" });
       }
-      const filesInput = typeof step.files !== "undefined" ? step.files : step.file;
-      if (typeof filesInput === "undefined") {
+      const filesInput = step.files === undefined ? step.file : step.files;
+      if (filesInput === undefined) {
         issues.push({ level: "error", path: `steps[${index}].files`, message: "files (or file) is required for upload" });
       } else if (typeof filesInput !== "string" && !Array.isArray(filesInput) && !isTemplateString(filesInput)) {
         issues.push({
@@ -313,10 +313,10 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
         issues.push({ level: "error", path: `steps[${index}].files`, message: "files must include at least one path" });
       }
     }
-    if (step.id === "extract" && typeof step.kind !== "undefined" && typeof step.kind !== "string") {
+    if (step.id === "extract" && step.kind !== undefined && typeof step.kind !== "string") {
       issues.push({ level: "error", path: `steps[${index}].kind`, message: "kind must be a string" });
     }
-    if (typeof step.as !== "undefined") {
+    if (step.as !== undefined) {
       if (typeof step.as !== "string" || !STEP_ALIAS_RE.test(step.as)) {
         issues.push({ level: "error", path: `steps[${index}].as`, message: "alias must match /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/" });
       } else if (aliases.has(step.as)) {
@@ -332,7 +332,7 @@ export function lintPlan(input: { steps: PipelineStepInput[]; result?: Record<st
       isTemplateString,
     });
   }
-  if (typeof input.result !== "undefined") {
+  if (input.result !== undefined) {
     if (typeof input.result !== "object" || input.result === null || Array.isArray(input.result)) {
       issues.push({ level: "error", path: "result", message: "result must be an object map of outputField -> sourcePath" });
     } else {

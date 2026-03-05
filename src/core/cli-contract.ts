@@ -27,14 +27,14 @@ function unique(values: string[]): string[] {
 }
 
 function normalizeLookupToken(input: string): string {
-  return input.trim().replace(/\s+/g, " ");
+  return input.trim().replaceAll(/\s+/g, " ");
 }
 
 function normalizeLegacyAliasLookup(input: string): string {
   return input
     .trim()
     .toLowerCase()
-    .replace(/[\s._-]+/g, "");
+    .replaceAll(/[\s._-]+/g, "");
 }
 
 const LEGACY_COMMAND_ID_ALIASES = new Map<string, string>([

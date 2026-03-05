@@ -1,4 +1,3 @@
-import { chromium } from "playwright-core";
 import type { Cookie } from "playwright-core";
 import { CliError } from "../../errors.js";
 import { sanitizeSessionId } from "../../state/index.js";

@@ -33,7 +33,7 @@ test("browser contract tests must not depend on external URLs (local fixtures on
   for (const filePath of files) {
     const rel = filePath.slice(repoRoot.length + 1).replaceAll("\\", "/");
     const text = readFileSync(filePath, "utf8");
-    const matches = text.match(/https?:\/\/[^\s"'`\)\]]+/g) ?? [];
+    const matches = text.match(/https?:\/\/[^\s"'`)\]]+/g) ?? [];
     for (const url of matches) {
       if (allowedPrefixes.some((prefix) => url.startsWith(prefix))) {
         continue;

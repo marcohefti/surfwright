@@ -160,8 +160,8 @@ function assertTargetClickFixture(fixture, filePath) {
   assert.equal(typeof observed.clicked, "object", `${filePath}: clicked must be an object`);
   assert.equal(typeof observed.clicked.text, "string", `${filePath}: clicked.text must be a string`);
   assert.ok(observed.clicked.text.includes(expect.clickedTextContains), `${filePath}: clicked.text missing expected content`);
-  assert.equal(Object.prototype.hasOwnProperty.call(observed, "wait"), true, `${filePath}: wait key missing`);
-  assert.equal(Object.prototype.hasOwnProperty.call(observed, "snapshot"), true, `${filePath}: snapshot key missing`);
+  assert.equal(Object.hasOwn(observed, "wait"), true, `${filePath}: wait key missing`);
+  assert.equal(Object.hasOwn(observed, "snapshot"), true, `${filePath}: snapshot key missing`);
   assert.equal(typeof observed.timingMs, "object", `${filePath}: timingMs must be an object`);
   assert.equal(typeof observed.timingMs.total, "number", `${filePath}: timingMs.total must be a number`);
 }

@@ -1,8 +1,6 @@
-import { chromium } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import type { BrowserRuntimeLike, BrowserNodeLike } from "../infra/types/browser-dom-types.js";
@@ -22,7 +20,7 @@ const REVEAL_SELECTOR_HINT =
   "[data-aos], [class*='fade'], [class*='reveal'], [class*='anim'], section, article, .card, .feature";
 
 function parseCycles(input: number | undefined): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return DEFAULT_TRANSITION_ASSERT_CYCLES;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 1 || input > MAX_TRANSITION_ASSERT_CYCLES) {
@@ -32,7 +30,7 @@ function parseCycles(input: number | undefined): number {
 }
 
 function parseMaxCandidates(input: number | undefined): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return DEFAULT_REVEAL_MAX_CANDIDATES;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 1 || input > MAX_REVEAL_MAX_CANDIDATES) {
@@ -318,7 +316,7 @@ export async function targetScrollRevealScan(opts: {
       sessionSource = watch.sessionSource;
       sessionId = watch.sessionId;
       const first = watch.samples[0];
-      const last = watch.samples[watch.samples.length - 1];
+      const last = watch.samples.at(-1);
       const opacityFrom = first?.computed.opacity ?? null;
       const opacityTo = last?.computed.opacity ?? null;
       const transformFrom = first?.computed.transform ?? null;

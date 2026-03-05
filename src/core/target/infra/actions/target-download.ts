@@ -1,16 +1,14 @@
-import { chromium, type Response } from "playwright-core";
+import { type Response } from "playwright-core";
 import { newActionId } from "../../../action-id.js";
 import { CliError } from "../../../errors.js";
 import { providers } from "../../../providers/index.js";
-import { redactHeaders } from "../../../shared/index.js";
 import { parseTargetQueryInput } from "../target-query.js";
 import { parseFrameScope } from "../target-find.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { createCdpEvaluator, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../cdp/index.js";
 import { cdpQueryOp } from "../../click/cdp-query-op.js";
 import type { TargetDownloadReport } from "../../../types.js";
-import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
-import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
+import { buildActionProofEnvelope, evaluateActionAssertions, parseActionAssertions, redactHeaders, toActionWaitEvidence } from "../../../shared/index.js";
 import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 import {
   handleMissingDownloadEvent,
@@ -134,7 +132,25 @@ export async function targetDownload(opts: {
     };
 
     let pickedIndex: number;
-    if (requestedIndex !== null) {
+    if (requestedIndex === null) {
+      if (visibleOnly) {
+        let found: number | null = null;
+        let offset = 0;
+        for (const entry of perFrameCounts) {
+          if (typeof entry.firstVisibleIndex === "number") {
+            found = offset + entry.firstVisibleIndex;
+            break;
+          }
+          offset += entry.rawCount;
+        }
+        if (found === null) {
+          throw new CliError("E_QUERY_INVALID", "No visible element matched download query");
+        }
+        pickedIndex = found;
+      } else {
+        pickedIndex = 0;
+      }
+    } else {
       if (requestedIndex >= matchCount) {
         throw new CliError("E_QUERY_INVALID", `index out of range: requested ${requestedIndex}, matchCount ${matchCount}`);
       }
@@ -143,22 +159,6 @@ export async function targetDownload(opts: {
         throw new CliError("E_QUERY_INVALID", `matched element at index ${requestedIndex} is not visible`);
       }
       pickedIndex = requestedIndex;
-    } else if (!visibleOnly) {
-      pickedIndex = 0;
-    } else {
-      let found: number | null = null;
-      let offset = 0;
-      for (const entry of perFrameCounts) {
-        if (typeof entry.firstVisibleIndex === "number") {
-          found = offset + entry.firstVisibleIndex;
-          break;
-        }
-        offset += entry.rawCount;
-      }
-      if (found === null) {
-        throw new CliError("E_QUERY_INVALID", "No visible element matched download query");
-      }
-      pickedIndex = found;
     }
 
     const responses: Response[] = [];

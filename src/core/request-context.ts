@@ -214,7 +214,7 @@ export async function withCapturedRequestContext<T>(opts: {
 
 export function requestContextEnvGet(name: string): string | undefined {
   const context = storage.getStore();
-  if (context && Object.prototype.hasOwnProperty.call(context.envOverrides, name)) {
+  if (context && Object.hasOwn(context.envOverrides, name)) {
     return context.envOverrides[name];
   }
   return typeof process.env[name] === "string" ? process.env[name] : undefined;

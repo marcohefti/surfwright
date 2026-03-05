@@ -89,6 +89,6 @@ test("open reports requestedUrl/finalUrl redirect evidence", async () => {
     assert.equal(openPayload.redirectChainTruncated, false);
     assert.equal(Array.isArray(openPayload.redirectChain), true);
     assert.equal(openPayload.redirectChain[0], openPayload.requestedUrl);
-    assert.equal(openPayload.redirectChain[openPayload.redirectChain.length - 1], openPayload.finalUrl);
+    assert.equal(openPayload.redirectChain.at(-1), openPayload.finalUrl);
   });
 });

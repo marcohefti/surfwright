@@ -1,8 +1,6 @@
-import { chromium } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { providers } from "../../providers/index.js";
 import { openCdpSession } from "./cdp/index.js";
@@ -63,7 +61,7 @@ type TargetClickAtReport = {
 };
 
 function parseOptionalInt(value: number | undefined, name: string, min: number, max: number): number | null {
-  if (typeof value === "undefined") {
+  if (value === undefined) {
     return null;
   }
   if (!Number.isFinite(value) || !Number.isInteger(value) || value < min || value > max) {
@@ -73,7 +71,7 @@ function parseOptionalInt(value: number | undefined, name: string, min: number, 
 }
 
 function parseOptionalNumber(value: number | undefined, name: string, min: number, max: number): number | null {
-  if (typeof value === "undefined") {
+  if (value === undefined) {
     return null;
   }
   if (!Number.isFinite(value) || value < min || value > max) {
@@ -135,7 +133,7 @@ function parseClickButton(value: string | undefined): "left" | "middle" | "right
 }
 
 function parseClickCount(value: number | undefined): number {
-  if (typeof value === "undefined") {
+  if (value === undefined) {
     return 1;
   }
   if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1 || value > 5) {
@@ -354,7 +352,7 @@ export async function targetScreenshot(opts: {
   const type = parseScreenshotType(opts.type);
   const quality =
     type === "jpeg" ? parseOptionalInt(opts.quality, "quality", 0, 100) : null;
-  if (type === "png" && typeof opts.quality !== "undefined") {
+  if (type === "png" && opts.quality !== undefined) {
     throw new CliError("E_QUERY_INVALID", "quality is only supported when type=jpeg");
   }
 
@@ -391,7 +389,7 @@ export async function targetScreenshot(opts: {
     if (Boolean(opts.fullPage) && (contentWidth <= 0 || contentHeight <= 0)) {
       throw new CliError("E_INTERNAL", "Unable to capture fullPage screenshot (layout metrics returned 0 size)");
     }
-    if (!Boolean(opts.fullPage) && (viewportWidth <= 0 || viewportHeight <= 0)) {
+    if (!opts.fullPage && (viewportWidth <= 0 || viewportHeight <= 0)) {
       throw new CliError("E_INTERNAL", "Unable to capture screenshot (viewport metrics returned 0 size)");
     }
 
@@ -400,7 +398,7 @@ export async function targetScreenshot(opts: {
       quality: quality ?? undefined,
       fromSurface: true,
       captureBeyondViewport: Boolean(opts.fullPage),
-      clip: Boolean(opts.fullPage)
+      clip: opts.fullPage
         ? {
             x: 0,
             y: 0,
@@ -427,8 +425,8 @@ export async function targetScreenshot(opts: {
       path: outPath,
       fullPage: Boolean(opts.fullPage),
       type,
-      width: Math.round(Boolean(opts.fullPage) ? contentWidth : viewportWidth),
-      height: Math.round(Boolean(opts.fullPage) ? contentHeight : viewportHeight),
+      width: Math.round(opts.fullPage ? contentWidth : viewportWidth),
+      height: Math.round(opts.fullPage ? contentHeight : viewportHeight),
       bytes: screenshot.byteLength,
       sha256,
       timingMs: {

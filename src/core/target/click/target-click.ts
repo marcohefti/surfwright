@@ -1,14 +1,12 @@
-import { chromium } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { parseTargetQueryInput } from "../infra/target-query.js";
 import { parseFrameScope } from "../infra/target-find.js";
 import { readPageTargetId, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
 import type { TargetClickDeltaEvidence, TargetClickExplainReport, TargetClickReport } from "../../types.js";
-import { CLICK_EXPLAIN_MAX_REJECTED, assertExpectedCountAfter, parseExpectedCountAfter, parseMatchIndex, parseWaitAfterClick, queryMismatchError, readPostSnapshot, resolveWaitTimeoutMs, summarizeCandidatePreviews } from "./click-utils.js";
+import { assertExpectedCountAfter, parseExpectedCountAfter, parseMatchIndex, parseWaitAfterClick, queryMismatchError, readPostSnapshot, resolveWaitTimeoutMs, summarizeCandidatePreviews } from "./click-utils.js";
 import { cdpQueryOp } from "./cdp-query-op.js";
 import { buildClickExplainReport } from "./click-explain.js";
 import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRIBUTES } from "./click-delta.js";
@@ -87,7 +85,7 @@ export async function targetClick(opts: {
     const hasContains = typeof opts.containsQuery === "string" && opts.containsQuery.trim().length > 0;
     if (hasText || hasSelector || hasContains) throw new CliError("E_QUERY_INVALID", "Use either --handle or a query via --text/--selector/--contains");
     if (requestedIndex !== null) throw new CliError("E_QUERY_INVALID", "--index cannot be combined with --handle");
-    if (Boolean(opts.visibleOnly)) throw new CliError("E_QUERY_INVALID", "--visible-only cannot be combined with --handle");
+    if (opts.visibleOnly) throw new CliError("E_QUERY_INVALID", "--visible-only cannot be combined with --handle");
     if (withinSelector.length > 0) throw new CliError("E_QUERY_INVALID", "--within cannot be combined with --handle");
     if (expectedCountAfter !== null) throw new CliError("E_QUERY_INVALID", "--expect-count-after requires selector query mode");
   }
@@ -303,7 +301,33 @@ export async function targetClick(opts: {
       });
     }
     let pickedIndex: number;
-    if (requestedIndex !== null) {
+    if (requestedIndex === null) {
+      if (visibleOnly) {
+        let found: number | null = null;
+        let offset = 0;
+        for (const entry of perFrameCounts) {
+          if (typeof entry.firstVisibleIndex === "number") {
+            found = offset + entry.firstVisibleIndex;
+            break;
+          }
+          offset += entry.rawCount;
+        }
+        if (found === null) {
+          const candidateSummary = await summarizeCandidatePreviews({ matchCount, limit: 3, previewAt });
+          throwMismatch({
+            message: "No visible element matched click query",
+            reason: "no_visible_match",
+            frameCount: perFrameCounts.length,
+            matchCount,
+            requestedIndex,
+            candidateSummary,
+          });
+        }
+        pickedIndex = found ?? 0;
+      } else {
+        pickedIndex = 0;
+      }
+    } else {
       if (requestedIndex >= matchCount) {
         const candidateSummary = await summarizeCandidatePreviews({ matchCount, limit: 3, previewAt });
         throwMismatch({
@@ -328,30 +352,6 @@ export async function targetClick(opts: {
         });
       }
       pickedIndex = requestedIndex;
-    } else if (!visibleOnly) {
-      pickedIndex = 0;
-    } else {
-      let found: number | null = null;
-      let offset = 0;
-      for (const entry of perFrameCounts) {
-        if (typeof entry.firstVisibleIndex === "number") {
-          found = offset + entry.firstVisibleIndex;
-          break;
-        }
-        offset += entry.rawCount;
-      }
-      if (found === null) {
-        const candidateSummary = await summarizeCandidatePreviews({ matchCount, limit: 3, previewAt });
-        throwMismatch({
-          message: "No visible element matched click query",
-          reason: "no_visible_match",
-          frameCount: perFrameCounts.length,
-          matchCount,
-          requestedIndex,
-          candidateSummary,
-        });
-      }
-      pickedIndex = found ?? 0;
     }
     const urlBeforeClick = target.page.url();
     const deltaBefore = includeDelta ? await captureClickDeltaState(target.page, mainEvaluator, opts.timeoutMs) : null;

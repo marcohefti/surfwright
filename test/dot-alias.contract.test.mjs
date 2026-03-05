@@ -15,7 +15,7 @@ function runCli(args, envOverrides = undefined) {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
       SURFWRIGHT_DAEMON: "0",
-      ...(envOverrides ?? {}),
+      ...envOverrides,
     },
   });
 }

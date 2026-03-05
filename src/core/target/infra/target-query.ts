@@ -101,7 +101,7 @@ export async function extractTargetQueryPreview(locator: Locator): Promise<{ tex
     return (await locator.evaluate(
       (node: BrowserNodeLike, { textMaxChars }: { textMaxChars: number }) => {
         const el = node;
-        const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+        const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
         const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";
         const classSuffix =
           classListRaw.length > 0

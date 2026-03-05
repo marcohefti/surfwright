@@ -35,6 +35,10 @@ export function printDoctorReport(report: DoctorReport, opts: RuntimeOutputOpts)
     writeJson(report, { pretty: opts.pretty });
     return;
   }
+  let unpackedSideloadSupported = "unknown";
+  if (typeof report.chrome.unpackedExtensionSideload.supported === "boolean") {
+    unpackedSideloadSupported = report.chrome.unpackedExtensionSideload.supported ? "true" : "false";
+  }
 
   const lines = [
     "surfwright doctor",
@@ -45,13 +49,7 @@ export function printDoctorReport(report: DoctorReport, opts: RuntimeOutputOpts)
     ...(report.chrome.executableSource ? [`chrome.source: ${report.chrome.executableSource}`] : []),
     ...(report.chrome.overridePath ? [`chrome.override: ${report.chrome.overridePath}`] : []),
     `chrome.unpackedSideload.checked: ${report.chrome.unpackedExtensionSideload.checked ? "true" : "false"}`,
-    `chrome.unpackedSideload.supported: ${
-      typeof report.chrome.unpackedExtensionSideload.supported === "boolean"
-        ? report.chrome.unpackedExtensionSideload.supported
-          ? "true"
-          : "false"
-        : "unknown"
-    }`,
+    `chrome.unpackedSideload.supported: ${unpackedSideloadSupported}`,
     `chrome.unpackedSideload.reason: ${report.chrome.unpackedExtensionSideload.reason}`,
     ...(report.chrome.found
       ? []

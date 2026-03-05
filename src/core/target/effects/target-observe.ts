@@ -1,8 +1,6 @@
-import { chromium } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import type { BrowserNodeLike, BrowserRuntimeLike } from "../infra/types/browser-dom-types.js";
@@ -87,7 +85,7 @@ export async function targetObserve(opts: {
       const measured = await selected.locator.evaluate(
         (node: BrowserNodeLike, { property, maxChars }: { property: string; maxChars: number }) => {
           const runtime = globalThis as unknown as BrowserRuntimeLike;
-          const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+          const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
           const clipped = (value: string): string => value.slice(0, maxChars);
           const read = (): string | null => {
             if (property === "text" || property === "innerText" || property === "textContent") {
@@ -118,7 +116,7 @@ export async function targetObserve(opts: {
               return clipped(styleValue.trim());
             }
             const direct = node?.[property];
-            if (typeof direct === "undefined" || direct === null) {
+            if (direct === undefined || direct === null) {
               return null;
             }
             return clipped(typeof direct === "string" ? direct : String(direct));
@@ -177,7 +175,7 @@ export async function targetObserve(opts: {
       samples,
       changes,
       firstValue: samples[0]?.value ?? null,
-      lastValue: samples[samples.length - 1]?.value ?? null,
+      lastValue: samples.at(-1)?.value ?? null,
       timingMs: {
         total: 0,
         resolveSession: resolvedSessionAt - startedAt,

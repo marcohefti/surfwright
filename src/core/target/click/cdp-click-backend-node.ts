@@ -77,7 +77,7 @@ export async function cdpDescribeBackendNode(opts: {
     }
   }
 
-  const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+  const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
   const id = typeof attributes.id === "string" && attributes.id.length > 0 ? `#${attributes.id}` : "";
   const classSuffix = typeof attributes.class === "string"
     ? normalize(attributes.class)

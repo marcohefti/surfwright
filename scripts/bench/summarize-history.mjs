@@ -20,7 +20,6 @@ function parseArgs(argv) {
     outBrief: "",
     json: false,
   };
-
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
     if (token === "--history") {
@@ -99,7 +98,6 @@ function parseArgs(argv) {
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
-
 function readJsonMaybe(filePath) {
   if (!filePath || !fs.existsSync(filePath)) {
     return null;
@@ -128,21 +126,18 @@ function readJsonl(filePath) {
   }
   return out;
 }
-
 function pctDelta(current, previous) {
   if (!Number.isFinite(previous) || previous === 0) {
     return null;
   }
   return (current - previous) / previous;
 }
-
 function fmtPct(value) {
   if (!Number.isFinite(value)) {
     return "n/a";
   }
   return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(1)}%`;
 }
-
 function diffLabel(value, unit = "") {
   if (!Number.isFinite(value)) {
     return "n/a";
@@ -150,7 +145,6 @@ function diffLabel(value, unit = "") {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value}${unit}`;
 }
-
 function missionSetLabel(missionIds) {
   if (!Array.isArray(missionIds) || missionIds.length === 0) {
     return "";
@@ -160,7 +154,6 @@ function missionSetLabel(missionIds) {
   }
   return missionIds.join(",");
 }
-
 function classifyOutcome({ current, previous }) {
   if (!current) {
     return "failed";
@@ -168,18 +161,14 @@ function classifyOutcome({ current, previous }) {
   if (!previous) {
     return "baseline";
   }
-
   const successPrev = previous.metrics.attempts > 0 ? previous.metrics.verifiedOk / previous.metrics.attempts : 0;
   const successCur = current.metrics.attempts > 0 ? current.metrics.verifiedOk / current.metrics.attempts : 0;
   const successDelta = successCur - successPrev;
-
   const tokenPct = pctDelta(current.metrics.tokensTotal, previous.metrics.tokensTotal) ?? 0;
   const wallPct = pctDelta(current.metrics.wallTimeMsTotal, previous.metrics.wallTimeMsTotal) ?? 0;
   const toolPct = pctDelta(current.metrics.toolCallsTotal, previous.metrics.toolCallsTotal) ?? 0;
-
   const improvedSignals = [tokenPct < -0.03, wallPct < -0.03, toolPct < -0.03].filter(Boolean).length;
   const regressedSignals = [tokenPct > 0.03, wallPct > 0.03, toolPct > 0.03].filter(Boolean).length;
-
   if (successDelta < 0) {
     return "regressed";
   }
@@ -194,12 +183,10 @@ function classifyOutcome({ current, previous }) {
   }
   return "mixed";
 }
-
 function describeDrivers(current, previous) {
   if (!current || !previous) {
     return "baseline";
   }
-
   const changes = [
     { key: "tokens", value: current.metrics.tokensTotal - previous.metrics.tokensTotal, render: (v) => diffLabel(v) },
     { key: "wallMs", value: current.metrics.wallTimeMsTotal - previous.metrics.wallTimeMsTotal, render: (v) => diffLabel(v, "ms") },
@@ -210,17 +197,14 @@ function describeDrivers(current, previous) {
   ]
     .filter((row) => Number.isFinite(row.value) && row.value !== 0)
     .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-
   if (changes.length === 0) {
     return "no measurable delta";
   }
-
   return changes
     .slice(0, 3)
     .map((row) => `${row.key} ${row.render(row.value)}`)
     .join("; ");
 }
-
 function buildResultSheetMarkdown(summary) {
   const lines = [];
   lines.push("# SurfWright Result Sheet");
@@ -232,14 +216,12 @@ function buildResultSheetMarkdown(summary) {
   lines.push(`- iterations: \`${summary.iterations.length}\``);
   lines.push("- mode: `one campaign per run, one mission scope per run, fresh agent per flow+mission attempt`");
   lines.push("");
-
   const baselineRefs = summary.config?.baselineReferences || {};
   lines.push("## Baseline References");
   lines.push("");
   lines.push(`- chrome-mcp metrics: \`${baselineRefs.chromeMcpMetricsJson || ""}\``);
   lines.push(`- prior surfwright summary: \`${baselineRefs.surfwrightCanarySummaryJson || ""}\``);
   lines.push("");
-
   lines.push("## Iterations");
   lines.push("");
   lines.push("| iter | agents | label | outcome | verified | tokens | wall ms | tools | dTokens vs prev | dWall vs prev | why (hypothesis) | change | evidence |");
@@ -251,7 +233,6 @@ function buildResultSheetMarkdown(summary) {
     );
   }
   lines.push("");
-
   const latest = summary.latest;
   if (latest) {
     lines.push("## Latest Snapshot");
@@ -269,14 +250,11 @@ function buildResultSheetMarkdown(summary) {
     lines.push(`- metrics: \`${latest.artifacts.metricsJsonPath || ""}\``);
     lines.push("");
   }
-
   return `${lines.join("\n")}\n`;
 }
-
 function buildNextTaskMarkdown(summary) {
   const lines = [];
   const latest = summary.latest;
-
   lines.push("# Next Iteration Task");
   lines.push("");
   lines.push("## Guardrails");
@@ -287,18 +265,15 @@ function buildNextTaskMarkdown(summary) {
   lines.push("- No commit/push unless explicitly requested.");
   lines.push("- Keep run artifacts under tmp/ only.");
   lines.push("");
-
   if (!latest) {
     lines.push("No successful iteration rows yet.");
     lines.push("");
     return `${lines.join("\n")}\n`;
   }
-
   const nextLabel = `exp-${String(latest.iteration + 1).padStart(2, "0")}`;
   const ids = summary.scopeMissionIds || [];
   const missionArg = ids.length === 1 ? `--mission-id ${ids[0]}` : `--mission-ids ${ids.join(",")}`;
   const agentsPerMission = Number(latest.agentsPerMission || summary.config?.agentsPerMission || 1);
-
   lines.push("## Latest");
   lines.push("");
   lines.push(`- scope: ${summary.scopeId}`);
@@ -306,12 +281,11 @@ function buildNextTaskMarkdown(summary) {
   lines.push(`- outcome: ${latest.outcome}`);
   lines.push(`- evidence: ${latest.evidence}`);
   lines.push("");
-
   lines.push("## Next Command");
   lines.push("");
   lines.push("```bash");
   lines.push("pnpm bench:loop:run \\");
-  lines.push(`  --label \"${nextLabel}\" \\`);
+  lines.push(`  --label "${nextLabel}" \\`);
   lines.push(`  ${missionArg} \\`);
   lines.push(`  --agents-per-mission ${agentsPerMission} \\`);
   lines.push("  --hypothesis \"<why this should improve>\" \\");
@@ -320,20 +294,16 @@ function buildNextTaskMarkdown(summary) {
   lines.push(`node scripts/bench/summarize-history.mjs --scope-id ${summary.scopeId}`);
   lines.push("```");
   lines.push("");
-
   return `${lines.join("\n")}\n`;
 }
-
 function writeOutputs(args, summary) {
   fs.mkdirSync(path.dirname(args.outMd), { recursive: true });
   fs.mkdirSync(path.dirname(args.outJson), { recursive: true });
   fs.mkdirSync(path.dirname(args.outBrief), { recursive: true });
-
   fs.writeFileSync(args.outJson, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
   fs.writeFileSync(args.outMd, buildResultSheetMarkdown(summary), "utf8");
   fs.writeFileSync(args.outBrief, buildNextTaskMarkdown(summary), "utf8");
 }
-
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const config = readJsonMaybe(args.configPath) || {};
@@ -363,7 +333,12 @@ function main() {
   args.outBrief = args.outBrief || scoped.outBrief;
   const historyAll = readJsonl(args.historyPath);
   const header = historyAll.find((row) => row && row.kind === "header" && String(row.scopeId || "") === scopeId);
-  const headerMissionIds = Array.isArray(header?.missionIds) && header.missionIds.length > 0 ? header.missionIds.map((v) => String(v)) : (header?.missionId ? [String(header.missionId)] : []);
+  let headerMissionIds = [];
+  if (Array.isArray(header?.missionIds) && header.missionIds.length > 0) {
+    headerMissionIds = header.missionIds.map((v) => String(v));
+  } else if (header?.missionId) {
+    headerMissionIds = [String(header.missionId)];
+  }
   const scopeMissionIds = missionIds.length > 0 ? missionIds : headerMissionIds;
   const rows = historyAll.filter((row) => row && row.kind === "iteration" && row.loopId === loopId).sort((a, b) => Number(a.iteration || 0) - Number(b.iteration || 0));
   if (rows.length === 0) {
@@ -397,13 +372,22 @@ function main() {
     }
     return;
   }
+  const resolveRowMissionIds = (row) => {
+    if (Array.isArray(row.missionIds) && row.missionIds.length > 0) {
+      return row.missionIds.map((v) => String(v));
+    }
+    if (row.missionId) {
+      return [String(row.missionId)];
+    }
+    return scopeMissionIds;
+  };
   const normalized = rows.map((row) => ({
     iteration: Number(row.iteration || 0),
     iterationId: String(row.iterationId || ""),
     createdAt: String(row.createdAt || ""),
     scopeId: String(row.scopeId || scopeId),
     missionScopeType: String(row.missionScopeType || (Array.isArray(row.missionIds) && row.missionIds.length > 1 ? "cluster" : "single")),
-    missionIds: Array.isArray(row.missionIds) && row.missionIds.length > 0 ? row.missionIds.map((v) => String(v)) : (row.missionId ? [String(row.missionId)] : scopeMissionIds),
+    missionIds: resolveRowMissionIds(row),
     agentsPerMission: Number(row.agentsPerMission || (Array.isArray(row.flowIds) ? row.flowIds.length : 0) || 1),
     flowIds: Array.isArray(row.flowIds) ? row.flowIds.map((v) => String(v)) : [],
     label: String(row.label || ""),
@@ -445,7 +429,6 @@ function main() {
       row.evidence = "no metrics";
       continue;
     }
-
     const baseline = normalized.find((r) => r.metrics.attempts > 0) || null;
     row.deltas = {
       vsPrev: {
@@ -461,9 +444,7 @@ function main() {
     row.evidence = describeDrivers(row, prev);
     prev = row;
   }
-
-  const latest = [...normalized].reverse().find((row) => row.metrics.attempts > 0) || normalized[normalized.length - 1];
-
+  const latest = [...normalized].reverse().find((row) => row.metrics.attempts > 0) || normalized.at(-1);
   const summary = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
@@ -474,9 +455,7 @@ function main() {
     iterations: normalized,
     latest,
   };
-
   writeOutputs(args, summary);
-
   const output = {
     ok: true,
     loopId,
@@ -487,7 +466,6 @@ function main() {
     outBrief: args.outBrief,
     iterations: normalized.length,
   };
-
   if (args.json) {
     process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
   } else {
@@ -496,5 +474,4 @@ function main() {
     process.stdout.write(`bench-history: wrote ${args.outBrief}\n`);
   }
 }
-
 main();

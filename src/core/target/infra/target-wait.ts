@@ -1,7 +1,5 @@
-import { chromium } from "playwright-core";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { parseFrameScope } from "./target-find.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, openCdpSession } from "./cdp/index.js";
@@ -116,7 +114,7 @@ export async function targetWait(opts: {
           const ok = await evaluator.evaluate(({ text }: { text: string }) => {
             const runtime = globalThis as unknown as BrowserRuntimeLike;
             const body = runtime.document?.body ?? null;
-            const normalize = (value: string): string => value.replace(/\s+/g, " ").trim().toLowerCase();
+            const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim().toLowerCase();
             const hay = normalize(String(body?.innerText ?? ""));
             const needle = normalize(text);
             return needle.length > 0 && hay.includes(needle);

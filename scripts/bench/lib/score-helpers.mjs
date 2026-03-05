@@ -183,7 +183,7 @@ export function summarizeNumeric(values) {
 export function toCsvValue(value) {
   const text = String(value ?? "");
   if (/[,"\n]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
+    return `"${text.replaceAll('"', '""')}"`;
   }
   return text;
 }

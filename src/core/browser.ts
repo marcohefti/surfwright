@@ -74,11 +74,11 @@ export function chromeCandidatesForPlatform(): string[] {
 
   if (process.platform === "win32") {
     return [
-      "C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe",
-      "C:\\\\Program Files (x86)\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe",
-      "C:\\\\Program Files\\\\Chromium\\\\Application\\\\chrome.exe",
-      "C:\\\\Program Files\\\\BraveSoftware\\\\Brave-Browser\\\\Application\\\\brave.exe",
-      "C:\\\\Program Files\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe",
+      String.raw`C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`,
+      String.raw`C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe`,
+      String.raw`C:\\Program Files\\Chromium\\Application\\chrome.exe`,
+      String.raw`C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe`,
+      String.raw`C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe`,
     ];
   }
 

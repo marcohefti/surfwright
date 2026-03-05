@@ -1,15 +1,13 @@
-import { chromium, type Page } from "playwright-core";
+import { type Page } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
 import { resolveOpenSessionHint } from "../../session-isolation.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { readPageTargetId, resolveSessionForAction } from "../../target/public.js";
 import type { OpenReport, SessionReport } from "../../types.js";
 import { parseManagedBrowserMode } from "../app/browser-mode.js";
-import { buildActionProofEnvelope, evaluateActionAssertions, parseActionAssertions, toActionWaitEvidence } from "../../shared/index.js";
+import { buildActionProofEnvelope, classifyNavigationBlockType, evaluateActionAssertions, parseActionAssertions, toActionWaitEvidence } from "../../shared/index.js";
 import { buildRedirectEvidence, navigatePageWithEvidence, parseOpenReuseMode, parseOpenWaitUntil } from "./open-navigation.js";
-import { classifyNavigationBlockType } from "../../shared/index.js";
 import { connectSessionBrowser } from "./runtime-access.js";
 
 function canReuseActivePageForRequestedUrl(page: Page, requestedUrl: URL): boolean {
@@ -181,8 +179,8 @@ export async function openUrl(opts: {
     const page =
       (() => {
         if (reuseMode === "active" && existingPages.length > 0) {
-          const activePage = existingPages[existingPages.length - 1];
-          if (canReuseActivePageForRequestedUrl(activePage, parsedUrl)) {
+          const activePage = existingPages.at(-1);
+          if (activePage && canReuseActivePageForRequestedUrl(activePage, parsedUrl)) {
             return activePage;
           }
         }

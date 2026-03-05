@@ -1,8 +1,6 @@
-import { chromium } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { parseTargetQueryInput } from "../infra/target-query.js";
 import { parseFrameScope } from "../infra/target-find.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
@@ -11,8 +9,7 @@ import { cdpQueryOp } from "./cdp-query-op.js";
 import { parseWaitAfterClick, resolveWaitTimeoutMs } from "./click-utils.js";
 import { waitAfterClickWithBudget } from "./click-wait.js";
 import { readSelectorCountAfter } from "./click-proof.js";
-import { evaluateActionAssertions, parseActionAssertions } from "../../shared/index.js";
-import { buildActionProofEnvelope, toActionWaitEvidence } from "../../shared/index.js";
+import { evaluateActionAssertions, parseActionAssertions, buildActionProofEnvelope, toActionWaitEvidence } from "../../shared/index.js";
 import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 
 type TargetFillReport = {

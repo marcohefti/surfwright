@@ -32,9 +32,7 @@ function sectionBody(changelog, heading) {
 
 const failures = [];
 
-if (!exists(CHANGELOG_PATH)) {
-  failures.push(`Missing ${CHANGELOG_PATH}`);
-} else {
+if (exists(CHANGELOG_PATH)) {
   const changelog = readText(CHANGELOG_PATH);
   if (!changelog.includes("## [Unreleased]")) {
     failures.push(`${CHANGELOG_PATH} missing '## [Unreleased]' section`);
@@ -58,6 +56,8 @@ if (!exists(CHANGELOG_PATH)) {
       }
     }
   }
+} else {
+  failures.push(`Missing ${CHANGELOG_PATH}`);
 }
 
 if (failures.length > 0) {

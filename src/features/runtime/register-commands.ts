@@ -105,7 +105,18 @@ export function registerRuntimeCommands(ctx: RuntimeCommandContext) {
         if (rawCommandsLookup.length > 0) {
           commandIds = resolveContractCommandIdsOrThrow(rawCommandsLookup, report.commands);
         }
-        const mode = profileId.length > 0 ? "profile" : commandId.length > 0 ? "command" : commandIds.length > 0 ? "commands" : full ? "full" : "compact";
+        let mode: "profile" | "command" | "commands" | "full" | "compact";
+        if (profileId.length > 0) {
+          mode = "profile";
+        } else if (commandId.length > 0) {
+          mode = "command";
+        } else if (commandIds.length > 0) {
+          mode = "commands";
+        } else if (full) {
+          mode = "full";
+        } else {
+          mode = "compact";
+        }
         const outReport = buildContractOutput({
           report,
           mode,

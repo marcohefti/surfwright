@@ -1,8 +1,6 @@
-import { chromium } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
@@ -17,7 +15,7 @@ const DEFAULT_TRANSITION_TRACE_MAX_EVENTS = 120;
 const MAX_TRANSITION_TRACE_MAX_EVENTS = 1000;
 
 function parseCaptureMs(input: number | undefined): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return DEFAULT_TRANSITION_TRACE_CAPTURE_MS;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 1 || input > MAX_TRANSITION_TRACE_CAPTURE_MS) {
@@ -27,7 +25,7 @@ function parseCaptureMs(input: number | undefined): number {
 }
 
 function parseMaxEvents(input: number | undefined): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return DEFAULT_TRANSITION_TRACE_MAX_EVENTS;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 1 || input > MAX_TRANSITION_TRACE_MAX_EVENTS) {
@@ -158,7 +156,7 @@ export async function targetTransitionTrace(opts: {
           const elementLike = el as {
             textContent?: string | null;
           };
-          const raw = (elementLike.textContent ?? "").replace(/\s+/g, " ").trim();
+          const raw = (elementLike.textContent ?? "").replaceAll(/\s+/g, " ").trim();
           return raw.length > 0 ? raw.slice(0, 80) : null;
         };
 

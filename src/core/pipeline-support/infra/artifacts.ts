@@ -10,11 +10,11 @@ function resolveRunArtifactPath(label: string | undefined): string {
   fs.mkdirSync(runsDir, { recursive: true });
   const safeLabel = (label ?? "run")
     .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
+    .replaceAll(/[^a-z0-9._-]+/g, "-")
+    .replaceAll(/-+/g, "-")
+    .replaceAll(/^-|-$/g, "")
     .slice(0, RUN_ARTIFACT_LABEL_MAX);
-  const stamp = new Date().toISOString().replace(/[:]/g, "-").replace(/\..+$/, "Z");
+  const stamp = new Date().toISOString().replaceAll(/[:]/g, "-").replace(/\..+$/, "Z");
   const unique = Math.random().toString(16).slice(2, 8);
   return path.join(runsDir, `${stamp}-${safeLabel || "run"}-${unique}.json`);
 }

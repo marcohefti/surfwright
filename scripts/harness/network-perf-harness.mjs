@@ -94,7 +94,7 @@ function p95(values) {
   }
   const sorted = [...values].sort((a, b) => a - b);
   const idx = Math.max(0, Math.ceil(sorted.length * 0.95) - 1);
-  return sorted[idx] ?? sorted[sorted.length - 1];
+  return sorted[idx] ?? sorted.at(-1);
 }
 
 const options = parseArgv(process.argv.slice(2));

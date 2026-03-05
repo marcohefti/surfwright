@@ -4,7 +4,7 @@ type EnsureSharedSession = (opts: { timeoutMs: number }) => Promise<{ sessionId:
 type EnsureImplicitSession = (opts: { timeoutMs: number }) => Promise<{ session: { sessionId: string } }>;
 
 export function parseIsolationMode(input: string | undefined): "isolated" | "shared" {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return "isolated";
   }
   const value = input.trim().toLowerCase();

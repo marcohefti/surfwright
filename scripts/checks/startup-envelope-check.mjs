@@ -95,16 +95,18 @@ for (const entry of cases) {
     timingsMs.push(elapsedMs);
   }
 
-  const observedMs =
-    timingsMs.length === 0
-      ? null
-      : stat === "median"
-        ? median(timingsMs)
-        : stat === "min"
-          ? Math.min(...timingsMs)
-          : stat === "max"
-            ? Math.max(...timingsMs)
-            : median(timingsMs);
+  let observedMs = null;
+  if (timingsMs.length > 0) {
+    if (stat === "median") {
+      observedMs = median(timingsMs);
+    } else if (stat === "min") {
+      observedMs = Math.min(...timingsMs);
+    } else if (stat === "max") {
+      observedMs = Math.max(...timingsMs);
+    } else {
+      observedMs = median(timingsMs);
+    }
+  }
 
   results.push({
     caseId: entry.id,

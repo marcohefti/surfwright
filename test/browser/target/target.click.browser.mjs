@@ -9,9 +9,6 @@ import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-target-click-");
 const { runCliSync } = createCliRunner({ stateDir: TEST_STATE_DIR });
 
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
 
 function runCli(args) {
   return runCliSync(args);

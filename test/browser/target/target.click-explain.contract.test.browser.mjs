@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import test from "node:test";
 import { createCliRunner } from "../helpers/cli-runner.mjs";
 import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
@@ -9,9 +7,6 @@ import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-target-click-explain-");
 const { runCliSync } = createCliRunner({ stateDir: TEST_STATE_DIR });
 
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
 
 function runCli(args) {
   return runCliSync(args);
@@ -45,7 +40,7 @@ test.after(async () => {
 
 test("target click --explain returns bounded rejection reasons without clicking", () => {
   requireBrowser();
-  const html = `<title>Click Explain</title><main><button style=\"display:none\">Delete</button><button>Delete</button></main>`;
+  const html = `<title>Click Explain</title><main><button style="display:none">Delete</button><button>Delete</button></main>`;
   const dataUrl = `data:text/html,${encodeURIComponent(html)}`;
   const openResult = runCli(["open", dataUrl, "--timeout-ms", "5000"]);
   assert.equal(openResult.status, 0);
@@ -65,7 +60,7 @@ test("target click --explain returns bounded rejection reasons without clicking"
   const payload = parseJson(explainResult.stdout);
 
   assert.equal(payload.ok, true);
-  assert.equal(Object.prototype.hasOwnProperty.call(payload, "actionId"), false);
+  assert.equal(Object.hasOwn(payload, "actionId"), false);
   assert.equal(payload.matchCount, 2);
   assert.equal(payload.requestedIndex, null);
   assert.equal(payload.pickedIndex, 1);

@@ -50,7 +50,7 @@ export async function extractScopedSnapshotSample(opts: {
     }) => {
       const runtime = globalThis as unknown as BrowserRuntimeLike;
       const doc = runtime.document;
-      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+      const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
       const selectorHintFor = (node: BrowserNodeLike | null): string | null => {
         const el = node;
         const classListRaw = typeof el?.className === "string" ? normalize(el.className) : "";

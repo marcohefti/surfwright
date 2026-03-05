@@ -1,8 +1,6 @@
-import { chromium } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { extractTargetQueryPreview, parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
@@ -19,7 +17,7 @@ const MAX_SCROLL_WATCH_MAX_EVENTS = 1000;
 const SCROLL_WATCH_MAX_VALUE_CHARS = 300;
 
 function parseMaxEvents(input: number | undefined): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return DEFAULT_SCROLL_WATCH_MAX_EVENTS;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 1 || input > MAX_SCROLL_WATCH_MAX_EVENTS) {
@@ -166,7 +164,7 @@ export async function targetScrollWatch(opts: {
           const elementLike = el as {
             textContent?: string | null;
           };
-          const raw = (elementLike.textContent ?? "").replace(/\s+/g, " ").trim();
+          const raw = (elementLike.textContent ?? "").replaceAll(/\s+/g, " ").trim();
           return raw.length > 0 ? raw.slice(0, 80) : null;
         };
 
@@ -240,7 +238,7 @@ export async function targetScrollWatch(opts: {
       const observed = await selected.locator.evaluate(
         (node: BrowserNodeLike, { properties, maxChars }: { properties: string[]; maxChars: number }) => {
           const runtime = globalThis as unknown as BrowserRuntimeLike;
-          const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+          const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
           const clipped = (value: string): string => value.slice(0, maxChars);
           const computed: Record<string, string | null> = {};
           for (const property of properties) {

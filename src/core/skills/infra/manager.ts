@@ -152,7 +152,7 @@ function listFilesRecursive(rootDir: string): string[] {
       if (!entry.isFile()) {
         continue;
       }
-      const relPath = path.relative(rootDir, absPath).replace(/\\/g, "/");
+      const relPath = path.relative(rootDir, absPath).replaceAll("\\", "/");
       if (relPath === ".install-meta.json") {
         continue;
       }

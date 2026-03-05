@@ -25,12 +25,12 @@ function statFromValues(values: number[]): { min: number | null; max: number | n
   const sum = sorted.reduce((acc, value) => acc + value, 0);
   const pick = (percentile: number): number => {
     const index = Math.max(0, Math.ceil((percentile / 100) * sorted.length) - 1);
-    return sorted[index] ?? sorted[sorted.length - 1] ?? 0;
+    return sorted[index] ?? sorted.at(-1) ?? 0;
   };
 
   return {
     min: rounded(sorted[0] ?? 0),
-    max: rounded(sorted[sorted.length - 1] ?? 0),
+    max: rounded(sorted.at(-1) ?? 0),
     avg: rounded(sum / sorted.length),
     p50: rounded(pick(50)),
     p95: rounded(pick(95)),

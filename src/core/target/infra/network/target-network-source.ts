@@ -67,18 +67,32 @@ function toRequestFromHar(entry: unknown, index: number, captureStartMs: number)
   const status = typeof statusRaw === "number" && Number.isFinite(statusRaw) && statusRaw > 0 ? statusRaw : null;
   const method = typeof requestRaw.method === "string" ? requestRaw.method.toUpperCase() : "GET";
   const url = typeof requestRaw.url === "string" ? requestRaw.url : "";
-  const failure =
-    typeof surfRaw.failure === "string" && surfRaw.failure.trim().length > 0
-      ? surfRaw.failure.trim()
-      : typeof responseRaw.statusText === "string" && responseRaw.statusText.trim().length > 0 && status === null
-        ? responseRaw.statusText.trim()
-        : null;
+  let failure: string | null = null;
+  if (typeof surfRaw.failure === "string" && surfRaw.failure.trim().length > 0) {
+    failure = surfRaw.failure.trim();
+  } else if (typeof responseRaw.statusText === "string" && responseRaw.statusText.trim().length > 0 && status === null) {
+    failure = responseRaw.statusText.trim();
+  }
   const bytesApproxRaw =
     typeof responseRaw.bodySize === "number" && Number.isFinite(responseRaw.bodySize) && responseRaw.bodySize >= 0
       ? responseRaw.bodySize
       : null;
   const requestHeaders = headersArrayToMap(requestRaw.headers);
   const responseHeaders = headersArrayToMap(responseRaw.headers);
+  let ttfbMs: number | null = null;
+  if (typeof surfRaw.ttfbMs === "number" && Number.isFinite(surfRaw.ttfbMs)) {
+    ttfbMs = surfRaw.ttfbMs;
+  } else if (typeof timingsRaw.wait === "number" && Number.isFinite(timingsRaw.wait)) {
+    ttfbMs = timingsRaw.wait;
+  }
+  let ok: boolean | null;
+  if (typeof surfRaw.ok === "boolean") {
+    ok = surfRaw.ok;
+  } else if (status === null) {
+    ok = null;
+  } else {
+    ok = status >= 200 && status < 400;
+  }
   return {
     id: index,
     captureKey: `har:req:${index}`,
@@ -91,14 +105,9 @@ function toRequestFromHar(entry: unknown, index: number, captureStartMs: number)
     startMs,
     endMs: durationMs === null ? null : startMs + durationMs,
     durationMs,
-    ttfbMs:
-      typeof surfRaw.ttfbMs === "number" && Number.isFinite(surfRaw.ttfbMs)
-        ? surfRaw.ttfbMs
-        : typeof timingsRaw.wait === "number" && Number.isFinite(timingsRaw.wait)
-          ? timingsRaw.wait
-          : null,
+    ttfbMs,
     status,
-    ok: typeof surfRaw.ok === "boolean" ? surfRaw.ok : status === null ? null : status >= 200 && status < 400,
+    ok,
     failure,
     bytesApprox: bytesApproxRaw,
     requestHeaders: Object.keys(requestHeaders).length > 0 ? requestHeaders : undefined,

@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import test from "node:test";
 import { createCliRunner } from "../../helpers/cli-runner.mjs";
 import { cleanupStateDir } from "../../helpers/managed-cleanup.mjs";
@@ -9,9 +7,6 @@ import { mkBrowserTestStateDir } from "../../helpers/test-tmp.mjs";
 const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-target-effects-browser-");
 const { runCliSync } = createCliRunner({ stateDir: TEST_STATE_DIR });
 
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
 
 function runCli(args) {
   return runCliSync(args);
@@ -42,10 +37,16 @@ function requireBrowser() {
 function openTarget(url, { timeoutMs = 5000 } = {}) {
   const args = ["open", url, "--timeout-ms", String(timeoutMs)];
   const result = runCli(args);
+  let errorMessage = "open failed";
+  if (result.stdout.trim().length > 0) {
+    errorMessage = result.stdout;
+  } else if (result.stderr.trim().length > 0) {
+    errorMessage = result.stderr;
+  }
   assert.equal(
     result.status,
     0,
-    result.stdout.trim().length > 0 ? result.stdout : result.stderr.trim().length > 0 ? result.stderr : "open failed",
+    errorMessage,
   );
   return parseJson(result.stdout);
 }
@@ -142,7 +143,7 @@ test("target scroll-plan can sample selector counts per step", () => {
   assert.equal(typeof payload.steps[0].count, "number");
   assert.equal(payload.steps[0].count <= payload.steps[2].count, true);
   assert.equal(payload.countSummary.sampleCount, payload.steps.length);
-  assert.equal(payload.countSummary.last, payload.steps[payload.steps.length - 1].count);
+  assert.equal(payload.countSummary.last, payload.steps.at(-1).count);
 });
 
 test("target scroll-plan supports relative mode deltas", () => {

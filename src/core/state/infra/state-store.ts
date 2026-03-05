@@ -230,9 +230,9 @@ function applyTargetStateUpdate(state: SurfwrightState, target: TargetState) {
   const existing = state.targets[target.targetId];
   state.targets[target.targetId] = {
     ...target,
-    lastActionId: typeof target.lastActionId === "undefined" ? (existing?.lastActionId ?? null) : target.lastActionId,
-    lastActionAt: typeof target.lastActionAt === "undefined" ? (existing?.lastActionAt ?? null) : target.lastActionAt,
-    lastActionKind: typeof target.lastActionKind === "undefined" ? (existing?.lastActionKind ?? null) : target.lastActionKind,
+    lastActionId: target.lastActionId === undefined ? (existing?.lastActionId ?? null) : target.lastActionId,
+    lastActionAt: target.lastActionAt === undefined ? (existing?.lastActionAt ?? null) : target.lastActionAt,
+    lastActionKind: target.lastActionKind === undefined ? (existing?.lastActionKind ?? null) : target.lastActionKind,
   };
   const session = state.sessions[target.sessionId];
   if (session) {

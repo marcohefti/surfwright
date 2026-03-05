@@ -1,7 +1,7 @@
 import path from "node:path";
 
 function yamlQuote(value) {
-  return `'${String(value).replace(/'/g, "''")}'`;
+  return `'${String(value).replaceAll("'", "''")}'`;
 }
 
 function yamlInlineArray(values) {

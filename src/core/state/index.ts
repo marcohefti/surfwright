@@ -1,4 +1,3 @@
-export * from "./app/index.js";
 export * from "./repo/index.js";
 
 // Internal core consumers should import state utilities from this entrypoint.

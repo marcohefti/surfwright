@@ -14,8 +14,8 @@ import {
   type PipelineOps,
   type PipelineResultMap,
   type PipelineStepInput,
+  writeRunArtifact,
 } from "../pipeline-support/index.js";
-import { writeRunArtifact } from "../pipeline-support/index.js";
 import { appendNdjsonLogLine, initNdjsonLogFile, resolveNdjsonLogPath } from "./infra/ndjson-log.js";
 import { PIPELINE_STEP_EXECUTORS, countAssertionChecks, projectRunResult } from "./infra/execute-shared.js";
 export type { PipelineOps, PipelineStepInput } from "../pipeline-support/index.js";
@@ -112,7 +112,7 @@ export async function executePipelinePlan(opts: {
     const templateScope: Record<string, unknown> = {
       sessionId: ctx.sessionId ?? null,
       targetId: ctx.targetId ?? null,
-      last: results.length > 0 ? (results[results.length - 1].report as Record<string, unknown>) : null,
+      last: (results.at(-1)?.report as Record<string, unknown> | undefined) ?? null,
       steps: aliases,
     };
     const step = resolveTemplateInValue(stepRaw, templateScope, `steps[${index}]`) as PipelineStepInput;
@@ -240,12 +240,12 @@ export async function executePipelinePlan(opts: {
   const resultScope: Record<string, unknown> = {
     sessionId: ctx.sessionId ?? null,
     targetId: ctx.targetId ?? null,
-    last: results.length > 0 ? (results[results.length - 1].report as Record<string, unknown>) : null,
+    last: (results.at(-1)?.report as Record<string, unknown> | undefined) ?? null,
     steps: aliases,
   };
   const projectedResult = projectRunResult(loaded.plan.result as PipelineResultMap | undefined, resultScope);
   const requireScope: Record<string, unknown> =
-    typeof projectedResult === "undefined"
+    projectedResult === undefined
       ? resultScope
       : {
           ...resultScope,
@@ -270,8 +270,8 @@ export async function executePipelinePlan(opts: {
     steps: results,
     timeline,
     totalMs: finishedAt - startedAt,
-    ...(typeof projectedResult === "undefined" ? {} : { result: projectedResult }),
-    ...(typeof loaded.plan.require === "undefined" ? {} : { require: requireAssertions }),
+    ...(projectedResult === undefined ? {} : { result: projectedResult }),
+    ...(loaded.plan.require === undefined ? {} : { require: requireAssertions }),
   };
   if (ndjsonPath) {
     report.logNdjson = { path: ndjsonPath, mode: ndjsonMode };
@@ -292,8 +292,8 @@ export async function executePipelinePlan(opts: {
         steps: results,
         timeline,
         totalMs: finishedAt - startedAt,
-        ...(typeof projectedResult === "undefined" ? {} : { result: projectedResult }),
-        ...(typeof loaded.plan.require === "undefined" ? {} : { require: requireAssertions }),
+        ...(projectedResult === undefined ? {} : { result: projectedResult }),
+        ...(loaded.plan.require === undefined ? {} : { require: requireAssertions }),
       },
     });
   }

@@ -28,7 +28,7 @@ function deriveSpawnTimeoutMs(args, opts = {}) {
   const cliTimeoutMs = parseCliTimeoutMs(args);
   const fallbackMs = Number.isFinite(Number(opts.fallbackMs)) ? Number(opts.fallbackMs) : DEFAULT_SPAWN_TIMEOUT_MS;
   const graceMs = Number.isFinite(Number(opts.graceMs)) ? Number(opts.graceMs) : SPAWN_TIMEOUT_GRACE_MS;
-  const raw = cliTimeoutMs !== null ? cliTimeoutMs + graceMs : fallbackMs;
+  const raw = cliTimeoutMs === null ? fallbackMs : cliTimeoutMs + graceMs;
   return Math.max(250, Math.min(MAX_SPAWN_TIMEOUT_MS, raw));
 }
 
@@ -65,7 +65,7 @@ export function createCliRunner(opts) {
     ...process.env,
     SURFWRIGHT_STATE_DIR: opts.stateDir,
     SURFWRIGHT_TEST_BROWSER: "1",
-    ...(opts.env ?? {}),
+    ...opts.env,
   };
 
   return {
@@ -77,7 +77,7 @@ export function createCliRunner(opts) {
 
       return spawnSync(process.execPath, ["dist/cli.js", ...args], {
         encoding: "utf8",
-        env: { ...baseEnv, ...(extra.env ?? {}) },
+        env: { ...baseEnv, ...extra.env },
         timeout: timeoutMs,
         killSignal: "SIGKILL",
       });
@@ -91,7 +91,7 @@ export function createCliRunner(opts) {
             : deriveSpawnTimeoutMs(args);
 
         const child = spawn(process.execPath, ["dist/cli.js", ...args], {
-          env: { ...baseEnv, ...(extra.env ?? {}) },
+          env: { ...baseEnv, ...extra.env },
           stdio: ["ignore", "pipe", "pipe"],
           detached: process.platform !== "win32",
         });
@@ -131,4 +131,3 @@ export function createCliRunner(opts) {
     deriveSpawnTimeoutMs,
   };
 }
-

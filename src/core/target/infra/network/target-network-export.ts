@@ -21,7 +21,7 @@ function parseOutPath(input: string): string {
 }
 
 function parseFormat(input: string | undefined): "har" {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return "har";
   }
   const value = input.trim().toLowerCase();
@@ -40,7 +40,7 @@ function parseTraceId(input: string): string {
 }
 
 function parseTraceFormat(input: string | undefined, outPath: string): { format: "json"; gzip: boolean } {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return {
       format: "json",
       gzip: outPath.toLowerCase().endsWith(".gz"),

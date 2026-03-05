@@ -1,4 +1,4 @@
-import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
+import { type Request, type Response, type WebSocket } from "playwright-core";
 import { sanitizeActionId } from "../../../action-id.js";
 import { CliError } from "../../../errors.js";
 import { readRecentTargetAction } from "../../../state/index.js";
@@ -28,7 +28,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 function parseMaxEvents(value: number | undefined): number | null {
-  if (typeof value === "undefined") {
+  if (value === undefined) {
     return null;
   }
   if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0 || value > TAIL_MAX_EVENTS_CAP) {

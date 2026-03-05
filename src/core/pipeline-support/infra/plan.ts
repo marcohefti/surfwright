@@ -23,7 +23,7 @@ const TEMPLATE_EMBEDDED_RE = /\{\{\s*([^{}]+?)\s*\}\}/g;
 const STEP_ALIAS_RE = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
 
 export function readPathValue(input: unknown, pathExpr: string): unknown {
-  const normalized = pathExpr.trim().replace(/\[(\d+)\]/g, ".$1");
+  const normalized = pathExpr.trim().replaceAll(/\[(\d+)\]/g, ".$1");
   if (!normalized) {
     return input;
   }
@@ -53,7 +53,7 @@ export function resolveTemplateInValue(value: unknown, scope: Record<string, unk
     const exact = value.match(TEMPLATE_EXACT_RE);
     if (exact) {
       const resolved = readPathValue(scope, exact[1]);
-      if (typeof resolved === "undefined") {
+      if (resolved === undefined) {
         throw new CliError("E_QUERY_INVALID", `Unresolved template ${value} at ${pathLabel}`);
       }
       return resolved;
@@ -62,7 +62,7 @@ export function resolveTemplateInValue(value: unknown, scope: Record<string, unk
     let sawTemplate = false;
     replaced = replaced.replace(TEMPLATE_EMBEDDED_RE, (_full, expr: string) => {
       const resolved = readPathValue(scope, expr);
-      if (typeof resolved === "undefined") {
+      if (resolved === undefined) {
         throw new CliError("E_QUERY_INVALID", `Unresolved template {{${expr}}} at ${pathLabel}`);
       }
       sawTemplate = true;
@@ -84,7 +84,7 @@ export function resolveTemplateInValue(value: unknown, scope: Record<string, unk
 }
 
 export function parseStepAlias(input: unknown, stepIndex: number): string | null {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return null;
   }
   if (typeof input !== "string") {
@@ -101,7 +101,7 @@ export function parseStepAlias(input: unknown, stepIndex: number): string | null
 }
 
 export function parseStepTimeoutMs(input: unknown, fallback: number, stepIndex: number): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return fallback;
   }
   if (typeof input !== "number" || !Number.isFinite(input) || !Number.isInteger(input) || input <= 0) {
@@ -111,7 +111,7 @@ export function parseStepTimeoutMs(input: unknown, fallback: number, stepIndex: 
 }
 
 export function parseOptionalString(input: unknown, pathLabel: string): string | undefined {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return undefined;
   }
   if (typeof input !== "string") {
@@ -121,7 +121,7 @@ export function parseOptionalString(input: unknown, pathLabel: string): string |
 }
 
 export function parseOptionalBoolean(input: unknown, pathLabel: string): boolean | undefined {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return undefined;
   }
   if (typeof input !== "boolean") {
@@ -131,7 +131,7 @@ export function parseOptionalBoolean(input: unknown, pathLabel: string): boolean
 }
 
 export function parseOptionalInteger(input: unknown, pathLabel: string): number | undefined {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return undefined;
   }
   if (typeof input !== "number" || !Number.isFinite(input) || !Number.isInteger(input)) {
@@ -141,7 +141,7 @@ export function parseOptionalInteger(input: unknown, pathLabel: string): number 
 }
 
 export function parseOptionalStringOrStringArray(input: unknown, pathLabel: string): string[] | undefined {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return undefined;
   }
   if (typeof input === "string") {
@@ -173,16 +173,16 @@ function parsePlanObject(raw: unknown, source: string): {
   if (!Array.isArray(record.steps) || record.steps.length === 0) {
     throw new CliError("E_QUERY_INVALID", "plan.steps must be a non-empty array");
   }
-  if (typeof record.result !== "undefined" && (typeof record.result !== "object" || record.result === null || Array.isArray(record.result))) {
+  if (record.result !== undefined && (typeof record.result !== "object" || record.result === null || Array.isArray(record.result))) {
     throw new CliError("E_QUERY_INVALID", "plan.result must be an object map");
   }
-  if (typeof record.require !== "undefined" && (typeof record.require !== "object" || record.require === null || Array.isArray(record.require))) {
+  if (record.require !== undefined && (typeof record.require !== "object" || record.require === null || Array.isArray(record.require))) {
     throw new CliError("E_QUERY_INVALID", "plan.require must be an object");
   }
   return {
     steps: record.steps as PipelineStepInput[],
-    ...(typeof record.result === "undefined" ? {} : { result: record.result as PipelineResultMap }),
-    ...(typeof record.require === "undefined"
+    ...(record.result === undefined ? {} : { result: record.result as PipelineResultMap }),
+    ...(record.require === undefined
       ? {}
       : { require: record.require as PipelineStepInput["assert"] }),
   };
@@ -191,7 +191,7 @@ function parsePlanObject(raw: unknown, source: string): {
 function parseJsonWithContext(raw: string, source: string): unknown {
   try {
     return JSON.parse(raw);
-  } catch (error) {
+  } catch {
     // Keep parse failures stable across Node versions; do not leak engine-specific error strings.
     throw new CliError("E_QUERY_INVALID", `${source} is not valid JSON`);
   }
@@ -214,10 +214,12 @@ export function resolvePlanSource(opts: {
     return { source: "inline-json", replay: null, plan: parsePlanObject(parseJsonWithContext(opts.planJson, "plan-json"), "plan-json") };
   }
   if (typeof opts.planPath === "string" && opts.planPath.length > 0) {
-    const raw =
-      opts.planPath === "-"
-        ? (typeof opts.stdinPlan === "string" ? opts.stdinPlan : providers().fs.readFileSync(0, "utf8"))
-        : providers().fs.readFileSync(opts.planPath, "utf8");
+    let raw: string;
+    if (opts.planPath === "-") {
+      raw = typeof opts.stdinPlan === "string" ? opts.stdinPlan : providers().fs.readFileSync(0, "utf8");
+    } else {
+      raw = providers().fs.readFileSync(opts.planPath, "utf8");
+    }
     if (opts.planPath === "-" && raw.trim().length === 0) {
       throw new CliError("E_QUERY_INVALID", "stdin plan is empty");
     }

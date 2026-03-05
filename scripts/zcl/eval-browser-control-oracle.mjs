@@ -77,7 +77,7 @@ function extractProof(feedback) {
   if (!feedback || typeof feedback !== 'object') {
     throw new Error('feedback payload is missing');
   }
-  if (!(Object.prototype.hasOwnProperty.call(feedback, 'result'))) {
+  if (!(Object.hasOwn(feedback, 'result'))) {
     throw new Error('feedback.result is missing');
   }
   const raw = feedback.result;
@@ -103,7 +103,7 @@ function evaluateOracle(oracle, proof, attemptDir) {
 
   const collectFields = Array.isArray(oracle.collectFields) ? oracle.collectFields : [];
   for (const field of collectFields) {
-    if (!Object.prototype.hasOwnProperty.call(proof, field)) {
+    if (! Object.hasOwn(proof, field)) {
       failures.push(`missing proof field: ${field}`);
     }
   }
@@ -379,7 +379,7 @@ function readExecCommands(tracePath) {
 function extractCommandText(event) {
   const command = event?.input?.payload?.msg?.command;
   if (Array.isArray(command) && command.length > 0) {
-    const tail = command[command.length - 1];
+    const tail = command.at(-1);
     if (typeof tail === 'string' && tail.trim()) {
       return tail.trim();
     }
@@ -594,9 +594,9 @@ function containsValue(actual, expected) {
 
 function normalizeLooseText(value) {
   return String(value || '')
-    .replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/\s+/g, ' ')
+    .replaceAll(/[‘’]/g, "'")
+    .replaceAll(/[“”]/g, '"')
+    .replaceAll(/\s+/g, ' ')
     .trim();
 }
 
@@ -657,7 +657,7 @@ function canonicalizeUrl(value) {
       url.port = '';
     }
     if (url.pathname !== '/') {
-      url.pathname = url.pathname.replace(/\/+$/g, '');
+      url.pathname = url.pathname.replaceAll(/\/+$/g, '');
       if (url.pathname.length < 1) {
         url.pathname = '/';
       }
@@ -720,7 +720,7 @@ function normalizeToken(value) {
   if (!trimmed) {
     return '';
   }
-  const unquoted = trimmed.replace(/^['"](.+)['"]$/g, '$1');
+  const unquoted = trimmed.replaceAll(/^['"](.+)['"]$/g, '$1');
   return normalizeLooseText(unquoted).toLowerCase();
 }
 

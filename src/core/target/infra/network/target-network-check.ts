@@ -22,7 +22,7 @@ function parseBudget(path: string): TargetNetworkCheckBudget {
   const budget: TargetNetworkCheckBudget = {};
   const assignNumber = (key: keyof TargetNetworkCheckBudget, opts: { min: number; max: number }) => {
     const candidate = input[key as string];
-    if (typeof candidate === "undefined") {
+    if (candidate === undefined) {
       return;
     }
     if (typeof candidate !== "number" || !Number.isFinite(candidate) || candidate < opts.min || candidate > opts.max) {

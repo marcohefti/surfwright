@@ -1,7 +1,5 @@
-import { chromium } from "playwright-core";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import type { TargetSnapshotReport } from "../../types.js";
 import { frameScopeHints, parseFrameScope } from "../infra/target-find.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "../infra/cdp/index.js";
@@ -38,7 +36,7 @@ type SnapshotCursor = {
 };
 
 function parseSnapshotMode(input: string | undefined): SnapshotMode {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return "snapshot";
   }
   const normalized = input.trim().toLowerCase();
@@ -89,7 +87,7 @@ function parseNonNegativeIntInRange(opts: {
   max: number;
   name: string;
 }): number {
-  if (typeof opts.value === "undefined") {
+  if (opts.value === undefined) {
     return opts.defaultValue;
   }
   if (!Number.isFinite(opts.value) || !Number.isInteger(opts.value) || opts.value < opts.min || opts.value > opts.max) {
@@ -99,7 +97,7 @@ function parseNonNegativeIntInRange(opts: {
 }
 
 function parseSnapshotCursor(input: string | undefined): SnapshotCursor {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return { headings: 0, buttons: 0, links: 0, ax: 0 };
   }
   const raw = input.trim();

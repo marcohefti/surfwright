@@ -55,7 +55,7 @@ export function runShell(command, opts = {}) {
     maxBuffer: 64 * 1024 * 1024,
     env: {
       ...process.env,
-      ...(opts.env || {}),
+      ...opts.env,
     },
   });
   const durationMs = Date.now() - startedAt;
@@ -103,7 +103,7 @@ export function toTagList(tagsCsv) {
 }
 
 export function nowCompact() {
-  return new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return new Date().toISOString().replaceAll(/[-:]/g, "").replace(/\.\d{3}/, "");
 }
 
 export function pad3(value) {

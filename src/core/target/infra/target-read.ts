@@ -1,4 +1,4 @@
-import { chromium, type Locator } from "playwright-core";
+import { type Locator } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../state/index.js";
@@ -256,7 +256,7 @@ async function extractScopedText(opts: {
     ({ selectorQuery, visibleOnly }: { selectorQuery: string | null; visibleOnly: boolean }) => {
       const runtime = globalThis as unknown as BrowserRuntimeLike;
       const doc = runtime.document;
-      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+      const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
       const rootNode = selectorQuery ? doc?.querySelector?.(selectorQuery) ?? null : doc?.body ?? null;
       if (!rootNode) {
         return {

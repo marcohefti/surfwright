@@ -1,11 +1,9 @@
 import type { Page, Response } from "playwright-core";
 import { CliError } from "../../../errors.js";
 import { providers } from "../../../providers/index.js";
-import { redactHeaders } from "../../../shared/index.js";
 import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import type { TargetDownloadReport } from "../../../types.js";
-import { evaluateActionAssertions, type ParsedActionAssertions } from "../../../shared/index.js";
-import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
+import { buildActionProofEnvelope, evaluateActionAssertions, type ParsedActionAssertions, redactHeaders, toActionWaitEvidence } from "../../../shared/index.js";
 import { newActionId } from "../../../action-id.js";
 
 const DOWNLOAD_OUT_DIR_DEFAULT = "artifacts/downloads";
@@ -13,10 +11,10 @@ const DOWNLOAD_FILENAME_MAX = 180;
 
 export function sanitizeFilename(input: string): string {
   const raw = input.trim();
-  const normalized = raw.replace(/[\\\/]+/g, "-").replace(/\s+/g, " ").trim();
-  const safe = normalized.replace(/[^A-Za-z0-9._ -]+/g, "-").replace(/-+/g, "-").trim();
+  const normalized = raw.replaceAll(/[\\/]+/g, "-").replaceAll(/\s+/g, " ").trim();
+  const safe = normalized.replaceAll(/[^A-Za-z0-9._ -]+/g, "-").replaceAll(/-+/g, "-").trim();
   const sliced = safe.length > 0 ? safe.slice(0, DOWNLOAD_FILENAME_MAX) : "download.bin";
-  return sliced.replace(/\s+/g, " ");
+  return sliced.replaceAll(/\s+/g, " ");
 }
 
 export function resolveDownloadOutDir(input: string | undefined): string {
@@ -91,7 +89,7 @@ function filenameFromUrl(input: string): string | null {
   try {
     const parsed = new URL(input);
     const parts = parsed.pathname.split("/").filter((part) => part.length > 0);
-    const last = parts[parts.length - 1] ?? "";
+    const last = parts.at(-1) ?? "";
     return last.length > 0 ? decodeURIComponent(last) : null;
   } catch {
     return null;

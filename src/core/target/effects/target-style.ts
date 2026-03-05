@@ -1,4 +1,4 @@
-import { chromium, type Locator } from "playwright-core";
+import { type Locator } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../state/index.js";
@@ -34,7 +34,7 @@ function parseStylePreset(input: string | undefined): StylePreset | null {
 }
 
 function parseRequestedIndex(input: number | undefined): number | null {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return null;
   }
   if (!Number.isInteger(input) || input < 0) {
@@ -94,7 +94,13 @@ export async function targetStyle(opts: {
     }
 
     let selected: { locator: Locator; index: number; visible: boolean };
-    if (requestedIndex !== null) {
+    if (requestedIndex === null) {
+      selected = await resolveFirstMatch({
+        locator,
+        count,
+        visibleOnly: parsed.visibleOnly,
+      });
+    } else {
       if (requestedIndex >= count) {
         throw new CliError("E_QUERY_INVALID", `index out of range: requested ${requestedIndex}, matchCount ${count}`);
       }
@@ -104,19 +110,13 @@ export async function targetStyle(opts: {
         throw new CliError("E_QUERY_INVALID", `matched element at index ${requestedIndex} is not visible`);
       }
       selected = { locator: candidate, index: requestedIndex, visible };
-    } else {
-      selected = await resolveFirstMatch({
-        locator,
-        count,
-        visibleOnly: parsed.visibleOnly,
-      });
     }
 
     const preview = await extractTargetQueryPreview(selected.locator);
     const measured = await selected.locator.evaluate(
       (node: BrowserNodeLike, input: { properties: string[]; maxClassNameChars: number }) => {
         const runtime = globalThis as unknown as BrowserRuntimeLike;
-        const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+        const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
         const styleValues: Record<string, string | null> = {};
         for (const property of input.properties) {
           const value = runtime.getComputedStyle?.(node)?.getPropertyValue?.(property) ?? "";

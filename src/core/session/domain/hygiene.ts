@@ -22,9 +22,9 @@ export function normalizeAgentId(input: string): string | null {
     return value;
   }
   const normalized = value
-    .replace(/[^A-Za-z0-9._-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^[.-]+|[.-]+$/g, "");
+    .replaceAll(/[^A-Za-z0-9._-]/g, "-")
+    .replaceAll(/-+/g, "-")
+    .replaceAll(/^[.-]+|[.-]+$/g, "");
   if (normalized.length === 0) {
     return null;
   }

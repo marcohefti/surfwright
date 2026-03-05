@@ -54,7 +54,7 @@ export function parseScrollPlanMode(input: string | undefined): ScrollPlanMode {
 }
 
 export function parseSettleMs(input: number | undefined, fallback: number): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return fallback;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 0 || input > MAX_SETTLE_MS) {
@@ -64,7 +64,7 @@ export function parseSettleMs(input: number | undefined, fallback: number): numb
 }
 
 export function parseIntervalMs(input: number | undefined, fallback: number): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return fallback;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 1 || input > MAX_INTERVAL_MS) {
@@ -74,7 +74,7 @@ export function parseIntervalMs(input: number | undefined, fallback: number): nu
 }
 
 export function parseDurationMs(input: number | undefined, fallback: number): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return fallback;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 1 || input > MAX_DURATION_MS) {
@@ -84,7 +84,7 @@ export function parseDurationMs(input: number | undefined, fallback: number): nu
 }
 
 export function parseMaxSamples(input: number | undefined, fallback: number): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return fallback;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 1 || input > MAX_SAMPLE_COUNT) {

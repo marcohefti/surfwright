@@ -1,12 +1,10 @@
-import { chromium } from "playwright-core";
 import { CliError } from "../../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import { resolveTargetQueryLocator } from "../target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { parseOptionalTargetQuery, resolveFirstQueryMatch } from "./target-input-query.js";
 import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick } from "../../click/click-utils.js";
-import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
-import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
+import { evaluateActionAssertions, parseActionAssertions, buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 
 type TargetDialogReport = {

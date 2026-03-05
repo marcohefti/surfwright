@@ -15,10 +15,10 @@ export type OpenReuseMode = (typeof OPEN_REUSE_MODES)[number];
 
 function sanitizeFilename(input: string): string {
   const raw = input.trim();
-  const normalized = raw.replace(/[\\\/]+/g, "-").replace(/\s+/g, " ").trim();
-  const safe = normalized.replace(/[^A-Za-z0-9._ -]+/g, "-").replace(/-+/g, "-").trim();
+  const normalized = raw.replaceAll(/[\\/]+/g, "-").replaceAll(/\s+/g, " ").trim();
+  const safe = normalized.replaceAll(/[^A-Za-z0-9._ -]+/g, "-").replaceAll(/-+/g, "-").trim();
   const sliced = safe.length > 0 ? safe.slice(0, DOWNLOAD_FILENAME_MAX) : "download.bin";
-  return sliced.replace(/\s+/g, " ");
+  return sliced.replaceAll(/\s+/g, " ");
 }
 
 function resolveDownloadOutDir(input: string | undefined): string {
@@ -132,7 +132,7 @@ export function buildRedirectEvidence(opts: {
   if (normalized[0] !== opts.requestedUrl) {
     normalized.unshift(opts.requestedUrl);
   }
-  if (normalized[normalized.length - 1] !== opts.finalUrl) {
+  if (normalized.at(-1) !== opts.finalUrl) {
     normalized.push(opts.finalUrl);
   }
 
@@ -140,8 +140,9 @@ export function buildRedirectEvidence(opts: {
     return { redirectChain: normalized, redirectChainTruncated: false };
   }
 
+  const lastUrl = normalized.at(-1) ?? opts.finalUrl;
   return {
-    redirectChain: [...normalized.slice(0, OPEN_REDIRECT_CHAIN_MAX - 1), normalized[normalized.length - 1]],
+    redirectChain: [...normalized.slice(0, OPEN_REDIRECT_CHAIN_MAX - 1), lastUrl],
     redirectChainTruncated: true,
   };
 }

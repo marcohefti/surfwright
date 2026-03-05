@@ -1,9 +1,7 @@
-import { chromium, type CDPSession } from "playwright-core";
+import { type CDPSession } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
-import { providers } from "../../providers/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { createCdpMainWorldEvaluator, getCdpFrameTree, openCdpSession, resolveCdpFrameByStableId } from "./cdp/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import { safePageTitle } from "./utils/safe-page-title.js";

@@ -11,8 +11,7 @@ import { buildClickDeltaEvidence, captureClickDeltaState, CLICK_DELTA_ARIA_ATTRI
 import { buildClickProof } from "./click-proof.js";
 import { readPostSnapshot } from "./click-utils.js";
 import { waitAfterClickWithBudget } from "./click-wait.js";
-import { evaluateActionAssertions, type ParsedActionAssertions } from "../../shared/index.js";
-import { buildActionProofEnvelope, toActionWaitEvidence } from "../../shared/index.js";
+import { evaluateActionAssertions, type ParsedActionAssertions, buildActionProofEnvelope, toActionWaitEvidence } from "../../shared/index.js";
 
 export async function targetClickByHandle(opts: {
   startedAt: number;

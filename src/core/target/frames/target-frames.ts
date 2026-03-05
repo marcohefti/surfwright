@@ -1,7 +1,5 @@
-import { chromium } from "playwright-core";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "../infra/cdp/index.js";
 import type { TargetFramesReport } from "../../types.js";

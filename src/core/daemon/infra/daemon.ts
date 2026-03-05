@@ -374,7 +374,7 @@ export async function runViaDaemon(argv: string[], entryScriptPath: string): Pro
         });
         const daemonQueueRetryAttempts = attempt;
         const mergedHintContext = {
-          ...(normalized.hintContext ?? {}),
+          ...normalized.hintContext,
           daemonQueueRetryAttempts,
         };
         return {

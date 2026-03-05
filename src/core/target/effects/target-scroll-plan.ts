@@ -1,8 +1,7 @@
-import { chromium, type Locator } from "playwright-core";
+import { type Locator } from "playwright-core";
 import { newActionId } from "../../action-id.js";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { parseTargetQueryInput, resolveTargetQueryLocator } from "../infra/target-query.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import { createCdpEvaluator, getCdpFrameTree, openCdpSession } from "../infra/cdp/index.js";
@@ -160,13 +159,15 @@ export async function targetScrollPlan(opts: {
     }
 
     const sampledCounts = steps.map((step) => step.count).filter((count): count is number => typeof count === "number");
+    const firstSampledCount = sampledCounts[0] ?? 0;
+    const lastSampledCount = sampledCounts.at(-1) ?? firstSampledCount;
     const countSummary: TargetScrollPlanReport["countSummary"] =
       sampledCounts.length > 0
         ? {
             sampleCount: sampledCounts.length,
-            first: sampledCounts[0],
-            last: sampledCounts[sampledCounts.length - 1],
-            delta: sampledCounts[sampledCounts.length - 1] - sampledCounts[0],
+            first: firstSampledCount,
+            last: lastSampledCount,
+            delta: lastSampledCount - firstSampledCount,
             min: Math.min(...sampledCounts),
             max: Math.max(...sampledCounts),
           }

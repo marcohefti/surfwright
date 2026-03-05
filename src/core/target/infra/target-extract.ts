@@ -1,8 +1,6 @@
-import { chromium } from "playwright-core";
 import { CliError } from "../../errors.js";
 import { providers } from "../../providers/index.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { fetchAssistedExtractItems, type ExtractItemDraft } from "./target-extract-assist.js";
 import { frameScopeHints, parseFrameScope } from "./target-find.js";
 import { createCdpEvaluator, ensureValidSelectorSyntaxCdp, frameIdsForScope, getCdpFrameTree, listCdpFrameEntries, openCdpSession } from "./cdp/index.js";
@@ -25,7 +23,7 @@ function parseLimit(input: number | undefined): number {
 }
 
 function parseKind(input: string | undefined): TargetExtractReport["kind"] {
-  if (typeof input === "undefined" || input.trim().length === 0) {
+  if (input === undefined || input.trim().length === 0) {
     return "generic";
   }
   const normalized = input.trim().toLowerCase();
@@ -127,7 +125,7 @@ function parseDedupeBy(input: string | undefined): string[] {
 }
 
 function scalarString(value: unknown): string | null {
-  if (value === null || typeof value === "undefined") {
+  if (value === null || value === undefined) {
     return null;
   }
   if (typeof value === "string") {
@@ -213,7 +211,7 @@ export async function targetExtract(opts: {
   }
   if (schema) {
     for (const dedupeField of dedupeBy) {
-      if (!Object.prototype.hasOwnProperty.call(schema.fields, dedupeField)) {
+      if (! Object.hasOwn(schema.fields, dedupeField)) {
         throw new CliError("E_QUERY_INVALID", `dedupe-by field "${dedupeField}" is not present in schema output fields`);
       }
     }
@@ -273,6 +271,27 @@ export async function targetExtract(opts: {
         return;
       }
       seen.add(dedupeKey);
+      const optionalFields: Record<string, unknown> = {};
+      if (item.language === undefined) {
+        // no-op
+      } else {
+        optionalFields.language = item.language ?? null;
+      }
+      if (item.command === undefined) {
+        // no-op
+      } else {
+        optionalFields.command = item.command ?? null;
+      }
+      if (item.section === undefined) {
+        // no-op
+      } else {
+        optionalFields.section = item.section ?? null;
+      }
+      if (item.record === undefined) {
+        // no-op
+      } else {
+        optionalFields.record = item.record;
+      }
       merged.push({
         index: merged.length,
         title,
@@ -280,10 +299,7 @@ export async function targetExtract(opts: {
         summary: item.summary,
         publishedAt: item.publishedAt,
         frameUrl: item.frameUrl,
-        ...(typeof item.language !== "undefined" ? { language: item.language ?? null } : {}),
-        ...(typeof item.command !== "undefined" ? { command: item.command ?? null } : {}),
-        ...(typeof item.section !== "undefined" ? { section: item.section ?? null } : {}),
-        ...(typeof item.record !== "undefined" ? { record: item.record } : {}),
+        ...optionalFields,
         ...(includeActionable
           ? {
               actionable: {

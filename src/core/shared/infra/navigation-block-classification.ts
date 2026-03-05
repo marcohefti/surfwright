@@ -44,7 +44,7 @@ export async function classifyNavigationBlockType(page: Page): Promise<{
           parsedUrl = null;
         }
         const urlPath = lower(`${parsedUrl?.pathname ?? ""} ${parsedUrl?.search ?? ""}`);
-        if (/(^|[\/?&=_-])(login|signin|sign-in|auth|oauth|2fa|mfa|verify)([\/?&=_-]|$)/.test(urlPath)) {
+        if (/(^|[/?&=_-])(login|signin|sign-in|auth|oauth|2fa|mfa|verify)([/?&=_-]|$)/.test(urlPath)) {
           addSignal("auth", 2, "url-path");
         }
         if (/(captcha|recaptcha|hcaptcha|challenge|cf_chl)/.test(urlPath)) {
@@ -54,7 +54,7 @@ export async function classifyNavigationBlockType(page: Page): Promise<{
           addSignal("consent", 1, "url-path");
         }
 
-        const text = lower(String(runtime.document?.body?.innerText ?? "").replace(/\s+/g, " ").trim());
+        const text = lower(String(runtime.document?.body?.innerText ?? "").replaceAll(/\s+/g, " ").trim());
         if (text.includes("sign in") || text.includes("log in") || text.includes("two-factor") || text.includes("verification code")) {
           addSignal("auth", 2, "body-text");
         }

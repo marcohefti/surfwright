@@ -1,4 +1,4 @@
-import { chromium, type Request } from "playwright-core";
+import { type Request } from "playwright-core";
 import { CliError } from "../../errors.js";
 import { readRecentTargetAction } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";

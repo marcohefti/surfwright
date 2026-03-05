@@ -137,7 +137,7 @@ export async function acquireSessionBrowser(opts: {
         sessionId: opts.sessionId,
         cdpOrigin: opts.cdpOrigin,
         outcome,
-        ...(typeof error === "undefined" ? {} : { error }),
+        ...(error === undefined ? {} : { error }),
       });
     }
   };

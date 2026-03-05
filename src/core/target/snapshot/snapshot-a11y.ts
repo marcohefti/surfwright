@@ -86,7 +86,7 @@ export async function targetSnapshotA11y(opts: {
     }
   }
 
-  const normalize = (value: string): string => value.replace(/\\s+/g, " ").trim();
+  const normalize = (value: string): string => value.replaceAll(/\\s+/g, " ").trim();
   const axValue = (value: unknown): unknown => {
     if (value && typeof value === "object" && "value" in value) {
       return (value as { value?: unknown }).value;
@@ -145,7 +145,7 @@ export async function targetSnapshotA11y(opts: {
       const name = nameOf(node);
       const backend = backendIdOf(node);
       if ((includeRoles.has(role) && name.length > 0) || backend !== null) {
-        const handle = backend !== null ? encodeBackendNodeHandle(backend) : null;
+        const handle = backend === null ? null : encodeBackendNodeHandle(backend);
         const value = valueOf(node);
         const description = descOf(node);
         allRows.push({

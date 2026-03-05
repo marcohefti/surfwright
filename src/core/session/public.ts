@@ -87,7 +87,7 @@ export async function openUrl(opts: {
   }
   if (ensureMode === "fresh") {
     const snapshot = readState();
-    const canReuseRequestedId = requestedSessionId ? !Boolean(snapshot.sessions[requestedSessionId]) : false;
+    const canReuseRequestedId = requestedSessionId ? !snapshot.sessions[requestedSessionId] : false;
     const created = await sessionNew({
       timeoutMs: opts.timeoutMs,
       requestedSessionId: canReuseRequestedId ? requestedSessionId ?? undefined : undefined,

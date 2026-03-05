@@ -97,15 +97,23 @@ export function normalizeSessionState(opts: {
 
   const kind: SessionKind = value.kind === "attached" ? "attached" : "managed";
   const policy = normalizeSessionPolicy(value.policy) ?? defaultSessionPolicyForKind(kind);
-  const browserMode: BrowserMode =
-    kind === "attached" ? "unknown" : value.browserMode === "headed" ? "headed" : "headless";
+  let browserMode: BrowserMode;
+  if (kind === "attached") {
+    browserMode = "unknown";
+  } else if (value.browserMode === "headed") {
+    browserMode = "headed";
+  } else {
+    browserMode = "headless";
+  }
   const debugPort = asPositiveInteger(value.debugPort) ?? opts.inferDebugPortFromCdpOrigin(value.cdpOrigin);
-  const userDataDir =
-    kind === "managed"
-      ? typeof value.userDataDir === "string" && value.userDataDir.length > 0
-        ? value.userDataDir
-        : opts.defaultUserDataDir(opts.sessionId)
-      : null;
+  let userDataDir: string | null = null;
+  if (kind === "managed") {
+    if (typeof value.userDataDir === "string" && value.userDataDir.length > 0) {
+      userDataDir = value.userDataDir;
+    } else {
+      userDataDir = opts.defaultUserDataDir(opts.sessionId);
+    }
+  }
   const profile =
     kind === "managed" && typeof value.profile === "string" && value.profile.trim().length > 0 ? value.profile.trim() : null;
   const browserExecutablePath =

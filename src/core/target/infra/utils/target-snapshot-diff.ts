@@ -47,7 +47,7 @@ function parseSnapshot(text: string, label: string): TargetSnapshotReport {
 
 function normalizeList(values: string[]): string[] {
   return values
-    .map((v) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim() : ""))
+    .map((v) => (typeof v === "string" ? v.replaceAll(/\s+/g, " ").trim() : ""))
     .filter((v) => v.length > 0);
 }
 
@@ -91,7 +91,7 @@ function normalizeLinks(values: Array<{ text: string; href: string }>): Link[] {
     if (!value || typeof value !== "object") {
       continue;
     }
-    const text = typeof value.text === "string" ? value.text.replace(/\s+/g, " ").trim() : "";
+    const text = typeof value.text === "string" ? value.text.replaceAll(/\s+/g, " ").trim() : "";
     const href = typeof value.href === "string" ? value.href.trim() : "";
     if (!text && !href) {
       continue;
@@ -174,8 +174,8 @@ export function targetSnapshotDiffFromFiles(opts: { aPath: string; bPath: string
   const cappedLinksRemoved = capList(links.removed, DIFF_LIST_CAP);
 
   const changedTextPreview =
-    (typeof a.textPreview === "string" ? a.textPreview.replace(/\s+/g, " ").trim() : "") !==
-    (typeof b.textPreview === "string" ? b.textPreview.replace(/\s+/g, " ").trim() : "");
+    (typeof a.textPreview === "string" ? a.textPreview.replaceAll(/\s+/g, " ").trim() : "") !==
+    (typeof b.textPreview === "string" ? b.textPreview.replaceAll(/\s+/g, " ").trim() : "");
 
   const modeA = a.mode as TargetSnapshotMode;
   const modeB = b.mode as TargetSnapshotMode;

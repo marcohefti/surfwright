@@ -41,7 +41,7 @@ function parseOptionalPositiveIntInRange(opts: {
   max: number;
   fallback: number;
 }): number {
-  if (typeof opts.value === "undefined") {
+  if (opts.value === undefined) {
     return opts.fallback;
   }
 

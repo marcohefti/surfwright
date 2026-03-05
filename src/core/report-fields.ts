@@ -126,7 +126,7 @@ function deriveEvalProof(report: Record<string, unknown>): Record<string, unknow
   const consoleObj = asRecord(report.console);
   return {
     resultType: typeof result.type === "string" ? result.type : "unknown",
-    resultValue: Object.prototype.hasOwnProperty.call(result, "value") ? result.value : null,
+    resultValue: Object.hasOwn(result, "value") ? result.value : null,
     resultTruncated: Boolean(result.truncated),
     consoleCount: typeof consoleObj?.count === "number" ? consoleObj.count : 0,
     consoleCaptured: Boolean(consoleObj?.captured),
@@ -139,7 +139,7 @@ function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputSh
     return report;
   }
   const out: Record<string, unknown> = {};
-  if (Object.prototype.hasOwnProperty.call(report, "ok")) {
+  if (Object.hasOwn(report, "ok")) {
     out.ok = report.ok;
   }
   if (shape === "compact") {
@@ -147,24 +147,25 @@ function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputSh
       if (key === "ok") {
         continue;
       }
-      if (Object.prototype.hasOwnProperty.call(report, key)) {
+      if (Object.hasOwn(report, key)) {
         out[key] = report[key];
       }
     }
     return out;
   }
   // proof shape
-  const proof = Object.prototype.hasOwnProperty.call(report, "proofEnvelope")
-    ? report.proofEnvelope
-    : Object.prototype.hasOwnProperty.call(report, "proof")
-      ? report.proof
-      : null;
+  let proof: unknown = null;
+  if (Object.hasOwn(report, "proofEnvelope")) {
+    proof = report.proofEnvelope;
+  } else if (Object.hasOwn(report, "proof")) {
+    proof = report.proof;
+  }
   const derivedProof =
     proof ??
-    (Object.prototype.hasOwnProperty.call(report, "summary") ? report.summary : null) ??
+    (Object.hasOwn(report, "summary") ? report.summary : null) ??
     deriveExtractProof(report) ??
     deriveEvalProof(report) ??
-    (Object.prototype.hasOwnProperty.call(report, "downloadStarted")
+    (Object.hasOwn(report, "downloadStarted")
       ? {
           downloadStarted: report.downloadStarted,
           downloadMethod: report.downloadMethod,
@@ -177,22 +178,22 @@ function applyOutputShape(report: Record<string, unknown>, shape: ReportOutputSh
           failureReason: report.failureReason,
         }
       : null);
-  if (Object.prototype.hasOwnProperty.call(report, "sessionId")) {
+  if (Object.hasOwn(report, "sessionId")) {
     out.sessionId = report.sessionId;
   }
-  if (Object.prototype.hasOwnProperty.call(report, "targetId")) {
+  if (Object.hasOwn(report, "targetId")) {
     out.targetId = report.targetId;
   }
-  if (Object.prototype.hasOwnProperty.call(report, "actionId")) {
+  if (Object.hasOwn(report, "actionId")) {
     out.actionId = report.actionId;
   }
-  if (Object.prototype.hasOwnProperty.call(report, "url")) {
+  if (Object.hasOwn(report, "url")) {
     out.url = report.url;
   }
-  if (Object.prototype.hasOwnProperty.call(report, "finalUrl")) {
+  if (Object.hasOwn(report, "finalUrl")) {
     out.finalUrl = report.finalUrl;
   }
-  if (Object.prototype.hasOwnProperty.call(report, "repeat")) {
+  if (Object.hasOwn(report, "repeat")) {
     out.repeat = report.repeat;
   }
   out.proof = derivedProof;
@@ -233,12 +234,12 @@ export function projectReportFields<T extends Record<string, unknown>>(report: T
   }
 
   const projected: Record<string, unknown> = {};
-  if (Object.prototype.hasOwnProperty.call(shaped, "ok")) {
+  if (Object.hasOwn(shaped, "ok")) {
     projected.ok = shaped.ok;
   }
 
   for (const field of fields) {
-    if (!Object.prototype.hasOwnProperty.call(shaped, field)) {
+    if (! Object.hasOwn(shaped, field)) {
       continue;
     }
     projected[field] = shaped[field];

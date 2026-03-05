@@ -44,7 +44,7 @@ function parseArgs(argv) {
 }
 
 function normalizeRelative(filePath) {
-  return filePath.replace(/\\/g, "/");
+  return filePath.replaceAll("\\", "/");
 }
 
 function listFilesWithRipgrep(rootDir) {

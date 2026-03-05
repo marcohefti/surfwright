@@ -1,14 +1,6 @@
-import { chromium } from "playwright-core";
 import { newActionId, sanitizeActionId } from "../../../action-id.js";
 import { CliError } from "../../../errors.js";
-import { nowIso, stateRootDir } from "../../../state/index.js";
-import {
-  createNetworkCapture,
-  deleteNetworkCapture,
-  finalizeNetworkCapture,
-  readNetworkCapture,
-  setNetworkCaptureWorkerPid,
-} from "../../../state/index.js";
+import { nowIso, stateRootDir, createNetworkCapture, deleteNetworkCapture, finalizeNetworkCapture, readNetworkCapture, setNetworkCaptureWorkerPid } from "../../../state/index.js";
 import { targetNetwork } from "./target-network.js";
 import {
   parseNetworkInput,
@@ -39,7 +31,7 @@ function parseCaptureId(input: string): string {
 }
 
 function parseMaxRuntimeMs(value: number | undefined): number {
-  if (typeof value === "undefined") {
+  if (value === undefined) {
     return 10 * 60 * 1000;
   }
   if (!Number.isFinite(value) || !Number.isInteger(value) || value < CAPTURE_MAX_RUNTIME_MIN_MS || value > CAPTURE_MAX_RUNTIME_CAP_MS) {

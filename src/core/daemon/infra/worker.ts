@@ -371,12 +371,14 @@ export async function runDaemonWorker(opts: {
           metric("daemon_worker_rss_mb", rssMb);
           if (diag) {
             const errorCode = orchestrated.response.ok ? null : orchestrated.response.code;
-            const result: "success" | "typed_error" | "unreachable" | "timeout" | "cancelled" =
-              errorCode === "E_DAEMON_QUEUE_TIMEOUT"
-                ? "timeout"
-                : orchestrated.response.ok
-                  ? "success"
-                  : "typed_error";
+            let result: "success" | "typed_error" | "unreachable" | "timeout" | "cancelled";
+            if (errorCode === "E_DAEMON_QUEUE_TIMEOUT") {
+              result = "timeout";
+            } else if (orchestrated.response.ok) {
+              result = "success";
+            } else {
+              result = "typed_error";
+            }
             const queueWaitForEvent =
               errorCode === "E_DAEMON_QUEUE_TIMEOUT" && queueWaitMs === 0 ? DAEMON_QUEUE_WAIT_MS_DEFAULT : queueWaitMs;
             diagnostics.emitEvent({

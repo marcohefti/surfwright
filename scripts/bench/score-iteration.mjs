@@ -452,7 +452,7 @@ function main() {
       attemptId: row.attemptId,
       durationMs: row.durationMs,
       exitCode: row.exitCode,
-      commandPreview: String(row.command || "").replace(/\s+/g, " ").slice(0, 220),
+      commandPreview: String(row.command || "").replaceAll(/\s+/g, " ").slice(0, 220),
       command: row.command,
     }));
 

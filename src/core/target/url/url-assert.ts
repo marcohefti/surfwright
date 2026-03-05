@@ -1,7 +1,5 @@
-import { chromium } from "playwright-core";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../infra/targets.js";
 import type { TargetUrlAssertReport } from "../../types.js";
 import { classifyNavigationBlockType } from "../../shared/index.js";

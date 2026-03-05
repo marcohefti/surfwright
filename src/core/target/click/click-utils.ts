@@ -138,7 +138,7 @@ export function parseWaitAfterClick(opts: {
 }
 
 export function parseMatchIndex(input: number | undefined): number | null {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return null;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 0) {
@@ -293,7 +293,7 @@ export async function readPostSnapshot(evaluator: {
   return await evaluator.evaluate(
     ({ maxChars }: { maxChars: number }) => {
       const runtime = globalThis as unknown as BrowserRuntimeLike;
-      const normalize = (value: string): string => value.replace(/\\s+/g, " ").trim();
+      const normalize = (value: string): string => value.replaceAll(/\\s+/g, " ").trim();
       const body = runtime.document?.body ?? null;
       const textRaw = body?.innerText ?? "";
       return {
@@ -483,7 +483,7 @@ export async function summarizeCandidatePreviews(opts: {
     if (!preview) {
       continue;
     }
-    const text = preview.text.trim().replace(/\s+/g, " ").slice(0, 40);
+    const text = preview.text.trim().replaceAll(/\s+/g, " ").slice(0, 40);
     const selectorHint = preview.selectorHint ?? "?";
     rows.push(`#${idx} ${preview.visible ? "visible" : "hidden"} ${selectorHint} "${text}"`);
   }

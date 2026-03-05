@@ -1,9 +1,7 @@
-import process from "node:process";
 import { stateRootDir } from "../../state/index.js";
 import { providers } from "../../providers/index.js";
 import {
   DAEMON_META_FILENAME,
-  type DaemonMeta,
   currentProcessUid,
   isProcessAlive,
   parseDaemonMeta,

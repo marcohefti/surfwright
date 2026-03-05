@@ -116,7 +116,7 @@ test("withSessionBrowser enforces deterministic dual-session acquire/release ord
 });
 
 test("runtime-access migration scan gate leaves direct connectOverCDP only in abstraction module", () => {
-  const result = spawnSync("rg", ["-n", "chromium\\.connectOverCDP\\(", "src/core"], {
+  const result = spawnSync("rg", ["-n", String.raw`chromium\.connectOverCDP\(`, "src/core"], {
     encoding: "utf8",
     cwd: process.cwd(),
   });

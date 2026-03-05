@@ -68,7 +68,7 @@ test("target upload --submit-selector and target select-option return determinis
     "--result-selector",
     "#upload-status",
     "--result-filename-regex",
-    "upload-submit-fixture\\.txt",
+    String.raw`upload-submit-fixture\.txt`,
     "--wait-for-text",
     "uploaded:1",
     "--timeout-ms",

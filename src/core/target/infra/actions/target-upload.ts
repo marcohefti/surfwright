@@ -1,12 +1,10 @@
-import { chromium } from "playwright-core";
 import { newActionId } from "../../../action-id.js";
 import { CliError } from "../../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import { providers } from "../../../providers/index.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { parseWaitAfterClick, resolveWaitTimeoutMs, waitAfterClick, waitTimeoutError } from "../../click/click-utils.js";
-import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
-import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
+import { evaluateActionAssertions, parseActionAssertions, buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 import type { BrowserNodeLike } from "../types/browser-dom-types.js";
 import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 import {
@@ -104,7 +102,12 @@ function parseOptionalExpectedFilename(input: string | undefined): string | null
 
 function parseUploadFiles(input: string | string[] | undefined): Array<{ absolutePath: string; name: string; size: number; type: string }> {
   const { fs, path } = providers();
-  const raw = Array.isArray(input) ? input : typeof input === "string" ? [input] : [];
+  let raw: string[] = [];
+  if (Array.isArray(input)) {
+    raw = input;
+  } else if (typeof input === "string") {
+    raw = [input];
+  }
   const files = raw.map((entry) => entry.trim()).filter((entry) => entry.length > 0);
   if (files.length === 0) {
     throw new CliError("E_QUERY_INVALID", "Provide at least one --file <path>");
@@ -173,13 +176,14 @@ export async function targetUpload(opts: {
   }
   const resultTextContains = parseOptionalTrimmedString(opts.resultTextContains);
   const explicitFilenameRegex = parseOptionalRegex(opts.resultFilenameRegex, "result-filename-regex");
-  const inferredFilenameRegex =
-    explicitFilenameRegex ??
-    (expectedUploadedFilename
-      ? new RegExp(`\\b${escapeRegexLiteral(expectedUploadedFilename)}\\b`)
-      : fileInputs.length === 1
-        ? new RegExp(`\\b${escapeRegexLiteral(fileInputs[0].name)}\\b`)
-        : null);
+  let inferredFilenameRegex = explicitFilenameRegex;
+  if (inferredFilenameRegex === null) {
+    if (expectedUploadedFilename) {
+      inferredFilenameRegex = new RegExp(`\\b${escapeRegexLiteral(expectedUploadedFilename)}\\b`);
+    } else if (fileInputs.length === 1) {
+      inferredFilenameRegex = new RegExp(`\\b${escapeRegexLiteral(fileInputs[0].name)}\\b`);
+    }
+  }
   const parsedAssertions = parseActionAssertions({
     assertUrlPrefix: opts.assertUrlPrefix,
     assertSelector: opts.assertSelector,

@@ -37,7 +37,7 @@ export function cdpQueryOp(arg: {
   | boolean {
   const runtime = globalThis as unknown as BrowserRuntimeLike;
   const doc = runtime.document;
-  const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+  const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
   const normLower = (value: string): string => normalize(value).toLowerCase();
 
   const selectorHintFor = (node: BrowserNodeLike | null): string | null => {

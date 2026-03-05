@@ -1,10 +1,9 @@
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
+import { type Browser, type BrowserContext, type Page } from "playwright-core";
 import { allocateFreePort, ensureSessionReachable, killManagedBrowserProcessTree, startManagedSession } from "../../browser.js";
 import { CliError } from "../../errors.js";
 import { ensureProfileManagedSession } from "../../profile/index.js";
 import { withSessionHeartbeat } from "../../session/index.js";
-import { defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId } from "../../state/index.js";
-import { allocateSessionIdForState, assertSessionDoesNotExist, mutateState, saveTargetSnapshots } from "../../state/index.js";
+import { defaultSessionUserDataDir, nowIso, readState, sanitizeSessionId, allocateSessionIdForState, assertSessionDoesNotExist, mutateState, saveTargetSnapshots } from "../../state/index.js";
 import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 import {
   DEFAULT_IMPLICIT_SESSION_LEASE_TTL_MS,
@@ -14,7 +13,6 @@ import {
   type TargetListReport,
 } from "../../types.js";
 import {
-  buildHandleTypeMismatchError,
   buildSessionNotFoundError,
   buildTargetSessionUnknownError,
   fallbackSessionIdForTargetRecovery,

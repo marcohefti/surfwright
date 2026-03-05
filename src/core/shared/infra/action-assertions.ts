@@ -27,7 +27,7 @@ export function parseActionAssertions(input: ActionAssertionInput): ParsedAction
 }
 
 function normalizeText(value: string): string {
-  return value.replace(/\s+/g, " ").trim().toLowerCase();
+  return value.replaceAll(/\s+/g, " ").trim().toLowerCase();
 }
 
 async function checkSelectorVisible(page: Page, selector: string): Promise<boolean> {

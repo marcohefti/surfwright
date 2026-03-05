@@ -24,7 +24,7 @@ clearDir(promptDir);
 clearDir(oracleDir);
 
 for (const name of missionFiles) {
-  const base = name.replace(/\.md$/i, '');
+  const base = name.replaceAll(/\.md$/i, '');
   const missionId = base;
   const raw = readFileSync(path.join(sourceDir, name), 'utf8');
 
@@ -242,7 +242,7 @@ function parseLiteral(token) {
     return Number(token);
   }
   if ((token.startsWith('"') && token.endsWith('"')) || (token.startsWith("'") && token.endsWith("'"))) {
-    const normalized = token.startsWith("'") ? `"${token.slice(1, -1).replace(/"/g, '\\"')}"` : token;
+    const normalized = token.startsWith("'") ? `"${token.slice(1, -1).replaceAll('"', String.raw`\"`)}"` : token;
     return JSON.parse(normalized);
   }
   return token;

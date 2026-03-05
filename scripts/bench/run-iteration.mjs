@@ -133,11 +133,11 @@ function main() {
     .filter((row) => row && row.kind === "iteration" && row.loopId === loopId)
     .sort((a, b) => Number(a.iteration || 0) - Number(b.iteration || 0));
 
-  const iteration = historyRows.length > 0 ? Number(historyRows[historyRows.length - 1].iteration || 0) + 1 : 1;
+  const iteration = historyRows.length > 0 ? Number(historyRows.at(-1).iteration || 0) + 1 : 1;
   const iterationId = `${nowCompact()}-i${pad3(iteration)}`;
   const label = args.label || `iter-${pad3(iteration)}`;
-  const scopeSlug = scopeId.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase();
-  const campaignId = `${loopId}-${scopeSlug}-i${pad3(iteration)}-${iterationId}`.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+  const scopeSlug = scopeId.replaceAll(/[^a-zA-Z0-9-]/g, "-").toLowerCase();
+  const campaignId = `${loopId}-${scopeSlug}-i${pad3(iteration)}-${iterationId}`.toLowerCase().replaceAll(/[^a-z0-9-]/g, "-");
 
   const iterationDir = path.resolve(repoRoot, "tmp/zerocontext/bench-loop", loopId, scopeId, iterationId);
   const logsDir = path.join(iterationDir, "logs");
@@ -157,7 +157,7 @@ function main() {
     const changedFiles = gitStatus ? gitStatus.split(/\r?\n/).map((line) => line.trim()).filter(Boolean) : [];
     const changedPaths = changedFiles.map((line) => extractChangedPath(line)).filter(Boolean);
     const nonLoopDataChanges = changedPaths.filter((filePath) => !isLoopDataPath(filePath));
-    const previousHistoryRow = historyRows.length > 0 ? historyRows[historyRows.length - 1] : null;
+    const previousHistoryRow = historyRows.length > 0 ? historyRows.at(-1) : null;
 
     if (iterationMode === "optimize" && !args.allowNoChange) {
       const hypothesis = String(args.hypothesis || "").trim();
@@ -319,7 +319,7 @@ function main() {
     }
 
     const measured = historyRows.filter((row) => Number(row?.metrics?.attempts || 0) > 0);
-    const previous = measured.length > 0 ? measured[measured.length - 1] : null;
+    const previous = measured.length > 0 ? measured.at(-1) : null;
     const baseline = measured.length > 0 ? measured[0] : null;
     const deltaPrev = previous ? buildDelta(metricsCore, previous.metrics || {}) : buildDelta(metricsCore, null);
     const deltaBaseline = baseline ? buildDelta(metricsCore, baseline.metrics || {}) : buildDelta(metricsCore, null);

@@ -64,7 +64,7 @@ export function evaluateAssertionSpec(assert: PipelineAssertionInput | undefined
     if (typeof pathExpr !== "string") {
       continue;
     }
-    const ok = typeof readPathValue(report, pathExpr) !== "undefined";
+    const ok = readPathValue(report, pathExpr) !== undefined;
     checks.push({ kind: "exists", path: pathExpr, ok, message: ok ? "ok" : "expected path to exist" });
   }
   return { total: checks.length, failed: checks.filter((entry) => !entry.ok).length, checks };

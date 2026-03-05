@@ -1,4 +1,3 @@
-import { chromium } from "playwright-core";
 import { newActionId } from "../../../action-id.js";
 import { CliError } from "../../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
@@ -9,8 +8,7 @@ import { parseOptionalTargetQuery, resolveFirstQueryMatch } from "./target-input
 import { parseWaitAfterClick, resolveWaitTimeoutMs } from "../../click/click-utils.js";
 import { waitAfterClickWithBudget } from "../../click/click-wait.js";
 import { readSelectorCountAfter } from "../../click/click-proof.js";
-import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
-import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
+import { evaluateActionAssertions, parseActionAssertions, buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 import type { BrowserRuntimeLike } from "../types/browser-dom-types.js";
 import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 
@@ -177,7 +175,7 @@ export async function targetKeypress(opts: {
     });
     const resultText = await evaluator.evaluate(() => {
       const runtime = globalThis as unknown as BrowserRuntimeLike;
-      const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+      const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
       const active = runtime.document?.activeElement as
         | null
         | {
@@ -185,14 +183,14 @@ export async function targetKeypress(opts: {
             innerText?: string;
             textContent?: string;
           };
-      const raw =
-        typeof active?.value === "string"
-          ? active.value
-          : typeof active?.innerText === "string"
-            ? active.innerText
-            : typeof active?.textContent === "string"
-              ? active.textContent
-              : "";
+      let raw = "";
+      if (typeof active?.value === "string") {
+        raw = active.value;
+      } else if (typeof active?.innerText === "string") {
+        raw = active.innerText;
+      } else if (typeof active?.textContent === "string") {
+        raw = active.textContent;
+      }
       return normalize(raw).slice(0, 240);
     });
     const countAfter = await readSelectorCountAfter({

@@ -1,9 +1,9 @@
 function normalizeNewlines(text) {
-  return String(text ?? "").replace(/\r\n/g, "\n");
+  return String(text ?? "").replaceAll("\r\n", "\n");
 }
 
 function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 export function extractChangelogVersionSection(changelogText, version) {
@@ -45,4 +45,3 @@ export function extractChangelogVersionSection(changelogText, version) {
     body,
   };
 }
-

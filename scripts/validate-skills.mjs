@@ -61,8 +61,8 @@ function parseFrontmatter(skillPath, body) {
     fail(`${skillPath}: frontmatter missing 'description'`);
   }
 
-  const name = nameMatch ? nameMatch[1].trim().replace(/^"|"$/g, "") : "";
-  const description = descriptionMatch ? descriptionMatch[1].trim().replace(/^"|"$/g, "") : "";
+  const name = nameMatch ? nameMatch[1].trim().replaceAll(/^"|"$/g, "") : "";
+  const description = descriptionMatch ? descriptionMatch[1].trim().replaceAll(/^"|"$/g, "") : "";
 
   if (name.length === 0) {
     fail(`${skillPath}: frontmatter name is empty`);
@@ -111,13 +111,13 @@ function validateSkillDir(skillDirPath) {
   const openaiYaml = readIfExists(openaiYamlPath);
   if (openaiYaml) {
     const defaultPromptMatch = openaiYaml.match(/^\s*default_prompt:\s*"([^"]*)"\s*$/m);
-    if (!defaultPromptMatch) {
-      fail(`${openaiYamlPath}: missing interface.default_prompt string`);
-    } else {
+    if (defaultPromptMatch) {
       const defaultPrompt = defaultPromptMatch[1];
       if (!defaultPrompt.includes(`$${frontmatter.name}`)) {
         fail(`${openaiYamlPath}: default_prompt must reference $${frontmatter.name}`);
       }
+    } else {
+      fail(`${openaiYamlPath}: missing interface.default_prompt string`);
     }
   }
 
@@ -222,9 +222,7 @@ for (const skillDir of skillDirs) {
 }
 
 const lockPath = path.join(skillsRoot, "surfwright.lock.json");
-if (!fs.existsSync(lockPath)) {
-  fail(`${lockPath}: missing skill lock file`);
-} else {
+if (fs.existsSync(lockPath)) {
   const lockRaw = readIfExists(lockPath);
   try {
     const lock = JSON.parse(lockRaw ?? "");
@@ -234,6 +232,8 @@ if (!fs.existsSync(lockPath)) {
   } catch {
     fail(`${lockPath}: invalid JSON`);
   }
+} else {
+  fail(`${lockPath}: missing skill lock file`);
 }
 
 if (process.exitCode && process.exitCode !== 0) {

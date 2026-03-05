@@ -143,7 +143,7 @@ export function buildScopeId(missionIds) {
   }
 
   const joined = sorted.join("__");
-  const safeJoined = joined.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const safeJoined = joined.replaceAll(/[^a-zA-Z0-9_-]/g, "-");
   if (safeJoined.length <= 80) {
     return `cluster-${sorted.length}-${safeJoined}`;
   }
@@ -335,6 +335,6 @@ export function extractChangedPath(line) {
 }
 
 export function isLoopDataPath(filePath) {
-  const normalized = String(filePath || "").replace(/\\/g, "/");
+  const normalized = String(filePath || "").replaceAll("\\", "/");
   return normalized.startsWith("tmp/");
 }

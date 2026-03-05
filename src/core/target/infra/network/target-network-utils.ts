@@ -197,7 +197,7 @@ function parsePositiveInt(opts: {
   max: number;
   name: string;
 }): number {
-  if (typeof opts.value === "undefined") {
+  if (opts.value === undefined) {
     return opts.defaultValue;
   }
   if (!Number.isFinite(opts.value) || !Number.isInteger(opts.value) || opts.value < opts.min || opts.value > opts.max) {
@@ -384,7 +384,7 @@ function maybeTruncate(value: string, maxChars: number): string {
 }
 
 function normalizeWhitespace(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
+  return value.replaceAll(/\s+/g, " ").trim();
 }
 
 export function postDataPreview(buffer: Buffer, opts: { maxBytes: number; redactors: RegExp[] }): string {

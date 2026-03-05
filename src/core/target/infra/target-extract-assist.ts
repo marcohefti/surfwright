@@ -21,16 +21,16 @@ export type ExtractItemDraft = {
 };
 
 export function normalizeExtractWhitespace(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
+  return value.replaceAll(/\s+/g, " ").trim();
 }
 
 function decodeXmlEntities(input: string): string {
   return input
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'");
 }
 
 function maybeAbsoluteUrl(opts: { base: string; value: string | null; kind: TargetExtractReport["kind"]; slug: string | null }): string | null {
@@ -150,7 +150,7 @@ function parseXmlTag(block: string, names: string[]): string | null {
     const pattern = new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${name}>`, "i");
     const match = block.match(pattern);
     if (match && typeof match[1] === "string") {
-      const value = normalizeExtractWhitespace(decodeXmlEntities(match[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")));
+      const value = normalizeExtractWhitespace(decodeXmlEntities(match[1].replaceAll(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")));
       if (value.length > 0) {
         return value;
       }

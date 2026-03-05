@@ -1,10 +1,8 @@
-import { chromium } from "playwright-core";
 import { newActionId } from "../../../action-id.js";
 import { CliError } from "../../../errors.js";
 import { nowIso, saveTargetSnapshot } from "../../../state/index.js";
 import { ensureValidSelector, resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
-import { evaluateActionAssertions, parseActionAssertions } from "../../../shared/index.js";
-import { buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
+import { evaluateActionAssertions, parseActionAssertions, buildActionProofEnvelope, toActionWaitEvidence } from "../../../shared/index.js";
 import type { TargetSelectOptionReport } from "../../../types.js";
 import { connectSessionBrowser } from "../../../session/infra/runtime-access.js";
 

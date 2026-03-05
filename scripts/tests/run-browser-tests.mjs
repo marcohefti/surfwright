@@ -1,6 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import fs from "node:fs";
-import { promises as fsp } from "node:fs";
+import fs, { promises as fsp } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -29,7 +28,7 @@ function hasArg(argv, flagPrefix) {
 }
 
 function escapeRegexLiteral(input) {
-  return String(input).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return String(input).replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));

@@ -25,7 +25,7 @@ export function targetExtractTableRowsOp(arg: {
 } {
   const runtime = globalThis as unknown as BrowserRuntimeLike;
   const doc = runtime.document;
-  const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+  const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
   const isVisible = (node: BrowserNodeLike | null): boolean => {
     if (!node) {
       return false;
@@ -130,7 +130,7 @@ export function targetExtractTableRowsOp(arg: {
         const rawKey = headers[index] ?? `col ${index + 1}`;
         let key = rawKey;
         let duplicateOrdinal = 2;
-        while (Object.prototype.hasOwnProperty.call(record, key)) {
+        while (Object.hasOwn(record, key)) {
           key = `${rawKey} #${duplicateOrdinal}`;
           duplicateOrdinal += 1;
         }

@@ -6,7 +6,7 @@ import type { TargetNetworkQueryPreset, TargetNetworkQueryReport } from "../../.
 const QUERY_ROW_CAP = 500;
 
 function parsePreset(input: string | undefined): TargetNetworkQueryPreset {
-  if (typeof input === "undefined" || input.trim().length === 0) {
+  if (input === undefined || input.trim().length === 0) {
     return "summary";
   }
   const value = input.trim().toLowerCase();
@@ -17,7 +17,7 @@ function parsePreset(input: string | undefined): TargetNetworkQueryPreset {
 }
 
 function parseLimit(input: number | undefined): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return 20;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 1 || input > QUERY_ROW_CAP) {

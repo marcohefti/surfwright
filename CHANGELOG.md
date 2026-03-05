@@ -11,6 +11,7 @@ All notable changes to SurfWright are documented here.
 - [devx] Added `oxlint` as the TypeScript lint runner (`pnpm lint`) and wired it into `validate` / `validate:strict`.
 - [lint] Moved `LOC001`, `ARC005`, `ARC008`, `ARC010`, `BUDG002`, and `BUDG003` enforcement from custom policy scripts to `.oxlintrc.json` (`max-lines`, `no-restricted-imports`, `node/no-process-env`).
 - [policy] Removed superseded custom lint-oriented policy rules so `policy-check` stays focused on architecture topology and structural invariants.
+- [lint] Resolved strict oxlint migration fallout across `src/`, `scripts/`, and `test/` with maintainable refactors (no rule downgrades or lint bypasses), restoring `pnpm lint` to zero errors.
 
 ### Fixed
 - [errors] Expanded `CliError` hint context typing to accept JSON values so extension runtime diagnostics compile cleanly.

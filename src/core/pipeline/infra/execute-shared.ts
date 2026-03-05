@@ -43,7 +43,7 @@ export function countAssertionChecks(input: PipelineStepInput["assert"] | undefi
 }
 
 export function projectRunResult(resultMap: PipelineResultMap | undefined, scope: Record<string, unknown>): Record<string, unknown> | undefined {
-  if (typeof resultMap === "undefined") {
+  if (resultMap === undefined) {
     return undefined;
   }
   const projected: Record<string, unknown> = {};
@@ -52,7 +52,7 @@ export function projectRunResult(resultMap: PipelineResultMap | undefined, scope
       throw new CliError("E_QUERY_INVALID", `plan.result.${key} must be a non-empty string path`);
     }
     const resolved = readPathValue(scope, pathExpr);
-    if (typeof resolved === "undefined") {
+    if (resolved === undefined) {
       throw new CliError("E_QUERY_INVALID", `plan.result.${key} unresolved path: ${pathExpr}`);
     }
     projected[key] = resolved;
@@ -77,7 +77,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
     await ops.list({
       timeoutMs,
       sessionId,
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     }),
   snapshot: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
     await ops.snapshot({
@@ -87,7 +87,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       selectorQuery: parseOptionalString(step.selector, `steps[${index}].selector`),
       visibleOnly: Boolean(step.visibleOnly),
       frameScope: stepFrameScope,
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     }),
   find: async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) =>
     await ops.find({
@@ -100,7 +100,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       visibleOnly: Boolean(step.visibleOnly),
       first: Boolean(step.first),
       limit: parseOptionalInteger(step.limit, `steps[${index}].limit`),
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     }),
   count: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
     await ops.count({
@@ -112,7 +112,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       containsQuery: parseOptionalString(step.contains, `steps[${index}].contains`),
       visibleOnly: Boolean(step.visibleOnly),
       frameScope: stepFrameScope,
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     }),
   "scroll-plan": async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) =>
     await ops.scrollPlan({
@@ -125,7 +125,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       countSelectorQuery: parseOptionalString(step.countSelector, `steps[${index}].countSelector`),
       countContainsQuery: parseOptionalString(step.countContains, `steps[${index}].countContains`),
       countVisibleOnly: Boolean(step.countVisibleOnly),
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     }),
   scrollPlan: async (input) => await PIPELINE_STEP_EXECUTORS["scroll-plan"](input),
   "repeat-until": async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) => {
@@ -143,7 +143,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
     if (nestedStep.id === "repeat-until" || nestedStep.id === "repeatUntil") {
       throw new CliError("E_QUERY_INVALID", `steps[${index}].step.id nested repeat-until is not supported`);
     }
-    if (typeof nestedStep.as !== "undefined") {
+    if (nestedStep.as !== undefined) {
       throw new CliError("E_QUERY_INVALID", `steps[${index}].step.as is not supported; use steps[${index}].as`);
     }
 
@@ -151,9 +151,9 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
     if (typeof untilPath !== "string" || untilPath.trim().length === 0) {
       throw new CliError("E_QUERY_INVALID", `steps[${index}].untilPath is required`);
     }
-    const hasUntilEquals = Object.prototype.hasOwnProperty.call(step, "untilEquals");
-    const hasUntilGte = Object.prototype.hasOwnProperty.call(step, "untilGte");
-    const hasUntilDeltaGte = Object.prototype.hasOwnProperty.call(step, "untilDeltaGte");
+    const hasUntilEquals = Object.hasOwn(step, "untilEquals");
+    const hasUntilGte = Object.hasOwn(step, "untilGte");
+    const hasUntilDeltaGte = Object.hasOwn(step, "untilDeltaGte");
     const untilChanged = parseOptionalBoolean(step.untilChanged, `steps[${index}].untilChanged`);
     const hasUntilChanged = untilChanged === true;
     const conditionCount = Number(hasUntilEquals) + Number(hasUntilGte) + Number(hasUntilDeltaGte) + Number(hasUntilChanged);
@@ -252,7 +252,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       attempts.push({
         attempt,
         matched,
-        value: typeof currentValue === "undefined" ? null : currentValue,
+        value: currentValue === undefined ? null : currentValue,
         ...(typeof currentDelta === "number" ? { delta: currentDelta } : {}),
       });
       previousValue = currentValue;
@@ -263,14 +263,20 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       }
     }
 
-    const until =
-      hasUntilEquals
-        ? { kind: "equals", path: untilPath, expected: step.untilEquals }
-        : hasUntilGte
-          ? { kind: "gte", path: untilPath, threshold: untilGte ?? null }
-          : hasUntilDeltaGte
-            ? { kind: "delta-gte", path: untilPath, threshold: untilDeltaGte ?? null }
-          : { kind: "changed", path: untilPath };
+    let until:
+      | { kind: "equals"; path: string; expected: unknown }
+      | { kind: "gte"; path: string; threshold: number | null }
+      | { kind: "delta-gte"; path: string; threshold: number | null }
+      | { kind: "changed"; path: string };
+    if (hasUntilEquals) {
+      until = { kind: "equals", path: untilPath, expected: step.untilEquals };
+    } else if (hasUntilGte) {
+      until = { kind: "gte", path: untilPath, threshold: untilGte ?? null };
+    } else if (hasUntilDeltaGte) {
+      until = { kind: "delta-gte", path: untilPath, threshold: untilDeltaGte ?? null };
+    } else {
+      until = { kind: "changed", path: untilPath };
+    }
 
     return {
       ok: true,
@@ -316,7 +322,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       assertUrlPrefix: parseOptionalString(step.assertUrlPrefix, `steps[${index}].assertUrlPrefix`),
       assertSelector: parseOptionalString(step.assertSelector, `steps[${index}].assertSelector`),
       assertText: parseOptionalString(step.assertText, `steps[${index}].assertText`),
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     });
   },
   "click-read": async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
@@ -339,7 +345,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       readFrameScope: parseOptionalString(step.readFrameScope, `steps[${index}].readFrameScope`),
       chunkSize: parseOptionalInteger(step.chunkSize, `steps[${index}].chunkSize`),
       chunkIndex: parseOptionalInteger(step.chunk, `steps[${index}].chunk`),
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     }),
   clickRead: async (input) => await PIPELINE_STEP_EXECUTORS["click-read"](input),
   fill: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) => {
@@ -367,7 +373,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       assertUrlPrefix: parseOptionalString(step.assertUrlPrefix, `steps[${index}].assertUrlPrefix`),
       assertSelector: parseOptionalString(step.assertSelector, `steps[${index}].assertSelector`),
       assertText: parseOptionalString(step.assertText, `steps[${index}].assertText`),
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     });
   },
   upload: async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) => {
@@ -375,7 +381,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
     if (typeof selectorQuery !== "string" || selectorQuery.length === 0) {
       throw new CliError("E_QUERY_INVALID", `steps[${index}].selector is required for upload`);
     }
-    const filesInput = typeof step.files !== "undefined" ? step.files : step.file;
+    const filesInput = step.files === undefined ? step.file : step.files;
     const files = parseOptionalStringOrStringArray(filesInput, `steps[${index}].files`);
     if (!files || files.length < 1) {
       throw new CliError("E_QUERY_INVALID", `steps[${index}].files (or file) must include at least one path`);
@@ -400,7 +406,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       assertUrlPrefix: parseOptionalString(step.assertUrlPrefix, `steps[${index}].assertUrlPrefix`),
       assertSelector: parseOptionalString(step.assertSelector, `steps[${index}].assertSelector`),
       assertText: parseOptionalString(step.assertText, `steps[${index}].assertText`),
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     });
   },
   read: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
@@ -413,7 +419,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       frameScope: stepFrameScope,
       chunkSize: parseOptionalInteger(step.chunkSize, `steps[${index}].chunkSize`),
       chunkIndex: parseOptionalInteger(step.chunk, `steps[${index}].chunk`),
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     }),
   wait: async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) =>
     await ops.wait({
@@ -423,7 +429,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       forText: parseOptionalString(step.forText, `steps[${index}].forText`),
       forSelector: parseOptionalString(step.forSelector, `steps[${index}].forSelector`),
       networkIdle: Boolean(step.networkIdle),
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     }),
   eval: async ({ step, index, timeoutMs, stepTargetId, sessionId, ops }) =>
     await ops.eval({
@@ -434,7 +440,7 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       argJson: parseOptionalString(step.argJson, `steps[${index}].argJson`),
       captureConsole: parseOptionalBoolean(step.captureConsole, `steps[${index}].captureConsole`),
       maxConsole: parseOptionalInteger(step.maxConsole, `steps[${index}].maxConsole`),
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     }),
   extract: async ({ step, index, timeoutMs, stepTargetId, stepFrameScope, sessionId, ops }) =>
     await ops.extract({
@@ -446,6 +452,6 @@ export const PIPELINE_STEP_EXECUTORS: Record<string, (input: PipelineStepExecuto
       visibleOnly: Boolean(step.visibleOnly),
       frameScope: stepFrameScope,
       limit: parseOptionalInteger(step.limit, `steps[${index}].limit`),
-      persistState: !Boolean(step.noPersist),
+      persistState: !step.noPersist,
     }),
 };

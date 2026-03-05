@@ -5,7 +5,7 @@ import type { SurfwrightState, TargetNetworkArtifactPruneReport, TargetNetworkEx
 type NetworkArtifactState = SurfwrightState["networkArtifacts"][string];
 
 function parseLimit(input: number | undefined): number {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return 50;
   }
   if (!Number.isFinite(input) || !Number.isInteger(input) || input < 1 || input > 5000) {
@@ -20,7 +20,7 @@ function parseOptionalRange(opts: {
   min: number;
   max: number;
 }): number | null {
-  if (typeof opts.value === "undefined") {
+  if (opts.value === undefined) {
     return null;
   }
   if (!Number.isFinite(opts.value) || !Number.isInteger(opts.value) || opts.value < opts.min || opts.value > opts.max) {

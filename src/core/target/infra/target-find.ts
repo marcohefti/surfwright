@@ -1,12 +1,9 @@
-import { chromium } from "playwright-core";
 import { CliError } from "../../errors.js";
-import { nowIso } from "../../state/index.js";
-import { saveTargetSnapshot } from "../../state/index.js";
+import { nowIso, saveTargetSnapshot } from "../../state/index.js";
 import { parseTargetQueryInput } from "./target-query.js";
-import { DEFAULT_TARGET_FIND_LIMIT } from "../../types.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "./targets.js";
 import type { BrowserNodeLike, BrowserRuntimeLike } from "./types/browser-dom-types.js";
-import type { TargetFindReport } from "../../types.js";
+import { DEFAULT_TARGET_FIND_LIMIT, type TargetFindReport } from "../../types.js";
 import { connectSessionBrowser } from "../../session/infra/runtime-access.js";
 import {
   createCdpEvaluator,
@@ -40,7 +37,7 @@ type FrameMatchPayload = {
 export type FrameScope = "main" | "all";
 
 export function parseFrameScope(input: string | undefined): FrameScope {
-  if (typeof input === "undefined") {
+  if (input === undefined) {
     return "main";
   }
   const normalized = input.trim().toLowerCase();
@@ -233,7 +230,7 @@ export async function targetFind(opts: {
         }) => {
           const runtime = globalThis as unknown as BrowserRuntimeLike;
           const doc = runtime.document;
-          const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();
+          const normalize = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
           const normLower = (value: string): string => normalize(value).toLowerCase();
           const selectorHintFor = (node: BrowserNodeLike | null): string | null => {
             const el = node;

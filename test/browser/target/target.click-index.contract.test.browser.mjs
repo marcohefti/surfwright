@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import test from "node:test";
 import { createCliRunner } from "../helpers/cli-runner.mjs";
 import { cleanupStateDir } from "../helpers/managed-cleanup.mjs";
@@ -9,9 +7,6 @@ import { mkBrowserTestStateDir } from "../helpers/test-tmp.mjs";
 const TEST_STATE_DIR = mkBrowserTestStateDir("surfwright-target-click-index-");
 const { runCliSync } = createCliRunner({ stateDir: TEST_STATE_DIR });
 
-function stateFilePath() {
-  return path.join(TEST_STATE_DIR, "state.json");
-}
 
 function runCli(args) {
   return runCliSync(args);
@@ -330,8 +325,8 @@ test("target find returns href and tag metadata for each match", () => {
   assert.equal(Array.isArray(payload.matches), true);
   assert.ok(payload.matches.length >= 3);
   for (const match of payload.matches) {
-    assert.equal(Object.prototype.hasOwnProperty.call(match, "href"), true);
-    assert.equal(Object.prototype.hasOwnProperty.call(match, "tag"), true);
+    assert.equal(Object.hasOwn(match, "href"), true);
+    assert.equal(Object.hasOwn(match, "tag"), true);
     assert.ok(match.href === null || typeof match.href === "string");
     assert.ok(match.tag === null || typeof match.tag === "string");
   }

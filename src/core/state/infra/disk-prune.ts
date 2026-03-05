@@ -53,7 +53,7 @@ function parseOptionalRetentionNumber(opts: {
   max: number;
   fallback: number | null;
 }): number | null {
-  if (typeof opts.value === "undefined") {
+  if (opts.value === undefined) {
     return opts.fallback;
   }
   if (opts.value === null) {

@@ -1,7 +1,6 @@
-import { chromium, type Request, type Response, type WebSocket } from "playwright-core";
+import { type Request, type Response, type WebSocket } from "playwright-core";
 import { sanitizeActionId } from "../../../action-id.js";
-import { nowIso } from "../../../state/index.js";
-import { readRecentTargetAction, saveTargetSnapshot } from "../../../state/index.js";
+import { nowIso, readRecentTargetAction, saveTargetSnapshot } from "../../../state/index.js";
 import { providers } from "../../../providers/index.js";
 import { resolveSessionForAction, resolveTargetHandle, sanitizeTargetId } from "../targets.js";
 import { buildInsights, buildPerformanceSummary, buildTruncationHints, toTableRows } from "./target-network-analysis.js";

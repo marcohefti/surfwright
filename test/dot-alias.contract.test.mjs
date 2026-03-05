@@ -8,13 +8,14 @@ import test from "node:test";
 
 const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-dot-alias-"));
 
-function runCli(args) {
+function runCli(args, envOverrides = undefined) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
     encoding: "utf8",
     env: {
       ...process.env,
       SURFWRIGHT_STATE_DIR: TEST_STATE_DIR,
       SURFWRIGHT_DAEMON: "0",
+      ...(envOverrides ?? {}),
     },
   });
 }
@@ -96,7 +97,9 @@ test("dot-command alias supports network subcommands", () => {
   assert.equal(tracePayload.ok, false);
   assert.equal(tracePayload.code, "E_QUERY_INVALID");
 
-  const extensionList = runCli(["extension.list"]);
+  const extensionList = runCli(["extension.list"], {
+    SURFWRIGHT_WORKSPACE_DIR: path.join(TEST_STATE_DIR, "workspace"),
+  });
   assert.equal(extensionList.status, 0);
   const extensionPayload = parseJson(extensionList.stdout);
   assert.equal(extensionPayload.ok, true);

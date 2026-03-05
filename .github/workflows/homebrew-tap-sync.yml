@@ -10,9 +10,6 @@ on:
         description: "Version without v prefix"
         required: true
 
-permissions:
-  contents: read
-
 concurrency:
   group: homebrew-sync-${{ github.ref }}
   cancel-in-progress: false
@@ -21,6 +18,8 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -29,9 +28,12 @@ jobs:
 
       - name: Resolve version and tarball metadata
         id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${{ inputs.version }}"
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            VERSION="${INPUT_VERSION}"
           else
             VERSION="${GITHUB_REF_NAME#v}"
           fi
@@ -71,10 +73,14 @@ jobs:
           git clone "https://x-access-token:${HOMEBREW_TAP_PAT}@github.com/marcohefti/homebrew-tap.git" /tmp/homebrew-tap
 
       - name: Update formula
+        env:
+          META_VERSION: ${{ steps.meta.outputs.version }}
+          META_TARBALL: ${{ steps.meta.outputs.tarball }}
+          META_SHA256: ${{ steps.meta.outputs.sha256 }}
         run: |
-          VERSION="${{ steps.meta.outputs.version }}"
-          TARBALL="${{ steps.meta.outputs.tarball }}"
-          SHA256="${{ steps.meta.outputs.sha256 }}"
+          VERSION="${META_VERSION}"
+          TARBALL="${META_TARBALL}"
+          SHA256="${META_SHA256}"
           cat > /tmp/homebrew-tap/Formula/surfwright.rb <<RUBY
           class Surfwright < Formula
             desc "Agent-first browser control surface for Chrome/Chromium"
@@ -97,13 +103,16 @@ jobs:
           RUBY
 
       - name: Verify formula matches release version
+        env:
+          META_VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          VERSION="${{ steps.meta.outputs.version }}"
+          VERSION="${META_VERSION}"
           grep -q "surfwright-${VERSION}.tgz" /tmp/homebrew-tap/Formula/surfwright.rb
 
       - name: Commit and push formula bump
         env:
           HOMEBREW_TAP_PAT: ${{ secrets.HOMEBREW_TAP_PAT }}
+          META_VERSION: ${{ steps.meta.outputs.version }}
         run: |
           cd /tmp/homebrew-tap
           git config user.name "github-actions[bot]"
@@ -113,5 +122,5 @@ jobs:
             echo "No formula changes to commit"
             exit 0
           fi
-          git commit -m "chore(formula): surfwright ${{ steps.meta.outputs.version }}"
+          git commit -m "chore(formula): surfwright ${META_VERSION}"
           git push origin main

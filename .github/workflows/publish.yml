@@ -42,9 +42,12 @@ jobs:
 
       - name: Resolve release context
         id: release
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${{ inputs.version }}"
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            VERSION="${INPUT_VERSION}"
             RELEASE_REF="manual-v${VERSION}"
           else
             VERSION="${GITHUB_REF_NAME#v}"
@@ -72,10 +75,11 @@ jobs:
           node scripts/prepare-package-artifacts.mjs --package guard
 
       - name: Guard package version parity and release version alignment
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           CAN_VERSION=$(node -e "console.log(require('./packages/canonical/package.json').version)")
           GUARD_VERSION=$(node -e "console.log(require('./packages/guard/package.json').version)")
-          RELEASE_VERSION="${{ steps.release.outputs.version }}"
           if [[ "$CAN_VERSION" != "$GUARD_VERSION" ]]; then
             echo "Version mismatch: canonical=$CAN_VERSION guard=$GUARD_VERSION" >&2
             exit 1
@@ -97,10 +101,13 @@ jobs:
 
       - name: Publish both packages (guarded)
         id: publish_guarded
+        env:
+          RELEASE_DIST_TAG: ${{ steps.release.outputs.dist_tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           mkdir -p artifacts/publish
-          DIST_TAG="${{ steps.release.outputs.dist_tag }}"
-          VERSION="${{ steps.release.outputs.version }}"
+          DIST_TAG="${RELEASE_DIST_TAG}"
+          VERSION="${RELEASE_VERSION}"
           PUBLISH_TIMEOUT="20m"
 
           publish_one() {
@@ -152,9 +159,12 @@ jobs:
           fi
 
       - name: Verify dist-tag versions
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_DIST_TAG: ${{ steps.release.outputs.dist_tag }}
         run: |
-          VERSION="${{ steps.release.outputs.version }}"
-          DIST_TAG="${{ steps.release.outputs.dist_tag }}"
+          VERSION="${RELEASE_VERSION}"
+          DIST_TAG="${RELEASE_DIST_TAG}"
           # npm dist-tag propagation is occasionally eventual-consistent right after publish.
           for i in {1..10}; do
             CAN_TAG_VERSION=$(npm view @marcohefti/surfwright@"$DIST_TAG" version 2>/dev/null || true)
@@ -169,16 +179,20 @@ jobs:
           exit 1
 
       - name: Post-publish smoke checks
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           node scripts/release/smoke-contract.mjs \
             --mode registry \
-            --version "${{ steps.release.outputs.version }}" \
+            --version "${RELEASE_VERSION}" \
             --out artifacts/publish/smoke-report.json
 
       - name: Verify npm provenance attestations for both packages
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           mkdir -p artifacts/publish
-          VERSION="${{ steps.release.outputs.version }}"
+          VERSION="${RELEASE_VERSION}"
           CAN_META=$(npm view @marcohefti/surfwright@"$VERSION" --json)
           GUARD_META=$(npm view surfwright@"$VERSION" --json)
           CAN_ATTEST_URL=$(printf '%s' "$CAN_META" | jq -r '.dist.attestations.url // empty')
@@ -215,9 +229,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           set -euo pipefail
-          VERSION="${{ steps.release.outputs.version }}"
+          VERSION="${RELEASE_VERSION}"
           DIST_BRANCH="skills-dist"
           DIST_TAG="skills-v${VERSION}"
 
@@ -249,25 +264,34 @@ jobs:
       - name: Verify skills-dist tag is discoverable via skills CLI (remote)
         env:
           DISABLE_TELEMETRY: "1"
-        run: npx -y skills add "marcohefti/surfwright@skills-v${{ steps.release.outputs.version }}" --list
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: npx -y skills add "marcohefti/surfwright@skills-v${RELEASE_VERSION}" --list
 
       - name: Generate release notes artifact from changelog
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           node scripts/release/release-notes-from-changelog.mjs \
-            --version "${{ steps.release.outputs.version }}" \
+            --version "${RELEASE_VERSION}" \
             --out artifacts/publish/release-notes.md
 
       - name: Write release metadata artifact
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_REF: ${{ steps.release.outputs.release_ref }}
+          RELEASE_DIST_TAG: ${{ steps.release.outputs.dist_tag }}
+          RELEASE_IS_PRERELEASE: ${{ steps.release.outputs.is_prerelease }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           mkdir -p artifacts/publish
           cat > artifacts/publish/release-metadata.json <<JSON
           {
-            "version": "${{ steps.release.outputs.version }}",
-            "releaseRef": "${{ steps.release.outputs.release_ref }}",
-            "distTag": "${{ steps.release.outputs.dist_tag }}",
-            "prerelease": ${{ steps.release.outputs.is_prerelease }},
+            "version": "${RELEASE_VERSION}",
+            "releaseRef": "${RELEASE_REF}",
+            "distTag": "${RELEASE_DIST_TAG}",
+            "prerelease": ${RELEASE_IS_PRERELEASE},
             "packages": ["@marcohefti/surfwright", "surfwright"],
-            "event": "${{ github.event_name }}",
+            "event": "${EVENT_NAME}",
             "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           JSON

@@ -7,9 +7,6 @@ on:
         description: "Version without v prefix (e.g. 0.1.1 or 0.2.0-next.1)"
         required: true
 
-permissions:
-  contents: read
-
 concurrency:
   group: publish-dry-run-${{ inputs.version }}
   cancel-in-progress: false
@@ -18,6 +15,8 @@ jobs:
   dry-run:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -37,8 +36,10 @@ jobs:
 
       - name: Resolve release context
         id: release
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${INPUT_VERSION}"
           if [[ "$VERSION" == *-* ]]; then
             DIST_TAG="next"
             IS_PRERELEASE="true"
@@ -56,10 +57,11 @@ jobs:
           node scripts/prepare-package-artifacts.mjs --package guard
 
       - name: Guard package version parity and release version alignment
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           CAN_VERSION=$(node -e "console.log(require('./packages/canonical/package.json').version)")
           GUARD_VERSION=$(node -e "console.log(require('./packages/guard/package.json').version)")
-          RELEASE_VERSION="${{ steps.release.outputs.version }}"
           if [[ "$CAN_VERSION" != "$GUARD_VERSION" ]]; then
             echo "Version mismatch: canonical=$CAN_VERSION guard=$GUARD_VERSION" >&2
             exit 1
@@ -86,19 +88,25 @@ jobs:
             --out artifacts/publish-dry-run/smoke-report.json
 
       - name: Generate release notes artifact from changelog
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           node scripts/release/release-notes-from-changelog.mjs \
-            --version "${{ steps.release.outputs.version }}" \
+            --version "${RELEASE_VERSION}" \
             --out artifacts/publish-dry-run/release-notes.md
 
       - name: Write dry-run metadata artifact
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_DIST_TAG: ${{ steps.release.outputs.dist_tag }}
+          RELEASE_IS_PRERELEASE: ${{ steps.release.outputs.is_prerelease }}
         run: |
           mkdir -p artifacts/publish-dry-run
           cat > artifacts/publish-dry-run/release-metadata.json <<JSON
           {
-            "version": "${{ steps.release.outputs.version }}",
-            "distTag": "${{ steps.release.outputs.dist_tag }}",
-            "prerelease": ${{ steps.release.outputs.is_prerelease }},
+            "version": "${RELEASE_VERSION}",
+            "distTag": "${RELEASE_DIST_TAG}",
+            "prerelease": ${RELEASE_IS_PRERELEASE},
             "dryRun": true,
             "packages": ["@marcohefti/surfwright", "surfwright"],
             "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"

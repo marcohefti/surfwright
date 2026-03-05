@@ -18,9 +18,6 @@ on:
         required: true
         default: "Known-bad release; upgrade to a newer version."
 
-permissions:
-  contents: read
-
 concurrency:
   group: rollback-${{ inputs.dist_tag }}
   cancel-in-progress: false
@@ -30,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: release
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -43,35 +42,45 @@ jobs:
       - name: Rollback dist-tags for both packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          INPUT_DIST_TAG: ${{ inputs.dist_tag }}
+          INPUT_GOOD_VERSION: ${{ inputs.good_version }}
         run: |
-          DIST_TAG="${{ inputs.dist_tag }}"
-          GOOD="${{ inputs.good_version }}"
+          DIST_TAG="${INPUT_DIST_TAG}"
+          GOOD="${INPUT_GOOD_VERSION}"
           npm dist-tag add @marcohefti/surfwright@"$GOOD" "$DIST_TAG"
           npm dist-tag add surfwright@"$GOOD" "$DIST_TAG"
 
       - name: Deprecate known-bad versions
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          INPUT_BAD_VERSION: ${{ inputs.bad_version }}
+          INPUT_DEPRECATE_MESSAGE: ${{ inputs.deprecate_message }}
         run: |
-          BAD="${{ inputs.bad_version }}"
-          MSG="${{ inputs.deprecate_message }}"
+          BAD="${INPUT_BAD_VERSION}"
+          MSG="${INPUT_DEPRECATE_MESSAGE}"
           npm deprecate @marcohefti/surfwright@"$BAD" "$MSG"
           npm deprecate surfwright@"$BAD" "$MSG"
 
       - name: Rollback smoke checks
+        env:
+          INPUT_GOOD_VERSION: ${{ inputs.good_version }}
         run: |
-          GOOD="${{ inputs.good_version }}"
+          GOOD="${INPUT_GOOD_VERSION}"
           npx -y @marcohefti/surfwright@"$GOOD" contract > /tmp/canonical-rollback-contract.json
           npx -y surfwright@"$GOOD" contract > /tmp/guard-rollback-contract.json
 
       - name: Write rollback metadata
+        env:
+          INPUT_DIST_TAG: ${{ inputs.dist_tag }}
+          INPUT_GOOD_VERSION: ${{ inputs.good_version }}
+          INPUT_BAD_VERSION: ${{ inputs.bad_version }}
         run: |
           mkdir -p artifacts/rollback
           cat > artifacts/rollback/rollback-metadata.json <<JSON
           {
-            "distTag": "${{ inputs.dist_tag }}",
-            "goodVersion": "${{ inputs.good_version }}",
-            "badVersion": "${{ inputs.bad_version }}",
+            "distTag": "${INPUT_DIST_TAG}",
+            "goodVersion": "${INPUT_GOOD_VERSION}",
+            "badVersion": "${INPUT_BAD_VERSION}",
             "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           JSON

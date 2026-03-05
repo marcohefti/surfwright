@@ -13,6 +13,26 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function trimBoundaryDotsAndDashes(input: string): string {
+  let start = 0;
+  let end = input.length;
+  while (start < end) {
+    const code = input.charCodeAt(start);
+    if (code !== 46 && code !== 45) {
+      break;
+    }
+    start += 1;
+  }
+  while (end > start) {
+    const code = input.charCodeAt(end - 1);
+    if (code !== 46 && code !== 45) {
+      break;
+    }
+    end -= 1;
+  }
+  return input.slice(start, end);
+}
+
 export function normalizeAgentId(input: string): string | null {
   const value = input.trim();
   if (value.length === 0) {
@@ -24,11 +44,12 @@ export function normalizeAgentId(input: string): string | null {
   const normalized = value
     .replaceAll(/[^A-Za-z0-9._-]/g, "-")
     .replaceAll(/-+/g, "-")
-    .replaceAll(/^[.-]+|[.-]+$/g, "");
-  if (normalized.length === 0) {
+    .trim();
+  const trimmed = trimBoundaryDotsAndDashes(normalized);
+  if (trimmed.length === 0) {
     return null;
   }
-  return normalized.slice(0, 64);
+  return trimmed.slice(0, 64);
 }
 
 export function normalizeSessionLeaseTtlMs(input: unknown): number | null {
@@ -101,4 +122,3 @@ export function hasSessionLeaseExpired(session: SessionState, nowMs: number = Da
   }
   return leaseMs <= nowMs;
 }
-

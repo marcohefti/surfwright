@@ -69,8 +69,8 @@ test("request-context isolation: output-shape stays request-local under parallel
 });
 
 test("request-context isolation: workspace scope stays request-local under parallel runs", () => {
-  const wsA = path.resolve("/tmp/surfwright-ws-a");
-  const wsB = path.resolve("/tmp/surfwright-ws-b");
+  const wsA = path.resolve(process.cwd(), "tmp", "surfwright-ws-a");
+  const wsB = path.resolve(process.cwd(), "tmp", "surfwright-ws-b");
   const result = runNodeModule(`
     import { withRequestContext } from "./src/core/request-context.ts";
     import { resolveWorkspaceDir } from "./src/core/workspace/infra/workspace.ts";

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -91,7 +92,7 @@ function writeAtomicIfChanged(filePath: string, payload: string): boolean {
     // file may not exist yet
   }
 
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}${SHARD_TEMP_SUFFIX}`;
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.${randomBytes(3).toString("hex")}${SHARD_TEMP_SUFFIX}`;
   fs.writeFileSync(tempPath, payload, { encoding: "utf8", flag: "wx" });
   try {
     fs.renameSync(tempPath, filePath);

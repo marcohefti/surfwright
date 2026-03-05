@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { CliError } from "./errors.js";
 
 const ACTION_ID_PATTERN = /^[A-Za-z0-9._:-]{1,64}$/;
@@ -15,6 +16,6 @@ export function sanitizeActionId(input: string): string {
 
 export function newActionId(): string {
   const stamp = Date.now().toString(36);
-  const rand = Math.random().toString(36).slice(2, 8);
+  const rand = randomBytes(4).toString("hex");
   return `a-${stamp}-${rand}`;
 }

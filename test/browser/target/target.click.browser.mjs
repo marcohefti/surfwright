@@ -99,7 +99,8 @@ test("target upload keypress and drag-drop return deterministic shapes", () => {
   assert.equal(verifyDrag.status, 0);
   assert.equal(parseJson(verifyDrag.stdout).result.value, "card-a");
 
-  const uploadMissingFile = runCli(["--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId, "--selector", "#search", "--file", "/tmp/does-not-exist.txt", "--timeout-ms", "5000"]);
+  const uploadMissingPath = path.join(TEST_STATE_DIR, "missing-upload-fixture.txt");
+  const uploadMissingFile = runCli(["--session", ensurePayload.sessionId, "target", "upload", openPayload.targetId, "--selector", "#search", "--file", uploadMissingPath, "--timeout-ms", "5000"]);
   assert.equal(uploadMissingFile.status, 1);
   assert.equal(parseJson(uploadMissingFile.stdout).code, "E_QUERY_INVALID");
 

@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { spawn, spawnSync } from "node:child_process";
 import test from "node:test";
 import { readRuntimeState, writeCanonicalState } from "../core/state-storage.mjs";
+import { cleanupWorkspaceTestDir, mkWorkspaceTestDir } from "../helpers/workspace-tmp.mjs";
 
-const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-opportunistic-maint-"));
+const TEST_STATE_DIR = mkWorkspaceTestDir("surfwright-opportunistic-maint-");
+
+function fixturePath(name) {
+  return path.join(TEST_STATE_DIR, "fixtures", name);
+}
 
 function runCli(args, env = {}) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
@@ -93,11 +97,7 @@ async function waitForPathMissing(targetPath, timeoutMs) {
 }
 
 process.on("exit", () => {
-  try {
-    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore cleanup failures
-  }
+  cleanupWorkspaceTestDir(TEST_STATE_DIR);
 });
 
 test("opportunistic maintenance parks idle managed browser processes without deleting sessions", async () => {
@@ -123,7 +123,7 @@ test("opportunistic maintenance parks idle managed browser processes without del
           browserMode: "headless",
           cdpOrigin: "http://127.0.0.1:1",
           debugPort: 9222,
-          userDataDir: "/tmp/surfwright-m-idle",
+          userDataDir: fixturePath("surfwright-m-idle"),
           profile: null,
           browserPid: pid,
           ownerId: "agent.test",
@@ -183,7 +183,7 @@ test("opportunistic maintenance scales idle parking under managed-session pressu
         browserMode: "headless",
         cdpOrigin: `http://127.0.0.1:${9000 + i}`,
         debugPort: 9000 + i,
-        userDataDir: `/tmp/surfwright-${sessionId}`,
+        userDataDir: fixturePath(`surfwright-${sessionId}`),
         profile: null,
         browserPid: i === 1 ? pid : null,
         ownerId: "agent.test",

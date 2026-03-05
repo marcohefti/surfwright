@@ -31,6 +31,7 @@ const EVAL_MAX_CONSOLE_TEXT_CHARS = 4000;
 const EVAL_MAX_RESULT_STRING_CHARS = 4000;
 const EVAL_MAX_RESULT_ITEMS = 200;
 const EVAL_MAX_RESULT_DEPTH = 6;
+const EVAL_MAX_EVALUATOR_BODY_CHARS = EVAL_MAX_SCRIPT_FILE_BYTES;
 
 export function parseJsonObjectText(opts: {
   text: string;
@@ -213,16 +214,30 @@ export async function targetEval(opts: {
           async ({
             expression,
             arg,
+            maxExpressionChars,
             maxStringChars,
             maxItems,
             maxDepth,
           }: {
             expression: string;
             arg: unknown;
+            maxExpressionChars: number;
             maxStringChars: number;
             maxItems: number;
             maxDepth: number;
           }) => {
+            const hasUnsafeControlChars = (input: string): boolean => {
+              for (let idx = 0; idx < input.length; idx += 1) {
+                const code = input.charCodeAt(idx);
+                if (code === 9 || code === 10 || code === 13) {
+                  continue;
+                }
+                if (code < 32 || code === 127) {
+                  return true;
+                }
+              }
+              return false;
+            };
             const typeOf = (value: unknown): TargetEvalReport["result"]["type"] => {
               if (value === undefined) {
                 return "undefined";
@@ -325,6 +340,25 @@ export async function targetEval(opts: {
             };
 
             try {
+              if (typeof expression !== "string" || expression.length === 0) {
+                return {
+                  ok: false,
+                  errorMessage: "evaluation expression is required",
+                };
+              }
+              if (expression.length > maxExpressionChars) {
+                return {
+                  ok: false,
+                  errorMessage: `evaluation expression exceeds ${maxExpressionChars} characters`,
+                };
+              }
+              if (hasUnsafeControlChars(expression)) {
+                return {
+                  ok: false,
+                  errorMessage: "evaluation expression contains unsupported control characters",
+                };
+              }
+              // Dynamic execution is intentionally confined to this target-eval boundary.
               const evaluator = new Function("arg", expression) as (arg: unknown) => unknown;
               const raw = evaluator(arg);
               const settled = raw && typeof (raw as Promise<unknown>).then === "function" ? await (raw as Promise<unknown>) : raw;
@@ -348,6 +382,7 @@ export async function targetEval(opts: {
           {
             expression: parsed.evaluatorBody,
             arg,
+            maxExpressionChars: EVAL_MAX_EVALUATOR_BODY_CHARS,
             maxStringChars: EVAL_MAX_RESULT_STRING_CHARS,
             maxItems: EVAL_MAX_RESULT_ITEMS,
             maxDepth: EVAL_MAX_RESULT_DEPTH,

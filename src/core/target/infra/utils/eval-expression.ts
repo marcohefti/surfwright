@@ -12,9 +12,35 @@ export function parseEvalExpression(
   },
   limits: { maxInlineChars: number; maxScriptFileBytes: number },
 ): { expression: string; evaluatorBody: string } {
+  const stripTrailingEquals = (input: string): string => {
+    let end = input.length;
+    while (end > 0 && input.charCodeAt(end - 1) === 61) {
+      end -= 1;
+    }
+    return input.slice(0, end);
+  };
+  const hasUnsafeControlChars = (input: string): boolean => {
+    for (let idx = 0; idx < input.length; idx += 1) {
+      const code = input.charCodeAt(idx);
+      if (code === 9 || code === 10 || code === 13) {
+        continue;
+      }
+      if (code < 32 || code === 127) {
+        return true;
+      }
+    }
+    return false;
+  };
+  const enforceEvalGuardrails = (sourceText: string, sourceLabel: string): void => {
+    if (hasUnsafeControlChars(sourceText)) {
+      throw new CliError("E_QUERY_INVALID", `${sourceLabel} contains unsupported control characters`);
+    }
+  };
   const ensureEvaluable = (evaluatorBody: string, sourceLabel: string) => {
+    enforceEvalGuardrails(evaluatorBody, sourceLabel);
     try {
       // Fail fast before browser/session work when JS syntax is invalid.
+      // This is an explicit trust boundary before dynamic compilation.
       new Function("arg", evaluatorBody);
     } catch {
       throw new CliError("E_QUERY_INVALID", `${sourceLabel} contains invalid JavaScript syntax`);
@@ -38,13 +64,14 @@ export function parseEvalExpression(
       throw new CliError("E_QUERY_INVALID", `${sourceLabel} must be valid base64`);
     }
     const canonical = decoded.toString("base64");
-    if (canonical.replace(/=+$/u, "") !== normalized.replace(/=+$/u, "")) {
+    if (stripTrailingEquals(canonical) !== stripTrailingEquals(normalized)) {
       throw new CliError("E_QUERY_INVALID", `${sourceLabel} must be valid base64`);
     }
     const text = decoded.toString("utf8");
     if (text.trim().length === 0) {
       throw new CliError("E_QUERY_INVALID", `${sourceLabel} decodes to empty JavaScript`);
     }
+    enforceEvalGuardrails(text, sourceLabel);
     return { text, decodedBytes: decoded.length };
   };
 
@@ -89,6 +116,7 @@ export function parseEvalExpression(
     if (scriptText.trim().length === 0) {
       throw new CliError("E_QUERY_INVALID", "script-file is empty");
     }
+    enforceEvalGuardrails(scriptText, "script-file");
     const mode = opts.mode === "expr" || opts.mode === "script" ? opts.mode : "script";
     if (mode === "expr") {
       if (scriptText.length > limits.maxInlineChars) {
@@ -134,6 +162,7 @@ export function parseEvalExpression(
     if (expr.length > limits.maxInlineChars) {
       throw new CliError("E_EVAL_SCRIPT_TOO_LARGE", `expr must be at most ${limits.maxInlineChars} characters`);
     }
+    enforceEvalGuardrails(expr, "expr");
     const evaluatorBody = `return (${expr});`;
     ensureEvaluable(evaluatorBody, "expr");
     return { expression: expr, evaluatorBody };
@@ -142,6 +171,7 @@ export function parseEvalExpression(
   if (expression.length > limits.maxInlineChars) {
     throw new CliError("E_EVAL_SCRIPT_TOO_LARGE", `expression must be at most ${limits.maxInlineChars} characters`);
   }
+  enforceEvalGuardrails(expression, "expression");
   ensureEvaluable(expression, "expression");
   return { expression, evaluatorBody: expression };
 }

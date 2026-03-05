@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { readRuntimeState, stateFilePath, writeCanonicalState } from "./core/state-storage.mjs";
+import { cleanupWorkspaceTestDir, mkWorkspaceTestDir } from "./helpers/workspace-tmp.mjs";
 
-const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-state-maint-"));
+const TEST_STATE_DIR = mkWorkspaceTestDir("surfwright-state-maint-");
+
+function fixturePath(name) {
+  return path.join(TEST_STATE_DIR, "fixtures", name);
+}
 
 function runCli(args, env = {}) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
@@ -56,11 +60,7 @@ function readState() {
 
 
 process.on("exit", () => {
-  try {
-    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore cleanup failures
-  }
+  cleanupWorkspaceTestDir(TEST_STATE_DIR);
 });
 
 test("contract includes state maintenance commands", () => {
@@ -232,7 +232,7 @@ test("session prune removes unreachable attached sessions and can drop managed s
         kind: "managed",
         cdpOrigin: "http://127.0.0.1:1",
         debugPort: 9222,
-        userDataDir: "/tmp/surfwright-m-dead",
+        userDataDir: fixturePath("surfwright-m-dead"),
         browserPid: 999999,
         createdAt: "2026-02-13T09:00:00.000Z",
         lastSeenAt: "2026-02-13T09:00:00.000Z",
@@ -302,7 +302,7 @@ test("state reconcile combines session and target maintenance", () => {
         kind: "managed",
         cdpOrigin: "http://127.0.0.1:1",
         debugPort: 9222,
-        userDataDir: "/tmp/surfwright-m-dead",
+        userDataDir: fixturePath("surfwright-m-dead"),
         browserPid: 999999,
         createdAt: "2026-02-13T09:00:00.000Z",
         lastSeenAt: "2026-02-13T09:00:00.000Z",
@@ -401,7 +401,7 @@ test("session prune drops managed sessions with expired lease even without drop-
         kind: "managed",
         cdpOrigin: "http://127.0.0.1:1",
         debugPort: 9222,
-        userDataDir: "/tmp/surfwright-m-expired",
+        userDataDir: fixturePath("surfwright-m-expired"),
         browserPid: null,
         ownerId: "agent.test",
         leaseExpiresAt: "2000-01-01T00:00:00.000Z",
@@ -441,7 +441,7 @@ test("session prune uses grace pass before removing unreachable managed sessions
         kind: "managed",
         cdpOrigin: "http://127.0.0.1:1",
         debugPort: 9222,
-        userDataDir: "/tmp/surfwright-m-grace",
+        userDataDir: fixturePath("surfwright-m-grace"),
         browserPid: null,
         ownerId: "agent.test",
         leaseExpiresAt: null,

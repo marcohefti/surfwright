@@ -5,7 +5,7 @@ import { providers } from "../../providers/index.js";
 const RUN_ARTIFACT_LABEL_MAX = 64;
 
 function resolveRunArtifactPath(label: string | undefined): string {
-  const { fs, path } = providers();
+  const { crypto, fs, path } = providers();
   const runsDir = path.join(stateRootDir(), "runs");
   fs.mkdirSync(runsDir, { recursive: true });
   const safeLabel = (label ?? "run")
@@ -14,8 +14,10 @@ function resolveRunArtifactPath(label: string | undefined): string {
     .replaceAll(/-+/g, "-")
     .replaceAll(/^-|-$/g, "")
     .slice(0, RUN_ARTIFACT_LABEL_MAX);
-  const stamp = new Date().toISOString().replaceAll(/[:]/g, "-").replace(/\..+$/, "Z");
-  const unique = Math.random().toString(16).slice(2, 8);
+  const iso = new Date().toISOString();
+  const dotIndex = iso.indexOf(".");
+  const stamp = (dotIndex === -1 ? iso : `${iso.slice(0, dotIndex)}Z`).split(":").join("-");
+  const unique = crypto.randomBytes(3).toString("hex");
   return path.join(runsDir, `${stamp}-${safeLabel || "run"}-${unique}.json`);
 }
 

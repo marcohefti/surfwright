@@ -18,9 +18,42 @@ export type {
   PipelineStepInput,
 } from "./plan-types.js";
 
-const TEMPLATE_EXACT_RE = /^\{\{\s*([^{}]+?)\s*\}\}$/;
-const TEMPLATE_EMBEDDED_RE = /\{\{\s*([^{}]+?)\s*\}\}/g;
 const STEP_ALIAS_RE = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
+
+type TemplatePart = { kind: "text"; value: string } | { kind: "expr"; value: string };
+
+function parseTemplateParts(input: string): { parts: TemplatePart[]; sawTemplate: boolean } {
+  const parts: TemplatePart[] = [];
+  let cursor = 0;
+  let sawTemplate = false;
+  while (cursor < input.length) {
+    const openIndex = input.indexOf("{{", cursor);
+    if (openIndex === -1) {
+      parts.push({ kind: "text", value: input.slice(cursor) });
+      break;
+    }
+    if (openIndex > cursor) {
+      parts.push({ kind: "text", value: input.slice(cursor, openIndex) });
+    }
+    const closeIndex = input.indexOf("}}", openIndex + 2);
+    if (closeIndex === -1) {
+      parts.push({ kind: "text", value: input.slice(openIndex) });
+      break;
+    }
+    const expr = input.slice(openIndex + 2, closeIndex).trim();
+    if (expr.length === 0 || expr.includes("{") || expr.includes("}")) {
+      parts.push({ kind: "text", value: input.slice(openIndex, closeIndex + 2) });
+    } else {
+      parts.push({ kind: "expr", value: expr });
+      sawTemplate = true;
+    }
+    cursor = closeIndex + 2;
+  }
+  if (parts.length === 0) {
+    parts.push({ kind: "text", value: "" });
+  }
+  return { parts, sawTemplate };
+}
 
 export function readPathValue(input: unknown, pathExpr: string): unknown {
   const normalized = pathExpr.trim().replaceAll(/\[(\d+)\]/g, ".$1");
@@ -50,25 +83,30 @@ function asInterpolationString(value: unknown): string {
 
 export function resolveTemplateInValue(value: unknown, scope: Record<string, unknown>, pathLabel: string): unknown {
   if (typeof value === "string") {
-    const exact = value.match(TEMPLATE_EXACT_RE);
-    if (exact) {
-      const resolved = readPathValue(scope, exact[1]);
+    const parsed = parseTemplateParts(value);
+    if (!parsed.sawTemplate) {
+      return value;
+    }
+    if (parsed.parts.length === 1 && parsed.parts[0].kind === "expr") {
+      const resolved = readPathValue(scope, parsed.parts[0].value);
       if (resolved === undefined) {
         throw new CliError("E_QUERY_INVALID", `Unresolved template ${value} at ${pathLabel}`);
       }
       return resolved;
     }
-    let replaced = value;
-    let sawTemplate = false;
-    replaced = replaced.replace(TEMPLATE_EMBEDDED_RE, (_full, expr: string) => {
-      const resolved = readPathValue(scope, expr);
-      if (resolved === undefined) {
-        throw new CliError("E_QUERY_INVALID", `Unresolved template {{${expr}}} at ${pathLabel}`);
+    let replaced = "";
+    for (const part of parsed.parts) {
+      if (part.kind === "text") {
+        replaced += part.value;
+        continue;
       }
-      sawTemplate = true;
-      return asInterpolationString(resolved);
-    });
-    return sawTemplate ? replaced : value;
+      const resolved = readPathValue(scope, part.value);
+      if (resolved === undefined) {
+        throw new CliError("E_QUERY_INVALID", `Unresolved template {{${part.value}}} at ${pathLabel}`);
+      }
+      replaced += asInterpolationString(resolved);
+    }
+    return replaced;
   }
   if (Array.isArray(value)) {
     return value.map((entry, idx) => resolveTemplateInValue(entry, scope, `${pathLabel}[${idx}]`));

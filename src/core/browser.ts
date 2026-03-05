@@ -423,6 +423,14 @@ function extensionIdFromUrl(rawUrl: string): string | null {
   return match[1].toLowerCase();
 }
 
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) {
+    end -= 1;
+  }
+  return value.slice(0, end);
+}
+
 async function inspectExtensionRuntimeTargets(cdpOrigin: string, timeoutMs: number): Promise<{
   cdpRuntimeIds: string[];
   cdpTargetUrls: string[];
@@ -432,7 +440,7 @@ async function inspectExtensionRuntimeTargets(cdpOrigin: string, timeoutMs: numb
   const deadlineMs = Math.max(200, Math.min(timeoutMs, EXTENSION_RUNTIME_CDP_PROBE_TIMEOUT_MS));
   const timer = setTimeout(() => controller.abort(), deadlineMs);
   try {
-    const response = await fetch(`${cdpOrigin.replace(/\/+$/, "")}/json/list`, {
+    const response = await fetch(`${trimTrailingSlashes(cdpOrigin)}/json/list`, {
       signal: controller.signal,
     });
     if (!response.ok) {

@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { mkWorkspaceTestDir } from "./helpers/workspace-tmp.mjs";
 
 const EVALUATOR_PATH = path.join(process.cwd(), "scripts", "zcl", "eval-browser-control-oracle.mjs");
 
 function runEvaluator(opts) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-zcl-oracle-"));
+  const tmpDir = mkWorkspaceTestDir("surfwright-zcl-oracle-");
   const attemptDir = path.join(tmpDir, "attempt");
   const oraclePath = path.join(tmpDir, "oracle.json");
   fs.mkdirSync(attemptDir, { recursive: true });
@@ -85,8 +85,9 @@ test("zcl oracle evaluator fails when local discovery guard is set to fail", () 
     rules: [{ field: "featureCount", op: "eq", value: 1 }],
   };
   const proof = { featureCount: 1 };
+  const guardCwd = path.join(process.cwd(), "tmp", "zcl", "attempt-guard");
   const runtimeEnv = {
-    runtime: { startCwd: "/tmp/zcl/attempt-guard" },
+    runtime: { startCwd: guardCwd },
     env: { explicit: { ZCL_GUARD_LOCAL_DISCOVERY: "fail" } },
   };
   const traceEvents = [
@@ -96,7 +97,7 @@ test("zcl oracle evaluator fails when local discovery guard is set to fail", () 
         payload: {
           msg: {
             command: ["/bin/zsh", "-lc", "sed -n '1,200p' /Users/test/Sites/other-repo/README.md"],
-            cwd: "/tmp/zcl/attempt-guard",
+            cwd: guardCwd,
             parsed_cmd: [
               {
                 type: "read",
@@ -122,8 +123,9 @@ test("zcl oracle evaluator allows skill reads under local discovery guard", () =
     rules: [{ field: "featureCount", op: "eq", value: 1 }],
   };
   const proof = { featureCount: 1 };
+  const guardCwd = path.join(process.cwd(), "tmp", "zcl", "attempt-guard");
   const runtimeEnv = {
-    runtime: { startCwd: "/tmp/zcl/attempt-guard" },
+    runtime: { startCwd: guardCwd },
     env: { explicit: { ZCL_GUARD_LOCAL_DISCOVERY: "fail" } },
   };
   const traceEvents = [
@@ -133,7 +135,7 @@ test("zcl oracle evaluator allows skill reads under local discovery guard", () =
         payload: {
           msg: {
             command: ["/bin/zsh", "-lc", "cat /Users/test/.codex/skills/surfwright/SKILL.md"],
-            cwd: "/tmp/zcl/attempt-guard",
+            cwd: guardCwd,
             parsed_cmd: [
               {
                 type: "read",

@@ -124,6 +124,29 @@ function sessionClearFailureHints(input: {
   return hints;
 }
 
+function parseDidYouMean(rawMessage: string): string | null {
+  const marker = "did you mean";
+  const lower = rawMessage.toLowerCase();
+  const markerIndex = lower.indexOf(marker);
+  if (markerIndex === -1) {
+    return null;
+  }
+  let start = markerIndex + marker.length;
+  while (start < rawMessage.length) {
+    const code = rawMessage.charCodeAt(start);
+    if (code !== 32 && code !== 9) {
+      break;
+    }
+    start += 1;
+  }
+  const end = rawMessage.indexOf("?", start);
+  if (end === -1) {
+    return null;
+  }
+  const suggestion = rawMessage.slice(start, end).trim();
+  return suggestion.length > 0 ? suggestion : null;
+}
+
 export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure | null {
   if (typeof error !== "object" || error === null) {
     return null;
@@ -134,8 +157,7 @@ export function toCommanderFailure(error: unknown, argv?: string[]): CliFailure 
   }
   const rawMessage = typeof maybe.message === "string" ? maybe.message : "invalid command input";
   const message = rawMessage.replace(/^error:\s*/i, "").trim();
-  const didYouMeanMatch = /Did you mean\s+(.+?)\?/i.exec(rawMessage);
-  const didYouMean = didYouMeanMatch?.[1]?.trim() ?? null;
+  const didYouMean = parseDidYouMean(rawMessage);
   const missingArgMatch = /missing required argument '([^']+)'/i.exec(rawMessage);
   const unknownOptionMatch = /unknown option '([^']+)'/i.exec(rawMessage);
   const tooManyArgsMatch = /too many arguments(?: for '([^']+)')?/i.exec(rawMessage);

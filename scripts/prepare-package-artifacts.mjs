@@ -21,7 +21,17 @@ if (!fs.existsSync(pkgDir)) {
   throw new Error(`Package directory does not exist: ${pkgDir}`);
 }
 
-const build = spawnSync("pnpm", ["-s", "build"], {
+function resolveCorepackPnpmCli(nodeExecPath) {
+  const nodeBinDir = path.dirname(nodeExecPath);
+  const cliPath = path.resolve(nodeBinDir, "..", "lib", "node_modules", "corepack", "dist", "pnpm.js");
+  if (!fs.existsSync(cliPath)) {
+    throw new Error(`pnpm cli not found at ${cliPath}`);
+  }
+  return cliPath;
+}
+
+const pnpmCli = resolveCorepackPnpmCli(process.execPath);
+const build = spawnSync(process.execPath, [pnpmCli, "-s", "build"], {
   cwd: root,
   stdio: "inherit",
 });

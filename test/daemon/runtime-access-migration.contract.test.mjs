@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { mkWorkspaceTestDir } from "../helpers/workspace-tmp.mjs";
 
 function runCli(args, env = {}) {
-  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-runtime-migration-"));
+  const stateDir = mkWorkspaceTestDir("surfwright-runtime-migration-");
   try {
     return spawnSync(process.execPath, ["dist/cli.js", ...args], {
       encoding: "utf8",
@@ -116,42 +116,27 @@ test("withSessionBrowser enforces deterministic dual-session acquire/release ord
 });
 
 test("runtime-access migration scan gate leaves direct connectOverCDP only in abstraction module", () => {
-  const result = spawnSync("rg", ["-n", String.raw`chromium\.connectOverCDP\(`, "src/core"], {
-    encoding: "utf8",
-    cwd: process.cwd(),
-  });
-
   let matchedFiles = [];
-  if (result.status === 0) {
-    matchedFiles = result.stdout
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .map((line) => line.split(":")[0]);
-  } else if (result.error && result.error.code === "ENOENT") {
-    const root = path.resolve(process.cwd(), "src/core");
-    const stack = [root];
-    while (stack.length > 0) {
-      const current = stack.pop();
-      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-        const full = path.join(current, entry.name);
-        if (entry.isDirectory()) {
-          stack.push(full);
-          continue;
-        }
-        if (!entry.isFile() || !entry.name.endsWith(".ts")) {
-          continue;
-        }
-        const text = fs.readFileSync(full, "utf8");
-        if (!text.includes("chromium.connectOverCDP(")) {
-          continue;
-        }
-        const rel = path.relative(process.cwd(), full).split(path.sep).join("/");
-        matchedFiles.push(rel);
+  const root = path.resolve(process.cwd(), "src/core");
+  const stack = [root];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(full);
+        continue;
       }
+      if (!entry.isFile() || !entry.name.endsWith(".ts")) {
+        continue;
+      }
+      const text = fs.readFileSync(full, "utf8");
+      if (!text.includes("chromium.connectOverCDP(")) {
+        continue;
+      }
+      const rel = path.relative(process.cwd(), full).split(path.sep).join("/");
+      matchedFiles.push(rel);
     }
-  } else {
-    assert.fail(`Expected scan matches. stderr: ${result.stderr}`);
   }
 
   assert.deepEqual(Array.from(new Set(matchedFiles)), ["src/core/session/infra/runtime-access.ts"]);

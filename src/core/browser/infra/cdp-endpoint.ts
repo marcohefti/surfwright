@@ -48,7 +48,17 @@ function trimTrailingSlash(pathname: string): string {
   if (pathname === "/") {
     return "";
   }
-  return pathname.replace(/\/+$/, "");
+  let end = pathname.length;
+  while (end > 0 && pathname.charCodeAt(end - 1) === 47) {
+    end -= 1;
+  }
+  if (end <= 0) {
+    return "";
+  }
+  if (end === 1 && pathname[0] === "/") {
+    return "";
+  }
+  return pathname.slice(0, end);
 }
 
 function pushUnique(values: string[], next: string): void {

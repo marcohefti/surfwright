@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { readRuntimeState, writeCanonicalState } from "../core/state-storage.mjs";
+import { cleanupWorkspaceTestDir, mkWorkspaceTestDir } from "../helpers/workspace-tmp.mjs";
 
-const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-session-clear-"));
+const TEST_STATE_DIR = mkWorkspaceTestDir("surfwright-session-clear-");
+
+function fixturePath(name) {
+  return path.join(TEST_STATE_DIR, "fixtures", name);
+}
 
 function runCli(args) {
   return spawnSync(process.execPath, ["dist/cli.js", ...args], {
@@ -34,11 +38,7 @@ function readState() {
 }
 
 process.on("exit", () => {
-  try {
-    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore cleanup failures
-  }
+  cleanupWorkspaceTestDir(TEST_STATE_DIR);
 });
 
 test("session clear resets state and supports explicit keep-processes mode", () => {
@@ -69,7 +69,7 @@ test("session clear resets state and supports explicit keep-processes mode", () 
         kind: "managed",
         cdpOrigin: "http://127.0.0.1:1",
         debugPort: 9223,
-        userDataDir: "/tmp/surfwright-m-main",
+        userDataDir: fixturePath("surfwright-m-main"),
         browserPid: null,
         ownerId: "agent.test",
         leaseExpiresAt: null,
@@ -100,9 +100,9 @@ test("session clear resets state and supports explicit keep-processes mode", () 
         profile: "custom",
         maxRuntimeMs: 1000,
         workerPid: null,
-        stopSignalPath: "/tmp/stop",
-        donePath: "/tmp/done",
-        resultPath: "/tmp/result",
+        stopSignalPath: fixturePath("stop"),
+        donePath: fixturePath("done"),
+        resultPath: fixturePath("result"),
         endedAt: null,
         actionId: "a-1",
       },
@@ -112,7 +112,7 @@ test("session clear resets state and supports explicit keep-processes mode", () 
         artifactId: "art-1",
         createdAt: "2026-02-13T09:00:00.000Z",
         format: "har",
-        path: "/tmp/a.har",
+        path: fixturePath("a.har"),
         sessionId: "m-main",
         targetId: "t-main",
         captureId: "cap-1",
@@ -175,7 +175,7 @@ test("session clear can scope cleanup to one session", () => {
         kind: "managed",
         cdpOrigin: "http://127.0.0.1:1",
         debugPort: 9223,
-        userDataDir: "/tmp/surfwright-m-main",
+        userDataDir: fixturePath("surfwright-m-main"),
         browserPid: null,
         ownerId: "agent.test",
         leaseExpiresAt: null,
@@ -214,9 +214,9 @@ test("session clear can scope cleanup to one session", () => {
         profile: "custom",
         maxRuntimeMs: 1000,
         workerPid: null,
-        stopSignalPath: "/tmp/stop-a",
-        donePath: "/tmp/done-a",
-        resultPath: "/tmp/result-a",
+        stopSignalPath: fixturePath("stop-a"),
+        donePath: fixturePath("done-a"),
+        resultPath: fixturePath("result-a"),
         endedAt: null,
         actionId: "a-1",
       },
@@ -229,9 +229,9 @@ test("session clear can scope cleanup to one session", () => {
         profile: "custom",
         maxRuntimeMs: 1000,
         workerPid: null,
-        stopSignalPath: "/tmp/stop-m",
-        donePath: "/tmp/done-m",
-        resultPath: "/tmp/result-m",
+        stopSignalPath: fixturePath("stop-m"),
+        donePath: fixturePath("done-m"),
+        resultPath: fixturePath("result-m"),
         endedAt: null,
         actionId: "a-2",
       },
@@ -241,7 +241,7 @@ test("session clear can scope cleanup to one session", () => {
         artifactId: "art-a",
         createdAt: "2026-02-13T09:00:00.000Z",
         format: "har",
-        path: "/tmp/a.har",
+        path: fixturePath("a.har"),
         sessionId: "a-main",
         targetId: "t-a",
         captureId: "cap-a",
@@ -252,7 +252,7 @@ test("session clear can scope cleanup to one session", () => {
         artifactId: "art-m",
         createdAt: "2026-02-13T09:00:00.000Z",
         format: "har",
-        path: "/tmp/m.har",
+        path: fixturePath("m.har"),
         sessionId: "m-main",
         targetId: "t-m",
         captureId: "cap-m",

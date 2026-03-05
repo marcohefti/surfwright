@@ -160,12 +160,19 @@ export function usageRequiredPositionals(usage: string): string[] {
   const text = String(usage ?? "");
   const beforeOptional = text.split("[")[0] ?? text;
   const positionals: string[] = [];
-  const regex = /<([^>\s]+)>/g;
-  for (const match of beforeOptional.matchAll(regex)) {
-    const name = typeof match[1] === "string" ? match[1].trim() : "";
-    if (name.length > 0) {
+  for (let index = 0; index < beforeOptional.length; index += 1) {
+    if (beforeOptional[index] !== "<") {
+      continue;
+    }
+    const closeIndex = beforeOptional.indexOf(">", index + 1);
+    if (closeIndex === -1) {
+      break;
+    }
+    const name = beforeOptional.slice(index + 1, closeIndex).trim();
+    if (name.length > 0 && !name.includes(" ")) {
       positionals.push(name);
     }
+    index = closeIndex;
   }
   return unique(positionals);
 }

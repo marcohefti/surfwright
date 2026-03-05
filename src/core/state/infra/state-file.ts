@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { CliError } from "../../errors.js";
@@ -6,7 +7,7 @@ import { normalizeSessionState } from "../../session/index.js";
 import { STATE_VERSION, type SessionState, type SurfwrightState, type TargetState } from "../../types.js";
 
 function quarantineStateFile(statePath: string, raw: string): string | null {
-  const quarantinePath = path.join(path.dirname(statePath), `state.corrupt.${Date.now()}.${Math.random().toString(16).slice(2)}.json`);
+  const quarantinePath = path.join(path.dirname(statePath), `state.corrupt.${Date.now()}.${randomBytes(3).toString("hex")}.json`);
   try {
     fs.renameSync(statePath, quarantinePath);
     return quarantinePath;

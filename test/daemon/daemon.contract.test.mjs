@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import test from "node:test";
+import { cleanupWorkspaceTestDir, mkWorkspaceTestDir } from "../helpers/workspace-tmp.mjs";
 
-const TEST_STATE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "surfwright-daemon-contract-"));
+const TEST_STATE_DIR = mkWorkspaceTestDir("surfwright-daemon-contract-");
 const MAX_FRAME_BYTES = 1024 * 1024 * 4;
 
 function runCli(args, env = {}) {
@@ -114,6 +114,16 @@ async function sendRawDaemonLine(port, line) {
   });
 }
 
+function hasStackTraceFrameLine(text) {
+  for (const line of String(text).split("\n")) {
+    const trimmed = line.trimStart();
+    if (trimmed.startsWith("at ")) {
+      return true;
+    }
+  }
+  return false;
+}
+
 process.on("exit", () => {
   const meta = readDaemonMeta();
   if (meta && typeof meta.pid === "number") {
@@ -124,7 +134,7 @@ process.on("exit", () => {
     }
   }
   try {
-    fs.rmSync(TEST_STATE_DIR, { recursive: true, force: true });
+    cleanupWorkspaceTestDir(TEST_STATE_DIR);
   } catch {
     // ignore
   }
@@ -354,5 +364,5 @@ test("json-mode failures do not emit stack traces by default", () => {
   const result = runCli(["open", "camelpay.localhost"]);
   assert.equal(result.status, 1);
   assert.equal(result.stderr.trim().length, 0);
-  assert.equal(/\n\s+at\s+/.test(result.stdout), false);
+  assert.equal(hasStackTraceFrameLine(result.stdout), false);
 });

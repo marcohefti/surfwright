@@ -24,7 +24,6 @@ if (!fs.existsSync(pkgDir)) {
 const build = spawnSync("pnpm", ["-s", "build"], {
   cwd: root,
   stdio: "inherit",
-  env: process.env,
 });
 if (build.status !== 0) {
   process.exit(build.status ?? 1);

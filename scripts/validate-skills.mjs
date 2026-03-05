@@ -51,18 +51,18 @@ function parseFrontmatter(skillPath, body) {
   }
 
   const yaml = match[1];
-  const nameMatch = yaml.match(/^name:\s*(.+)$/m);
-  const descriptionMatch = yaml.match(/^description:\s*(.+)$/m);
+  const nameValue = readYamlScalar(yaml, "name");
+  const descriptionValue = readYamlScalar(yaml, "description");
 
-  if (!nameMatch) {
+  if (!nameValue) {
     fail(`${skillPath}: frontmatter missing 'name'`);
   }
-  if (!descriptionMatch) {
+  if (!descriptionValue) {
     fail(`${skillPath}: frontmatter missing 'description'`);
   }
 
-  const name = nameMatch ? nameMatch[1].trim().replaceAll(/^"|"$/g, "") : "";
-  const description = descriptionMatch ? descriptionMatch[1].trim().replaceAll(/^"|"$/g, "") : "";
+  const name = nameValue ? trimQuoted(nameValue) : "";
+  const description = descriptionValue ? trimQuoted(descriptionValue) : "";
 
   if (name.length === 0) {
     fail(`${skillPath}: frontmatter name is empty`);
@@ -76,6 +76,42 @@ function parseFrontmatter(skillPath, body) {
   }
 
   return { name, description };
+}
+
+function trimQuoted(value) {
+  const trimmed = value.trim();
+  if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+function readYamlScalar(yaml, key) {
+  for (const line of yaml.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith(`${key}:`)) {
+      continue;
+    }
+    const value = trimmed.slice(key.length + 1).trim();
+    if (value.length > 0) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function readDefaultPrompt(openaiYaml) {
+  for (const line of openaiYaml.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("default_prompt:")) {
+      continue;
+    }
+    const value = trimmed.slice("default_prompt:".length).trim();
+    if (value.length > 0) {
+      return trimQuoted(value);
+    }
+  }
+  return null;
 }
 
 function validateSkillDir(skillDirPath) {
@@ -110,9 +146,8 @@ function validateSkillDir(skillDirPath) {
   const openaiYamlPath = path.join(skillDirPath, "agents", "openai.yaml");
   const openaiYaml = readIfExists(openaiYamlPath);
   if (openaiYaml) {
-    const defaultPromptMatch = openaiYaml.match(/^\s*default_prompt:\s*"([^"]*)"\s*$/m);
-    if (defaultPromptMatch) {
-      const defaultPrompt = defaultPromptMatch[1];
+    const defaultPrompt = readDefaultPrompt(openaiYaml);
+    if (defaultPrompt) {
       if (!defaultPrompt.includes(`$${frontmatter.name}`)) {
         fail(`${openaiYamlPath}: default_prompt must reference $${frontmatter.name}`);
       }

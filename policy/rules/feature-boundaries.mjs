@@ -1,4 +1,5 @@
 import path from "node:path";
+import { extractModuleSpecifiers, stripKnownSourceExtension } from "./import-utils.mjs";
 
 const DEFAULT_OPTIONS = {
   include: ["src/features/**/*.ts"],
@@ -16,19 +17,6 @@ function normalizeOptions(options) {
   };
 }
 
-function extractModuleSpecifiers(content) {
-  const imports = [];
-  const pattern = /(?:import|export)\s+(?:[^"']*?\s+from\s+)?["']([^"']+)["']/g;
-  let match;
-  while ((match = pattern.exec(content)) !== null) {
-    const specifier = match[1];
-    if (typeof specifier === "string" && specifier.length > 0) {
-      imports.push(specifier);
-    }
-  }
-  return imports;
-}
-
 function sourceFeature(file) {
   const match = /^src\/features\/([^/]+)\//.exec(file);
   return match ? match[1] : null;
@@ -41,7 +29,7 @@ function resolveRelativeImport(file, specifier) {
 }
 
 function normalizeImportTarget(resolved) {
-  return resolved.replace(/\.(c|m)?(j|t)sx?$/i, "");
+  return stripKnownSourceExtension(resolved);
 }
 
 function isFeatureIndexPath(targetPath, featureName) {

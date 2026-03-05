@@ -1,4 +1,5 @@
 import path from "node:path";
+import { extractModuleSpecifiers, stripKnownSourceExtension } from "../import-utils.mjs";
 
 const DEFAULT_OPTIONS = {
   include: ["src/core/**/*.ts"],
@@ -25,26 +26,13 @@ function matchesAny(file, patterns) {
   return patterns.some((pattern) => path.matchesGlob(file, pattern));
 }
 
-function extractModuleSpecifiers(content) {
-  const imports = [];
-  const pattern = /(?:import|export)\s+(?:[^"']*?\s+from\s+)?["']([^"']+)["']/g;
-  let match;
-  while ((match = pattern.exec(content)) !== null) {
-    const specifier = match[1];
-    if (typeof specifier === "string" && specifier.length > 0) {
-      imports.push(specifier);
-    }
-  }
-  return imports;
-}
-
 function resolveRelativeImport(file, specifier) {
   const baseDir = path.posix.dirname(file);
   return path.posix.normalize(path.posix.join(baseDir, specifier));
 }
 
 function normalizeImportTarget(resolved) {
-  return resolved.replace(/\.(c|m)?(j|t)sx?$/i, "");
+  return stripKnownSourceExtension(resolved);
 }
 
 export const rule = {
@@ -85,4 +73,3 @@ export const rule = {
     return violations;
   },
 };
-

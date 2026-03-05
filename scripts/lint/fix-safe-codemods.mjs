@@ -1,26 +1,9 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
 const TARGET_DIRS = ["src", "scripts", "test"];
 const TARGET_EXTENSIONS = new Set([".ts", ".mjs"]);
-
-function listFilesWithRipgrep(rootDir) {
-  const result = spawnSync("rg", ["--files", ...TARGET_DIRS], {
-    cwd: rootDir,
-    encoding: "utf8",
-  });
-  if (result.status !== 0) {
-    return null;
-  }
-  const files = result.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .filter((filePath) => TARGET_EXTENSIONS.has(path.extname(filePath)));
-  return files;
-}
 
 function listFilesByWalking(rootDir) {
   const out = [];
@@ -45,7 +28,7 @@ function listFilesByWalking(rootDir) {
       out.push(path.relative(rootDir, current).replaceAll("\\", "/"));
     }
   }
-  out.sort();
+  out.sort((a, b) => a.localeCompare(b));
   return out;
 }
 
@@ -69,7 +52,7 @@ function applyTransforms(input) {
 }
 
 const rootDir = process.cwd();
-const files = listFilesWithRipgrep(rootDir) ?? listFilesByWalking(rootDir);
+const files = listFilesByWalking(rootDir);
 let changedFiles = 0;
 
 for (const filePath of files) {

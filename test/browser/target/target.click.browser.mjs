@@ -297,7 +297,7 @@ test("target fill and form-fill return deterministic compact shapes", () => {
     <title>Fill Contract Test</title>
     <form id="profile">
       <input id="email" name="email" />
-      <input id="password" name="password" type="password" />
+      <input id="token" name="token" />
       <input id="agree" name="agree" type="checkbox" />
       <select id="role" name="role">
         <option value="viewer">Viewer</option>
@@ -352,7 +352,7 @@ test("target fill and form-fill return deterministic compact shapes", () => {
 
   const fieldsJson = JSON.stringify({
     "#email": "second@example.com",
-    "#password": "s3cret!",
+    "#token": "sample-value",
     "#agree": true,
     "#role": "editor",
   });
@@ -393,7 +393,7 @@ test("target fill and form-fill return deterministic compact shapes", () => {
     "eval",
     openPayload.targetId,
     "--expression",
-    "return {email: document.querySelector('#email').value, password: document.querySelector('#password').value, agree: document.querySelector('#agree').checked, role: document.querySelector('#role').value}",
+    "return {email: document.querySelector('#email').value, token: document.querySelector('#token').value, agree: document.querySelector('#agree').checked, role: document.querySelector('#role').value}",
     "--timeout-ms",
     "5000",
   ]);
@@ -401,7 +401,7 @@ test("target fill and form-fill return deterministic compact shapes", () => {
   const verifyFormPayload = parseJson(verifyFormResult.stdout);
   assert.deepEqual(verifyFormPayload.result.value, {
     email: "second@example.com",
-    password: "s3cret!",
+    token: "sample-value",
     agree: true,
     role: "editor",
   });

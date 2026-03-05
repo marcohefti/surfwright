@@ -160,38 +160,64 @@ function extractTraceChecks(raw) {
 }
 
 function parseSuccessRules(successCheck) {
-  const parts = successCheck.split(/\s+and\s+/).map((part) => part.trim()).filter(Boolean);
+  const parts = splitByAnd(successCheck);
   if (parts.length === 0) {
     throw new Error('Success check is empty');
   }
   return parts.map((part) => parseRule(part));
 }
 
+function splitByAnd(text) {
+  const normalized = String(text ?? '').replaceAll(/\s+/g, ' ').trim();
+  if (normalized.length === 0) {
+    return [];
+  }
+  return normalized.split(' and ').map((part) => part.trim()).filter(Boolean);
+}
+
+function parseFieldPrefix(part, separator) {
+  const index = part.indexOf(separator);
+  if (index < 1) {
+    return null;
+  }
+  const field = part.slice(0, index).trim();
+  if (!/^[A-Za-z0-9_]+$/.test(field)) {
+    return null;
+  }
+  return {
+    field,
+    rhs: part.slice(index + separator.length).trim(),
+  };
+}
+
 function parseRule(part) {
-  let m = part.match(/^([A-Za-z0-9_]+)\s+is\s+non-empty$/);
-  if (m) {
-    return { field: m[1], op: 'non_empty' };
+  const normalized = String(part ?? '').replaceAll(/\s+/g, ' ').trim();
+  if (normalized.endsWith(' is non-empty')) {
+    const field = normalized.slice(0, -' is non-empty'.length).trim();
+    if (/^[A-Za-z0-9_]+$/.test(field)) {
+      return { field, op: 'non_empty' };
+    }
   }
 
-  m = part.match(/^([A-Za-z0-9_]+)\s+starts with\s+(.+)$/);
-  if (m) {
-    return { field: m[1], op: 'starts_with', value: parseLiteral(m[2].trim()) };
+  const startsWith = parseFieldPrefix(normalized, ' starts with ');
+  if (startsWith) {
+    return { field: startsWith.field, op: 'starts_with', value: parseLiteral(startsWith.rhs) };
   }
 
-  m = part.match(/^([A-Za-z0-9_]+)\s+contains\s+(.+)$/);
-  if (m) {
-    return { field: m[1], op: 'contains', value: parseLiteral(m[2].trim()) };
+  const contains = parseFieldPrefix(normalized, ' contains ');
+  if (contains) {
+    return { field: contains.field, op: 'contains', value: parseLiteral(contains.rhs) };
   }
 
-  m = part.match(/^([A-Za-z0-9_]+)\s*>=\s*(-?\d+(?:\.\d+)?)$/);
-  if (m) {
-    return { field: m[1], op: 'gte', value: Number(m[2]) };
+  const gte = parseFieldPrefix(normalized, '>=');
+  if (gte && /^-?\d+(?:\.\d+)?$/.test(gte.rhs)) {
+    return { field: gte.field, op: 'gte', value: Number(gte.rhs) };
   }
 
-  m = part.match(/^([A-Za-z0-9_]+)\s*==\s*(.+)$/);
-  if (m) {
-    const field = m[1];
-    const rhs = m[2].trim();
+  const equal = parseFieldPrefix(normalized, '==');
+  if (equal) {
+    const field = equal.field;
+    const rhs = equal.rhs;
     if (rhs === 'startUrl') {
       return { field, op: 'eq_ref', ref: 'startUrl' };
     }

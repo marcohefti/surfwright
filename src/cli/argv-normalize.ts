@@ -31,8 +31,22 @@ const DOT_COMMAND_ALIAS_MAP = (() => {
 function countRequiredPositionals(usage: string): number {
   const text = String(usage ?? "");
   const beforeOptional = text.split("[")[0] ?? text;
-  const matches = beforeOptional.match(/<([^>\s]+)>/g) ?? [];
-  return matches.length;
+  let count = 0;
+  for (let index = 0; index < beforeOptional.length; index += 1) {
+    if (beforeOptional[index] !== "<") {
+      continue;
+    }
+    const closeIndex = beforeOptional.indexOf(">", index + 1);
+    if (closeIndex < 0) {
+      break;
+    }
+    const token = beforeOptional.slice(index + 1, closeIndex).trim();
+    if (token.length > 0 && !token.includes(" ")) {
+      count += 1;
+    }
+    index = closeIndex;
+  }
+  return count;
 }
 
 function firstCommandIndex(argv: string[]): number {

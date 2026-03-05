@@ -3,6 +3,8 @@ import fs from "node:fs";
 import process from "node:process";
 import { readRuntimeStateIfExists } from "../../core/state-storage.mjs";
 
+const PKILL_BIN = "/usr/bin/pkill";
+
 function pidIsAlive(pid) {
   if (typeof pid !== "number" || !Number.isFinite(pid) || pid <= 0) {
     return false;
@@ -127,9 +129,13 @@ export async function cleanupStateDir(stateDir, opts = {}) {
   if (process.platform !== "win32") {
     try {
       const pattern = escapeRegexLiteral(stateDir);
-      spawnSync("pkill", ["-TERM", "-f", pattern], { stdio: "ignore" });
+      if (fs.existsSync(PKILL_BIN)) {
+        spawnSync(PKILL_BIN, ["-TERM", "-f", pattern], { stdio: "ignore" });
+      }
       await sleep(150);
-      spawnSync("pkill", ["-KILL", "-f", pattern], { stdio: "ignore" });
+      if (fs.existsSync(PKILL_BIN)) {
+        spawnSync(PKILL_BIN, ["-KILL", "-f", pattern], { stdio: "ignore" });
+      }
     } catch {
       // ignore missing pkill or other cleanup failures
     }

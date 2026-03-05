@@ -657,7 +657,11 @@ function canonicalizeUrl(value) {
       url.port = '';
     }
     if (url.pathname !== '/') {
-      url.pathname = url.pathname.replaceAll(/\/+$/g, '');
+      let pathname = url.pathname;
+      while (pathname.length > 1 && pathname.endsWith('/')) {
+        pathname = pathname.slice(0, -1);
+      }
+      url.pathname = pathname;
       if (url.pathname.length < 1) {
         url.pathname = '/';
       }
@@ -720,7 +724,13 @@ function normalizeToken(value) {
   if (!trimmed) {
     return '';
   }
-  const unquoted = trimmed.replaceAll(/^['"](.+)['"]$/g, '$1');
+  let unquoted = trimmed;
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    unquoted = trimmed.slice(1, -1);
+  }
   return normalizeLooseText(unquoted).toLowerCase();
 }
 

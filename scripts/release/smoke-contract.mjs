@@ -46,7 +46,6 @@ function parseArgs(argv) {
 function run(cmd, args, cwd, capture = true) {
   return spawnSync(cmd, args, {
     cwd,
-    env: process.env,
     encoding: "utf8",
     stdio: capture ? "pipe" : "inherit",
   });
@@ -86,7 +85,7 @@ function smokeLocal(root, outDir) {
   };
 
   for (const key of ["canonical", "guard"]) {
-    const prep = run("node", ["scripts/prepare-package-artifacts.mjs", "--package", key], root, false);
+    const prep = run(process.execPath, ["scripts/prepare-package-artifacts.mjs", "--package", key], root, false);
     if (prep.status !== 0) {
       checks.push({ check: `prepare-${key}`, ok: false, status: prep.status ?? 1 });
       continue;

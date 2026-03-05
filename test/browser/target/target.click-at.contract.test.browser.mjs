@@ -117,7 +117,7 @@ test("target form-fill shorthand --field is discoverable and typed", () => {
     <title>Form Fill Shorthand</title>
     <form>
       <input id="email" />
-      <input id="password" type="password" />
+      <input id="token" type="text" />
       <input id="agree" type="checkbox" />
       <select id="role"><option value="viewer">Viewer</option><option value="editor">Editor</option></select>
     </form>
@@ -140,7 +140,7 @@ test("target form-fill shorthand --field is discoverable and typed", () => {
     "--field",
     "#email=third@example.com",
     "--field",
-    "#password=short",
+    "#token=sample-value",
     "--field",
     "#agree=false",
     "--field",
@@ -159,14 +159,14 @@ test("target form-fill shorthand --field is discoverable and typed", () => {
     "eval",
     openPayload.targetId,
     "--expression",
-    "return {email: document.querySelector('#email').value, password: document.querySelector('#password').value, agree: document.querySelector('#agree').checked, role: document.querySelector('#role').value}",
+    "return {email: document.querySelector('#email').value, token: document.querySelector('#token').value, agree: document.querySelector('#agree').checked, role: document.querySelector('#role').value}",
     "--timeout-ms",
     "5000",
   ]);
   assert.equal(verifyResult.status, 0);
   assert.deepEqual(parseJson(verifyResult.stdout).result.value, {
     email: "third@example.com",
-    password: "short",
+    token: "sample-value",
     agree: false,
     role: "viewer",
   });

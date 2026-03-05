@@ -2,11 +2,12 @@
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
 
-const CONTRACT_SNAPSHOT_PATH = "test/fixtures/contract/contract.snapshot.json";
-const APPROVAL_DOC_PATH = "docs/architecture/contract-diff-approvals.md";
+const GIT_BIN = "/usr/bin/git";
+const CONTRACT_SNAPSHOT_FILE = "test/fixtures/contract/contract.snapshot.json";
+const APPROVAL_DOC_FILE = "docs/architecture/contract-diff-approvals.md";
 
 function runGit(args) {
-  const result = spawnSync("git", args, {
+  const result = spawnSync(GIT_BIN, args, {
     cwd: process.cwd(),
     encoding: "utf8",
   });
@@ -44,20 +45,20 @@ if (changedFiles.size === 0) {
   process.exit(0);
 }
 
-if (!changedFiles.has(CONTRACT_SNAPSHOT_PATH)) {
+if (!changedFiles.has(CONTRACT_SNAPSHOT_FILE)) {
   process.stdout.write("contract-diff-approval-check: PASS (contract snapshot unchanged)\n");
   process.exit(0);
 }
 
-if (!changedFiles.has(APPROVAL_DOC_PATH)) {
-  fail(`contract snapshot changed without approval doc update (${APPROVAL_DOC_PATH})`);
+if (!changedFiles.has(APPROVAL_DOC_FILE)) {
+  fail(`contract snapshot changed without approval doc update (${APPROVAL_DOC_FILE})`);
 }
 
-if (!fs.existsSync(APPROVAL_DOC_PATH)) {
-  fail(`missing approval doc at ${APPROVAL_DOC_PATH}`);
+if (!fs.existsSync(APPROVAL_DOC_FILE)) {
+  fail(`missing approval doc at ${APPROVAL_DOC_FILE}`);
 }
 
-const approvalBody = fs.readFileSync(APPROVAL_DOC_PATH, "utf8");
+const approvalBody = fs.readFileSync(APPROVAL_DOC_FILE, "utf8");
 if (!/##\s+\d{4}-\d{2}-\d{2}/.test(approvalBody)) {
   fail("approval doc must contain a date heading in format '## YYYY-MM-DD'");
 }

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { extractImportsWithClauses, stripKnownSourceExtension } from "./import-utils.mjs";
 
 const DEFAULT_OPTIONS = {
   include: ["src/**/*.ts"],
@@ -32,17 +33,16 @@ function normalizeOptions(options) {
 }
 
 function extractImports(content) {
-  const out = [];
-  const pattern = /^\s*import\s+([\s\S]*?)\s+from\s+["']([^"']+)["']/gm;
-  let match;
-  while ((match = pattern.exec(content)) !== null) {
-    const clause = match[1];
-    const specifier = match[2];
-    if (typeof clause === "string" && typeof specifier === "string") {
-      out.push({ clause: clause.trim(), specifier });
-    }
+  return extractImportsWithClauses(content);
+}
+
+function removeNamedImportAlias(part) {
+  const lower = part.toLowerCase();
+  const aliasIndex = lower.indexOf(" as ");
+  if (aliasIndex < 0) {
+    return part;
   }
-  return out;
+  return part.slice(0, aliasIndex);
 }
 
 function parseNamedBindings(clause) {
@@ -57,7 +57,7 @@ function parseNamedBindings(clause) {
       if (!part) {
         continue;
       }
-      const [left] = part.split(/\s+as\s+/i);
+      const left = removeNamedImportAlias(part);
       if (left && left.trim().length > 0) {
         named.push(left.trim());
       }
@@ -79,7 +79,8 @@ function parseNamedBindings(clause) {
 
 function resolveRelativeImport(file, specifier) {
   const baseDir = path.posix.dirname(file);
-  return path.posix.normalize(path.posix.join(baseDir, specifier)).replace(/\.(c|m)?(j|t)sx?$/i, "");
+  const resolved = path.posix.normalize(path.posix.join(baseDir, specifier));
+  return stripKnownSourceExtension(resolved);
 }
 
 function isAllowed(file, allowPatterns) {

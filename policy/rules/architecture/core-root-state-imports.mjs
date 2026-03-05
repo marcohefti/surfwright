@@ -1,4 +1,5 @@
 import path from "node:path";
+import { extractImportsWithClauses, stripKnownSourceExtension } from "../import-utils.mjs";
 
 const DEFAULT_OPTIONS = {
   include: ["src/**/*.ts"],
@@ -21,22 +22,13 @@ function normalizeOptions(options) {
 }
 
 function extractImports(content) {
-  const out = [];
-  const pattern = /^\\s*import\\s+([\\s\\S]*?)\\s+from\\s+[\"']([^\"']+)[\"']/gm;
-  let match;
-  while ((match = pattern.exec(content)) !== null) {
-    const clause = match[1];
-    const specifier = match[2];
-    if (typeof clause === "string" && typeof specifier === "string") {
-      out.push({ clause: clause.trim(), specifier });
-    }
-  }
-  return out;
+  return extractImportsWithClauses(content);
 }
 
 function resolveRelativeImport(file, specifier) {
   const baseDir = path.posix.dirname(file);
-  return path.posix.normalize(path.posix.join(baseDir, specifier)).replace(/\\.(c|m)?(j|t)sx?$/i, "");
+  const resolved = path.posix.normalize(path.posix.join(baseDir, specifier));
+  return stripKnownSourceExtension(resolved);
 }
 
 function isAllowed(file, allowPatterns) {

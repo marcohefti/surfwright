@@ -147,7 +147,7 @@ export const targetFormFillCommandSpec: TargetCommandSpec = {
         [
           "",
           "Examples:",
-          "  surfwright target form-fill <targetId> --field '#email=agent@example.com' --field '#password=s3cret'",
+          "  surfwright target form-fill <targetId> --field '#email=agent@example.com' --field '#token=demo-value'",
           "  surfwright target form-fill <targetId> --fields-json '{\"#email\":\"agent@example.com\",\"#agree\":true}'",
         ].join("\n"),
       )

@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const DEFAULT_TEST_TIMEOUT_MS = 120_000;
 const RUN_TMP_PREFIX = "surfwright-browser-tests-";
+const PKILL_BIN = "/usr/bin/pkill";
 
 async function walk(dir) {
   /** @type {string[]} */
@@ -71,12 +72,16 @@ function cleanupRunTmpRoot() {
     // Prefer user-data-dir scoping to avoid killing unrelated processes that might mention the path.
     const pattern = `user-data-dir=.*${escaped}`;
     try {
-      spawnSync("pkill", ["-TERM", "-f", pattern], { stdio: "ignore" });
+      if (fs.existsSync(PKILL_BIN)) {
+        spawnSync(PKILL_BIN, ["-TERM", "-f", pattern], { stdio: "ignore" });
+      }
     } catch {
       // ignore
     }
     try {
-      spawnSync("pkill", ["-KILL", "-f", pattern], { stdio: "ignore" });
+      if (fs.existsSync(PKILL_BIN)) {
+        spawnSync(PKILL_BIN, ["-KILL", "-f", pattern], { stdio: "ignore" });
+      }
     } catch {
       // ignore
     }

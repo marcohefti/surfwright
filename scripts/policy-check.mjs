@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import fs from "node:fs";
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -47,23 +46,6 @@ function normalizeRelative(filePath) {
   return filePath.replaceAll("\\", "/");
 }
 
-function listFilesWithRipgrep(rootDir) {
-  const rg = spawnSync("rg", ["--files"], {
-    cwd: rootDir,
-    encoding: "utf8",
-  });
-
-  if (rg.status !== 0 || typeof rg.stdout !== "string") {
-    return null;
-  }
-
-  return rg.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => normalizeRelative(line));
-}
-
 function listFilesByWalking(rootDir) {
   const out = [];
   const stack = [rootDir];
@@ -87,7 +69,7 @@ function listFilesByWalking(rootDir) {
     }
   }
 
-  return out;
+  return out.sort((a, b) => a.localeCompare(b));
 }
 
 function matchesAny(file, patterns) {
@@ -173,7 +155,7 @@ async function main() {
   const rootDir = path.resolve(scriptDir, "..");
 
   const config = loadConfig(rootDir, args.configPath);
-  const allFiles = listFilesWithRipgrep(rootDir) ?? listFilesByWalking(rootDir);
+  const allFiles = listFilesByWalking(rootDir);
   const globalFiles = filterFiles(allFiles, config.files?.include, config.files?.exclude);
 
   const violations = [];

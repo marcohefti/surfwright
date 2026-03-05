@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 
+const GIT_BIN = "/usr/bin/git";
 const BEHAVIOR_PREFIXES = [
   "src/cli.ts",
   "src/core/daemon/",
@@ -9,7 +10,7 @@ const BEHAVIOR_PREFIXES = [
 ];
 
 function runGit(args) {
-  const result = spawnSync("git", args, {
+  const result = spawnSync(GIT_BIN, args, {
     cwd: process.cwd(),
     encoding: "utf8",
   });

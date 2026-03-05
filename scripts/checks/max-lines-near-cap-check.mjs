@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -51,21 +50,6 @@ function resolveExemptFiles(config) {
   return exempt;
 }
 
-function listFilesWithRipgrep() {
-  const result = spawnSync("rg", ["--files", ...TARGET_DIRS], {
-    cwd: ROOT_DIR,
-    encoding: "utf8",
-  });
-  if (result.status !== 0) {
-    return null;
-  }
-  return result.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .filter((filePath) => TARGET_EXTENSIONS.has(path.extname(filePath)));
-}
-
 function listFilesByWalk() {
   const files = [];
   const stack = [...TARGET_DIRS.map((entry) => path.join(ROOT_DIR, entry))];
@@ -89,7 +73,7 @@ function listFilesByWalk() {
       files.push(path.relative(ROOT_DIR, current).replaceAll("\\", "/"));
     }
   }
-  files.sort();
+  files.sort((a, b) => a.localeCompare(b));
   return files;
 }
 
@@ -106,7 +90,7 @@ const config = loadLintConfig();
 const maxLines = resolveMaxLines(config);
 const warnThreshold = Math.ceil(maxLines * DEFAULT_WARN_RATIO);
 const exempt = resolveExemptFiles(config);
-const files = listFilesWithRipgrep() ?? listFilesByWalk();
+const files = listFilesByWalk();
 
 const nearCap = [];
 for (const filePath of files) {

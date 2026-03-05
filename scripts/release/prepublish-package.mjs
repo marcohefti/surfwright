@@ -15,7 +15,6 @@ const pkgDir = path.join(root, "packages", pkgKey);
 const verify = spawnSync("pnpm", ["-s", "verify"], {
   cwd: root,
   stdio: "inherit",
-  env: process.env,
 });
 if (verify.status !== 0) {
   process.exit(verify.status ?? 1);
@@ -24,7 +23,6 @@ if (verify.status !== 0) {
 const packDryRun = spawnSync("npm", ["pack", "--dry-run", "--json"], {
   cwd: pkgDir,
   stdio: "inherit",
-  env: process.env,
 });
 if (packDryRun.status !== 0) {
   process.exit(packDryRun.status ?? 1);

@@ -1,0 +1,167 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["node"],
+  "categories": {
+    "correctness": "off",
+    "suspicious": "off",
+    "pedantic": "off",
+    "perf": "off",
+    "restriction": "off",
+    "style": "off"
+  },
+  "rules": {
+    "no-explicit-any": "error"
+  },
+  "overrides": [
+    {
+      "files": ["src/**/*.ts", "scripts/**/*.mjs", "test/**/*.mjs"],
+      "rules": {
+        "max-lines": ["error", { "max": 500, "skipBlankLines": false, "skipComments": false }]
+      }
+    },
+    {
+      "files": [
+        "src/core/browser.ts",
+        "src/core/extensions/infra/registry.ts",
+        "src/features/runtime/register-commands.ts",
+        "scripts/zcl/eval-browser-control-oracle.mjs",
+        "scripts/bench/run-iteration.mjs",
+        "scripts/bench/score-iteration.mjs"
+      ],
+      "rules": {
+        "max-lines": "off"
+      }
+    },
+    {
+      "files": ["src/core/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [{ "group": ["node:*"], "message": "Core node:* imports are allowed only in infra/providers and explicit boundaries." }]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/core/**/domain/**/*.ts", "src/core/**/app/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [{ "name": "playwright-core", "message": "Core app/domain must not import playwright-core directly." }],
+            "patterns": [
+              { "group": ["node:*"], "message": "Core app/domain must not import node:* directly; move IO into infra/providers." },
+              {
+                "group": ["src/features/**", "../features/**", "../../features/**", "../../../features/**", "../../../../features/**"],
+                "message": "Core app/domain must not import surface feature modules."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/core/**/infra/**/*.ts",
+        "src/core/providers/**/*.ts",
+        "src/core/browser.ts",
+        "src/core/cli-contract.ts",
+        "src/core/request-context.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["src/**/*.ts"],
+      "rules": {
+        "node/no-process-env": "error"
+      }
+    },
+    {
+      "files": [
+        "src/core/providers/**/*.ts",
+        "src/cli.ts",
+        "src/core/state/infra/state-store.ts",
+        "src/core/browser.ts",
+        "src/core/request-context.ts"
+      ],
+      "rules": {
+        "node/no-process-env": "off"
+      }
+    },
+    {
+      "files": ["src/features/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [{ "name": "playwright-core", "message": "Feature modules must not import playwright-core directly." }]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/**/commands/**/*.ts", "src/features/**/register-commands.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [{ "name": "playwright-core", "message": "Command modules must not import playwright-core directly." }],
+            "patterns": [{ "group": ["node:*"], "message": "Feature command modules must not import node:* directly." }]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/**/domain/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [{ "name": "playwright-core", "message": "Feature domain modules must not import playwright-core directly." }],
+            "patterns": [
+              { "group": ["node:*"], "message": "Feature domain modules must not import node:* directly." },
+              {
+                "group": [
+                  "../commands/**",
+                  "../../commands/**",
+                  "../../../commands/**",
+                  "../../../../commands/**",
+                  "../infra/**",
+                  "../../infra/**",
+                  "../../../infra/**",
+                  "../../../../infra/**",
+                  "../usecases/**",
+                  "../../usecases/**",
+                  "../../../usecases/**",
+                  "../../../../usecases/**"
+                ],
+                "message": "Feature domain modules must not import commands/infra/usecases layers."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/**/usecases/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [{ "name": "playwright-core", "message": "Feature usecase modules must not import playwright-core directly." }],
+            "patterns": [
+              { "group": ["node:*"], "message": "Feature usecase modules must not import node:* directly." },
+              {
+                "group": ["../commands/**", "../../commands/**", "../../../commands/**", "../../../../commands/**"],
+                "message": "Feature usecase modules must not import command modules."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

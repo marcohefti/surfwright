@@ -1,4 +1,4 @@
-import type { CliFailure } from "./types.js";
+import type { CliFailure, JsonValue } from "./types.js";
 
 export class CliError extends Error {
   code: string;
@@ -8,7 +8,7 @@ export class CliError extends Error {
     strategy: string;
     nextCommand?: string;
     requiredFields?: string[];
-    context?: Record<string, string | number | boolean | null>;
+    context?: Record<string, JsonValue>;
   };
   diagnostics?: {
     unknownFlags?: string[];
@@ -17,7 +17,7 @@ export class CliError extends Error {
     canonicalInvocation?: string;
   };
   hints?: string[];
-  hintContext?: Record<string, string | number | boolean | null>;
+  hintContext?: Record<string, JsonValue>;
 
   constructor(
     code: string,
@@ -29,7 +29,7 @@ export class CliError extends Error {
         strategy: string;
         nextCommand?: string;
         requiredFields?: string[];
-        context?: Record<string, string | number | boolean | null>;
+        context?: Record<string, JsonValue>;
       };
       diagnostics?: {
         unknownFlags?: string[];
@@ -38,7 +38,7 @@ export class CliError extends Error {
         canonicalInvocation?: string;
       };
       hints?: string[];
-      hintContext?: Record<string, string | number | boolean | null>;
+      hintContext?: Record<string, JsonValue>;
     },
   ) {
     super(message);

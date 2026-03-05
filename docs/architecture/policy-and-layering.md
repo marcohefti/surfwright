@@ -23,6 +23,7 @@ SurfWright’s architecture is mostly enforced, not just described. Without enfo
   - `policy/config.json` (baseline)
   - `policy/config.strict.json` (stricter gates for `validate:strict`)
 - Runner: `scripts/policy-check.mjs` (`pnpm -s policy:check`, `pnpm -s policy:check:strict`)
+- Language lint runner: `oxlint` (`pnpm -s lint`)
 - Rule registry + implementations:
   - `policy/rules/index.mjs`
   - `policy/rules/*.mjs`
@@ -35,6 +36,7 @@ SurfWright’s architecture is mostly enforced, not just described. Without enfo
 2. Each enabled rule filters the file list via config `include`/`exclude` globs.
 3. Each rule returns an array of violations (or none).
 4. Violations are sorted and printed (or emitted as JSON with `--json`).
+5. Language lint checks run via `oxlint` in `pnpm lint` (wired into `validate` / `validate:strict`).
 
 ## Invariants / Guardrails (How to Fix Common ARC*/BUDG* Failures)
 
@@ -116,6 +118,9 @@ This is a navigation layer. For the full list, see `docs/policy-harness.md` and 
   - Where to look:
     - rules: `policy/rules/budgets/*.mjs`
     - config: `policy/config.json`
+
+- Lint-driven purity/size/env checks
+  - feature/core import restrictions, `process.env` restrictions, and line-count limits are now enforced in `.oxlintrc.json` via `pnpm lint`.
 
 ## Observability
 

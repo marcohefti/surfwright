@@ -33,16 +33,6 @@
       }
     },
     {
-      "name": "surface-command-purity",
-      "enabled": true,
-      "options": { "include": ["src/features/**/*.ts"], "exclude": [] }
-    },
-    {
-      "name": "feature-layer-purity",
-      "enabled": true,
-      "options": { "include": ["src/features/**/domain/**/*.ts", "src/features/**/usecases/**/*.ts"], "exclude": [] }
-    },
-    {
       "name": "core-boundaries",
       "enabled": true,
       "options": {
@@ -86,6 +76,7 @@
         "include": ["src/**/*.ts"],
         "exclude": [],
         "allowlist": [
+          "src/core/browser.ts",
           "src/cli.ts",
           "src/core/daemon/infra/daemon.ts",
           "src/core/daemon/infra/daemon-meta.ts",
@@ -106,11 +97,6 @@
           "src/core/workspace/infra/workspace.ts"
         ]
       }
-    },
-    {
-      "name": "core-layer-purity",
-      "enabled": true,
-      "options": { "include": ["src/core/**/domain/**/*.ts", "src/core/**/app/**/*.ts"], "exclude": [] }
     },
     {
       "name": "core-root-freeze",
@@ -226,11 +212,6 @@
       "options": { "max": 12, "include": ["**/*"], "exclude": [] }
     },
     {
-      "name": "max-loc",
-      "enabled": true,
-      "options": { "max": 500, "include": ["src/**/*.ts", "scripts/**/*.mjs", "test/**/*.mjs"], "exclude": [] }
-    },
-    {
       "name": "core-layer-structure-budget",
       "enabled": true,
       "options": {
@@ -251,40 +232,6 @@
         "requiredDirs": ["app", "domain", "infra"],
         "excludeDomains": [],
         "maxMissingDomains": 0
-      }
-    },
-    {
-      "name": "core-node-imports-budget",
-      "enabled": true,
-      "options": {
-        "include": ["src/core/**/*.ts"],
-        "exclude": [],
-        "allowPatterns": [
-          "src/core/**/infra/**/*.ts",
-          "src/core/providers/**/*.ts",
-          "src/core/browser.ts",
-          "src/core/cli-contract.ts"
-        ],
-        "maxViolations": 0
-      }
-    },
-    {
-      "name": "core-process-env-budget",
-      "enabled": true,
-      "options": {
-        "include": ["src/**/*.ts"],
-        "exclude": [],
-        "allowPatterns": ["src/core/providers/**/*.ts", "src/cli.ts", "src/core/state/infra/state-store.ts"],
-        "maxViolations": 0
-      }
-    },
-    {
-      "name": "typescript-no-explicit-any",
-      "enabled": true,
-      "options": {
-        "include": ["src/**/*.ts"],
-        "exclude": [],
-        "allowlist": []
       }
     }
   ]

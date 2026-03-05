@@ -1,6 +1,7 @@
 # Policy Harness
 
 This repository uses a lightweight, agent-first policy harness for structural checks.
+Language linting is handled separately by `oxlint` (`pnpm lint`).
 
 ## Why
 
@@ -22,9 +23,9 @@ Each rule exports a `rule` object:
 
 ```js
 export const rule = {
-  id: "LOC001",
-  name: "max-loc",
-  description: "File must not exceed a configured line count limit",
+  id: "ARC001",
+  name: "feature-boundaries",
+  description: "Cross-feature imports must go through feature public index",
   defaultOptions: { ... },
   check: async ({ files, options, helpers }) => Violation[],
 };
@@ -34,15 +35,12 @@ export const rule = {
 
 ```js
 {
-  ruleId: "LOC001",
-  ruleName: "max-loc",
+  ruleId: "ARC001",
+  ruleName: "feature-boundaries",
   severity: "error",
-  file: "src/cli.ts",
-  message: "612 > 500 (+112)",
-  actual: 612,
-  limit: 500,
-  overBy: 112,
-  suggestion: "Split file by concern to reduce file size and review scope"
+  file: "src/features/runtime/commands/runtime.run.ts",
+  message: "cross-feature import must target src/features/<name>/index",
+  suggestion: "Import via the other feature public index"
 }
 ```
 
@@ -65,6 +63,12 @@ Human-readable:
 pnpm policy:check
 ```
 
+Code lint:
+
+```bash
+pnpm lint
+```
+
 Machine-readable:
 
 ```bash
@@ -79,22 +83,23 @@ Policy rules are intentionally simple and file-system based. The names below map
 - `ARC002 feature-core-imports`: features may import core only via approved facades (typically `src/core/*/public`).
 - `ARC003 state-boundaries`: state mutation primitives are imported only by `src/core/state/repo/**`.
 - `ARC004 core-boundaries`: bounded core domains import each other only via `src/core/<domain>/(public|index)`.
-- `ARC005 surface-command-purity`: surface command modules must not contain hidden behavior (keep pure wiring).
 - `ARC006 domain-no-cross-domain`: domain layers must not cross-import other domains.
 - `ARC007 boundary-json-parse`: `JSON.parse` is allowed only in explicit boundary modules.
-- `ARC008 core-layer-purity`: app/domain layers must not import from infra/boundary modules.
 - `ARC009 core-root-freeze`: adding new `src/core/*.ts` modules requires an explicit decision (freeze core-root growth).
-- `ARC010 feature-layer-purity`: feature `domain/**` and `usecases/**` must not import Node built-ins or Playwright (keeps feature layers pure and testable).
 - `ARC011 core-root-state-imports`: code outside the state domain must not import a core-root state facade (use `src/core/state/index` for core internals and `src/core/state/public` for feature access).
 - `ARC012 core-domain-root-freeze`: bounded core domain roots only keep stable entrypoints (`index.ts`, `public.ts`).
 - `ARC013 core-layer-direction`: core layer imports follow direction; `app`/`domain` must not depend on `infra`.
 - `ARC014 feature-layer-direction`: feature flow is `commands -> usecases -> domain`; reverse/sideways imports are blocked.
 - `ARC015 public-surface-curation`: `src/core/**/public.ts` should avoid direct `infra/**` coupling unless explicitly allowlisted.
 - `BUDG001 core-layer-structure-budget`: budget for how many bounded core domains are still missing `app/domain/infra` structure (ratchet to 0).
-- `BUDG002 core-node-imports-budget`: budget for `node:` imports outside `infra/**` and `providers/**` (ratchet to 0).
-- `BUDG003 core-process-env-budget`: budget for `process.env` usage outside `providers/**` and explicit boundaries (ratchet to 0).
 - `DIR001 max-files-per-directory`: keeps directories small for review and navigation.
-- `LOC001 max-loc`: prevents single-file mega-modules.
+
+`oxlint` now enforces language-level constraints previously handled by policy scripts:
+
+- `no-explicit-any`
+- `max-lines` (500) for `src/**/*.ts`, `scripts/**/*.mjs`, `test/**/*.mjs`
+- `no-restricted-imports` constraints for feature/core layer purity and node import boundaries
+- `node/no-process-env` constraints for env-access boundaries
 
 ## Exit Codes
 

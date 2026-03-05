@@ -42,7 +42,7 @@ export const rule = {
           continue;
         }
         violations.push({
-          ruleId: "ARC010",
+          ruleId: "ARC012",
           ruleName: "core-domain-root-freeze",
           severity: "error",
           file,

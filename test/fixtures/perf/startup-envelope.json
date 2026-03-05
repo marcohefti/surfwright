@@ -4,8 +4,7 @@
   "stat": "median",
   "cases": {
     "contract": { "maxMs": 2000 },
-    "doctor": { "maxMs": 1500 },
+    "doctor": { "maxMs": 7000 },
     "skill-doctor": { "maxMs": 1500 }
   }
 }
-

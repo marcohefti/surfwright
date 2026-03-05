@@ -1,9 +1,9 @@
-import type { CliFailure } from "../types.js";
+import type { CliFailure, JsonValue } from "../types.js";
 import { CliError } from "../errors.js";
 
 type QueryInvalidOptions = {
   hints?: string[];
-  hintContext?: Record<string, string | number | boolean | null>;
+  hintContext?: Record<string, JsonValue>;
   recovery?: CliFailure["recovery"];
 };
 

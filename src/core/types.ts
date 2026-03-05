@@ -340,6 +340,8 @@ export type StateDiskPruneReport = {
     workspaceDir: string | null;
   };
 };
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 export type CliFailure = {
   ok: false;
   code: string;
@@ -350,7 +352,7 @@ export type CliFailure = {
     strategy: string;
     nextCommand?: string;
     requiredFields?: string[];
-    context?: Record<string, string | number | boolean | null>;
+    context?: Record<string, JsonValue>;
   };
   diagnostics?: {
     unknownFlags?: string[];
@@ -359,7 +361,7 @@ export type CliFailure = {
     canonicalInvocation?: string;
   };
   hints?: string[];
-  hintContext?: Record<string, string | number | boolean | null>;
+  hintContext?: Record<string, JsonValue>;
 };
 export type { SessionState, TargetState, SurfwrightState } from "./types/state.js";
 export type CliCommandContract = {

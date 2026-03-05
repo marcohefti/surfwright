@@ -53,8 +53,9 @@ SurfWright needs a growing command surface without turning the CLI into a monoli
 - Features are isolated:
   - cross-feature internal imports are blocked by policy (`ARC001`).
 - Feature purity is enforced:
-  - “surface command wiring” must stay thin (`ARC005` / `surface-command-purity` in `policy/config.json`).
-  - feature `domain/**` and `usecases/**` must avoid Node/Playwright imports (`ARC010` / `feature-layer-purity`).
+  - `oxlint` blocks direct `playwright-core` imports in feature modules.
+  - `oxlint` blocks `node:*` imports in feature command/domain/usecase modules.
+  - `oxlint` blocks `domain -> commands/infra/usecases` and `usecases -> commands` imports via restricted import patterns.
 
 ## Observability
 

@@ -24,17 +24,26 @@ function requireBrowser() {
   assert.equal(payload?.chrome?.found === true, true, "Chrome/Chromium not found (required for browser contract tests)");
 
   const ensure = (timeoutMs) => runCliSync(["session", "ensure", "--timeout-ms", String(timeoutMs)]);
+  const parseEnsureCode = (result) => {
+    try {
+      return String(parseJson(result.stdout)?.code ?? "");
+    } catch {
+      return "";
+    }
+  };
   let ensured = ensure(5000);
   if (ensured.status !== 0) {
-    let code = "";
-    try {
-      code = String(parseJson(ensured.stdout)?.code ?? "");
-    } catch {
-      code = "";
-    }
+    let code = parseEnsureCode(ensured);
     if (code === "E_BROWSER_START_TIMEOUT" || code === "E_BROWSER_START_FAILED") {
       runCliSync(["session", "clear", "--timeout-ms", "8000"]);
       ensured = ensure(8000);
+      if (ensured.status !== 0) {
+        code = parseEnsureCode(ensured);
+        if (code === "E_BROWSER_START_TIMEOUT" || code === "E_BROWSER_START_FAILED") {
+          runCliSync(["session", "clear", "--timeout-ms", "8000"]);
+          ensured = ensure(8000);
+        }
+      }
     }
   }
   assert.equal(ensured.status, 0, ensured.stdout || ensured.stderr);
